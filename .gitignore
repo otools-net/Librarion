@@ -426,3 +426,26 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# --- Librarion ---
+
+# Local data (databases, caches) of a development run
+src/Librarion.Api/data/
+*.db
+*.db-shm
+*.db-wal
+
+# The web client, built from src/Librarion.Web by the Librarion.Api build (see Librarion.Api.csproj)
+src/Librarion.Api/wwwroot/
+src/Librarion.Web/.angular/
+
+# This machine's own settings over the neutral appsettings.json
+src/Librarion.Api/appsettings.Local.json
+src/Librarion.Api/appsettings.Development.json
+
+# End-to-end test output
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+
+# Sample files are committed whatever their type (a Calibre metadata.db, logs...).
+!tests/samples/**

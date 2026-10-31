@@ -1,0 +1,21 @@
+# Text files are LF in the repository and in working copies (the machine's core.autocrlf=true would make them CRLF).
+* text=auto eol=lf
+
+# Windows batch files: cmd.exe expects CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binaries.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.db binary
+
+# Sample files of the tests: kept byte for byte (some are broken or CRLF on purpose).
+tests/samples/** -text
