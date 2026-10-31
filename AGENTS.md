@@ -15,6 +15,9 @@ Books come as loose files or by the hundred thousand inside ZIP archives, indexe
 ([archives](agents/docs/features/archives.md)); reference for archive-based libraries: MyHomeLib
 (`C:\workspace\GIT\reference-projects\MyHomeLib`).
 
+Reference for how books are shown and read (covers, titles, the reader; behaviour only, its GPL-3 code is never
+copied): calibre-web (`C:\workspace\GIT\reference-projects\calibre-web`).
+
 Reference project for design, rights and philosophy: SimpleFileExplorer (`C:\workspace\GIT\SimpleFileExplorer`, SFE).
 When a pattern exists there (tenants, rights catalog, sessions, settings levels, tests), port it and say so in the
 note rather than inventing a new one.
@@ -115,5 +118,7 @@ note rather than inventing a new one.
 |---|---|---|
 | [rights](agents/docs/features/rights.md) | rights catalog, scopes, evaluation (planned, ported from SFE) | `Core/Access/` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
+| [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
+| [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |
