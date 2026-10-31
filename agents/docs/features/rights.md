@@ -12,7 +12,10 @@ Code (planned): `src/Librarion.Core/Access/` (`RightCatalog`, `RightsEvaluator`,
   through `LibraryAccess`, minus the tenant's disabled rights, minus server-disabled rights (`Librarion:Rights:Disabled`,
   ids, `prefix*`, `kind:write`).
 - **Content filters** (allowed/denied tags, languages, max rating) per group: narrow which books a right applies to,
-  applied in every query (`Visible()`), 404 for a hidden book (never told apart from missing).
+  applied in every query (`Visible()`), 404 for a hidden book (never told apart from missing). **Joined at query time**
+  through `TagClosure` (D22): always current, no precomputation. Known cost: a narrow allow-list (a group seeing
+  0.1 % of the books) makes keyset pages scan far to fill a page; the stage 2 benchmark measures that case, and if it
+  breaks the budgets the user decides on precomputed visibility (a row or bitmask per book and filter profile).
 - Each right: id, scope, `Kind` (Read/Write: Write when any route it opens changes something), `GuestAllowed`,
   default groups, `since` (revision, for existing installs after the first release).
 - Tag rights (`tags.assign`, `tags.manage`, `tags.importMappings`, `tags.defaults`): [tags](tags.md).

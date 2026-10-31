@@ -46,7 +46,9 @@ A format without a viewer offers **Download** only. The choice per format is rec
   for PDF/CBZ, a fraction otherwise; saved on page change (debounced) and on leaving; the book opens where it was left.
 - Read state (unread / reading / read) follows the progress (≥ 98 % offers "mark as read").
 - KOReader sync (kosync API) in the same stage maps to the same position store, so a book continued on an e-ink device
-  opens there in the browser too (by the book's file hash, as KOReader identifies books).
+  opens there in the browser too (by the book's file hash, as KOReader identifies books). That partial MD5 is computed
+  **lazily** (on download or first sync, then stored on the `BookFile`), never for every file at import: a deflated
+  archive entry needs a full decompression.
 
 ## Rights
 

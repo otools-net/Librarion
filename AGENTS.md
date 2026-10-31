@@ -55,6 +55,8 @@ note rather than inventing a new one.
   ([privacy](agents/docs/development/privacy.md)).
 - **Scale:** millions of books, hundreds of thousands of authors and tags; nothing proportional to the catalog per
   request, every list pages by key ([scale](agents/docs/development/scale.md)).
+  A feature or idea (the user's or an agent's) that would cost at scale is **brought to the user before it is added**:
+  the cost, alternatives, a recommendation, or a recommendation not to add it when no good alternative exists.
 - **UI:** every screen works from a 360 px phone to a desktop, compact by default, touch and mouse
   ([frontend](agents/docs/development/frontend.md)).
 - **Tests** come with every feature and fix; important flows also get end-to-end tests; not done until `dotnet test`

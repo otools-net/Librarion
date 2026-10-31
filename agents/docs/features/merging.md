@@ -30,7 +30,7 @@ compared only within the key's group.
 | **Same file** | content hash (SHA-256 of the bytes, computed lazily: candidates first by size + CRC32, which zip entries give for free) | merged automatically into one book on import (tenant setting, on by default), the copies kept as files of it |
 | **Same document** | FB2 `<document-info><id>`, EPUB `dc:identifier` (UUID), Calibre `uuid`, ISBN | suggested, high confidence |
 | **Same work** | normalized title (case-folded, punctuation and articles removed, transliterated) + first author's normalized name; also file name stem + author when there is no title | suggested, medium confidence (different formats or editions show here) |
-| **Similar** | the same with a small edit distance on the title, within one author's books | suggested, low confidence, only on the duplicates page |
+| **Similar** | small edit distance on the title | **on demand only** (D21): never a catalog-wide pass; computed when a curator opens one book, one author or one field page, capped (200 candidates); Postgres `pg_trgm`, SQLite in memory over the capped set |
 
 - Keys are computed at import and on edits; a background task (batches keyed on `Books.Id`, resumable) builds
   `DuplicateGroups (Id, Level, Key)` and `DuplicateMembers (GroupId, BookId)` incrementally: a new book joins or opens
@@ -71,8 +71,10 @@ respect it). This adds **finding** them and doing it from one page:
 
 - Suggestions per field (and among plain tags), by blocking keys on the normalized name: same name after NFKC,
   case and spacing; transliteration (Стивен Кинг / Stephen King); name forms ("King, Stephen", "S. King", "King
-  Stephen"); small edit distance within a field; same name in two fields (`genre:Horror` / `category:Horror`).
-  Ranked by book count, so the merges that fix most books come first.
+  Stephen"); same name in two fields (`genre:Horror` / `category:Horror`). Ranked by book count, so the merges that
+  fix most books come first.
+- **Spelling distance** ("Steven" / "Stephen") is **on demand only** (D21): on one tag's page or one field page,
+  capped, as the books' Similar level; no catalog-wide fuzzy pass over 650k values.
 - **Merge fields:** a whole field into another (`genre:` → `category:`): its values merged by name into the target
   field's, the rest moved, the field becomes an alias key (`genre:` keeps working in search and in import mappings).
 - The tag page and the tag picker show "Possible duplicates" for a tag; **Not the same** is remembered as for books.
@@ -80,6 +82,7 @@ respect it). This adds **finding** them and doing it from one page:
 
 ## Scale
 
+- Fuzzy matching (edit distance) has no ordinary index: only on demand within one scope, capped (D21).
 - Blocking keys are columns or small tables with indexes; a group above a size cap (e.g. 50 books with "Untitled" by
   "Unknown") is dropped as noise, never compared.
 - Content hashes only for size + CRC collisions (rare), read in the background with I/O limits; never a hash of every

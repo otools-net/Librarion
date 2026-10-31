@@ -63,12 +63,17 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
 - `TagGraph` (names, aliases, parents) in memory per tenant, reloaded on a version change (50k tags ≈ a few MB); the
   big fields' values (authors, series) stay in the database, looked up by index ([metadata-tags](metadata-tags.md)).
 - Picker suggestions by prefix on name/alias/shorthand with an index, capped.
+- Tag names are not copied into the books' search documents: free text reaches tags through the tag-name index (D20,
+  [metadata-tags](metadata-tags.md)), so a rename or merge never re-indexes books.
+- `TagCounts` changes are summed per batch and written once per tag and batch (no hot row for `category:Fiction`
+  under parallel imports).
 
 ## Where tags show
 
 - Search: `tag:`, `-tag:`, ancestors included, `special:untagged`, hidden rule; `tag:"name (parent)"` for
   disambiguation.
-- Content filters ([rights](rights.md)): allowed / denied tags per group, through `TagClosure`.
+- Content filters ([rights](rights.md)): allowed / denied tags per group, through `TagClosure`, joined at query time
+  (D22).
 - OPDS: a Tags navigation feed by category → children, only tags the user can see, counts from `TagCounts`; Atom
   `<category>` per book.
 - Web: chips on cards and the book page grouped by category, sidebar of tags, tag manager.

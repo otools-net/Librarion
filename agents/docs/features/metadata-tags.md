@@ -64,7 +64,10 @@ separate `Authors`, `Series` or `Publishers` tables.
 - `field:value` (name or alias, normalized; quotes for spaces), `field:value*` prefix, `-field:value`, `field:`
   alone = has any value (`-series:` = books outside any series); a value's descendants included as for tags
   (`category:Fiction` finds Horror). `tag:` keeps matching every tag, fields included (`tag:"author:Stephen King"`).
-  Free text also matches field values (they are in the book's search document).
+  Free text also matches field values, **without copying them into the books' search documents** (D20): the words
+  are matched against titles (FTS) and, separately, against tag names and aliases (a small indexed table); books come
+  through `BookTags` and the two results are combined. Renaming or merging `category:Fiction` (1M books) touches one
+  row, never re-indexes books.
 - Browse pages per field (authors A–Z, series, categories, publishers, languages) are one tag-list view with the
   field as a filter: keyset by `SortName`, counts from `TagCounts`, a value's page lists its books (series sorted by
   `Number`). New fields get a browse page without code.
