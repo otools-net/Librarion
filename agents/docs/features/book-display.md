@@ -81,7 +81,8 @@ Labors split licence: check terms).
 ## Where it shows
 
 - Grid card: cover `m`, title (2 lines, ellipsis), first author (1 line). List row: cover `s`, title, authors, series,
-  format badges. Book page: cover `l`, full metadata, formats, **Read** and **Download**.
+  format badges. Book page: cover `l`, full metadata, copies and formats, possible duplicates ([merging](merging.md)), **Read** and
+  **Download**.
 - OPDS: `http://opds-spec.org/image` (cover `l`) and `…/image/thumbnail` (`m`) links; title as above.
 - Lazy loading (`loading="lazy"`, only visible cards in the virtual grid) and fixed aspect boxes (no layout shift).
 

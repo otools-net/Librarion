@@ -36,8 +36,8 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
   plain tags.
 - Hierarchical raw names (`A.B` for Calibre, `A / B / C`, `A > B`) create or reuse the parents chain (separators
   configurable per library; off by default for EPUB, whose subjects contain dots).
-- **Curating keeps through re-imports:** merging tag X into Y moves X's links (batches) and turns X's names into
-  aliases of Y and its mappings to Y; *ignore* drops the links and maps the raw name to nothing; renaming or
+- **Curating keeps through re-imports** (finding duplicate tags and fields to merge: [merging](merging.md)):
+  merging tag X into Y moves X's links (batches) and turns X's names into aliases of Y and its mappings to Y; *ignore* drops the links and maps the raw name to nothing; renaming or
   re-parenting changes nothing for the importer.
 - **Re-import** recomputes only `Imported` links of the books it reads: adds new ones, removes those the source no
   longer has. `Manual` and `Rule` links are never touched. A user removing an imported tag from a book writes a
