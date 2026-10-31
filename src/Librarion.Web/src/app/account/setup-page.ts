@@ -5,6 +5,7 @@ import { errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SetupState } from '../core/models';
 import { SessionService } from '../core/session.service';
+import { Logo } from '../shared/logo';
 
 /**
  * The first start (as SFE's setup page): the setup code the server printed (and wrote to its data folder), the first
@@ -13,13 +14,13 @@ import { SessionService } from '../core/session.service';
  */
 @Component({
     selector: 'lib-setup-page',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, Logo],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'account-page' },
     template: `
         <main class="account-card wide">
             <header class="account-head">
-                <span class="brand"><img src="favicon.svg" alt="" width="24" height="24"><span>{{ 'app.name' | t }}</span></span>
+                <span class="brand"><svg libLogo></svg><span>{{ 'app.name' | t }}</span></span>
                 <h1>{{ (state()?.recover ? 'setup.recoverTitle' : 'setup.title') | t }}</h1>
             </header>
             @if (!state()) {

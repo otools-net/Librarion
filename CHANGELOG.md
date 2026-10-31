@@ -6,6 +6,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- A new logo and favicon: a temple front whose columns are book spines, its colours following the light or dark
+  theme.
 - First build: the server starts on SQLite or PostgreSQL and shows the app's frame in light and dark, on phones and
   desktops.
 - First setup: the server prints a setup code; with it, the first server administrator and the first tenant (with

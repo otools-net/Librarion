@@ -7,6 +7,7 @@ import { ADMIN_RIGHTS } from '../core/rights';
 import { SessionService } from '../core/session.service';
 import { ThemeService } from '../core/theme.service';
 import { Icon, IconName, IconSprite } from '../shared/icon';
+import { Logo } from '../shared/logo';
 
 interface NavItem {
     label: MessageKey;
@@ -22,7 +23,7 @@ interface NavItem {
  */
 @Component({
     selector: 'lib-shell',
-    imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, Icon, IconSprite],
+    imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, Icon, IconSprite, Logo],
     templateUrl: './shell.html',
     host: { class: 'shell', '(document:keydown.escape)': 'closeDrawer()' },
     changeDetection: ChangeDetectionStrategy.OnPush,

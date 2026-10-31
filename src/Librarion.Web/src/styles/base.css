@@ -123,3 +123,26 @@ textarea {
         font-size: max(16px, 1em);
     }
 }
+
+/* The mark (shared/logo.ts): blue from the theme, details in the colour of the surface around it. */
+.logo {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.logo .logo-blue {
+    fill: var(--accent);
+}
+
+.logo .logo-gold {
+    fill: #e0b25c;
+}
+
+.logo .logo-gold-dark {
+    fill: #b98a36;
+}
+
+.logo .logo-detail {
+    fill: var(--surface);
+}

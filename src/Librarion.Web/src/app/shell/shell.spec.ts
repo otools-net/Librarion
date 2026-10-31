@@ -22,6 +22,18 @@ describe('Shell', () => {
         expect(items.slice(1).every(item => item.getAttribute('aria-disabled') === 'true')).toBe(true);
     });
 
+    it('shows the logo as a decorative mark beside the name, the link named for screen readers', async () => {
+        const { element } = await render();
+
+        const brand = element.querySelector<HTMLAnchorElement>('.brand')!;
+        const logo = brand.querySelector('svg.logo')!;
+        expect(brand.getAttribute('aria-label')).toBe('Librarion');
+        expect(logo.getAttribute('aria-hidden')).toBe('true');
+        expect(logo.getAttribute('viewBox')).toBe('0 0 56 56');
+        expect(logo.querySelectorAll('.logo-blue, .logo-gold, .logo-detail').length).toBeGreaterThan(0);
+        expect(brand.querySelector('img')).toBeNull();
+    });
+
     it('opens the drawer from the menu button and closes it on the backdrop or Escape', async () => {
         const { fixture, element } = await render();
         const button = element.querySelector<HTMLButtonElement>('.menu-button')!;

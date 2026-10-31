@@ -1,4 +1,4 @@
-# Librarion
+# <img src="src/Librarion.Web/public/logo.svg" alt="" width="40" height="40"> Librarion
 
 A self-hosted e-book library server for **huge collections**: millions of books, as loose files or by the hundred
 thousand inside ZIP archives, browsed, searched and read from any device, and served to reader apps over OPDS (with a

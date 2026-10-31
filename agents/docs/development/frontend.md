@@ -17,6 +17,9 @@ Ported from SFE's `frontend.md` (its phone, touch and overflow rules come from r
   dialogs become full-width sheets.
 - Touch: tap targets ≥ 24 px (44 preferred), text fields ≥ 16 px on touch screens (no iOS zoom), close-on-outside on
   `pointerdown`, long press for the item menu; nothing needs hover.
+- The logo is the "portico of spines" (a temple front whose columns are book spines): `shared/logo.ts` inline, its
+  blue from `--accent` so it follows the theme; `public/favicon.svg` is its simple form (roof, three spines, step),
+  `public/logo.svg` the mark for the README. Drawn from scratch, no font, nothing from elsewhere.
 - Light and dark themes, set before first paint; system fonts or bundled ones (no web font from outside:
   [privacy](privacy.md)).
 - Accessibility: WCAG 2.2 AA checked by axe in e2e on the main screens.

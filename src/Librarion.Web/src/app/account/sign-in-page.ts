@@ -4,6 +4,7 @@ import { Api, ApiError } from '../core/api.service';
 import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SessionService } from '../core/session.service';
+import { Logo } from '../shared/logo';
 
 /**
  * The sign-in page (`login?return=`), ported from SFE: a name and password; back to `return` once signed in. A
@@ -12,13 +13,13 @@ import { SessionService } from '../core/session.service';
  */
 @Component({
     selector: 'lib-sign-in-page',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, Logo],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'account-page' },
     template: `
         <main class="account-card">
             <header class="account-head">
-                <span class="brand"><img src="favicon.svg" alt="" width="24" height="24"><span>{{ 'app.name' | t }}</span></span>
+                <span class="brand"><svg libLogo></svg><span>{{ 'app.name' | t }}</span></span>
                 <h1>{{ (recovering() ? 'signIn.recoverTitle' : 'signIn.title') | t }}</h1>
             </header>
             @if (!ready()) {
