@@ -19,6 +19,7 @@ var main = builder.Configuration.Sources.ToList().FindIndex(source => source is 
 builder.Configuration.Sources.Insert(main + 1, local);
 
 builder.Services.AddLibrarionCore(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddSingleton<ClientPage>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
     // Loopback proxies only (the default list); trusted proxies elsewhere come with the security settings.
@@ -58,7 +59,8 @@ var api = app.MapGroup("/api");
 api.MapSystemEndpoints();
 api.MapFallback(() => TypedResults.NotFound()).AllowAnonymous();
 
-app.MapFallbackToFile("index.html");
+// Addresses the client routes itself: its page, with the app's root as its base (ClientPage).
+app.MapFallback((HttpContext context, ClientPage page) => page.Serve(context));
 
 await LibrarionDatabase.InitializeAsync(
     app.Services.GetRequiredService<IDbContextFactory<LibrarionDbContext>>(), AppVersion.Version, app.Logger);

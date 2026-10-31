@@ -9,7 +9,7 @@
         <svg [libIcon]="drawerOpen() ? 'close' : 'menu'"></svg>
     </button>
 
-    <a class="brand" routerLink="/">
+    <a class="brand" routerLink="/" [attr.aria-label]="'app.name' | t">
         <img src="favicon.svg" alt="" width="24" height="24">
         <span>{{ 'app.name' | t }}</span>
     </a>

@@ -1,0 +1,91 @@
+# Build and unit tests (agents/docs/development/testing.md) on every push and pull request:
+# - backend on Linux and Windows with SQLite, and on Linux again with PostgreSQL (the suite runs once per provider);
+# - the client's specs.
+# Publishes nothing.
+name: Build and test
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: build-test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  NG_CLI_ANALYTICS: 'false'
+  LIBRARION_TEST_TIME_FACTOR: '3'
+
+jobs:
+  backend:
+    name: Backend (${{ matrix.os }}, ${{ matrix.database }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, database: sqlite }
+          - { os: windows-latest, database: sqlite }
+          - { os: ubuntu-latest, database: postgres }
+    services:
+      postgres:
+        # Only for the postgres job: an empty image skips the service (Windows runners have no service containers).
+        image: ${{ matrix.database == 'postgres' && 'postgres:17' || '' }}
+        env:
+          POSTGRES_USER: librarion
+          POSTGRES_PASSWORD: librarion
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U librarion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/Librarion.Web/package-lock.json
+
+      - name: PostgreSQL for the tests
+        if: matrix.database == 'postgres'
+        shell: bash
+        run: echo "LIBRARION_TEST_POSTGRES=Host=localhost;Port=5432;Username=librarion;Password=librarion;Database=postgres" >> "$GITHUB_ENV"
+
+      # The Api build installs and builds the client (npm ci + ng build) into wwwroot, which the privacy tests read.
+      - name: dotnet test
+        run: dotnet test --logger "console;verbosity=normal"
+
+  client:
+    name: Client specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/Librarion.Web/package-lock.json
+
+      - name: npm test
+        working-directory: src/Librarion.Web
+        run: |
+          npm ci --no-audit --no-fund
+          npm test

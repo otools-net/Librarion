@@ -8,7 +8,7 @@ end-user documentation; building, testing and the code are described in `agents/
 books)**: browse, search, read and download books, with OPDS feeds for reader apps (username/password and API keys),
 and users, tenants and rights. .NET 10 minimal APIs + EF Core in `src/Librarion.Core` / `src/Librarion.Api`, Angular
 client in `src/Librarion.Web`, tests in `tests/Librarion.Tests` and `tests/e2e`. **Not in production yet**: until the
-first release, schema and settings may change without migrations (see
+MVP (1.0.0), schema and settings may change without migrations (see
 [production-upgrades](agents/docs/development/production-upgrades.md)).
 
 Books come as loose files or by the hundred thousand inside ZIP archives, indexed and read **without unpacking**
@@ -40,7 +40,7 @@ note rather than inventing a new one.
   never put implementation details here.
 - Areas: `architecture/` (how the app is put together), `development/` (rules for changing it), `environment/`
   (commands, build, this machine), `features/` (one file per function of the app).
-- Link between notes with relative links.
+- Link between notes with relative links; `node agents/tools/check-links/check-links.mjs` checks them.
 - A plan (`agents/docs/development/*-plan.md`) is removed once its epic is finalized: move what stays true (decisions,
   gotchas, how it works) into the feature notes, then delete the plan, its line in the index and every link to it.
   Git history keeps it; work still left becomes a new, smaller plan or a bullet.
@@ -61,12 +61,25 @@ note rather than inventing a new one.
   is bumped only when `edge` is merged into `main`
   ([versioning-and-changelog](agents/docs/development/versioning-and-changelog.md)).
 - **User docs:** user-visible changes go in `docs/` ([user-docs](agents/docs/development/user-docs.md)).
-- **Git:** work is committed on the `edge` branch, merged into `main` when ready; messages `claude: <short summary>`;
-  commit only when asked.
+- **Database:** both providers (SQLite, PostgreSQL) work; every model change makes a migration for each
+  ([database](agents/docs/development/database.md)).
+- **Texts:** every UI text is a translation key in `src/i18n/en.json` ([frontend](agents/docs/development/frontend.md)).
+- **Git:** work is committed on the `edge` branch, merged into `main` when the user says; messages
+  `claude: <short summary>`; a commit after each finished stage or functionality of importance, green tests only
+  (decided 2026-10-31). Pushing, merging and tags only when the user asks.
 - **Agent tools:** put any reusable helper (scripts, generators, drivers) in `agents/tools/<job>/` with a `README.md`,
   never only in the scratchpad; work output goes to a temp folder, not the repo.
 
 ## Index
+
+### Architecture — `agents/docs/architecture/`
+
+| Note | Covers | Code |
+|---|---|---|
+| [stack](agents/docs/architecture/stack.md) | technologies, versions, external references | `Librarion.slnx`, `Directory.Packages.props` |
+| [source-layout](agents/docs/architecture/source-layout.md) | **what each folder holds** (start here to find code) | `src/`, `tests/` |
+| [sessions-and-pipeline](agents/docs/architecture/sessions-and-pipeline.md) | middleware order, CSP, request guard, deep addresses (`ClientPage`) | `Api/Program.cs`, `Api/Security/` |
+| [config-files](agents/docs/architecture/config-files.md) | configuration sources and order, keys so far | `Api/Program.cs`, `appsettings.json` |
 
 ### Development rules — `agents/docs/development/`
 
@@ -78,14 +91,29 @@ note rather than inventing a new one.
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
 | [testing](agents/docs/development/testing.md) | test rules, layers, infrastructure | `tests/` |
+| [testing-backend](agents/docs/development/testing-backend.md) | provider runs, SQLite pools, outbound guard, built-client tests | `tests/Librarion.Tests/` |
+| [testing-client](agents/docs/development/testing-client.md) | Vitest/jsdom gotchas, fakes | `src/Librarion.Web/src/testing/` |
+| [testing-e2e](agents/docs/development/testing-e2e.md) | Playwright: devices, guard, layout check, no mouse | `tests/e2e/` |
+| [database](agents/docs/development/database.md) | two providers, migrations per provider, schema agreement | `Core/Data/` |
+| [code-style](agents/docs/development/code-style.md) | C# style | `.editorconfig` |
 | [production-upgrades](agents/docs/development/production-upgrades.md) | before / after the first release | |
 | [versioning-and-changelog](agents/docs/development/versioning-and-changelog.md) | branches, version bumps, `CHANGELOG.md` | `Directory.Build.props` |
 | [user-docs](agents/docs/development/user-docs.md) | what goes in `docs/`, README, OpenAPI | `docs/` |
+
+### Environment — `agents/docs/environment/`
+
+| Note | Covers |
+|---|---|
+| [commands](agents/docs/environment/commands.md) | build, test (both providers), run, client, e2e |
+| [build](agents/docs/environment/build.md) | client build inside MSBuild, theme-boot, the fixed static-assets error |
+| [dev-machine](agents/docs/environment/dev-machine.md) | this machine: SDK, Node, Edge, Docker without Hub access |
+| [line-endings](agents/docs/environment/line-endings.md) | LF everywhere, autocrlf warnings, ef output |
 
 ### Features — `agents/docs/features/`
 
 | Note | Covers | Code |
 |---|---|---|
 | [rights](agents/docs/features/rights.md) | rights catalog, scopes, evaluation (planned, ported from SFE) | `Core/Access/` |
-| [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` || [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
+| [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
+| [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |

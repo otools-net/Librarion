@@ -1,0 +1,71 @@
+# End-to-end tests (tests/e2e/README.md, agents/docs/development/testing-e2e.md), as SFE:
+# - a push to edge runs the quick set (@smoke, @a11y) on the Android, iPhone and desktop devices;
+# - a push to main, and "Run workflow" (Actions tab), run everything on every device.
+# The report, traces and videos of failures are kept as the run's artifact. Publishes nothing.
+name: End-to-end tests
+
+on:
+  push:
+    branches: [edge, main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  NG_CLI_ANALYTICS: 'false'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      # The work folder in the runner's temp folder: `runner.temp` isn't available in a job's `env:`, only in steps.
+      - name: Work folder
+        run: echo "LIBRARION_E2E_WORK=$RUNNER_TEMP/librarion-e2e" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            src/Librarion.Web/package-lock.json
+            tests/e2e/package-lock.json
+
+      - name: Packages and browsers
+        working-directory: tests/e2e
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium webkit ffmpeg
+
+      - name: Quick set (edge)
+        if: github.ref == 'refs/heads/edge'
+        working-directory: tests/e2e
+        run: npm run e2e -- --project=android --project=iphone --project=desktop --grep "@smoke|@a11y"
+
+      - name: Everything
+        if: github.ref != 'refs/heads/edge'
+        working-directory: tests/e2e
+        run: npm run e2e
+
+      - name: Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            ${{ runner.temp }}/librarion-e2e/report
+            ${{ runner.temp }}/librarion-e2e/results
+            ${{ runner.temp }}/librarion-e2e/app.log
+          retention-days: 14

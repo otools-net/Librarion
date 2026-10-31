@@ -77,6 +77,28 @@ public sealed class ApiTests
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>
+    /// A client address at any depth gets the page with the app's root as its base: with <c>./</c>, <c>/a/b</c>
+    /// would load <c>/a/main.js</c> (found by the e2e smoke set).
+    /// </summary>
+    [TestMethod]
+    public async Task ADeepClientAddressGetsThePageWithTheAppsRootAsBase()
+    {
+        RepositoryFiles.WebRoot();
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        using var client = ApiClients.Create(factory);
+
+        using var response = await client.GetAsync("/authors/12/books", TestContext.CancellationToken);
+        var html = await response.Content.ReadAsStringAsync(TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual("text/html", response.Content.Headers.ContentType?.MediaType);
+        StringAssert.Contains(html, "<base href=\"/\">");
+        StringAssert.Contains(html, "<lib-root>");
+        Assert.AreEqual(SecurityHeaders.AppPolicy, string.Join(";", response.Headers.GetValues("Content-Security-Policy")));
+    }
+
     [TestMethod]
     public async Task TheOpenApiDocumentCarriesTheVersion()
     {

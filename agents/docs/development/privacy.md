@@ -22,8 +22,9 @@ Priority 1 of the project. Ported from SFE's `fully-local.md` and extended to th
 
 - `TheWebClientHasNoExternalUrls`: scans the built `wwwroot` for `http(s)://` outside an allow-list (XML namespaces,
   licence texts).
-- `TheServerMakesNoOutboundRequests`: the HTTP test server runs with an `HttpMessageHandler` that fails any request;
-  the main flows (setup, import, browse, OPDS) run through it.
-- e2e guard: a page request to another origin fails the test (as SFE's guard does for console errors and CSP
-  violations).
+- `TheServerMakesNoOutboundRequests`: an `OutboundGuard` (the runtime's `System.Net.Http` / `NameResolution`
+  activity sources: every HTTP request and name lookup of the process) watches while the server's flows run; each
+  stage adds its flows (import, browse, OPDS…). `TheOutboundGuardSeesARequest` proves the guard sees one.
+- `TheWebClientHasNoInlineScripts`, `TheAngularCliSendsNoAnalytics`.
+- e2e guard (`tests/e2e/fixtures/test.ts`): a page request to another origin fails the test.
 - Use dotless host names in client specs, so no real domain appears in test data.
