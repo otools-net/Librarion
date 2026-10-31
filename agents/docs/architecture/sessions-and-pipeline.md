@@ -1,7 +1,8 @@
 # The request pipeline
 
-Code: `src/Librarion.Api/Program.cs`, `Security/` (`SecurityHeaders`, `RequestGuard`), `ClientPage.cs`. Sessions
-(cookie for the web, Basic / API keys for OPDS) come in stage 1 and 7 ([opds-auth](../features/opds-auth.md)).
+Code: `src/Librarion.Api/Program.cs`, `Security/` (`SecurityHeaders`, `RequestGuard`), `ClientPage.cs`. Sessions:
+`Security/LibrarionSession.cs` (cookie), `CurrentAccess.cs`, `RightMetadata.cs` (`RequireRight`), `SignInThrottle.cs`;
+Basic / API keys for OPDS come in stage 7 ([opds-auth](../features/opds-auth.md)).
 
 - **Order:** `UseForwardedHeaders` (loopback proxies) → `SecurityHeaders` (first, so errors carry them too) →
   exception handler, status code pages → `RequestGuard` → authorization → `/openapi`, static files
@@ -18,3 +19,10 @@ Code: `src/Librarion.Api/Program.cs`, `Security/` (`SecurityHeaders`, `RequestGu
   (found by the e2e smoke set; `ADeepClientAddressGetsThePageWithTheAppsRootAsBase`).
 - Every `/api` and `/openapi` route names its right or `.AllowAnonymous()` (`EveryRouteNamesARight`); in stage 0
   all are anonymous (no accounts yet).
+- **Order (stage 1):** … → `UseAuthentication` → `RequestGuard` (header check, then 503 `setup-required` except
+  `api/setup` and `api/session`) → `UseRateLimiter` (`sign-in` policy per address) → `UseAuthorization`.
+- **Session cookie** `librarion.session-<port>` (SFE's per-port names): user id, security stamp, tenant; stamp checked
+  on every request (`LibrarionSession.ValidateAsync`); keys in `Librarion:Security:KeysDirectory` (`data/keys`).
+- `builder.WebHost.UseStaticWebAssets()` in Program.cs: `dotnet run` without a launch profile runs as Production and
+  otherwise warned "Static Web Assets are not enabled" and couldn't serve the built client.
+- `appsettings.json` `Urls` (5090) wins over `ASPNETCORE_URLS`: pass `--urls` to run on another port.

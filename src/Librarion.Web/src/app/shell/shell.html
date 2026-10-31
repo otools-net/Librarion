@@ -22,21 +22,35 @@
                [title]="'shell.nav.soon' | t">
     </form>
 
-    <button type="button" class="icon-button" (click)="theme.toggle()"
+    @if (tenants().length) {
+        <select class="tenant-switch" [attr.aria-label]="'shell.tenant' | t" [title]="'shell.tenant' | t" (change)="switchTenant(+valueOf($event))">
+            @for (tenant of tenants(); track tenant.id) {
+                <option [value]="tenant.id" [selected]="sessions.session()?.tenant?.id === tenant.id">{{ tenant.name }}</option>
+            }
+        </select>
+    }
+
+    <button type="button" class="icon-button theme-button" (click)="theme.toggle()"
             [title]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t"
             [attr.aria-label]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t">
         <svg [libIcon]="theme.current() === 'dark' ? 'sun' : 'moon'"></svg>
     </button>
+
+    <a class="icon-button account-button" routerLink="/account"
+       [title]="'shell.account' | t: { name: sessions.user()?.displayName || sessions.user()?.userName || '' }"
+       [attr.aria-label]="'shell.account' | t: { name: sessions.user()?.displayName || sessions.user()?.userName || '' }">
+        <svg libIcon="user"></svg>
+    </a>
 </header>
 
 <div class="layout">
     <nav id="main-nav" class="sidebar" [class.open]="drawerOpen()" [attr.aria-label]="'shell.nav.label' | t">
         <ul>
-            @for (item of nav; track item.label) {
+            @for (item of nav(); track item.label) {
                 <li>
                     @if (item.link) {
                         <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
-                           [routerLinkActiveOptions]="{ exact: true }" [title]="item.label | t">
+                           [routerLinkActiveOptions]="{ exact: item.link === '/' }" [title]="item.label | t">
                             <svg [libIcon]="item.icon"></svg>
                             <span>{{ item.label | t }}</span>
                         </a>

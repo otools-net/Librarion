@@ -92,6 +92,7 @@ note rather than inventing a new one.
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
 | [stage-0-foundation-plan](agents/docs/development/stage-0-foundation-plan.md) | stage 0 work items and exit criteria (repo, build, tests, privacy guards, i18n, shell, CI) | |
+| [stage-1-access-plan](agents/docs/development/stage-1-access-plan.md) | **stage 1 in progress**: what is built (accounts, tenants, rights, setup, settings, security log, admin UI), what is left (e2e, notes, docs), decisions taken | `Core/Access/`, `Core/Settings/`, `Api/Endpoints/`, `app/account/`, `app/admin/` |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |

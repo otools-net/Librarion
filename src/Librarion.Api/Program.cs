@@ -19,6 +19,10 @@ local.ResolveFileProvider();
 var main = builder.Configuration.Sources.ToList().FindIndex(source => source is JsonConfigurationSource { Path: "appsettings.json" });
 builder.Configuration.Sources.Insert(main + 1, local);
 
+// `dotnet run` without a launch profile runs as Production: without this, the client's files built into wwwroot
+// aren't found ("Static Web Assets are not enabled"). A published app has no such manifest: then it does nothing.
+builder.WebHost.UseStaticWebAssets();
+
 builder.Services.AddLibrarionCore(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddLibrarionSecurity(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton<ClientPage>();

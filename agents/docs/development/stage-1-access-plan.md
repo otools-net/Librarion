@@ -31,39 +31,63 @@ holding several libraries**. Version stays `0.0.0` on `edge`; the merge into `ma
 
 ## Work items
 
-### 1.1 Data and access core
+### 1.1 Data and access core — done (`ad3a49f`)
 
-- [ ] Entities + migrations (both providers): `Tenants`, `Libraries`, `Users`, `Groups`, `GroupMembers`,
-      `GroupRights`, `GroupLibraries`, `TenantDisabledRights`, `Settings`, `SecurityEvents`; query filters.
-- [ ] `RightCatalog` / `Rights`, `RightsEvaluator` (cached until `AccessChanges` moves; `Librarion:Rights:Disabled`).
-- [ ] `PasswordHashing` (PBKDF2-SHA512 210k, rehash), `IUserDirectory` + `LocalUserDirectory` (lockout),
-      `SignInService`, `AccessService` (tenants, libraries, users, groups; last-administrator rules).
-- [ ] `SetupService`, `GeneratedSetupCode`, `AccountRecovery`, `SecurityLog` (+ retention), `SettingsService`.
+- [x] Entities + migrations (both providers): `Tenants`, `Libraries`, `Users`, `Groups`, `GroupMembers`,
+      `GroupRights`, `GroupLibraries`, `TenantDisabledRights`, `Settings`, `SecurityEvents`; query filters
+      (`TenantScope` on the context, `TenantDb.ForTenantAsync` / `ForServerAsync`).
+- [x] `RightCatalog` / `Rights`, `RightsEvaluator` (cached until `AccessChanges` moves; `Librarion:Rights:Disabled`).
+- [x] `PasswordHashing`, `IUserDirectory` + `LocalUserDirectory` (lockout), `SignInService`, `AccessService`
+      (tenants, libraries, users, groups; last server administrator kept; a tenant keeps an administrator).
+- [x] `SetupService`, `GeneratedSetupCode`, `AccountRecovery`, `SecurityLog` (+ `SecurityLogCleanup`), `SettingsService`.
 
-### 1.2 API
+### 1.2 API — done (`ad3a49f`)
 
-- [ ] Cookie session (`librarion.session-<port>`, stamp checked per request, Data Protection keys in `data/keys`),
-      `CurrentAccess`, `RequireRight` policies, `SignInThrottle` + sign-in rate limit, `RequestGuard` 503
-      `setup-required`.
-- [ ] Routes: `api/setup`, `api/session` (get, login, logout, tenant, recovery, password), `api/tenants`,
-      `api/libraries`, `api/users`, `api/groups`, `api/rights`, `api/settings`, `api/me/preferences`,
-      `api/security-events`; `api/system/info` and `/openapi` behind rights.
+- [x] Cookie session, `CurrentAccess`, `RequireRight` policies, `SignInThrottle` + sign-in rate limit, `RequestGuard`
+      503 `setup-required`, `SetupCodeNotice` (console box at start).
+- [x] Routes: `api/setup`, `api/session/*`, `api/tenants`, `api/libraries`, `api/users`, `api/groups`, `api/rights`,
+      `api/settings`, `api/me/preferences`, `api/security-events`; `api/system/info` (`system.info`) and `/openapi`
+      (`system.apiDocs`) behind rights.
 
-### 1.3 Client
+### 1.3 Client — done (committed with this note)
 
-- [ ] Session service (`can(right)`), 401 → sign-in, 503 → setup; setup page, sign-in page with recovery, account page
-      (password, preferences), admin section: tenants, users, groups (rights by area, libraries), libraries, settings by
-      level, security log. Phone and desktop, compact, i18n keys.
+- [x] `SessionService` (`can`, `signedIn` / `needsRight` guards), `Api` with `ApiError` (401 → sign-in, 503 → setup),
+      `errors.ts` (server codes → `error.<code>`), setup page, sign-in page with recovery, account page (password,
+      preferences), administration (`/admin/users|groups|libraries|tenants|settings|security`), shared
+      `SettingsPanel`, shell: admin link, tenant switcher (server administrators), account button.
+- [x] Styles: `forms.css`, `account.css`, `admin.css` (SFE's, on Librarion's tokens).
 
-### 1.4 Tests and docs
+### 1.4 Tests and docs — partly done
 
-- [ ] Backend: rights evaluation, catalog invariants, lockout and throttle, setup and recovery, session ends on stamp
-      change, last administrator kept, `NoQueryCrossesTenants`, tenant administrator can't reach another tenant or a
-      server administrator (every admin route), settings levels and locks, event log filtering, both providers.
-- [ ] Client specs for every page and service; e2e: setup, sign-in, admin flows (user, group, library), sign in as
-      the new user, on phone and desktop with layout checks and axe.
-- [ ] Feature notes (rights, accounts, setup, settings, security log), `docs/` (first start, accounts and rights),
-      changelog.
+- [x] Backend (45 green on SQLite): `AccessTests`, `TenancyTests` (`NoQueryCrossesTenants`), `SettingsTests`,
+      `RightCatalogTests`, `ClientI18nTests.EveryNameTheServerSendsHasItsText`; earlier tests moved to signed-in clients.
+- [x] Client specs (43 green): session/guards/errors, sign-in, setup, account, settings panel, admin sections, shell.
+- [ ] **e2e: not updated yet, expect failures.** Every page now needs an account, so `smoke`/`a11y`/`harness` land
+      on `/setup`. To do: `scripts/server.mjs` gives the server a known `Librarion__Setup__Code` (and its own data
+      folder); a fixture sets up through `POST api/setup` (or the page once) and signs in; then specs for setup,
+      sign-in, recovery, admin flows (create account, group with rights, library), signing in as the new account,
+      on every phone project + desktop with layout checks and axe.
+- [ ] Look at the new pages in a browser at 360 px and on desktop (not done: only unit-tested).
+- [ ] Feature notes: update `features/rights.md` (no longer planned: catalog, scopes, evaluation as built), new
+      `features/accounts.md`, `features/tenants.md`, `features/setup.md`, `features/settings.md`,
+      `features/security-log.md` (code comments already point at these names), and the AGENTS.md index lines.
+- [ ] `docs/`: first start (setup code), accounts, groups and rights, settings levels; README first-run lines.
+- [ ] PostgreSQL run: never run locally (Docker can't pull images on this machine); push `edge` when the user says.
+- [ ] When all is green: tick the exit criteria, commit "stage 1 done", ask the user about merging into `main` (0.2.0).
+
+## Decisions taken while building (keep in the feature notes)
+
+- Server administrators have no tenant (`Users.TenantId` null) and are in no group; they pick the tenant they work in
+  (`POST api/session/tenant`, claim in the cookie). Before any tenant exists they get every non-library right.
+- `IsServerAdmin` and an account's tenant are fixed at creation (`user.adminFixed`).
+- Tenant routes take `?tenant=` for server administrators (`ApiResults.TargetTenant`): own tenant needs the tenant
+  right, another tenant the server right; refused = 404 (a tenant administrator doesn't learn other tenants exist).
+- Validation and conflict answers carry codes (`userName.taken`, `tenant.lastAdministrator`), translated by the client
+  as `error.<code>`; problem `type` is the code for 409s.
+- Settings: four `ui.*` keys only so far (theme, density, language, page size); server level stored in the database
+  too (not a settings file as SFE).
+- Pre-1.0: the `Initial` migration is regenerated rather than adding migrations (no installs exist).
+- No guests and no "set up from this computer without a code" (SFE has both): left for later decisions.
 
 ## Exit criteria
 

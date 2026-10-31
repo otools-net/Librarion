@@ -1,0 +1,167 @@
+/* Administration and account pages: section tabs, toolbars, lists of rows, editors, settings rows. */
+
+.tabs {
+    display: flex;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-3);
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: thin;
+}
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--target);
+    padding: 0 var(--space-3);
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.tab.active {
+    border-bottom-color: var(--accent);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+}
+
+.toolbar-search {
+    flex: 1 1 200px;
+    max-width: 360px;
+}
+
+.segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 720px;
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.panel h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.rows {
+    max-width: 720px;
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-3);
+}
+
+.row + .row {
+    border-top: 1px solid var(--border);
+}
+
+.row-main {
+    display: flex;
+    flex: 1 1 200px;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding: var(--space-1) 0;
+    border: 0;
+    background: none;
+    text-align: start;
+}
+
+button.row-main {
+    cursor: pointer;
+}
+
+button.row-main:hover .row-title {
+    color: var(--accent);
+}
+
+.row-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.row-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.row-form {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.row-form input[type="text"] {
+    flex: 1 1 160px;
+}
+
+.setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.setting-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.setting-control :is(select, input[type="number"]) {
+    flex: 0 1 240px;
+    width: auto;
+}
+
+.setting-row.changed .field-label::after {
+    content: " •";
+    color: var(--accent);
+}
+
+.tenant-switch {
+    max-width: 160px;
+}
+
+@media (max-width: 640px) {
+    .tenant-switch {
+        max-width: 110px;
+    }
+}
