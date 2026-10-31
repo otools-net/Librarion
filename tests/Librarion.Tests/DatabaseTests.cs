@@ -36,7 +36,7 @@ public sealed class DatabaseTests
 
         await using var second = ApiClients.CreateFactory(catalog);
         using var client = ApiClients.Create(second);
-        using var response = await client.GetAsync("/api/system/info", TestContext.CancellationToken);
+        using var response = await client.GetAsync("/api/session", TestContext.CancellationToken);
 
         response.EnsureSuccessStatusCode();
     }

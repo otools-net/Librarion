@@ -4,6 +4,7 @@ using Librarion.Api;
 using Librarion.Api.Endpoints;
 using Librarion.Api.Security;
 using Librarion.Core;
+using Librarion.Core.Access;
 using Librarion.Core.Data;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -19,15 +20,12 @@ var main = builder.Configuration.Sources.ToList().FindIndex(source => source is 
 builder.Configuration.Sources.Insert(main + 1, local);
 
 builder.Services.AddLibrarionCore(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddLibrarionSecurity(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton<ClientPage>();
 
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    // Loopback proxies only (the default list); trusted proxies elsewhere come with the security settings.
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 builder.Services.AddProblemDetails();
-builder.Services.AddAuthorization();
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
 {
     document.Info.Title = "Librarion API";
@@ -46,17 +44,26 @@ app.UseForwardedHeaders();
 app.UseMiddleware<SecurityHeaders>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseAuthentication();
 app.UseMiddleware<RequestGuard>();
+app.UseRateLimiter();
 app.UseAuthorization();
 
-// Anonymous until stage 1 (then a right, as SFE's system.apiDocs).
-app.MapOpenApi().AllowAnonymous();
+app.MapOpenApi().RequireRight(Rights.ApiDocs);
 
 app.UseDefaultFiles();
 app.MapStaticAssets();
 
 var api = app.MapGroup("/api");
+api.MapSetupEndpoints();
+api.MapSessionEndpoints();
 api.MapSystemEndpoints();
+api.MapTenantEndpoints();
+api.MapLibraryEndpoints();
+api.MapUserEndpoints();
+api.MapGroupEndpoints();
+api.MapSettingsEndpoints();
+api.MapSecurityEventEndpoints();
 api.MapFallback(() => TypedResults.NotFound()).AllowAnonymous();
 
 // Addresses the client routes itself: its page, with the app's root as its base (ClientPage).
@@ -64,6 +71,7 @@ app.MapFallback((HttpContext context, ClientPage page) => page.Serve(context));
 
 await LibrarionDatabase.InitializeAsync(
     app.Services.GetRequiredService<IDbContextFactory<LibrarionDbContext>>(), AppVersion.Version, app.Logger);
+await SetupCodeNotice.ShowIfNeededAsync(app);
 
 await app.RunAsync();
 
