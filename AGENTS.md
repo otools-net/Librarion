@@ -121,4 +121,5 @@ note rather than inventing a new one.
 | [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
+| [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |

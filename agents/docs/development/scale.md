@@ -4,8 +4,8 @@
 
 - Every list (books, authors, series, tags, search results, OPDS feeds) pages **by key** (`after` cursor on the sort
   columns + `Id`), never `OFFSET`; each sort has a matching index. OPDS `next` links carry the cursor.
-- Counts on big sets come from denormalized columns (`Authors.BookCount`, …) or are capped ("1000+"); never a
-  `COUNT(*)` over the catalog per request.
+- Counts on big sets come from denormalized columns (`TagCounts` for authors, series and every tag, …) or are
+  capped ("1000+"); never a `COUNT(*)` over the catalog per request.
 - Rights and content filters are part of the query (`Visible()`), never a filter after paging.
 - Imports and scans write in batches (1000 rows, `ChangeTracker.Clear()` between), resume after a stop, and skip
   unchanged files by size + mtime (+ partial hash on doubt).
