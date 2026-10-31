@@ -11,12 +11,14 @@ Files: `Directory.Build.props` (`<Version>`), `CHANGELOG.md`. Same workflow as S
 
 ## Versioning
 
-`<Version>` is semantic `major.minor.patch`, `0.x` until the first release. It changes **only when `edge` is merged
-into `main`**, from the `## Unreleased` section of `CHANGELOG.md`:
+`<Version>` is semantic `major.minor.patch`. It **starts at `0.0.0`** (decided 2026-10-31) and changes **only when
+`edge` is merged into `main`**, from the `## Unreleased` section of `CHANGELOG.md`:
 
 - only `### Fixed` → bump patch;
 - any `### Added` / `### Changed` → bump minor, reset patch;
-- major only when the user asks; docs, tests, build scripts, `AGENTS.md`, `agents/` only → no bump.
+- docs, tests, build scripts, `AGENTS.md`, `agents/` only → no bump.
+- **`1.0.0` is the MVP**, and only the user declares it: until then the major stays `0`, whatever is merged (so
+  stage merges give `0.1.0`, `0.2.0`, …). After 1.0.0, a major only when the user asks.
 
 ## Changelog
 

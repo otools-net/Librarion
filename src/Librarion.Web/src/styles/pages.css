@@ -1,0 +1,27 @@
+/* Page content shared by the pages (app/home for now). */
+
+.lead {
+    max-width: 60ch;
+    color: var(--text-muted);
+}
+
+.facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--space-1) var(--space-4);
+    max-width: 480px;
+    margin: var(--space-4) 0 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.facts dt {
+    color: var(--text-muted);
+}
+
+.facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}

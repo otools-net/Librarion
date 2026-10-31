@@ -1,6 +1,6 @@
 # Production upgrades
 
-Librarion is **not in production yet**: until v1.0.0, the schema, stored files and settings may change without a
+Librarion is **not in production yet**: until the MVP (1.0.0), the schema, stored files and settings may change without a
 migration path (delete the dev database and re-import).
 
 From the first release on, SFE's rules apply (its `production-upgrades.md`): every change to the database, caches,

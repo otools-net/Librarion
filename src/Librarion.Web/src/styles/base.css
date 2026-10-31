@@ -1,0 +1,125 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+}
+
+h1 {
+    margin: 0 0 var(--space-3);
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+
+p {
+    margin: 0 0 var(--space-3);
+}
+
+a {
+    color: var(--accent);
+}
+
+/* A link inside a line of text is underlined (SFE's accessibility rule). */
+p a:not([class]) {
+    text-decoration: underline;
+}
+
+:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: inherit;
+}
+
+.icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.icon-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--target);
+    height: var(--target);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    cursor: pointer;
+}
+
+.icon-button:hover {
+    background: var(--surface-2);
+}
+
+.skip-link {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: 100;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: var(--accent-text);
+    transform: translateY(-200%);
+}
+
+.skip-link:focus {
+    transform: none;
+}
+
+.muted {
+    color: var(--text-muted);
+}
+
+.error {
+    color: var(--danger);
+}
+
+/* Touch screens: larger targets, and text fields of 16 px at least (else iOS zooms the page into them). */
+@media (pointer: coarse) {
+    :root {
+        --target: 44px;
+    }
+
+    input,
+    select,
+    textarea {
+        font-size: max(16px, 1em);
+    }
+}

@@ -1,0 +1,22 @@
+<Project>
+
+  <!--
+    Every package version in one place. Before adding a package: it must not send anything anywhere
+    (agents/docs/development/privacy.md).
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
+    <PackageVersion Include="MSTest" Version="4.4.1" />
+  </ItemGroup>
+
+</Project>

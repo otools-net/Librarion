@@ -2,7 +2,7 @@
 
 Roadmap and decisions: [foundation-plan](foundation-plan.md). Goal: a repo where every later change is cheap and
 guarded: builds, tests on three layers, privacy guards, i18n and a responsive shell exist before the first feature.
-Version after merge: `0.1.0` (no user-visible feature: changelog says "first build").
+Version: `0.0.0` in `Directory.Build.props`; the merge into `main` bumps it to `0.1.0` (changelog: "first build").
 
 Machine (2026-10-31): .NET SDK 10.0.103, Node 24.21 / npm 12.2, Docker 29.3, no local Postgres (tests use a
 container). Pins taken from SFE where it has them: Angular 22, TypeScript 6.0, Vitest 5, Playwright 1.64.1 (exact),
@@ -15,7 +15,7 @@ MSTest 4, EF Core / ASP.NET packages 10.0.x.
 - [ ] Branch `edge` from `main`; all stage work there.
 - [ ] `.gitattributes` (LF everywhere, binaries `-text`, `tests/samples/** -text`), `.editorconfig` (C# style from SFE
       `code-style.md`, 4-space TS), `.gitignore` (+ `!tests/samples/**`).
-- [ ] `global.json` (SDK 10.0.x, `rollForward: latestFeature`), `Directory.Build.props` (`Version 0.1.0`, `Nullable`,
+- [ ] `global.json` (SDK 10.0.x, `rollForward: latestFeature`), `Directory.Build.props` (`Version 0.0.0`, `Nullable`,
       `ImplicitUsings`, `LangVersion latest`, warnings as errors in CI), `Directory.Packages.props` (central package
       versions), `dotnet-tools.json` (dotnet-ef).
 - [ ] `Librarion.slnx`, `README.md` (short, links into `docs/`), `CHANGELOG.md` (`## Unreleased`), `docs/README.md`.

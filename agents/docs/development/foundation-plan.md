@@ -1,4 +1,4 @@
-# Foundation plan: roadmap to v1.0
+# Foundation plan: roadmap to the MVP (1.0.0)
 
 From an empty repo to the first release, in stages. This file holds the decisions and the roadmap; each stage gets
 its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts, removed when it is finalized
@@ -32,7 +32,7 @@ its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts
 | D5 | Content restrictions per group: library access + tag/language/rating filters, as query predicates (`Visible()`) | Post-filters break paging at scale |
 | D6 | OPDS 1.2 + OpenSearch in v1, OPDS 2.0 after it, OPDS-PSE later | 1.2 is what reader apps read |
 | D7 | API keys per user: scoped, named, revocable; Basic password, Bearer, or opt-in path key ([opds-auth](../features/opds-auth.md)) | Every OPDS client can use one of them |
-| D8 | `edge` for work, `main` for releases, `claude: …` commits, version `0.<stage>.x` until v1.0 | SFE workflow |
+| D8 | `edge` for work, `main` for releases, `claude: …` commits; version starts at **`0.0.0`**, stays `0.x` until the **MVP = `1.0.0`**, declared by the user | SFE workflow; 1.0 means usable, not "stage 9 reached" |
 | D9 | Tags: SFE's TagStudio model, **vocabulary per tenant**, link sources + import mappings ([tags](../features/tags.md)) | Curation survives re-imports; one merge applies to every library |
 | D10 | Books inside **ZIP containers only** (Zip64 included), read in place; 7z/RAR only as per-book wrappers ([archives](../features/archives.md)) | One seek per book; solid 7z / RAR can't seek |
 | D11 | **No INPX**; reconsidered only if the head-indexing benchmark fails on HDD / NAS | Books are the source of truth |
@@ -58,8 +58,9 @@ Data model: detailed in each stage plan; tags in [tags](../features/tags.md), ar
 
 ## Roadmap
 
-Each stage ends with its exit criteria met, `edge` merged into `main` (when the user says) and a `0.<stage>.0`
-version. Every stage keeps the four priorities: no outbound, benchmark budgets, 360 px to desktop, unit + e2e tests.
+Each stage ends with its exit criteria met and `edge` merged into `main` (when the user says), bumping the minor
+version from `0.0.0` (stage 0 → `0.1.0`, …). `1.0.0` is the MVP: the user declares it, at the end of stage 9 or earlier
+if the stages done by then make a usable product. Every stage keeps the four priorities: no outbound, benchmark budgets, 360 px to desktop, unit + e2e tests.
 
 | Stage | Goal | Scope | Exit criteria |
 |---|---|---|---|
@@ -72,7 +73,7 @@ version. Every stage keeps the four priorities: no outbound, benchmark budgets, 
 | **6. Tag management** | Curate thousands of imported tags | tag manager (parents, aliases, colors, categories, merge, delete), picker, book / selection / scope tagging, library and folder default tags, Imported tags page (map / merge / ignore by count), tag rights | top 500 raw tags of the generated catalog curated in minutes, covering > 90 % of imported links; e2e for each flow |
 | **7. OPDS and API keys** | Reader apps connect with password or key | OPDS 1.2 (root, recent, authors A–Z, series, tags by category, shelves, OpenSearch), acquisition per format (FB2 also as fb2.zip), covers; Basic with verification cache and throttle; API keys UI and scopes; path keys; OPDS 2.0 if time allows | feeds validate against the schemas; HTTP-level e2e as a reader app; KOReader, Moon+, Thorium checked by hand; OPDS p95 met |
 | **8. Reading** | Read in the browser, progress follows the user | bundled readers: EPUB (epub.js), PDF (pdf.js), FB2 (ours), CBZ (pages from the inner zip); extract cache (LRU, capped); read states, shelves, KOReader sync (kosync) | e2e: each format, also from a container zip, on phones and desktop; cache cap holds under parallel readers |
-| **9. Release v1.0** | Installable, documented, reviewed | Docker image (amd64/arm64) + compose with Postgres, portable zip / AppImage, Windows service / systemd scripts with smoke tests, user docs with screenshots, security review (SFE's attack vectors), 10M run, by-hand checks on real phones and OPDS apps, `production-upgrades` switched to "in production" | v1.0.0 tagged by the user |
+| **9. Release (MVP candidate)** | Installable, documented, reviewed | Docker image (amd64/arm64) + compose with Postgres, portable zip / AppImage, Windows service / systemd scripts with smoke tests, user docs with screenshots, security review (SFE's attack vectors), 10M run, by-hand checks on real phones and OPDS apps, `production-upgrades` switched to "in production" | the user declares the MVP: `1.0.0` tagged |
 
 Order: rights before the first real route (1); the scale proof (2) before import and UI build on the schema; import
 (3, 4) before the UI (5) so every screen is built against millions of real-shaped rows.

@@ -72,7 +72,7 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to v1.0**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
+| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
 | [stage-0-foundation-plan](agents/docs/development/stage-0-foundation-plan.md) | stage 0 work items and exit criteria (repo, build, tests, privacy guards, i18n, shell, CI) | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
