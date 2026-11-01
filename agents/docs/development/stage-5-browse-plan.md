@@ -37,7 +37,10 @@ Reference: SimpleFileExplorer (`C:\workspace\SimpleFileExplorer`): `agents/docs/
   phone sheets for popups opening low, overflow rows instead of wrapping buttons, tap targets, `title` hints on every
   button, `document:pointerdown` to close popups, battery-friendly polling.
 
-## Decisions for this stage (proposed; the user may revise)
+## Decisions for this stage (confirmed by the user, 2026-11-01)
+
+Confirmed explicitly: the "ink and paper" palette (D-5.2), the administration groups as proposed (D-5.3), and the
+order: design foundation (5.0), then the administration with its search (5.1), then browse, book page and search.
 
 - **D-5.1 Design foundation first (5.0):** new tokens in `styles/tokens.css` (layered surfaces, two radii, shadow,
   type scale, motion durations with `prefers-reduced-motion` honoured), an **icon sprite** of inline SVGs shipped with
