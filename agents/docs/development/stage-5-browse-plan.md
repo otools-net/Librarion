@@ -99,13 +99,26 @@ order: design foundation (5.0), then the administration with its search (5.1), t
   catalog). Replaces the one-line `scan-bar` text in `library-panel.ts`.
   **Also in the administration, as SFE's "Background tasks" (the user, 2026-11-02;
   `Sfe.Web/src/app/tasks/tasks-section.component.ts`):** a section under Tenant and server (`admin/tasks/...`) with
-  sub-pages Tasks, Schedules and History. Tasks: a summary line on top ("Running: scan of Comics · next: import of
-  Fiction tomorrow 03:00", `aria-live`), then a card per task kind (folder scan, Calibre import, INPX import): icon,
-  name, what it does, state (Idle / Running with a spinner and the elapsed time), a progress bar while running, the
-  library and the counts so far, Last run (its outcome, linking to the run in History) and Next run (time, "in 5 h",
-  which schedule), with Cancel (asks first) and Run now (asks which library) and Schedule. Schedules and History:
-  every library's, each row naming its library and linking to the library's own tab. Refreshed every 2 s while shown
-  and the page is visible. Server: one route across the tenant's libraries (`GET /api/tasks/overview`: the running
+  sub-pages Tasks, Schedules and History; the sub-page chips carry badges (runs going on, number of schedules).
+  How SFE shows it (`tasks-section.component.ts`, `styles/tasks.css`, `task-history.component.ts`):
+  - A summary line on top, muted (`aria-live="polite"`): "Running: scan of Comics · next: import of Fiction
+    tomorrow 03:00", or "Nothing running · nothing planned".
+  - A card per task kind (folder scan, Calibre import, INPX import) in a column: a head with a 36 px tinted icon
+    tile, the name (h3) and under it the state ("Idle", or "Running · 2:14" in accent, bold, after an 11 px spinner),
+    and the actions on the right (Cancel in danger style, asking first; Run now, asking which library; Schedule,
+    opening the schedule dialog for that task). Then a muted line on what the task does; while running a 6 px
+    rounded bar (a width from the server's `progress` fraction, animated; indeterminate when the fraction is
+    unknown, as a scan's is) and a detail line "**Comics:** 12,400 files seen, 3 archives, 1,200 added, …" (the
+    server words the counts, the same text the run's summary keeps when it ends). At the foot a `dl` of Last run
+    (an outcome pill and "today 03:00", a link opening that run in History) and Next run (bold time, "in 5 h" in
+    accent, and which schedule plans it; else "Not planned: only when started by hand"). A running card has an
+    accent-tinted border and icon; a task that can't run is dimmed.
+  - Schedules: SFE's list (switch, task icon, task and library, when, next and last run, edit and delete), here the
+    rows of every library with the dialog of chunk 9.
+  - History: the runs newest first across libraries (outcome icon, task, library, trigger, when and how long, its
+    summary); a row opens on its log when runs keep one, and a running run's log follows it.
+  - Refreshed every 2 s while shown and the page is visible (SFE's `visibleInterval`); the elapsed times tick with
+    each refresh. On phones the actions take the card's full width. Server: one route across the tenant's libraries (`GET /api/tasks/overview`: the running
   runs, the latest run of each kind, the schedules with their next times; bounded by the libraries, not the catalog)
   and the history as a keyset page across libraries; only libraries where the account holds `Rights.scan` (or
   `Rights.import` for imports) appear.
