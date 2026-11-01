@@ -125,8 +125,8 @@ public sealed partial class ClientI18nTests
     [GeneratedRegex(@"\{\{.*?\}\}", RegexOptions.Singleline)]
     private static partial Regex Interpolation();
 
-    /// <summary><c>@if (…) {</c>, <c>} @else {</c>, <c>@for (…) {</c>, closing braces.</summary>
-    [GeneratedRegex(@"@\w+[^{]*\{|\}")]
+    /// <summary><c>@let x = …;</c>, <c>@if (…) {</c>, <c>} @else {</c>, <c>@for (…) {</c>, closing braces.</summary>
+    [GeneratedRegex(@"@let\s[^;]*;|@\w+[^{]*\{|\}")]
     private static partial Regex ControlFlow();
 
     [GeneratedRegex(@"\p{L}")]

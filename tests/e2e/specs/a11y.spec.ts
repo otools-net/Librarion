@@ -36,10 +36,13 @@ test.describe('@a11y', () => {
     });
 
     test('my account', async ({ page }) => {
-        await page.goto('./account');
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('My account');
-        await expect(page.getByRole('heading', { name: 'Preferences' })).toBeVisible();
+        await page.goto('./admin/account');
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preferences');
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
         await audit(page, 'account');
+        await page.goto('./admin');
+        await expect(page.locator('.admin-card').first()).toBeVisible();
+        await audit(page, 'administration overview');
     });
 
     test('the administration with its editors open', async ({ page }) => {
@@ -58,7 +61,7 @@ test.describe('@a11y', () => {
         await expect(page.getByRole('heading', { name: 'Tenant', exact: true })).toBeVisible();
         await audit(page, 'tenants');
 
-        for (const section of ['libraries', 'settings', 'security']) {
+        for (const section of ['libraries', 'settings', 'librarySettings', 'security', 'system']) {
             await page.goto(`./admin/${section}`);
             await expect(page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link', { name: /./ }).first()).toBeVisible();
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);

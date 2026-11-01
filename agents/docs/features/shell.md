@@ -23,5 +23,5 @@ e2e `smoke.spec.ts`. User docs: `docs/user-guide/finding-your-way.md`. Plan: [st
   Gotcha: the top bar is sticky with a z-index, so its menus can't rise above a backdrop outside it: the menus'
   backdrop is rendered inside the top bar, the navigation's in `.layout`.
 - Administration (`/admin…`, `.admin-frame`): no sidebar, switcher, search or menu button; the back arrow returns to
-  the last library page seen (else `/`). Its own left column comes with the administration structure (chunk 6).
+  the last library page seen (else `/`). Its own left column is the [admin page](admin-page.md)'s.
 - Screenshots tool: `#account`, `#library`, `#menu` open them.

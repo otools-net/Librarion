@@ -1,13 +1,14 @@
 import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { ApiMock, groupInfo, mockApi, sessionInfo, settle, testProviders, userInfo } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { RightInfo, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
-import { AdminPage } from './admin-page';
+import { AdminPage, adminMatcher } from './admin-page';
 import { GroupsSection } from './groups-section';
 import { LibrariesSection } from './libraries-section';
 import { LibraryPanel } from './library-panel';
@@ -42,11 +43,68 @@ const right = (id: string, area: string, kind: 'read' | 'write' = 'read', scope:
     ({ id, area, kind, scope, defaultGroups: [], disabledByServer: false });
 
 describe('AdminPage', () => {
-    it('shows only the sections the session has a right for', async () => {
-        const { element, navigate } = await render(AdminPage, mockApi(), ['tenant.users', 'tenant.securityLog']);
+    /** The page at `url` through the real route matcher. */
+    async function open(url: string, rights: string[], api = mockApi()) {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({ providers: testProviders(api) });
+        TestBed.inject(SessionService).set(sessionInfo(rights));
+        const router = TestBed.inject(Router);
+        router.resetConfig([{ matcher: adminMatcher, component: AdminPage }, { path: '**', children: [] }]);
+        const harness = await RouterTestingHarness.create();
+        await harness.navigateByUrl(url);
+        await settle();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        return { harness, router, element: harness.routeNativeElement as HTMLElement };
+    }
 
-        expect([...element.querySelectorAll('.tab')].map(tab => tab.textContent?.trim())).toEqual(['Accounts', 'Groups', 'Security log']);
-        expect(navigate).toHaveBeenCalledWith(['users'], expect.objectContaining({ replaceUrl: true }));
+    const navLinks = (element: HTMLElement) => [...element.querySelectorAll('.admin-nav a')].map(a => a.textContent?.trim());
+
+    it('lists only the sections the session has a right for, by group, with the overview\'s cards', async () => {
+        const { element } = await open('/admin', ['account.preferences', 'tenant.users', 'tenant.securityLog']);
+
+        expect([...element.querySelectorAll('.admin-nav .group-label')].map(label => label.textContent?.trim()))
+            .toEqual(['Account', 'People and access', 'Tenant and server']);
+        expect(navLinks(element)).toEqual(['My account', 'Accounts', 'Groups', 'Security log']);
+        expect(element.querySelector('h1')?.textContent).toBe('Administration');
+        expect([...element.querySelectorAll('.admin-card .card-title')].map(a => a.textContent?.trim()))
+            .toEqual(['My account', 'Accounts', 'Groups', 'Security log']);
+    });
+
+    it('opens a section with its sub-pages under it, breadcrumbs and the sub-page\'s heading', async () => {
+        const { element } = await open('/admin/settings/server', ['tenant.settings', 'server.settings']);
+
+        expect(navLinks(element)).toEqual(['Settings', 'This tenant', 'Whole server', 'System']);
+        expect(element.querySelector('.admin-subnav a[aria-current="page"]')?.textContent?.trim()).toBe('Whole server');
+        expect([...element.querySelectorAll('.admin-crumbs li')].map(li => li.textContent?.trim()))
+            .toEqual(['Administration', 'Tenant and server', 'Settings', 'Whole server']);
+        expect(element.querySelector('.admin-head h1')?.textContent).toBe('Whole server');
+        expect(element.querySelector('.admin-head p')?.textContent).toContain('defaults of every tenant');
+        expect(element.querySelector('lib-settings-section')).not.toBeNull();
+    });
+
+    it('keeps the addresses of the earlier pages (admin/users) and opens the first sub-page', async () => {
+        const { element } = await open('/admin/users', ['tenant.users']);
+
+        expect(element.querySelector('.admin-head h1')?.textContent).toBe('Accounts');
+        expect(element.querySelector('.admin-nav a[aria-current="page"]')?.textContent?.trim()).toBe('Accounts');
+        expect(element.querySelector('lib-users-section')).not.toBeNull();
+    });
+
+    it('sends a section the session can\'t see to the overview, and one section straight to it', async () => {
+        const hidden = await open('/admin/tenants', ['account.preferences', 'tenant.users']);
+        expect(hidden.router.url).toBe('/admin');
+
+        const single = await open('/admin', ['account.preferences', 'account.password']);
+        expect(single.router.url).toBe('/admin/account');
+        expect(single.element.querySelector('.admin-head h1')?.textContent).toBe('Preferences');
+    });
+
+    it('says when there is nothing to administer', async () => {
+        const { element } = await open('/admin', []);
+
+        expect(element.querySelector('.empty')?.textContent).toContain('Nothing to administer');
+        expect(element.querySelector('.admin-nav')).toBeNull();
     });
 });
 

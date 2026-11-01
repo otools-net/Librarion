@@ -18,6 +18,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   administrators, Sign out) in place of the theme button and the tenant box. The navigation is grouped, with
   Administration at its foot; on phones it and the menus rise from the bottom. The administration is a page of its
   own, with an arrow back to the library.
+- The administration is grouped as in SFE: a left column of sections in groups (Account, Libraries, People and
+  access, Tenant and server), an overview of cards, a path back above each page and an address per page
+  (`/admin/settings/server`). My account is its first section (`/account` still opens it), settings are split by
+  level (library settings under Libraries; this tenant and the whole server under Settings), and System shows the
+  version and database.
 
 ## 0.5.0
 

@@ -12,7 +12,10 @@ test.describe('@admin', () => {
         const groupName = uniqueName('Librarians', testInfo);
         const libraryName = uniqueName('Shelf', testInfo);
 
+        // The overview: a card per section, by group.
         await page.goto('./admin');
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Administration');
+        await press(page.locator('.admin-card').getByRole('link', { name: 'Accounts' }), isMobile);
         await expect(page).toHaveURL(/\/admin\/users$/);
 
         // The account, in the built-in Users group.
@@ -35,12 +38,12 @@ test.describe('@admin', () => {
 
         // The account signs in here (this browser only: the administrator's saved sign-in stays good).
         await page.context().clearCookies();
-        await page.goto('./admin');
+        await page.goto('./admin/libraries');
         await signIn(page, isMobile, userName, password);
 
         await expect(page).toHaveURL(/\/admin\/libraries$/);
         const sections = page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link');
-        await expect(sections).toHaveText(['Libraries']);
+        await expect(sections).toHaveText(['My account', 'Libraries']);
 
         await page.getByLabel('Name of a new library').fill(libraryName);
         await press(page.getByRole('button', { name: 'Add' }), isMobile);

@@ -1,15 +1,25 @@
 # Administration
 
-**Administration** in the menu shows the sections your account may use (each needs a [right](../reference/rights.md)):
+**Administration** (at the foot of the navigation, or in the account menu) is a page of its own. Its left column
+lists the sections your account may use, in groups (each needs a [right](../reference/rights.md)); a section with
+several pages lists them under it once open. The page itself opens on an **overview**: a card per section with what it
+holds and links to its pages. Above each page, the path back (Administration › group › section › page) links to the
+overview, its group and its section. The arrow at the top left returns to the library.
 
-| Section | What | Who |
-|---|---|---|
-| [Accounts](accounts.md) | people who sign in | tenant administrators (their tenant), server administrators (all) |
-| [Groups](groups.md) | what accounts may do, and in which libraries | tenant administrators, server administrators |
-| [Libraries](libraries.md) | the tenant's libraries | tenant administrators, server administrators |
-| [Tenants](tenants.md) | organisations sharing the server | server administrators |
-| [Settings](settings.md) | defaults for the server, a tenant, a library | whoever holds the matching settings right |
-| [Security log](security-log.md) | sign-ins and access changes | tenant administrators (their tenant), server administrators (all) |
+| Group | Section | What | Who |
+|---|---|---|---|
+| Account | My account | your preferences and password ([your account](../user-guide/account.md)) | everyone |
+| Libraries | [Libraries](libraries.md) | the tenant's libraries | tenant administrators, server administrators |
+| Libraries | [Library settings](settings.md) | the settings of one library | whoever holds the library settings right |
+| People and access | [Accounts](accounts.md) | people who sign in | tenant administrators (their tenant), server administrators (all) |
+| People and access | [Groups](groups.md) | what accounts may do, and in which libraries | tenant administrators, server administrators |
+| Tenant and server | [Tenants](tenants.md) | organisations sharing the server | server administrators |
+| Tenant and server | [Settings](settings.md) | defaults of this tenant and of the whole server | whoever holds the matching settings right |
+| Tenant and server | [Security log](security-log.md) | sign-ins and access changes | tenant administrators (their tenant), server administrators (all) |
+| Tenant and server | System | the server's version, build and database | tenant administrators, server administrators |
+
+Each page has an address of its own (`/admin/settings/server`, `/admin/users`…) to bookmark; addresses of pages
+that move later keep working.
 
 ## Server and tenant administrators
 

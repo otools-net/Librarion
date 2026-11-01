@@ -119,6 +119,7 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
+| [admin-page](agents/docs/features/admin-page.md) | the administration: groups, sections and sub-pages (`admin-sections.ts`), its own column, overview, breadcrumbs, moved addresses | `app/admin/`, `styles/admin.css` |
 | [shell](agents/docs/features/shell.md) | the frame: top bar, library switcher (`LibraryContext`), account menu, sidebar, phone sheets, the administration's own frame | `app/shell/`, `core/library-context.ts`, `styles/shell.css` |
 | [design](agents/docs/features/design.md) | the look: tokens, ink and paper palette, layered surfaces, type scale, motion, tested contrast (SFE's approach) | `src/styles/tokens.css`, `ClientDesignTests` |
 | [rights](agents/docs/features/rights.md) | rights catalog, scopes, built-in groups, evaluation and its cache, route rule; planned rights and content filters | `Core/Access/`, `Api/Security/` |

@@ -98,7 +98,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 4. [x] Dialogs as phone sheets, toasts, empty states, skeleton placeholders.
 5. [x] The shell: top bar (library switcher, search box, account menu), desktop library sidebar, phone menu sheet;
        the administration outside it (D-5.9).
-6. [ ] Administration structure: a page of its own with its own left column (D-5.9), `admin-sections.ts` (groups,
+6. [x] Administration structure: a page of its own with its own left column (D-5.9), `admin-sections.ts` (groups,
        sections, sub-pages, rights), routes `admin/:section/:page`, overview cards, breadcrumbs, moved-addresses table.
 7. [ ] Administration on phones: list of sections, section pages with chips, back to the list.
 8. [ ] Library pages split into sub-pages (folders, runs, import, missing books, schedules).

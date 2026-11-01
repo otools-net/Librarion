@@ -1,5 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Api } from '../core/api.service';
 import { errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
@@ -9,26 +8,17 @@ import { SessionService } from '../core/session.service';
 import { ThemeService } from '../core/theme.service';
 import { SettingsPanel } from '../settings/settings-panel';
 
-/** My account (as SFE's AccountSection): who is signed in, the password of a local account, own preferences, sign out. */
+/** My account in the administration (SFE's AccountSection): own preferences, or the password of a local account. */
 @Component({
-    selector: 'lib-account-page',
+    selector: 'lib-account-section',
     imports: [TranslatePipe, SettingsPanel],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-        <h1>{{ 'account.title' | t }}</h1>
         @if (sessions.user(); as user) {
-            <p class="lead">{{ 'account.signedInAs' | t: { name: user.displayName || user.userName } }}
-                @if (sessions.session()?.tenant; as tenant) {
-                    · {{ tenant.name }}
-                }
-            </p>
-            <div class="form-actions account-actions">
-                <button type="button" class="button" [title]="'account.signOutHint' | t" (click)="signOut()">{{ 'account.signOut' | t }}</button>
-            </div>
-
-            @if (user.local && sessions.can(rights.ownPassword)) {
+            @if (page() === 'password' && !user.local) {
+                <p class="notice">{{ 'account.notLocal' | t }}</p>
+            } @else if (page() === 'password' && sessions.can(rights.ownPassword)) {
                 <section class="panel">
-                    <h2>{{ 'account.password' | t }}</h2>
                     <form class="settings-form" novalidate (submit)="changePassword($event)">
                         <div class="field">
                             <label class="field-label" for="current-password">{{ 'account.currentPassword' | t }}</label>
@@ -65,19 +55,19 @@ import { SettingsPanel } from '../settings/settings-panel';
                 </section>
             }
 
-            @if (sessions.can(rights.ownPreferences)) {
+            @if (page() === 'preferences' && sessions.can(rights.ownPreferences)) {
                 <section class="panel">
-                    <h2>{{ 'account.preferences' | t }}</h2>
                     <lib-settings-panel level="user" (savedStates)="applied($event)" />
                 </section>
             }
         }
     `,
 })
-export class AccountPage {
+export class AccountSection {
+    readonly page = input.required<string>();
+
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
-    private readonly router = inject(Router);
     private readonly theme = inject(ThemeService);
     protected readonly sessions = inject(SessionService);
     protected readonly rights = Rights;
@@ -120,10 +110,5 @@ export class AccountPage {
     protected applied(states: SettingState[]): void {
         const theme = states.find(state => state.key === 'ui.theme')?.value;
         this.theme.choose(theme === 'light' || theme === 'dark' ? theme : '');
-    }
-
-    protected async signOut(): Promise<void> {
-        await this.sessions.signOut();
-        void this.router.navigate(['/login']);
     }
 }

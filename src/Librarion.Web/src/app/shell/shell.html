@@ -81,7 +81,7 @@
                         <span class="muted">{{ sessions.session()?.tenant?.name }}</span>
                     </span>
                 </div>
-                <a class="menu-item" routerLink="/account" [title]="'shell.myAccountHint' | t">
+                <a class="menu-item" routerLink="/admin/account" [title]="'shell.myAccountHint' | t">
                     <svg libIcon="user"></svg><span class="menu-text">{{ 'shell.myAccount' | t }}</span>
                 </a>
                 @if (canAdmin()) {
