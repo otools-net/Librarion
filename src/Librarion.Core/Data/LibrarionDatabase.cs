@@ -27,10 +27,25 @@ public static class LibrarionDatabase
     }
 
     internal static void ConfigureSqlite(DbContextOptionsBuilder builder, string connectionString) =>
-        builder.UseSqlite(connectionString, sqlite => sqlite.MigrationsHistoryTable("__EFMigrationsHistory"));
+        builder.UseSqlite(connectionString, sqlite => sqlite.MigrationsHistoryTable("__EFMigrationsHistory"))
+            .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, ScopeModelCacheKeyFactory>();
 
     internal static void ConfigurePostgres(DbContextOptionsBuilder builder, string connectionString) =>
-        builder.UseNpgsql(connectionString, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory"));
+        builder.UseNpgsql(WithoutParallelWorkers(connectionString), postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory"))
+            .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, ScopeModelCacheKeyFactory>();
+
+    /// <summary>
+    /// No parallel workers for the app's queries unless the connection string sets its own <c>Options</c>: every query
+    /// reads a page by index, and starting workers cost more than they saved (the stage 2 benchmark at 10M books: the
+    /// planner overestimated a 60-row lookup, launched two workers, 6 ms instead of 2, on each of a page's queries).
+    /// </summary>
+    internal static string WithoutParallelWorkers(string connectionString)
+    {
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+        if (string.IsNullOrEmpty(builder.Options))
+            builder.Options = "-c max_parallel_workers_per_gather=0";
+        return builder.ConnectionString;
+    }
 
     /// <summary>
     /// Applies the provider's migrations and records <paramref name="version"/> as the installed one. Before the first

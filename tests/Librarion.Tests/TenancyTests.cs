@@ -43,6 +43,8 @@ public sealed class TenancyTests
             await settings.SaveAsync(new SettingOwner(SettingLevel.User, user.Id), null,
                 new SettingChanges(new() { [SettingCatalog.PageSize] = System.Text.Json.JsonDocument.Parse("100").RootElement }), Cancel);
             await services.GetRequiredService<SecurityLog>().WriteAsync(SecurityEventKind.UserCreated, tenant.Id, null, "x", null, cancellationToken: Cancel);
+            await using var tenantRows = await tenantDb.ForTenantAsync(tenant.Id, Cancel);
+            await CatalogRows.AddAsync(tenantRows, tenant.Id, Cancel);
         }
 
         await using var db = await tenantDb.ForTenantAsync(a.Id, Cancel);
@@ -63,8 +65,20 @@ public sealed class TenancyTests
             ["TenantDisabledRights"] = await db.TenantDisabledRights.CountAsync(r => r.TenantId == b.Id, Cancel),
             ["Settings"] = await db.Settings.CountAsync(s => s.TenantId != a.Id, Cancel),
             ["SecurityEvents"] = await db.SecurityEvents.CountAsync(e => e.TenantId != a.Id, Cancel),
+            ["Books"] = await db.Books.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["BookFiles"] = await db.BookFiles.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["Archives"] = await db.Archives.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["BookIdentifiers"] = await db.BookIdentifiers.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["Tags"] = await db.Tags.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["TagAliases"] = await db.TagAliases.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["TagParents"] = await db.TagParents.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["TagClosure"] = await db.TagClosure.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["BookTags"] = await db.BookTags.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["TagCounts"] = await db.TagCounts.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["GroupTagFilters"] = await db.GroupTagFilters.CountAsync(x => x.Tag!.TenantId != a.Id, Cancel),
         };
         var seenOfA = await db.Users.CountAsync(Cancel) + await db.GroupLibraries.CountAsync(Cancel) + await db.Settings.CountAsync(Cancel);
+        Assert.AreEqual(1, await db.Books.CountAsync(Cancel), "The tenant's own book is seen");
 
         Assert.IsEmpty(unfiltered, "Tenant-owned without a query filter: " + string.Join(", ", unfiltered));
         Assert.IsTrue(leaks.All(l => l.Value <= 0), "Rows of another tenant seen: " + string.Join(", ", leaks.Where(l => l.Value > 0)));
@@ -84,6 +98,8 @@ public sealed class TenancyTests
         await accounts.CreateUserAsync(new UserInput("gone-user", Password: ApiClients.Password), tenant.Id, Cancel);
         await factory.Services.GetRequiredService<SettingsService>()
             .SaveAsync(new SettingOwner(SettingLevel.Tenant, tenant.Id), null, new SettingChanges(Lock: [SettingCatalog.Density]), Cancel);
+        await using (var rows = await factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(tenant.Id, Cancel))
+            await CatalogRows.AddAsync(rows, tenant.Id, Cancel);
 
         Assert.IsTrue(await accounts.DeleteTenantAsync(tenant.Id, Cancel));
 
@@ -92,6 +108,11 @@ public sealed class TenancyTests
         Assert.AreEqual(0, await db.Groups.CountAsync(Cancel));
         Assert.AreEqual(0, await db.Libraries.CountAsync(Cancel));
         Assert.AreEqual(0, await db.Settings.CountAsync(Cancel));
+        Assert.AreEqual(0, await db.Books.CountAsync(Cancel) + await db.BookFiles.CountAsync(Cancel) + await db.Archives.CountAsync(Cancel)
+            + await db.BookIdentifiers.CountAsync(Cancel), "Books, files, archives and identifiers");
+        Assert.AreEqual(0, await db.Tags.CountAsync(Cancel) + await db.TagAliases.CountAsync(Cancel) + await db.TagParents.CountAsync(Cancel)
+            + await db.TagClosure.CountAsync(Cancel) + await db.BookTags.CountAsync(Cancel) + await db.TagCounts.CountAsync(Cancel)
+            + await db.GroupTagFilters.CountAsync(Cancel), "Tags and their links");
     }
 
     [TestMethod]

@@ -1,5 +1,8 @@
 # Duplicates and merging: books and tags (planned)
 
+Built (stage 2): `Books.MergedIntoId`, `WorkKey`, the `(TenantId, Size, Crc32)` file index and `BookIdentifiers`
+([catalog](catalog.md)); detection and merging are planned.
+
 Code (planned): `src/Librarion.Core/Merging/` (`DuplicateFinder`, `BlockingKeys`, `BookMerger`, `BookSplitter`,
 `TagDuplicateFinder`, `MergeLog`), entities `DuplicateGroups`, `DuplicateMembers`, `NotDuplicates`, `MergeLog`;
 client `app/curation/duplicates/`, the duplicates panel of `app/books/book-page`. Builds on [tags](tags.md) (tag merge),

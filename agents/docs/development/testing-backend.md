@@ -17,7 +17,10 @@ Rules and infrastructure: [testing](testing.md). Code: `tests/Librarion.Tests/In
   127.0.0.1, refused at once).
 - Tests reading the built client (`RepositoryFiles.WebRoot()`) are inconclusive without `wwwroot` locally
   (`-p:LibrarionSkipWebClient=true`) and fail on CI.
-- Angular's router holds `http://fake` (a dummy base for `new URL`): allowed by exact match in
+- A `WebApplicationFactory` shared by a class's tests (`[ClassInitialize]`) is started there with
+  `using (ApiClients.Create(factory)) { }`: its first use isn't thread-safe, and parallel tests touching it at once
+  each built a server (`Services` and the clients then reach different ones: "setup required" after the setup).
+- - Angular's router holds `http://fake` (a dummy base for `new URL`): allowed by exact match in
   `TheWebClientHasNoExternalUrls`, never as a prefix.
 - `dotnet run --no-build` after adding a migration runs the old build: "no such table". Build first.
 - Git Bash paths (`/c/...`) passed to .NET (a `Data Source=`) don't open: use `cygpath -m`.

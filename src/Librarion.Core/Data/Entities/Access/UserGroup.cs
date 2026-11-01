@@ -24,6 +24,9 @@ public sealed class UserGroup
     public List<GroupMember> Members { get; set; } = [];
     public List<GroupRight> Rights { get; set; } = [];
     public List<GroupLibrary> Libraries { get; set; } = [];
+
+    /// <summary>Content filters: which books of its libraries its members see (agents/docs/features/rights.md).</summary>
+    public List<GroupTagFilter> TagFilters { get; set; } = [];
 }
 
 public enum BuiltInGroup

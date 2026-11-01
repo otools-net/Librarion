@@ -4,6 +4,20 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ## Unreleased
 
+## 0.3.0
+
+### Added
+
+- The catalog in the database: books with their files, identifiers and tags (authors, series, categories and other
+  fields as tags), built for libraries of millions of books.
+- Book lists by title, author, date added or series number, a page at a time, showing only the books the reader may
+  browse (library rights and the groups' content filters); a book's details; the values of a field (authors,
+  series…) with their book counts (`api/books`, `api/books/{id}`, `api/fields/{key}/values`).
+
+### Changed
+
+- PostgreSQL connections run without parallel workers unless the connection string sets its own `Options`.
+
 ## 0.2.0
 
 ### Added

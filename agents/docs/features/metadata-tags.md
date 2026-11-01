@@ -1,5 +1,8 @@
 # Metadata as tags: `field:value` (planned)
 
+Built (stage 2): the field columns on `Tags`, `Ordinal` / `Number` on `BookTags`, the built-in fields per tenant,
+`Books.SortAuthor` / `SeriesId` and field value lists ([catalog](catalog.md)); resolving, import and search are planned.
+
 Code (planned): `src/Librarion.Core/Tagging/` (`TagFields`, `FieldTagResolver`, `BuiltInFields`), the metadata
 readers in `Core/Import/` hand `(field, value)` pairs to it; search syntax in `Core/Search/`. Builds on the tag model
 in [tags](tags.md) (SFE/TagStudio). Decision D18 in [foundation-plan](../development/foundation-plan.md) (decided
@@ -86,7 +89,7 @@ separate `Authors`, `Series` or `Publishers` tables.
   `Books.SeriesId` + `SeriesNumber` (first series), denormalized, kept by imports and tag edits; keyset paging on
   them as on titles.
 - `BookTags` grows to ≈ 2M × (authors + categories + series + language + publisher + year) ≈ 12–15M rows at 2M books:
-  the `(TagId, BookId)` and `(BookId)` indexes carry it; the stage 2 generator makes this shape.
+  the `(TagId, BookId)` and `(BookId)` indexes carry it; the benchmark's generator makes this shape ([catalog](catalog.md)).
 
 ## UI
 

@@ -13,7 +13,7 @@ if [ -z "$(docker ps -q -f "name=^${name}$")" ]; then
     else
         docker run -d --name "$name" -p "127.0.0.1:${port}:5432" \
             -e POSTGRES_USER=librarion -e POSTGRES_PASSWORD=librarion -e POSTGRES_DB=postgres \
-            -v librarion-pg:/var/lib/postgresql/data "$image" > /dev/null
+            -v librarion-pg:/var/lib/postgresql/data "$image"             -c shared_buffers=1GB -c effective_cache_size=4GB -c random_page_cost=1.1 -c work_mem=16MB > /dev/null
     fi
 fi
 

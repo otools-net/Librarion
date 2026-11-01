@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using Librarion.Core.Data;
+using Librarion.Core.Tagging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -84,7 +85,7 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
         return tenant is null ? null : ToInfo(tenant);
     }
 
-    /// <summary>A new tenant with its built-in groups (default rights, every library) and its first library.</summary>
+    /// <summary>A new tenant with its built-in groups (default rights, every library), its first library and its built-in tags and fields.</summary>
     public async Task<AccessResult<TenantInfo>> CreateTenantAsync(TenantInput input, CancellationToken cancellationToken = default)
     {
         var name = input.Name?.Trim() ?? string.Empty;
@@ -114,8 +115,14 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
                 Rights = RightCatalog.All.Where(r => r.DefaultGroups.Contains(builtIn)).Select(r => new GroupRight { Right = r.Id }).ToList(),
             }).ToList(),
         };
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         db.Tenants.Add(tenant);
         await db.SaveChangesAsync(cancellationToken);
+        var (tags, closure) = BuiltInTags.Create(tenant.Id);
+        db.Tags.AddRange(tags);
+        db.TagClosure.AddRange(closure);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         changes.Changed();
         return AccessResult<TenantInfo>.Ok(ToInfo(tenant));
     }

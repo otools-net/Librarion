@@ -1,5 +1,8 @@
 # Tags (planned)
 
+Tables built (stage 2): `Tags`, `TagAliases`, `TagParents`, `TagClosure`, `BookTags`, `TagCounts`, built-in tags
+([catalog](catalog.md)); the services and UI below are planned.
+
 Code (planned): `src/Librarion.Core/Tagging/` (`TagService`, `TagGraph`, `TagClosure`, `ImportedTags`, `ScopeTagger`,
 `BookTagRows`, `BuiltInTags`), entities in `Data/Entities/Tags/`; client `src/app/tags/`. Ported from SFE
 (`agents/docs/features/tags.md`, `scope-tagging.md`, `default-tags.md` there; model from
