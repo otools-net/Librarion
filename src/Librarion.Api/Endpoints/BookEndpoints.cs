@@ -25,7 +25,7 @@ public static class BookEndpoints
             })
             .WithName("ListBooks")
             .WithSummary("Books the caller may browse, a page at a time by key.")
-            .WithDescription("`sort` = `title` (default), `author` or `added` (newest first); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `limit` up to 200.");
+            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `limit` up to 200.");
 
         books.MapGet("/{id:int}", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {

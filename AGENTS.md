@@ -92,9 +92,8 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
-| [stage-2-catalog-plan](agents/docs/development/stage-2-catalog-plan.md) | **stage 2 in progress**: catalog schema, 2M/10M generator, benchmark with budgets, keyset list APIs | `Core/Data/Entities/Catalog/`, `Tags/`, `Core/Tagging/`, `tests/Librarion.Benchmarks/` |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
-| [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
+| [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
 | [testing](agents/docs/development/testing.md) | test rules, layers, infrastructure | `tests/` |
 | [testing-backend](agents/docs/development/testing-backend.md) | provider runs, SQLite pools, outbound guard, built-client tests | `tests/Librarion.Tests/` |
@@ -125,6 +124,7 @@ note rather than inventing a new one.
 | [setup](agents/docs/features/setup.md) | first start: setup code (configured or generated), 503 until set up, recovery mode | `Core/Access/`, `Api/Security/`, `app/account/` |
 | [settings](agents/docs/features/settings.md) | settings by level (server, tenant, library, user), locks, catalog of keys | `Core/Settings/`, `app/settings/` |
 | [security-log](agents/docs/features/security-log.md) | security events: what is logged (never secrets), retention, who reads | `Core/Access/SecurityLog.cs`, `app/admin/` |
+| [catalog](agents/docs/features/catalog.md) | books, files, identifiers, tag tables, sort indexes, visibility, keyset pages, tag joins by size, catalog routes, known limits | `Core/Data/Entities/Catalog/`, `Core/Catalog/`, `Api/Endpoints/BookEndpoints.cs` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
 | [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |

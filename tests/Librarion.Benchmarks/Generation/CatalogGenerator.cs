@@ -9,7 +9,7 @@ namespace Librarion.Benchmarks.Generation;
 public sealed record CatalogTarget(int TenantId, int LibraryId, int FirstTagId, IReadOnlyDictionary<BuiltInTag, int> Fields);
 
 /// <summary>
-/// A real-shaped catalog as rows, deterministic for a seed (agents/docs/development/stage-2-catalog-plan.md): each
+/// A real-shaped catalog as rows, deterministic for a seed (agents/tools/benchmark/README.md): each
 /// book is planned from its id alone (<see cref="Plan"/>), so every table is streamed in its own pass without holding
 /// millions of books in memory. Planted on purpose: books without a title, duplicates of three kinds (same file, same
 /// identifier, same work), and filter tags on 0.1 %, 1 % and 10 % of the books for the narrow allow-lists of D22.

@@ -1,5 +1,8 @@
 # How a book is shown: cover and title (planned)
 
+Built (stage 2): `Title` / `SortTitle`, the cover columns, `BookTitles` and `FileTitles` ([catalog](catalog.md));
+covers, thumbnails and templates are planned.
+
 Code (planned): `Core/Catalog/BookTitles`, `Core/Covers/` (`CoverExtractor`, `CoverCache`, `Thumbnails`,
 `Generated/` one class per template), route
 `api/books/{id}/cover/{size}`; client `app/books/book-card`, `book-cover`. Reference for the behaviour (not the code:

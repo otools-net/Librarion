@@ -1,7 +1,7 @@
 # Scale benchmark
 
 `tests/Librarion.Benchmarks`: generates real-shaped catalogs of millions of books and measures the main queries
-against the budgets ([scale](../../docs/development/scale.md), [stage 2 plan](../../docs/development/stage-2-catalog-plan.md)).
+against the budgets ([scale](../../docs/development/scale.md), [catalog](../../docs/features/catalog.md)).
 Generated databases and reports go to `D:\Temp\librarion-bench` on this machine (never the repo).
 
 ```sh

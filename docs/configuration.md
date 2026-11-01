@@ -26,6 +26,9 @@ more, or many people at once, use PostgreSQL 15 or later:
 
 The database and its tables are created at the first start.
 
+Librarion turns off PostgreSQL's parallel workers for its own connections (every page it asks for is read by index,
+and starting workers only slowed it down). A connection string with its own `Options=...` keeps what it sets.
+
 ## Address
 
 `Urls` sets where the server listens (default `http://localhost:5090`, this computer only). To reach it from other
