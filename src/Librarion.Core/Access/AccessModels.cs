@@ -5,7 +5,7 @@ namespace Librarion.Core.Access;
 /// <param name="DisabledRights">Rights nobody gets in this tenant (<see cref="TenantDisabledRight"/>).</param>
 public sealed record TenantInfo(int Id, string Slug, string Name, bool Disabled, DateTime Created, IReadOnlyList<string> DisabledRights);
 
-public sealed record LibraryInfo(int Id, int TenantId, string Name, DateTime Created);
+public sealed record LibraryInfo(int Id, int TenantId, string Name, DateTime Created, int BookCount = 0);
 
 public sealed record MembershipInfo(int GroupId, string Group);
 

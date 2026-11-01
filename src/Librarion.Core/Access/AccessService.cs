@@ -175,7 +175,7 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         return await db.Libraries.AsNoTracking().OrderBy(l => l.Name).ThenBy(l => l.Id)
-            .Select(l => new LibraryInfo(l.Id, l.TenantId, l.Name, l.Created)).ToListAsync(cancellationToken);
+            .Select(l => new LibraryInfo(l.Id, l.TenantId, l.Name, l.Created, l.BookCount)).ToListAsync(cancellationToken);
     }
 
     public async Task<AccessResult<LibraryInfo>> CreateLibraryAsync(int tenantId, string? name, CancellationToken cancellationToken = default)
@@ -191,7 +191,7 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
         db.Libraries.Add(library);
         await db.SaveChangesAsync(cancellationToken);
         changes.Changed();
-        return AccessResult<LibraryInfo>.Ok(new LibraryInfo(library.Id, tenantId, library.Name, library.Created));
+        return AccessResult<LibraryInfo>.Ok(new LibraryInfo(library.Id, tenantId, library.Name, library.Created, library.BookCount));
     }
 
     public async Task<AccessResult<LibraryInfo>> RenameLibraryAsync(int tenantId, int libraryId, string? name, CancellationToken cancellationToken = default)
@@ -207,7 +207,7 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
         library.Name = trimmed;
         await db.SaveChangesAsync(cancellationToken);
         changes.Changed();
-        return AccessResult<LibraryInfo>.Ok(new LibraryInfo(library.Id, tenantId, library.Name, library.Created));
+        return AccessResult<LibraryInfo>.Ok(new LibraryInfo(library.Id, tenantId, library.Name, library.Created, library.BookCount));
     }
 
     public async Task<bool> DeleteLibraryAsync(int tenantId, int libraryId, CancellationToken cancellationToken = default)

@@ -125,7 +125,12 @@ public static class TaskEndpoints
         {
             null => Results.Ok(saved),
             "library" or "schedule" => Results.NotFound(),
-            _ => TypedResults.ValidationProblem(new Dictionary<string, string[]> { [problem] = ["invalid"] }),
+            _ => TypedResults.ValidationProblem(new Dictionary<string, string[]> { [problem] = [problem switch
+            {
+                "intervalMinutes" => "intervalMinutes.invalid",
+                "days" => "days.invalid",
+                _ => "kind.invalid",
+            }] }),
         };
     }
 
@@ -146,9 +151,9 @@ public static class TaskEndpoints
 
     private static string Code(RootProblem problem) => problem switch
     {
-        RootProblem.NotAbsolute => "notAbsolute",
-        RootProblem.Missing => "missing",
-        RootProblem.NotAllowed => "notAllowed",
-        _ => "overlaps",
+        RootProblem.NotAbsolute => "path.notAbsolute",
+        RootProblem.Missing => "path.missing",
+        RootProblem.NotAllowed => "path.notAllowed",
+        _ => "path.overlaps",
     };
 }

@@ -91,11 +91,11 @@ public sealed class TaskApiTests
             return problem!.Errors["path"].Single();
         }
 
-        Assert.AreEqual("notAllowed", await AddAsync(keeper, elsewhere));
-        Assert.AreEqual("notAllowed", await AddAsync(keeper, Path.Combine(allowed, "..", "private")), "the full path is what counts");
-        Assert.AreEqual("notAbsolute", await AddAsync(keeper, "shared/family"));
+        Assert.AreEqual("path.notAllowed", await AddAsync(keeper, elsewhere));
+        Assert.AreEqual("path.notAllowed", await AddAsync(keeper, Path.Combine(allowed, "..", "private")), "the full path is what counts");
+        Assert.AreEqual("path.notAbsolute", await AddAsync(keeper, "shared/family"));
         Assert.IsNull(await AddAsync(keeper, Path.Combine(allowed, "family")));
-        Assert.AreEqual("overlaps", await AddAsync(admin, allowed), "around a root of the tenant");
+        Assert.AreEqual("path.overlaps", await AddAsync(admin, allowed), "around a root of the tenant");
         Assert.IsNull(await AddAsync(admin, elsewhere), "a server administrator: anywhere");
 
         // Users of the tenant don't scan.
