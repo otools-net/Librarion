@@ -122,24 +122,6 @@ public sealed class BookDownloads(TenantDb tenantDb)
         }
     }
 
-    /// <summary>The media type of a format; <c>application/octet-stream</c> for one without its own.</summary>
-    public static string ContentType(string format) => format switch
-    {
-        "epub" or "kepub" => "application/epub+zip",
-        "fb2" => "application/x-fictionbook+xml",
-        "pdf" => "application/pdf",
-        "mobi" or "azw" => "application/x-mobipocket-ebook",
-        "azw3" => "application/vnd.amazon.ebook",
-        "djvu" => "image/vnd.djvu",
-        "cbz" => "application/vnd.comicbook+zip",
-        "cbr" => "application/vnd.comicbook-rar",
-        "txt" => "text/plain; charset=utf-8",
-        "rtf" => "application/rtf",
-        "doc" => "application/msword",
-        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        _ => "application/octet-stream",
-    };
-
     private static string NameOf(string path) => path[(path.LastIndexOfAny(['/', '\\']) + 1)..];
 
     /// <summary>The full path of <paramref name="relative"/> under the root; null when it would leave it.</summary>

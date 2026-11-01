@@ -1,6 +1,7 @@
 using Librarion.Core.Catalog;
 using Librarion.Core.Containers;
 using Librarion.Core.Data;
+using Librarion.Core.Formats;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

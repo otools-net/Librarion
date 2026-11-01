@@ -1,6 +1,6 @@
 # Metadata readers: what a book's head says
 
-Code: `src/Librarion.Core/Import/Metadata/` (`MetadataReaders` by format, `Fb2Reader`, `Fb2Genres`, `EpubReader` +
+Formats are dispatched through their `BookFormat` ([book-formats](book-formats.md)). Code: `src/Librarion.Core/Import/Metadata/` (`MetadataReaders` by format, `Fb2Reader`, `Fb2Genres`, `EpubReader` +
 `InnerZip`, `ComicInfoReader`, `MobiReader`, `PdfReader`, `SafeXml`, `HeadStream`, `Languages`, `Isbns`);
 `Core/Import/BookMetadata.cs` (`IMetadataReader`, `FieldValue`). Tests: `MetadataReaderTests`,
 `LibraryScannerTests`. What the values become: [metadata-tags](metadata-tags.md#import).
@@ -9,8 +9,9 @@ Code: `src/Librarion.Core/Import/Metadata/` (`MetadataReaders` by format, `Fb2Re
   description, field values `(field, value, ordinal, number, sort name)`, plain tags and identifiers; null = nothing.
   A reader that throws keeps the book by its file name and lists the problem in the scan's result.
 - **FB2**: `<description>` only, at most 1 MB (`HeadStream`): covers and text are never read at import. Authors and
-  translators from their parts (sort name "Last, First Middle"), genres named by `Fb2Genres` (English; unknown codes
-  as they came), `<sequence>` with its number, `<lang>`, year from `<date>` or `<publish-info>`, publisher, ISBN,
+  translators from their parts (sort name "Last, First Middle"), genres named by `Fb2Genres` (English; MyHomeLib's
+  `Installer/GenreLists/genres_fb2_en.glst`, MIT, fills the codes ours lacked; unknown codes as they came; its
+  group numbers could become parent categories later), `<sequence>` with its number, `<lang>`, year from `<date>` or `<publish-info>`, publisher, ISBN,
   `<document-info><id>` as `fb2-id`, `<keywords>` as plain tags. Code pages from the XML declaration
   (windows-1251).
 - **EPUB / KEPUB**: `container.xml` → OPF `<metadata>`; creators by role (`opf:role` or EPUB 3 `refines`; `aut` or

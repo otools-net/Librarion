@@ -367,6 +367,27 @@ internal sealed class ScannedLibrary : IAsyncDisposable
         return path;
     }
 
+    public string WriteBytes(string relative, byte[] bytes)
+    {
+        var path = Path.Combine(Root, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
+
+    /// <summary>The configured cache folder of this server (<c>Librarion:Cache:Directory</c>, in the test's folder).</summary>
+    public string CacheDirectory => Path.Combine(catalog.BasePath, "cache");
+
+    /// <summary>The server set up, its administrator signed in and working in this library's tenant.</summary>
+    public async Task<(HttpClient Client, Librarion.Api.Endpoints.SessionInfo Session)> AdminAsync(CancellationToken cancellationToken)
+    {
+        var (admin, session) = await ApiClients.SetUpAsync(factory, cancellationToken);
+        using var switched = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(admin, "/api/session/tenant",
+            new Librarion.Api.Endpoints.TenantChoice(TenantId), ApiClients.Json, cancellationToken);
+        switched.EnsureSuccessStatusCode();
+        return (admin, session);
+    }
+
     public string Zip(string relative, params (string Name, string? Text)[] entries)
     {
         var path = Path.Combine(Root, relative);

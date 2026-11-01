@@ -68,7 +68,7 @@ Data model: detailed in each stage plan; tags in [tags](../features/tags.md), ar
 [book-display](../features/book-display.md), reading progress
 in [reader](../features/reader.md), the e-ink face in [ereader-mode](../features/ereader-mode.md), conversions in
 [conversion](../features/conversion.md). Reference for book handling (behaviour only, GPL-3 code not copied): calibre-web
-(`C:\workspace\GIT\reference-projects\calibre-web`).
+(`C:\workspace\calibre-web`).
 
 ## Roadmap
 

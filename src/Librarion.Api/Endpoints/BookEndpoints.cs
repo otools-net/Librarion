@@ -1,6 +1,7 @@
 using Librarion.Api.Security;
 using Librarion.Core.Access;
 using Librarion.Core.Catalog;
+using Librarion.Core.Covers;
 using Librarion.Core.Reading;
 
 namespace Librarion.Api.Endpoints;
@@ -39,6 +40,22 @@ public static class BookEndpoints
             .WithName("GetBook")
             .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book.");
 
+        books.MapGet("/{id:int}/cover/{size}", async (int id, string size, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
+                CoverService covers) =>
+            {
+                if (!Enum.TryParse<CoverSize>(size, ignoreCase: true, out var coverSize) || !Enum.IsDefined(coverSize))
+                    return Results.NotFound();
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                if (await covers.GetAsync(state.TenantId!.Value, visibility, id, coverSize, context.RequestAborted) is not { } cover)
+                    return Results.NotFound();
+                // A day in the browser, then a revalidation (the tag changes with the cover: a re-import, an edit).
+                context.Response.Headers.CacheControl = "private, max-age=86400";
+                return Results.File(cover.Path, "image/webp", entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
+            })
+            .WithName("GetBookCover")
+            .WithSummary("A book's cover as WebP: `s` (80 px wide), `m` (240) or `l` (600); its own cover, else the generated one. Never missing.");
+
         books.MapGet("/{id:int}/files/{fileId:int}", async (int id, int fileId, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
                 BookDownloads downloads) =>
             {
@@ -62,7 +79,7 @@ public static class BookEndpoints
                 // A compressed entry is not seekable: its length is known all the same (the stream is held to it).
                 if (!content.Seekable)
                     context.Response.ContentLength = content.Length;
-                return Results.File(content.Stream, BookDownloads.ContentType(target.Format), target.Name,
+                return Results.File(content.Stream, Librarion.Core.Formats.BookFormats.ContentType(target.Format), target.Name,
                     target.Modified is { } modified ? new DateTimeOffset(modified, TimeSpan.Zero) : null, EntityTag(target), enableRangeProcessing: content.Seekable);
             })
             .RequireRight(Rights.Download)

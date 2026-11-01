@@ -1,5 +1,8 @@
 using Librarion.Core.Catalog;
+using Librarion.Core.Covers;
+using Librarion.Core.Covers.Generated;
 using Librarion.Core.Data;
+using Librarion.Core.Formats;
 using Librarion.Core.Reading;
 using Librarion.Core.Tagging;
 using Microsoft.EntityFrameworkCore;
@@ -301,6 +304,16 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         }
 
         book.WorkKey = PathKeys.Of(TagNames.Normalize(title ?? FileTitles.FromPath(path)), firstAuthor is null ? "" : TagNames.Normalize(firstAuthor));
+
+        // Every book gets its generated cover's design once (kept across re-reads: the same book keeps its look); the
+        // cover inside the book is looked for on first view, and again after a re-read.
+        if (book.GeneratedTemplate is null || book.GeneratedVariant is null)
+            (book.GeneratedTemplate, book.GeneratedVariant) = GeneratedCovers.Assign(book.WorkKey.Value);
+        if (book.CoverSource is CoverSource.Book or CoverSource.Generated)
+        {
+            book.CoverSource = CoverExtractor.HasCovers(BookFormats.Of(path) ?? "") ? CoverSource.Book : CoverSource.Generated;
+            book.CoverState = CoverState.Unknown;
+        }
     }
 
     private static string Cut(string text, int length) => text.Length > length ? text[..length] : text;

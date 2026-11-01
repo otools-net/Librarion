@@ -58,8 +58,8 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 ### 3.5 Covers
 
-- [ ] Extraction per format, cover cache, thumbnails, generated templates (long titles, other scripts, RTL), route
-      `GET api/books/{id}/cover/{size}`.
+- [x] Extraction per format, cover cache, thumbnails, generated templates (long titles, other scripts, RTL), route
+      `GET api/books/{id}/cover/{size}` ([book-display](../features/book-display.md); CJK titles have no font yet).
 
 ### 3.6 Duplicates at import, download
 
@@ -101,7 +101,9 @@ since: run it before the next commit (commands below). Docker and WSL are stoppe
 
 Done since (2026-11-01, second session): items 1 and 2 below (download, identical files), and a scanner fix: entries
 after the first of a zip lost their metadata because `OpenEntry`'s stream closed the archive (now `leaveOpen`).
-Start at item 3.
+Then item 3 (covers), the format registry (`Core/Formats/`, [book-formats](../features/book-formats.md): the user
+wants formats added gradually) and one configurable cache folder (`Librarion:Cache:Directory`, the user's rule).
+Start at item 4.
 
 1. ~~**3.6 download**~~ (done) (small, needed by the e2e): `GET api/books/{id}/files/{fileId}`, right `library.download`, the
    book visible to the caller (`BookVisibilities`, else 404). Loose file: from root + path, check it is still inside
@@ -114,7 +116,7 @@ Start at item 3.
    archive entry whose (size, CRC) matches a file of the tenant (index `BookFiles (TenantId, Size, Crc32)`) is
    compared by SHA-256 (`ContentHash`, computed only then) and added as a second file of the existing book instead
    of a new book. Joining different formats of one work (same identifier or `WorkKey`) is optional in this stage.
-3. **3.5 covers** ([book-display](../features/book-display.md)): add SkiaSharp + HarfBuzzSharp to
+3. ~~**3.5 covers**~~ (done) ([book-display](../features/book-display.md)): add SkiaSharp + HarfBuzzSharp to
    `Directory.Packages.props` (check the NuGet cache in `~/.nuget/packages` first; check the native assets for
    linux-x64/arm64; privacy: no telemetry). Cover extraction per format (FB2 `<coverpage>` → `<binary>`, read to the
    end of the file this time; EPUB cover from the OPF manifest; CBZ first image; PDF none in v1), a sharded disk cache
@@ -139,7 +141,8 @@ Start at item 3.
 - Only server administrators add folders unless `Librarion:Libraries:Folders` lists allowed ones.
 - At most 2 scans at once (`MaxParallelScans`).
 - Image library: SkiaSharp + HarfBuzzSharp (D17's leading option, not installed yet).
-- FB2 genres are named in English (`Fb2Genres`, written from memory: MyHomeLib's genre lists are not on this machine).
+- FB2 genres are named in English (`Fb2Genres`: written from memory, then completed from MyHomeLib's
+  `genres_fb2_en.glst` once it was found in `C:\workspace\MyHomeLib`; 295 codes).
 - An archive marked `Incomplete` (broken) is skipped until its size or time changes.
 - New plain tags go under the "Imported: <source>" category; field values go straight under their field.
 

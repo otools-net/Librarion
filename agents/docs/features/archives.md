@@ -5,7 +5,7 @@ Built: `src/Librarion.Core/Containers/` (`ZipDirectory` with `Fingerprint`, `Bou
 (see its `archive-reading.md`) without the ciphers: an encrypted entry is listed and refused when opened. Every entry
 is CRC-checked at its end. Download: `src/Librarion.Core/Reading/BookDownloads.cs`, route in
 `Api/Endpoints/BookEndpoints.cs` (tests `BookDownloadTests`). Planned: `ExtractCache`. Reference for
-the library side: MyHomeLib (`C:\workspace\GIT\reference-projects\MyHomeLib`: `unit_MHLArchiveHelpers.pas`,
+the library side: MyHomeLib (`C:\workspace\MyHomeLib`: `unit_MHLArchiveHelpers.pas`,
 `unit_ImportFB2Thread.pas`, `TBookRecord.GetBookStream` in `unit_Globals.pas`).
 
 Libraries are often a few hundred ZIP files each holding **100k+ books** (FB2 mostly, also EPUB, PDF, DJVU, MOBI…).

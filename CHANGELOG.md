@@ -17,6 +17,10 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   archive, never unpacked, with resumable ranges where the file allows them.
 - The same book file found again in an archive (the same bytes) becomes another copy of the book already there, not
   a second book.
+- Book covers (`api/books/{id}/cover/{s|m|l}`): the cover inside FB2, EPUB, CBZ, MOBI and AZW3 books, extracted the
+  first time it is shown and kept in the cache; every other book gets a generated cover (five designs, eight palettes,
+  titles in Latin, Greek, Cyrillic, Arabic and Hebrew scripts), the same for a book every time.
+- `Librarion:Cache:Directory` sets where cache files are kept (default `data/cache`).
 
 ## 0.3.0
 
