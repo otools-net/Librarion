@@ -34,19 +34,22 @@ APIs. Version stays on `edge`; the merge into `main` makes it `0.3.0`.
 - **Benchmark** (same project, command `run`): warm runs of the main queries, p50 / p95 per query, budgets from the
   foundation plan; plan checks (PostgreSQL `EXPLAIN`: no `Seq Scan` on big tables; SQLite `EXPLAIN QUERY PLAN`: no
   `SCAN` of a big table without an index); a JSON + text report into a temp folder; exit 1 past a budget.
-- **This machine** (16 GB RAM; C: ~26 GB free, **D:\Temp for generated data**, ~220 GB free): SQLite catalogs and
-  reports under `D:\Temp\librarion-bench`; PostgreSQL's data sits in Docker's disk image on C:, fine at 2M,
-  brought to the user before a 10M PostgreSQL run. Docker stopped after each PostgreSQL run.
+- **This machine** (16 GB RAM; C: ~26 GB free): generated SQLite catalogs and reports under
+  `D:\Temp\librarion-bench`; Docker's storage is on D: too (moved 2026-11-01), so 2M and 10M fit on both providers.
+  Docker Desktop started for a PostgreSQL run and stopped right after (little memory).
 
 ## Work items
 
 ### 2.1 Schema
 
-- [ ] Entities in `Core/Data/Entities/Catalog/` and `Tags/`, model config, query filters, the two `Initial`
-      migrations regenerated ([database](database.md)); `ModelsOfBothProvidersAgree` green.
-- [ ] Built-in fields per tenant at tenant creation (`author`, `translator`, `editor`, `illustrator`, `series`,
+- [x] Entities in `Core/Data/Entities/Catalog/` and `Tags/`, model config (`LibrarionDbContext.Catalog.cs`), query
+      filters, the two `Initial` migrations regenerated ([database](database.md)); `ModelsOfBothProvidersAgree` green.
+- [x] Built-in fields per tenant at tenant creation (`author`, `translator`, `editor`, `illustrator`, `series`,
       `category`, `publisher`, `language`, `year`) and built-in tags (Meta Tags, Archived); closure rows kept.
-- [ ] Tests: tenant filters on the new sets, cascade on library / tenant delete, closure for a value and a parent chain.
+- [x] Tests: tenant filters on the new sets (`NoQueryCrossesTenants` + `CatalogRows`), cascade on tenant delete,
+      closure for a value and a parent chain (`CatalogSchemaTests`).
+- Deleting a library or tenant with millions of books by cascade is one huge transaction: stage 3 deletes in batches
+  first (a task), the cascade then only finishes the job.
 
 ### 2.2 Generator
 
@@ -67,7 +70,7 @@ APIs. Version stays on `edge`; the merge into `main` makes it `0.3.0`.
 - [ ] Queries: first and deep pages per sort, a field value's books (author with 5k books, series by number),
       authors A–Z page, book detail, filtered pages for each allow-list size, `TagCounts` page.
 - [ ] Plan checks per provider; budgets; report.
-- [ ] Runs: 2M on PostgreSQL and SQLite recorded in this note; 10M as far as the disk allows.
+- [ ] Runs: 2M and 10M on PostgreSQL and SQLite, recorded in this note.
 
 ### 2.5 Notes, docs
 
