@@ -12,7 +12,11 @@ References (behaviour only): calibre-web `cps/db.py` for Calibre's tables (`C:\w
 copied); MyHomeLib for INPX (`C:\workspace\MyHomeLib`, MIT: `Program/ImportImpl/unit_ImportInpxThread.pas`,
 `unit_Consts.pas`).
 
-## Decisions for this stage (proposed; the user may revise)
+## Decisions for this stage (confirmed by the user, 2026-11-01)
+
+Confirmed explicitly: imported metadata wins over a later scan's head reads; INPX `DEL=1` records are skipped and
+counted; the files' folder is added as a root automatically (with the checks of adding a root by hand). The rest was
+accepted as proposed.
 
 - **One import pipeline, one class per source** (as [book-formats](../features/book-formats.md)): `IImportSource`
   reads records `(source id, title, sort title, field values, plain tags, identifiers, description, rating, year,
