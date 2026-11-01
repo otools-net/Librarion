@@ -27,3 +27,15 @@ not); good solutions for intuitive use, accessibility and visual appeal. Palette
   appears on (`--text` on all four, `--text-muted`/`--accent`/`--danger` on bg, surface, surface-2, the text on accent
   and danger buttons), focus ring and strong borders 3:1. A new colour token gets its pairs in `ClientDesignTests`.
 - The first strong border (#b9b0a2) read 2.1:1 on paper: control edges need 3:1 (WCAG 1.4.11).
+
+## Icons
+
+- One sprite of inline SVG symbols (`app/shared/icon.ts`, `IconSprite` once in the shell), used as
+  `<svg libIcon="name">`: no icon font, nothing fetched. Drawn on a 24 × 24 grid, `currentColor` strokes 1.8 wide,
+  round ends and joins (`.icon`, base.css); 20 px in use. Decorative (`aria-hidden`): the button or link around carries
+  the text or the `title`.
+- `ICON_NAMES` lists them and types `IconName` (an unknown name doesn't compile); `icon.spec.ts` checks each name has
+  its symbol and none is left over, all on the 24 grid.
+- Groups: shell, books and fields, actions, navigation, administration, status. A new icon: its name in the list, its
+  symbol in the sprite, then a look with the contact sheet ([icon-sheet](../../tools/icon-sheet/README.md)).
+

@@ -78,7 +78,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 
 1. [x] Tokens: layered surfaces, radii, shadow, type scale, motion (reduced motion honoured), ink and paper palette;
        contrast test over the tokens (both themes, AA).
-2. [ ] Icon sprite (inline SVG, shipped) and the icon component; existing icons moved to it.
+2. [x] Icon sprite (inline SVG, shipped) and the icon component; existing icons moved to it.
 3. [ ] Controls restyled: buttons (primary, secondary, quiet, danger), fields, selects, checkboxes, chips, badges,
        cards, focus rings.
 4. [ ] Dialogs as phone sheets, toasts, empty states, skeleton placeholders.
