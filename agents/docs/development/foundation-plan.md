@@ -18,7 +18,7 @@ its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts
 - **Goal:** a Calibre-Web-like server whose first concern is **millions of books** staying fast (browse, search,
   OPDS), books as loose files or **inside ZIP archives of 100k+ entries read in place**, OPDS clients signing in by
   **username/password or API key**, and **users, tenants and rights** as in SFE.
-- **Non-goals for v1:** editing book files, format conversion, sending to Kindle, metadata from the internet,
+- **Non-goals for v1:** editing book files, sending to Kindle (email), metadata from the internet,
   downloading from online libraries, INPX catalogs (D11). Each can come later behind its own right.
 
 ## Decisions (confirmed 2026-10-31)
@@ -32,7 +32,7 @@ its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts
 | D5 | Content restrictions per group: library access + tag/language/rating filters, as query predicates (`Visible()`) | Post-filters break paging at scale |
 | D6 | OPDS 1.2 + OpenSearch in v1, OPDS 2.0 after it, OPDS-PSE later | 1.2 is what reader apps read |
 | D7 | API keys per user: scoped, named, revocable; Basic password, Bearer, or opt-in path key ([opds-auth](../features/opds-auth.md)) | Every OPDS client can use one of them |
-| D8 | `edge` for work, `main` for releases, `claude: …` commits; version starts at **`0.0.0`**, stays `0.x` until the **MVP = `1.0.0`**, declared by the user | SFE workflow; 1.0 means usable, not "stage 9 reached" |
+| D8 | `edge` for work, `main` for releases, `claude: …` commits; version starts at **`0.0.0`**, stays `0.x` until the **MVP = `1.0.0`**, declared by the user | SFE workflow; 1.0 means usable, not "stage 11 reached" |
 | D9 | Tags: SFE's TagStudio model, **vocabulary per tenant**, link sources + import mappings ([tags](../features/tags.md)) | Curation survives re-imports; one merge applies to every library |
 | D10 | Books inside **ZIP containers only** (Zip64 included), read in place; 7z/RAR only as per-book wrappers ([archives](../features/archives.md)) | One seek per book; solid 7z / RAR can't seek |
 | D11 | **No INPX**; reconsidered only if the head-indexing benchmark fails on HDD / NAS | Books are the source of truth |
@@ -47,6 +47,8 @@ its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts
 | D20 | Free text reaches tags and fields **through the tag-name index**, not through names copied into book search documents ([metadata-tags](../features/metadata-tags.md)) | A rename or merge of a tag with 1M books touches one row instead of re-indexing 1M documents |
 | D21 | **Fuzzy duplicate suggestions on demand only**, within one book, author or field page, capped; exact normalized matches catalog-wide ([merging](../features/merging.md)) | Edit distance has no ordinary index; a catalog-wide pass is millions of comparisons |
 | D22 | Hidden tags and content filters **joined at query time** through `TagClosure`; narrow allow-lists measured in stage 2, precomputed visibility only if the budgets fail (user decides then) ([rights](../features/rights.md)) | Simplest and always current; the cost is known and measured, not guessed |
+| D23 | **E-reader mode**: a second, basic face for the browsers of e-ink devices: server-rendered HTML, grayscale, no script, paged lists; search, browse, book page (cover, fields, tags, files) and download only ([ereader-mode](../features/ereader-mode.md)) | E-ink browsers are too slow for the Angular app and smear its colours and scrolling; most e-ink owners just want the file on the device |
+| D24 | **Format conversion on demand**: built-in C# converters (FB2 → EPUB, EPUB → KEPUB, EPUB / FB2 → AZW3, AZW3 and KEPUB ported from MIT tools) plus optional Calibre `ebook-convert` run as a separate program (other inputs, MOBI); Amazon targets AZW3 and MOBI, no KFX; queued, capped cache, optionally kept as a book file ([conversion](../features/conversion.md)) | Devices read what the library lacks (FB2 on a Kindle); nothing extra to install for the common cases, Calibre for the rest; KFX writers are closed or GPL-only (chosen 2026-11-01) |
 
 ## Architecture (ported from SFE)
 
@@ -64,13 +66,14 @@ agents/tools/           catalog generator, samples, benchmark runner, OPDS valid
 Data model: detailed in each stage plan; tags in [tags](../features/tags.md), archives in
 [archives](../features/archives.md), metadata fields as tags in [metadata-tags](../features/metadata-tags.md), duplicates and merges in [merging](../features/merging.md), titles and covers in
 [book-display](../features/book-display.md), reading progress
-in [reader](../features/reader.md). Reference for book handling (behaviour only, GPL-3 code not copied): calibre-web
+in [reader](../features/reader.md), the e-ink face in [ereader-mode](../features/ereader-mode.md), conversions in
+[conversion](../features/conversion.md). Reference for book handling (behaviour only, GPL-3 code not copied): calibre-web
 (`C:\workspace\GIT\reference-projects\calibre-web`).
 
 ## Roadmap
 
 Each stage ends with its exit criteria met and `edge` merged into `main` (when the user says), bumping the minor
-version from `0.0.0` (stage 0 → `0.1.0`, …). `1.0.0` is the MVP: the user declares it, at the end of stage 9 or earlier
+version from `0.0.0` (stage 0 → `0.1.0`, …). `1.0.0` is the MVP: the user declares it, at the end of stage 11 or earlier
 if the stages done by then make a usable product. Every stage keeps the four priorities: no outbound, benchmark budgets, 360 px to desktop, unit + e2e tests.
 
 | Stage | Goal | Scope | Exit criteria |
@@ -83,8 +86,10 @@ if the stages done by then make a usable product. Every stage keeps the four pri
 | **5. Browse and search** | The daily UI, fast on phones and desktops | virtual grid/list of covers and titles (D15), compact density, book page (cover, metadata, copies and formats, possible duplicates, **Read** / **Download**), browse pages per field (authors, series, categories, languages, publishers, custom fields) and tags, search language (`field:value` for every field, `tag:` with ancestors, `format:`, negation, hidden tags), facets with capped counts, content filters, download | p95 budgets through the UI's API calls; e2e on every phone project + desktop with layout checks; axe AA on main screens |
 | **6. Tag management and curation** | Curate thousands of imported tags, fix what the metadata lacks | tag manager (parents, aliases, colors, categories, fields, merge, delete: also authors and series), picker, book / selection / scope tagging, library and folder default tags, Imported tags page (map / merge / ignore by count), tag rights; title and field edit (author order, series number), cover upload, **Change cover style**, cover templates on/off and reassignment; **duplicates** (D19): duplicates page, compare and merge books, bulk merge, undo and split, not-duplicate marks, duplicate tag and field suggestions | top 500 raw tags of the generated catalog curated in minutes, covering > 90 % of imported links; duplicate detection over the generated 2M catalog within budget, its planted duplicates found; e2e for each flow |
 | **7. OPDS and API keys** | Reader apps connect with password or key | OPDS 1.2 (root, recent, authors A–Z, series, tags by category, shelves, OpenSearch), acquisition per format (FB2 also as fb2.zip), covers; Basic with verification cache and throttle; API keys UI and scopes; path keys; OPDS 2.0 if time allows | feeds validate against the schemas; HTTP-level e2e as a reader app; KOReader, Moon+, Thorium checked by hand; OPDS p95 met |
-| **8. E-reader** | Read in the browser, progress follows the user | the in-app reader (D16, [reader](../features/reader.md)): EPUB, FB2, MOBI/AZW3, CBZ (foliate-js or epub.js, chosen here), PDF (pdf.js), TXT; book content sandboxed; reading preferences per user; extract cache (LRU, capped); position per user/book/format, read states, "Continue reading", KOReader sync (kosync) | e2e: each format, also from a container zip, on phones and desktop, back to the same place after leaving; cache cap holds under parallel readers |
-| **9. Release (MVP candidate)** | Installable, documented, reviewed | Docker image (amd64/arm64) + compose with Postgres, portable zip / AppImage, Windows service / systemd scripts with smoke tests, user docs with screenshots, security review (SFE's attack vectors), 10M run, by-hand checks on real phones and OPDS apps, `production-upgrades` switched to "in production" | the user declares the MVP: `1.0.0` tagged |
+| **8. E-reader mode** | Find a book and download it from an e-ink device's browser | the `/e/` site (D23, [ereader-mode](../features/ereader-mode.md)): server-rendered, grayscale, no script; sign-in, home, search, browse by field, book page, downloads with the device's formats first, path key for cookie-less browsers | JS off on 600 × 800: sign in, search, book page, download (also from a zip); no `<script>` and no colour; Kindle, Kobo and PocketBook browsers checked by hand |
+| **9. Format conversion** | Every device gets a format it reads | conversion (D24, [conversion](../features/conversion.md)): built-in FB2 → EPUB, EPUB → KEPUB, EPUB / FB2 → AZW3 with catalog metadata and cover; optional Calibre (found, version checked, child process) for other inputs and MOBI; conversion matrix, queue with limits, capped cache, "Download as" in the book page, OPDS and e-reader mode, "keep as a format"; `books.convert`; "full" Docker image with Calibre | golden samples per path read back; FB2 from a 100k-entry zip as AZW3 within budget; cache cap and queue limits hold; e2e: download as AZW3 and KEPUB from the book page and e-reader mode; files open on a Kindle and a Kobo by hand |
+| **10. E-reader** | Read in the browser, progress follows the user | the in-app reader (D16, [reader](../features/reader.md)): EPUB, FB2, MOBI/AZW3, CBZ (foliate-js or epub.js, chosen here), PDF (pdf.js), TXT; book content sandboxed; reading preferences per user; extract cache (LRU, capped); position per user/book/format, read states, "Continue reading", KOReader sync (kosync) | e2e: each format, also from a container zip, on phones and desktop, back to the same place after leaving; cache cap holds under parallel readers |
+| **11. Release (MVP candidate)** | Installable, documented, reviewed | Docker image (amd64/arm64) + compose with Postgres, portable zip / AppImage, Windows service / systemd scripts with smoke tests, user docs with screenshots, security review (SFE's attack vectors), 10M run, by-hand checks on real phones and OPDS apps, `production-upgrades` switched to "in production" | the user declares the MVP: `1.0.0` tagged |
 
 Order: rights before the first real route (1); the scale proof (2) before import and UI build on the schema; import
 (3, 4) before the UI (5) so every screen is built against millions of real-shaped rows.
@@ -116,4 +121,8 @@ Order: rights before the first real route (1); the scale proof (2) before import
 - **Narrow content filters** (D22): query-time joins scan far for a group that sees few books; measured in stage 2.
 - **Wrong merges:** every merge logged, undo and split, redirects keep old links working (D19).
 - **Calibre schema drift:** importer tested against `metadata.db` samples from several Calibre versions.
+- **Converted output quality:** our AZW3 writer is new; golden samples, by-hand checks on Kindles, Calibre preferred
+  by a setting when installed (D24).
+- **Conversion cost:** CPU-heavy and a parser of strangers' files; queue limits, timeouts, Calibre in a child process
+  with a temp config (D24).
 - **Two providers with migrations each:** every schema change makes two migrations; `ModelsOfBothProvidersAgree`.

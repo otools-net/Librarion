@@ -11,7 +11,7 @@ Books are read **in the browser, inside the app**, on phones and desktops; every
 
 ## Formats
 
-| Format | Viewer (candidates, chosen in stage 8) | Notes |
+| Format | Viewer (candidates, chosen in stage 10) | Notes |
 |---|---|---|
 | EPUB 2/3 | foliate-js (MIT, vendored at a pinned commit) or epub.js (BSD, as calibre-web / SFE) | paginated or scrolled, CFI positions |
 | FB2, FBZ | foliate-js (reads FB2 natively) or our FB2 → HTML renderer | the most common format of archive libraries |

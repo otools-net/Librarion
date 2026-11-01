@@ -12,7 +12,7 @@ Code: `Librarion.slnx`, `Directory.Build.props`, `Directory.Packages.props`, `sr
 | Frontend | **Angular 22** + TypeScript 6 in `src/Librarion.Web`: standalone, signals, zoneless, OnPush, `HttpClient` (fetch), router; global CSS; runtime translation keys; built into `src/Librarion.Api/wwwroot` (git-ignored) |
 | Tests | MSTest 4 (method-level parallelism), `WebApplicationFactory<Program>`; client: Vitest 5 via `ng test` (jsdom); e2e: Playwright 1.64.1 (pinned exactly) + axe-core |
 | CI | GitHub Actions: `build-test.yml` (Linux/Windows, SQLite and PostgreSQL), `e2e.yml` |
-| Hosting | Kestrel `:5090` by default (`appsettings.json` `Urls`); packaging comes in stage 9 |
+| Hosting | Kestrel `:5090` by default (`appsettings.json` `Urls`); packaging comes in stage 11 |
 
 External references:
 

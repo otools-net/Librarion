@@ -126,4 +126,6 @@ note rather than inventing a new one.
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
 | [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
 | [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: detection, book-page panel, compare and merge, undo and split (planned) | `Core/Merging/` |
+| [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
+| [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |

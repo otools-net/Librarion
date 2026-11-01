@@ -19,6 +19,8 @@ Code (planned): `src/Librarion.Core/Access/` (`RightCatalog`, `RightsEvaluator`,
 - Each right: id, scope, `Kind` (Read/Write: Write when any route it opens changes something), `GuestAllowed`,
   default groups, `since` (revision, for existing installs after the first release).
 - Tag rights (`tags.assign`, `tags.manage`, `tags.importMappings`, `tags.defaults`): [tags](tags.md).
+- `books.convert` (download a converted copy, needs `books.download`; keeping it as a book file also needs
+  `books.edit`): [conversion](conversion.md).
 - OPDS has its own right (`opds.access`) so an admin can allow the web UI without feeds or the reverse; API keys carry
   scopes that can only narrow the user's rights, never widen them.
 

@@ -124,4 +124,4 @@ first build.
 ## Out of stage 0
 
 Accounts, rights catalog content, tenants (stage 1); catalog schema and generator (stage 2); Docker / portable
-packaging (stage 9, a Dockerfile only if CI needs it earlier).
+packaging (stage 11, a Dockerfile only if CI needs it earlier).
