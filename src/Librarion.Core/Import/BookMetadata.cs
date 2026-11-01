@@ -35,7 +35,7 @@ public interface IMetadataReader
     BookMetadata? Read(string format, Func<Stream> open, long size, CancellationToken cancellationToken);
 }
 
-/// <summary>Until the readers come (stage 3.4): every book by its file name.</summary>
+/// <summary>Every book by its file name, nothing opened (tests, and scans that shouldn't read books).</summary>
 public sealed class NoMetadataReader : IMetadataReader
 {
     public BookMetadata? Read(string format, Func<Stream> open, long size, CancellationToken cancellationToken) => null;

@@ -52,8 +52,8 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 ### 3.4 Metadata readers
 
-- [ ] FB2, EPUB, CBZ, MOBI / AZW3, PDF; hostile samples (XML bombs, huge heads, broken zips in zips).
-- [ ] Field resolver (`author`, `series` + number, `category`, `language`, `publisher`, `year`), `ImportTagMappings`.
+- [x] FB2, EPUB, CBZ, MOBI / AZW3, PDF; hostile samples (XML bombs, huge heads) ([metadata-readers](../features/metadata-readers.md)).
+- [x] Field resolver (`author`, `series` + number, `category`, `language`, `publisher`, `year`), `ImportTagMappings`.
 
 ### 3.5 Covers
 

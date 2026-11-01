@@ -178,6 +178,29 @@ public sealed class LibraryScannerTests
     }
 
     [TestMethod]
+    public async Task AnFb2InAZipComesInWithItsMetadataThroughTheRealReaders()
+    {
+        await using var library = await ScannedLibrary.CreateAsync(Cancel);
+        library.Zip("fb2.zip", ("1.fb2", """
+            <?xml version="1.0" encoding="utf-8"?>
+            <FictionBook><description><title-info><genre>sf_fantasy</genre>
+            <author><first-name>Terry</first-name><last-name>Pratchett</last-name></author>
+            <book-title>Guards! Guards!</book-title><lang>en</lang><sequence name="Discworld" number="8"/>
+            </title-info></description><body/></FictionBook>
+            """));
+
+        await library.ScanAsync(Cancel, new Librarion.Core.Import.Metadata.MetadataReaders());
+
+        await using var db = await library.DbAsync(Cancel);
+        var book = await db.Books.SingleAsync(Cancel);
+        Assert.AreEqual("Guards! Guards!", book.Title);
+        Assert.AreEqual("Pratchett, Terry", book.SortAuthor);
+        Assert.AreEqual(8, book.SeriesNumber);
+        var names = await db.BookTags.Where(l => l.BookId == book.Id).Select(l => l.Tag!.Field!.FieldKey + ":" + l.Tag.Name).ToListAsync(Cancel);
+        CollectionAssert.AreEquivalent(new[] { "category:Fantasy", "author:Terry Pratchett", "language:en", "series:Discworld" }, names);
+    }
+
+    [TestMethod]
     public async Task HostileAndBrokenArchivesAreReportedAndTheRestIsRead()
     {
         await using var library = await ScannedLibrary.CreateAsync(Cancel);

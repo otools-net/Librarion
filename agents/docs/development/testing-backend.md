@@ -25,6 +25,12 @@ Rules and infrastructure: [testing](testing.md). Code: `tests/Librarion.Tests/In
 - `dotnet run --no-build` after adding a migration runs the old build: "no such table". Build first.
 - Git Bash paths (`/c/...`) passed to .NET (a `Data Source=`) don't open: use `cygpath -m`.
 
+## Hangs
+
+- A test that never returns gives no output: `dotnet test --blame-hang-timeout 20s` names it (and writes a dump into
+  `TestResults/`, delete it after). Run long suites as `timeout 500 dotnet test ... > log` so a hang can't eat the
+  tool's 10-minute limit.
+
 ## Signed-in tests (stage 1)
 
 - Every route but `api/setup` and `api/session` answers 503 `setup-required` until the server is set up: start with
