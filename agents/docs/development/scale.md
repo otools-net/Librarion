@@ -58,7 +58,7 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
 - Same zip on a **5 200 RPM USB hard disk** (WD20EZRX, 64 MB cache; about 10 MB/s written over its USB link), cold
   (`--evict`: a 24 GB file read before the cold phases), database on the SSD: list 647 ms, index 154 s (651 a second:
   processor-bound, the disk reads forward), unchanged 4.7 ms, first byte p50 9.6 ms / p95 24 ms (real seeks). All
-  within budget: **D11 closed, no INPX** (2026-11-01).
+  within budget: folders stay indexed from the books (D11); INPX and Calibre come in as manual imports (stage 4).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
   author or date, fields found by scanning `BuiltIn`, tag pages joined one way for every size (before: Fiction 2.9 s, a
   0.1 % filter 0.8 s), parallel workers on PostgreSQL, a big series by number walked from its title.

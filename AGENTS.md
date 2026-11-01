@@ -92,7 +92,7 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
-| [stage-4-calibre-plan](agents/docs/development/stage-4-calibre-plan.md) | **stage 4, start here**: Calibre `metadata.db` import (proposed decisions, work items, exit criteria) | `Core/Calibre/` (planned) |
+| [stage-4-calibre-plan](agents/docs/development/stage-4-calibre-plan.md) | **stage 4, start here**: manual imports from other sources (Calibre `metadata.db`, INPX) stored in our database; decisions, work items, exit criteria | `Core/Imports/` (planned) |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |

@@ -1,79 +1,96 @@
-# Stage 4: Calibre import (plan)
+# Stage 4: imports from other sources, Calibre `metadata.db` and INPX (plan)
 
-Roadmap: [foundation-plan](foundation-plan.md) (D1, D15, D18, D19; budget "Calibre `metadata.db` of 2M books < 30 min
-on PostgreSQL, unchanged re-import < 5 min"). Goal: **Calibre users move in with their curation**, and keep using
-Calibre if they want: re-imports pick up their edits. Version stays on `edge`; the merge into `main` makes it `0.5.0`.
+Roadmap: [foundation-plan](foundation-plan.md) (D1, D11 as revised, D18, D19). Goal: **people move in with the
+catalogs they already have**. Version stays on `edge`; the merge into `main` makes it `0.5.0`.
 
-Reference for Calibre's schema (behaviour only, GPL-3 code never copied): calibre-web `cps/db.py`
-(`C:\workspace\calibre-web`), Calibre's own `resources/metadata_sqlite.sql` (read for the table list, not copied).
+**The user's rule (2026-11-01):** a Calibre library and an INPX catalog are imported by **a manual import of data
+from a different source**: an administrator starts it, it reads the source once, and **what it reads is stored in
+our database**. Librarion never reads the source live, a folder scan never reads it, and nothing is written back.
+Running the import again is how changes in the source come in.
 
-## Decisions for this stage (proposed; the first one is the user's to confirm)
+References (behaviour only): calibre-web `cps/db.py` for Calibre's tables (`C:\workspace\calibre-web`, GPL-3: never
+copied); MyHomeLib for INPX (`C:\workspace\MyHomeLib`, MIT: `Program/ImportImpl/unit_ImportInpxThread.pas`,
+`unit_Consts.pas`).
 
-- **A Calibre library is a root** (recommended): a library root holding `metadata.db` is a *Calibre root*. Its scan
-  runs the Calibre importer instead of the folder walk: books come from `metadata.db`, their files from
-  `<root>/<books.path>/<data.name>.<format>`, so the loose files are never imported a second time as bare books.
-  Alternative: a separate "Import a Calibre library" action into any library (one more UI, and a folder scan of the
-  same folder would double every book).
-- **Read-only, never written:** `metadata.db` opened `Mode=ReadOnly` (Calibre may be running; its WAL is honoured);
-  nothing is written back to Calibre (as [tags](../features/tags.md): writing back is not planned).
-- **Identity:** a Calibre book is `(root, calibre id)`, kept as the identifier `calibre:<id>` plus `calibre-uuid`;
-  files as loose `BookFiles` under the root (`RootId`, path `books.path/data.name.ext`), so downloads, covers and
-  identical-file detection work as for folders.
-- **Change detection:** `books.last_modified` (Calibre bumps it on every edit) against the value stored at the last
-  import; unchanged books are skipped in batches by id; books gone from `metadata.db` leave like files gone from a
-  folder; the whole root skipped when `metadata.db`'s size and time haven't changed.
-- **What becomes what** (D18, through `ImportTagResolver` with source `Calibre` and the import mappings):
+## Decisions for this stage (proposed; the user may revise)
+
+- **One import pipeline, one class per source** (as [book-formats](../features/book-formats.md)): `IImportSource`
+  reads records `(source id, title, sort title, field values, plain tags, identifiers, description, rating, year,
+  files)` in batches; `CatalogImporter` writes them through `ImportTagResolver` (source `Calibre` or `Inpx`, the
+  import mappings) and `CatalogWriter`. A future source (a CSV, another program's database) is one more class.
+- **A background task** like a scan ([tasks](../features/tasks.md)): `TaskRuns` kind `import`, progress, cancel,
+  counts (added, updated, matched to books already there, skipped, problems), one per library at a time, never
+  scheduled. Started from the library panel: "Import from another source" → source kind, the path of the source on
+  the server (`metadata.db`, or the `.inpx` file), and where its books' files are (default: the source's folder).
+  Paths validated as roots are (allowed folders for tenant administrators).
+- **Right `library.import`** (library scope, built-in Administrators): importing writes a library's metadata in bulk.
+- **Files:** imported books point at real files, as `BookFiles` under a root of the library: the files' folder is
+  added as a root when it isn't inside one already. Calibre: loose files `<path>/<data.name>.<format>`. INPX: entries
+  of the zips next to it (`<name>.inp` ↔ `<name>.zip`, or the record's `FOLDER`); the import lists each zip's directory
+  (73 ms per 100k entries, measured) to store locators and CRCs, and writes the `Archives` rows as done, so a later
+  scan skips the archives unchanged. A record whose file isn't found is skipped and counted (never a book without a
+  file).
+- **Matching what is there:** a record whose file is already a book's (the folder was scanned before) updates that
+  book instead of making another; else, a book with the same source id (a re-import); else a new book. Identical
+  files across records follow [merging](../features/merging.md).
+- **Who owns a book's metadata:** a new column `Books.MetadataSource` (`Heads`, `Calibre`, `Inpx`, later `Edited`).
+  A folder scan that sees an imported book's file changed updates the file (size, time, CRC) but **does not replace
+  the imported metadata** (it re-reads heads only for `Heads` books). A re-import recomputes only its own source's
+  `Imported` links; manual links, merges and edits stay. Migration on both providers.
+- **Re-import never deletes:** books gone from the source stay while their files exist (a scan removes books whose
+  files are gone); the run counts them as "not in the source any more".
+- **Calibre** (`metadata.db` opened `Mode=ReadOnly`, WAL honoured; the schema checked, unknown columns ignored):
   authors (sort from `authors.sort`) → `author`; series + `series_index` → `series` with number; publishers →
-  `publisher`; languages (ISO 639-2/3 → our normalised codes) → `language`; tags → plain tags, a dotted name
-  (`Fiction.Fantasy.Epic`, Calibre's hierarchy) becomes a parent chain; `pubdate` year → `year`; ratings (0–10) →
-  `Books.Rating`; comments (HTML) → description, text only; identifiers → `BookIdentifiers` (isbn, asin, goodreads…
-  as they are named).
-- **Custom columns** (`custom_columns`, `custom_column_<n>`, `books_custom_column_<n>_link`): `text` (single or
-  multiple), `enumeration`, `series` (with its extra number) and `rating` → a **custom field** per column (its
-  `label` as key, its `name` shown), values as field tags; `comments`, `bool`, `int`, `float`, `datetime` and
-  `composite` → kept per book in a small key/value table for display (no tags: not browsable values). The custom
-  field table may need a migration (both providers).
-- **Covers:** `has_cover` → `CoverSource.Calibre`, the picture read from `<path>/cover.jpg` on first view into the
-  same cover cache (a new `CoverService` source); without one, the generated cover as for every book.
-- **Curation kept on re-import:** only `Source = Imported` links of a re-read book are recomputed (as folder scans);
-  manual links, merges and edits made in Librarion stay. Covered by tests with a Librarion edit before a re-import.
-- **Titles:** `books.title`, `books.sort` as the sort title when present (Calibre's article rules), else ours.
+  `publisher`; languages → `language`; tags → plain tags, a dotted name (`Fiction.Fantasy`) → a parent chain;
+  `pubdate` → `year`; ratings 0–10 → `Books.Rating`; comments (HTML) → description as text; identifiers →
+  `BookIdentifiers`; `books.title` / `books.sort`; source id `calibre` (+ `calibre-uuid`). Custom columns: `text`,
+  `enumeration`, `series`, `rating` → a custom field per column, values as field tags; `comments`, `bool`, `int`,
+  `float`, `datetime`, `composite` → a small per-book key/value table shown on the book page. Covers: `has_cover` →
+  `CoverSource.Calibre`, `cover.jpg` read on first view into the cover cache.
+- **INPX** (a zip of `.inp` files, lines of `\x04`-separated fields, layout from `structure.info` else
+  `AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS`; `collection.info` names the
+  collection): authors `last,first,middle:` → `author` (sort "Last, First Middle"); genres `code:` → `category`
+  through `Fb2Genres`; series + number; language; keywords → plain tags; `LIBRATE` → rating; `LIBID` → identifier
+  `libid` (with the collection's name); `DEL=1` records skipped (an option to import them hidden later). Encoding
+  UTF-8 (older files: the code page declared or windows-1251).
+- **Budgets:** Calibre `metadata.db` of 2M books < 30 min on PostgreSQL, unchanged re-import < 5 min (roadmap); INPX
+  of 1M records < 15 min, unchanged re-import < 5 min (proposed). SQLite recorded.
 
 ## Work items
 
-### 4.1 Reader of `metadata.db`
+### 4.1 Import pipeline
 
-- [ ] `Core/Calibre/CalibreLibrary`: opens read-only, checks the schema it needs (tables and columns present; a
-      version it doesn't know reads what it can and reports the rest), reads books in id order in batches of 1000 with
-      their links (one query per link table per batch, never one per book).
-- [ ] Samples from several Calibre versions (made by the test from SQL, as Calibre's schema of each version: 3.x,
-      5.x, 7.x), custom columns of every type, a WAL-mode database, a locked one.
+- [ ] `Core/Imports/`: `IImportSource`, `CatalogImporter` (matching, `MetadataSource`, batches of 1000, counts by
+      differences), task kind `import` in `BackgroundTasks`, right `library.import`, routes, the migration.
+- [ ] The scanner leaves imported metadata alone (`MetadataSource != Heads`); tests for scan-after-import and
+      import-after-scan.
 
-### 4.2 Importer
+### 4.2 Calibre
 
-- [ ] Calibre root detection in `LibraryScanner` (root holds `metadata.db`), `CalibreImporter` writing through
-      `CatalogWriter` (a `ScannedFile` per format, metadata from the database instead of the heads).
-- [ ] Mapping above; custom fields; hierarchical tags; ratings; identifiers; change detection by `last_modified`;
-      books gone; counts by differences.
-- [ ] Identical files and formats: a Calibre book with EPUB + MOBI is one book with two files (it is, in Calibre).
+- [ ] `CalibreSource`: schema check, books in id order with their links (one query per link table per batch), custom
+      columns of every type; samples made by the test from SQL for several Calibre versions, a WAL database, a locked
+      one.
+- [ ] `CoverSource.Calibre` from `cover.jpg`.
 
-### 4.3 Covers
+### 4.3 INPX
 
-- [ ] `CoverSource.Calibre` from `cover.jpg`, cache key from its size and time; tests.
+- [ ] `InpxSource`: `structure.info`, `collection.info`, `.inp` lines, archive name rules, deleted records; samples
+      written by the test (an INPX and its zips), broken lines reported, never fatal.
 
-### 4.4 Generator, benchmark
+### 4.4 UI, docs
 
-- [ ] A generated 2M-book `metadata.db` (from the catalog generator's shapes: authors, series, tags with dotted
-      hierarchy, custom columns), import < 30 min on PostgreSQL, unchanged re-import < 5 min; SQLite recorded.
+- [ ] Library panel: "Import from another source" (kind, source path, files' folder), the run with its counts; texts.
+- [ ] `docs/administration/libraries.md` (importing from Calibre and INPX), CHANGELOG, rights reference.
 
-### 4.5 UI, docs, e2e
+### 4.5 Benchmark, e2e
 
-- [ ] The library panel shows a Calibre root as such (badge, "Calibre library"), its runs with counts.
-- [ ] User docs (`docs/administration/libraries.md`: adding a Calibre library), CHANGELOG.
-- [ ] e2e: a small Calibre library (written by the test: `metadata.db` from SQL, two books, a cover) added as a
-      folder, scanned, a book downloaded, its cover from Calibre.
+- [ ] Generators: a 2M-book `metadata.db` and a 1M-record INPX with its zips (from the catalog generator's shapes);
+      `import` runs timed, unchanged re-imports timed.
+- [ ] e2e: a small Calibre library and a small INPX collection (written by the test) imported from the library
+      panel, a book of each downloaded.
 
 ## Exit criteria
 
-Generated 2M `metadata.db` imported within budget, unchanged re-import within budget; re-import keeps every curation
-(manual tags, merges, edits); samples of several Calibre versions read; e2e: import a Calibre library.
+Both sources imported within budget, unchanged re-imports within budget; a re-import keeps every curation (manual
+tags, merges, edits) and a later folder scan keeps imported metadata; samples of several Calibre versions and INPX
+layouts read; e2e: import a Calibre library and an INPX collection from the library panel.
