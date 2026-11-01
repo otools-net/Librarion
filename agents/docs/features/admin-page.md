@@ -31,6 +31,8 @@ the [stage 5 plan](../development/stage-5-browse-plan.md).
   folders, plus import for Import; unknown or hidden tabs go to the first, replaceUrl), then `LibraryPanel [tab]`.
   The panel stays while the tab changes (no reload); the scan bar is above every tab. On a phone the shell's arrow
   goes from a library back to `/admin/libraries`.
+- Unsaved settings: the open section and sub-page carry a dot (`admin-mark`) while `UnsavedChanges.dirty()`; the
+  route's `canDeactivate: [leaveWithUnsaved]` asks before leaving ([settings](settings.md#the-forms-client)).
 - e2e: `adminSection(page, title)` (`fixtures/admin.ts`) finds a section link by its exact title: on phones the
   link's text includes the description. `libraryTab(page, name)` presses a library's tab.
 - The shell is in its admin frame there ([shell](shell.md)): `.admin-frame .page` has no padding, the column is

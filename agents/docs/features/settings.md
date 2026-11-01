@@ -22,3 +22,16 @@ preferences on `account/account-page.ts`, `core/session.service.ts` (applies the
   [missing-books](missing-books.md)).
 - The theme toggle in the account menu changes only this browser (localStorage), not the account's preference.
 - A new setting: one line in the catalog, its texts, and where the client uses it; no migration (rows hold JSON).
+
+## The forms (client)
+
+- `SettingsPanel` groups the states by `section` (`settings-group` cards, in the server's order); each setting has
+  its hint (`setting.<key>.hint`: `ClientI18nTests` wants one for every key of `SettingCatalog`), its control
+  (`id="setting-<key>"`, described by the hint and the "where it comes from" line), its lock above the user level.
+- Changes are marked (a dot on the label, a visually hidden "Changed, not saved yet"); the save bar (sticky at the
+  bottom, only while there are changes) counts them and holds Discard and Save.
+- `UnsavedChanges` (`core/unsaved-changes.ts`) holds the forms with changes: the administration marks its open
+  section and sub-page, its route's `leaveWithUnsaved` guard asks before leaving (the route is reused between sections:
+  guards run on parameter changes), Library settings asks before showing another library, and `beforeunload` asks
+  before the tab closes. A panel destroyed with changes drops them.
+

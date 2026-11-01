@@ -255,7 +255,7 @@
 .settings-form {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-4);
 }
 
 .rows {
@@ -329,12 +329,6 @@ button.row-main:hover .row-title {
     flex: 1 1 160px;
 }
 
-.setting-row {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
 .setting-control {
     display: flex;
     flex-wrap: wrap;
@@ -345,11 +339,6 @@ button.row-main:hover .row-title {
 .setting-control :is(select, input[type="number"]) {
     flex: 0 1 240px;
     width: auto;
-}
-
-.setting-row.changed .field-label::after {
-    content: " •";
-    color: var(--accent);
 }
 
 /* Phones: the list of sections is a page of its own (a card of rows: icon, title and description, chevron); an open
@@ -700,4 +689,86 @@ a.row-main {
 
 .switch input:disabled + .switch-track {
     opacity: .5;
+}
+
+/* Settings forms (settings-panel.ts): a card per group, a dot on what changed, the save bar sticky at the bottom. */
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 720px;
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.settings-group .group-label {
+    margin: 0;
+}
+
+.setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    scroll-margin-top: calc(var(--topbar-height) + var(--space-4));
+}
+
+.setting-row .field-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.changed-mark,
+.admin-mark {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+}
+
+.admin-nav a .admin-mark {
+    margin-inline-start: auto;
+}
+
+.setting-source {
+    font-style: italic;
+}
+
+.save-bar {
+    position: sticky;
+    bottom: var(--space-3);
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 720px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    animation: toast-in var(--duration) var(--ease);
+}
+
+.save-bar-status {
+    flex: 1;
+    min-width: 0;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .save-bar {
+        bottom: max(var(--space-2), env(safe-area-inset-bottom));
+    }
+
+    .settings-group {
+        padding: var(--space-3);
+    }
 }

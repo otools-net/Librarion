@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { ApiMock, groupInfo, mockApi, sessionInfo, settle, testProviders, userInfo } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { Media } from '../core/media';
+import { UnsavedChanges } from '../core/unsaved-changes';
 import { RightInfo, ScheduleInfo, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
 import { ToastService } from '../core/toast.service';
@@ -166,6 +167,17 @@ describe('AdminPage', () => {
         await settle();
         gone.harness.detectChanges();
         expect(gone.element.querySelector('.empty')?.textContent).toContain('doesn\'t exist');
+    });
+
+    it('marks the open section and sub-page while its form has unsaved changes', async () => {
+        const { element, harness } = await open('/admin/settings/server', ['tenant.settings', 'server.settings']);
+        expect(element.querySelector('.admin-mark')).toBeNull();
+
+        TestBed.inject(UnsavedChanges).set({}, true, () => { });
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        expect(element.querySelectorAll('.admin-nav .admin-mark')).toHaveLength(2);
+        expect(element.querySelector('.admin-subnav a[aria-current="page"] .admin-mark')).not.toBeNull();
     });
 
     it('says when there is nothing to administer', async () => {

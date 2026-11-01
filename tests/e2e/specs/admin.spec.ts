@@ -88,4 +88,30 @@ test.describe('@admin', () => {
         await expect(row).toBeHidden();
         await expect(page.getByRole('status').filter({ hasText: `Library ${libraryName} deleted.` })).toBeVisible();
     });
+
+    test('a settings page counts its unsaved changes and asks before they are lost @desktop', async ({ page, isMobile }) => {
+        await page.goto('./admin/settings/tenant');
+        const pageSize = page.getByLabel('Books per page');
+        const before = await pageSize.inputValue();
+        await pageSize.fill(String(Number(before) + 10));
+        const bar = page.getByRole('region', { name: 'Unsaved changes' });
+        await expect(bar.getByRole('status')).toHaveText('1 unsaved changes');
+
+        // Leaving: the administration's column on wider screens, the back arrow on a phone.
+        const leave = () => isPhoneWidth(page)
+            ? press(page.getByRole('button', { name: 'Back to the sections of the administration' }), isMobile)
+            : press(adminSection(page, 'Accounts'), isMobile);
+        await leave();
+        const dialog = page.getByRole('dialog', { name: 'Leave without saving?' });
+        await expect(dialog).toBeVisible();
+        await press(dialog.getByRole('button', { name: 'Cancel' }), isMobile);
+        await expect(page).toHaveURL(/\/admin\/settings\/tenant$/);
+        await expect(pageSize).toHaveValue(String(Number(before) + 10));
+
+        await leave();
+        await press(page.getByRole('dialog', { name: 'Leave without saving?' }).getByRole('button', { name: 'Leave without saving' }), isMobile);
+        await expect(page).not.toHaveURL(/\/admin\/settings\/tenant$/);
+        await page.goto('./admin/settings/tenant');
+        await expect(page.getByLabel('Books per page')).toHaveValue(before);
+    });
 });

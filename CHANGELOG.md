@@ -30,6 +30,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - Schedules say what they run: a folder scan, or an import from Calibre or INPX (new: imports can run on a
   schedule, checked as an import started by hand). They are set in a dialog that asks what, then where from, then
   when, and listed with what they run, when, their next time and an on/off switch.
+- Settings come in groups, each setting with a line on what it does; changed ones are marked, a bar at the bottom
+  counts the changes with Save and Discard, and leaving a page with unsaved changes asks first.
 
 ## 0.5.0
 

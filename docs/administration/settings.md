@@ -11,5 +11,7 @@ Open the level's page (for a library, choose it at the top), then for each setti
 - **Lock:** the levels below can't change it (a person's preference included);
 - **Locked by a level above:** this level can't change it.
 
-**Save** keeps the changes, **Discard** forgets them. Each level needs its right: server settings, tenant settings or
+Settings come in groups, each with a line on what it does. A changed setting is marked with a dot, and a bar at the
+bottom counts the changes: **Save** keeps them, **Discard** forgets them. Leaving the page (or choosing another
+library) with changes not saved asks first. Each level needs its right: server settings, tenant settings or
 library settings ([rights](../reference/rights.md)).

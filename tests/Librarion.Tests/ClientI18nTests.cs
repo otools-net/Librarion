@@ -66,7 +66,7 @@ public sealed partial class ClientI18nTests
 
     /// <summary>
     /// What the server names and the client shows by a key built at run time: rights, right areas, settings and their
-    /// choices, setting levels, built-in groups, security event kinds, and the error codes the access services send.
+    /// choices and hints, setting levels, built-in groups, security event kinds, and the error codes the access services send.
     /// </summary>
     [TestMethod]
     public void EveryNameTheServerSendsHasItsText()
@@ -80,7 +80,7 @@ public sealed partial class ClientI18nTests
             wanted.AddRange([$"right.{right.Id}", $"right.{right.Id}.hint", $"rightArea.{right.Area}"]);
         foreach (var setting in SettingCatalog.All)
         {
-            wanted.AddRange([$"setting.{setting.Key}", $"settingSection.{setting.Section}"]);
+            wanted.AddRange([$"setting.{setting.Key}", $"setting.{setting.Key}.hint", $"settingSection.{setting.Section}"]);
             wanted.AddRange((setting.Choices ?? []).Select(choice => $"setting.{setting.Key}.{choice}"));
         }
         wanted.AddRange(Enum.GetNames<SettingLevel>().Select(level => $"settingLevel.{Camel(level)}"));

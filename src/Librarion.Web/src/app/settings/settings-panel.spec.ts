@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { ApiMock, mockApi, settingState, settle, testProviders } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { SettingLevel } from '../core/models';
+import { I18n } from '../core/i18n.service';
 import { ToastService } from '../core/toast.service';
+import { UnsavedChanges } from '../core/unsaved-changes';
+import { ConfirmService } from '../shared/confirm';
 import { SettingsPanel } from './settings-panel';
 
 describe('SettingsPanel', () => {
@@ -27,7 +30,7 @@ describe('SettingsPanel', () => {
         const { element } = await render(api, 'tenant');
 
         const rows = [...element.querySelectorAll('.setting-row')];
-        expect(rows[0].querySelector('label')?.textContent).toBe('Colors');
+        expect(rows[0].querySelector('label')?.textContent?.trim()).toBe('Colors');
         expect(rows[0].querySelector('select')!.disabled).toBe(true);
         expect(rows[0].textContent).toContain('Locked by a level above');
         expect(rows[1].textContent).toContain('Set at this level');
@@ -71,5 +74,83 @@ describe('SettingsPanel', () => {
         expect(api.saveSettings).toHaveBeenCalledWith('user', { values: { 'ui.pageSize': 5000 }, lock: [], unlock: [] }, undefined);
         expect(element.querySelector('.field-error')?.textContent).toBe('This value doesn\'t fit.');
         expect(element.querySelector('input[type="checkbox"]')).toBeNull();
+    });
+
+    it('groups the settings by section, each with its hint', async () => {
+        const api = mockApi();
+        api.settings.mockResolvedValue([
+            settingState(),
+            settingState({ key: 'library.keepMissingDays', section: 'libraries', kind: 'integer', choices: null, min: 1, max: 3650, value: 30 }),
+        ]);
+        const { element } = await render(api, 'tenant');
+
+        const groups = [...element.querySelectorAll('.settings-group')];
+        expect(groups.map(group => group.querySelector('h2')?.textContent)).toEqual(['Interface', 'Libraries']);
+        expect(groups[1].querySelector('.field-hint')?.textContent).toContain('offers them for removal');
+        expect(element.querySelector('#setting-ui\\.theme')?.getAttribute('aria-describedby')).toBe('setting-hint-ui.theme setting-source-ui.theme');
+    });
+
+    it('marks what changed, counts it in the save bar, and forgets it on Discard', async () => {
+        const api = mockApi();
+        api.settings.mockResolvedValue([settingState(), settingState({ key: 'ui.density', choices: ['compact', 'comfortable'], value: 'compact' })]);
+        const { element, stable } = await render(api, 'tenant');
+        const unsaved = TestBed.inject(UnsavedChanges);
+        expect(element.querySelector('.save-bar')).toBeNull();
+
+        const selects = element.querySelectorAll<HTMLSelectElement>('select');
+        selects[0].value = 'dark';
+        selects[0].dispatchEvent(new Event('change'));
+        selects[1].value = 'comfortable';
+        selects[1].dispatchEvent(new Event('change'));
+        await stable();
+        expect(element.querySelectorAll('.setting-row.changed .changed-mark')).toHaveLength(2);
+        expect(element.querySelector('.save-bar [role="status"]')?.textContent).toBe('2 unsaved changes');
+        expect(unsaved.dirty()).toBe(true);
+
+        [...element.querySelectorAll<HTMLButtonElement>('.save-bar button')].find(b => b.textContent?.trim() === 'Discard')!.click();
+        await stable();
+        expect(element.querySelector('.save-bar')).toBeNull();
+        expect(element.querySelector('.changed-mark')).toBeNull();
+        expect(unsaved.dirty()).toBe(false);
+    });
+
+    it('asks before its changes are lost, and discards them when the user lets them go', async () => {
+        const api = mockApi();
+        api.settings.mockResolvedValue([settingState()]);
+        const { element, stable } = await render(api, 'tenant');
+        const unsaved = TestBed.inject(UnsavedChanges);
+        const confirm = TestBed.inject(ConfirmService);
+        const ask = vi.spyOn(confirm, 'ask').mockResolvedValue(false);
+
+        expect(await unsaved.confirmLeave(confirm, TestBed.inject(I18n))).toBe(true);
+        expect(ask).not.toHaveBeenCalled();
+
+        const select = element.querySelector<HTMLSelectElement>('select')!;
+        select.value = 'dark';
+        select.dispatchEvent(new Event('change'));
+        await stable();
+        expect(await unsaved.confirmLeave(confirm, TestBed.inject(I18n))).toBe(false);
+        expect(ask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Leave without saving?', danger: true }));
+        expect(unsaved.dirty()).toBe(true);
+
+        ask.mockResolvedValue(true);
+        expect(await unsaved.confirmLeave(confirm, TestBed.inject(I18n))).toBe(true);
+        await stable();
+        expect(unsaved.dirty()).toBe(false);
+        expect(element.querySelector('.save-bar')).toBeNull();
+    });
+
+    it('forgets its changes when it leaves the page', async () => {
+        const api = mockApi();
+        api.settings.mockResolvedValue([settingState()]);
+        const { element, stable, fixture } = await render(api, 'tenant');
+        const select = element.querySelector<HTMLSelectElement>('select')!;
+        select.value = 'dark';
+        select.dispatchEvent(new Event('change'));
+        await stable();
+        expect(TestBed.inject(UnsavedChanges).dirty()).toBe(true);
+
+        fixture.destroy();
+        expect(TestBed.inject(UnsavedChanges).dirty()).toBe(false);
     });
 });

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink, UrlMatchResult, UrlSegment } from '
 import { AccountSection } from '../account/account-section';
 import { TranslatePipe } from '../core/i18n.service';
 import { Media } from '../core/media';
+import { UnsavedChanges } from '../core/unsaved-changes';
 import { SessionService } from '../core/session.service';
 import { Icon } from '../shared/icon';
 import { EmptyState } from '../shared/placeholders';
@@ -76,6 +77,9 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
                                            [attr.aria-current]="open && item.subpages.length === 1 ? 'page' : null" [title]="'adminSection.' + item.id + '.hint' | t">
                                             <svg [libIcon]="item.icon"></svg>
                                             <span class="admin-nav-title">{{ 'adminSection.' + item.id | t }}</span>
+                                            @if (open && unsaved.dirty()) {
+                                                <span class="admin-mark" [title]="'admin.unsavedMark' | t"><span class="visually-hidden">{{ 'admin.unsavedMark' | t }}</span></span>
+                                            }
                                             @if (phone()) {
                                                 <small class="admin-nav-description">{{ 'adminSection.' + item.id + '.hint' | t }}</small>
                                                 <svg libIcon="chevron-right" class="admin-nav-chevron"></svg>
@@ -86,7 +90,12 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
                                                 @for (sub of item.subpages; track sub.id) {
                                                     <li>
                                                         <a [routerLink]="['/admin', item.id, sub.id]" replaceUrl [attr.aria-current]="sub.id === subpage()?.id ? 'page' : null"
-                                                           [title]="'adminPage.' + item.id + '.' + sub.id + '.hint' | t">{{ 'adminPage.' + item.id + '.' + sub.id | t }}</a>
+                                                           [title]="'adminPage.' + item.id + '.' + sub.id + '.hint' | t">
+                                                        {{ 'adminPage.' + item.id + '.' + sub.id | t }}
+                                                        @if (sub.id === subpage()?.id && unsaved.dirty()) {
+                                                            <span class="admin-mark" [title]="'admin.unsavedMark' | t"><span class="visually-hidden">{{ 'admin.unsavedMark' | t }}</span></span>
+                                                        }
+                                                    </a>
                                                     </li>
                                                 }
                                             </ul>
@@ -190,6 +199,7 @@ export class AdminPage {
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     private readonly injector = inject(Injector);
     protected readonly phone = inject(Media).phone;
+    protected readonly unsaved = inject(UnsavedChanges);
 
     protected readonly params = toSignal(this.route.paramMap, { requireSync: true });
     private readonly fragment = toSignal(this.route.fragment);
