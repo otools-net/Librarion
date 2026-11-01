@@ -17,6 +17,10 @@
   ([tenants](../features/tenants.md#isolation-in-the-database)).
 - Lists over every library of a tenant use `(TenantId, sort, Id)` indexes, one library's `(LibraryId, sort, Id)`.
 - Long strings (paths) are indexed through a 64-bit hash column (`PathKeys`), compared after.
-- The benchmark (`tests/Librarion.Benchmarks/`, planned) runs the main queries over the generated 2M catalog and fails
+- Books with a tag (content filters, a field value's page) are joined by size: walk the sort index and test each book
+  for a broad tag, start from the tag's links and sort for a narrow one (under √(page × books), from `TagCounts`);
+  descendants listed first so a test is one seek (`BookQueries.NarrowAsync`, measured in the
+  [stage 2 plan](stage-2-catalog-plan.md#results)).
+- The benchmark (`tests/Librarion.Benchmarks/`, [tool](../../tools/benchmark/README.md)) runs the main queries over the generated 2M catalog and fails
   past the budgets in [foundation-plan](foundation-plan.md#scale-budgets-checked-by-the-benchmark-see-scale); a 10M
   catalog run before each release checks that times grow with the page, not with the catalog.

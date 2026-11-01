@@ -53,29 +53,64 @@ APIs. Version stays on `edge`; the merge into `main` makes it `0.3.0`.
 
 ### 2.2 Generator
 
-- [ ] `tests/Librarion.Benchmarks` console (`generate --provider --connection --books 2000000 --seed`), writing
-      through provider-specific bulk writers; counts and `TagCounts` computed at the end; `agents/tools/benchmark/`
+- [x] `tests/Librarion.Benchmarks` console (`generate --provider --connection --books 2000000 --seed`), writing
+      through provider-specific bulk writers; counts and `TagCounts` computed on the way; `agents/tools/benchmark/`
       README.
-- [ ] Small-size tests (1k books) in `Librarion.Tests`: deterministic for a seed, shapes (Zipf, duplicates, filters).
+- [x] Small-size tests in `Librarion.Tests` (`CatalogGeneratorTests`): deterministic for a seed, shapes (Zipf,
+      duplicates, filters).
 
 ### 2.3 Catalog queries and API
 
-- [ ] `Core/Catalog/BookQueries` (`Visible`, keyset pages per sort), `TagQueries` (values of a field by sort name,
-      with counts), cursor encoding.
-- [ ] Routes `GET api/books?library&sort&after` and `GET api/fields/{key}/values?after&prefix`, `library.browse`.
-- [ ] Tests: paging walks the whole set once in order (both providers), filters never leak, cursors survive inserts.
+- [x] `Core/Catalog/BookQueries` (`VisibleAsync`, keyset pages per sort, book detail), `BookVisibilities`,
+      `TagQueries` (values of a field by sort name, with counts), `KeysetCursor`.
+- [x] Routes `GET api/books?library&sort&after&tag&limit`, `GET api/books/{id}`, `GET api/fields/{key}/values`,
+      `library.browse`.
+- [x] Tests (`CatalogQueryTests`, both providers): paging walks the whole set once in order, filters never leak,
+      the routes answer what the caller may browse. A value prefix search waits for stage 5 (collations).
 
 ### 2.4 Benchmark
 
-- [ ] Queries: first and deep pages per sort, a field value's books (author with 5k books, series by number),
-      authors A–Z page, book detail, filtered pages for each allow-list size, `TagCounts` page.
-- [ ] Plan checks per provider; budgets; report.
+- [x] Queries: first and middle pages per sort, a field value's books (most prolific author, a small author, the
+      biggest series, category Fiction with subcategories), authors A–Z, book detail, filtered pages for each
+      allow-list size.
+- [x] Plan checks per provider; budgets; report.
 - [ ] Runs: 2M and 10M on PostgreSQL and SQLite, recorded in this note.
 
 ### 2.5 Notes, docs
 
 - [ ] [scale](scale.md) with the measured numbers and the indexes; feature notes (tags, metadata-tags, merging,
       book-display) updated where the schema is now built; AGENTS.md index.
+
+## Results
+
+2M books, 15.4M book–tag links, 2.4M files, 660k tags (this machine, warm, p95 in ms; budget 100, detail 50):
+
+| Query | SQLite | PostgreSQL |
+|---|---|---|
+| books by title / author / newest, first and middle pages | 5–13 | 11–16 |
+| one library by title, middle page | 9 | 15 |
+| most prolific author (37k books) | 31 | 26 |
+| author with 5–20 books | 5 | 18 |
+| biggest series | 77 | 50 |
+| category Fiction with subcategories | 11 | 30 |
+| authors A–Z, first and middle | 3–5 | 8 |
+| book detail | 6 | 11 |
+| filtered group 0.1 % / 1 % / 10 % | 53 / 63 / 18 | 33 / 62 / 22 |
+
+No full scan of a big table on either. Generation: SQLite 3.2 min, PostgreSQL 7.4 min (`COPY` of `BookTags` checks
+its foreign keys: 230 s).
+
+What the benchmark found and fixed on the way (details in the notes):
+
+- The tenant query filter `TenantScope == null || TenantId == TenantScope` reached the databases as
+  `(@p OR TenantId = @s)`: every book list scanned and sorted all books. Now two models, filters as plain equalities
+  ([tenants](../features/tenants.md#isolation-in-the-database)).
+- Sorting every library by author or date had no index: `(TenantId, SortAuthor, Id)`, `(TenantId, Added, Id)`.
+- Lookups of a built-in field by `BuiltIn` scanned the tags: by `FieldKey` (unique index).
+- Books with a tag (a content filter's allowed tags, a field value's page) are joined **by size** (D22 stays
+  query-time): a broad tag walks the sort index and tests each book, a narrow one (under √(page × books) books, from
+  `TagCounts`) starts from its links and sorts them; the tag's descendants are listed first, so a test is one seek on
+  `(BookId, TagId)`. Before: category Fiction 2.9 s, a 0.1 % filter 0.8 s, a 1 % filter 0.17 s.
 
 ## Exit criteria
 

@@ -37,3 +37,21 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
   password `benchmark-password`) limited to each (D22's narrow allow-lists).
 - `TagCounts` (direct, parents, fields once per book) and `Libraries.BookCount`.
 - Small-size tests: `CatalogGeneratorTests` (3,000 books, both providers).
+
+## What `run` measures
+
+```sh
+dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/sqlite-2m.db" [--iterations 20]
+```
+
+- 20 queries through Core's own services (`BookQueries`, `TagQueries`, `BookVisibilities`): first and middle pages
+  by title, author and newest first (all libraries and one), the books of the most prolific author, of an author
+  with 5–20 books, of the biggest series, of category Fiction with its subcategories, authors A–Z (first and
+  middle), book detail on random ids, and the pages of the three filtered groups (0.1 %, 1 %, 10 %).
+- Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms).
+- Every SQL command a query runs is captured (EF's diagnostic events) and explained with its parameters:
+  PostgreSQL `EXPLAIN` (a `Seq Scan` on a big table fails), SQLite `EXPLAIN QUERY PLAN` (a bare `SCAN` of a big table
+  fails; `SCAN … USING INDEX` is the keyset walk).
+- Report `bench-<provider>-<books>-<time>.json` and every plan in `…-plans.txt` in the work folder. Exit 1 on a full
+  scan, or on PostgreSQL past a budget (SQLite's times are recorded, not enforced).
+- Run nothing else heavy at the same time: the timings are the machine's.

@@ -42,7 +42,8 @@ public abstract class BulkWriter : IAsyncDisposable
 
 internal sealed class PostgresBulkWriter(string connectionString) : BulkWriter
 {
-    private readonly NpgsqlConnection _connection = new(connectionString);
+    // No command timeout: completing a COPY of 15M rows (its foreign keys checked) takes minutes, past the 30 s default.
+    private readonly NpgsqlConnection _connection = new(new NpgsqlConnectionStringBuilder(connectionString) { CommandTimeout = 0 }.ConnectionString);
     private readonly List<string> _indexes = [];
 
     public override async Task BeginAsync(CancellationToken cancellationToken)
