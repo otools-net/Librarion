@@ -87,13 +87,13 @@ accepted as proposed.
 
 ### 4.3 INPX
 
-- [ ] `InpxSource`: `structure.info`, `collection.info`, `.inp` lines, archive name rules, deleted records; samples
-      written by the test (an INPX and its zips), broken lines reported, never fatal.
+- [x] `InpxSource`: `structure.info`, `collection.info`, `.inp` lines, archive name rules, deleted records; samples
+      written by the test (an INPX and its zips), broken lines reported, never fatal; windows-1251 `.inp` files.
 
 ### 4.4 UI, docs
 
-- [ ] Library panel: "Import from another source" (kind, source path, files' folder), the run with its counts; texts.
-- [ ] `docs/administration/libraries.md` (importing from Calibre and INPX), CHANGELOG, rights reference.
+- [x] Library panel: "Import from another program" (kind, source path, files' folder), the run with its counts; texts.
+- [x] `docs/administration/libraries.md` (importing from Calibre and INPX), CHANGELOG, rights reference.
 
 ### 4.5 Benchmark, e2e
 

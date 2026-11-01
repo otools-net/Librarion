@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    GroupInfo, GroupInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingLevel, SettingState, SetupInput,
+    GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
@@ -84,6 +84,8 @@ export class Api {
     libraryTasks = (library: number, before?: number) => this.get<TaskRunInfo[]>(`api/libraries/${library}/tasks`, { before, limit: 10 });
     missingBooks = (library: number, after?: string) => this.get<MissingBookPage>(`api/libraries/${library}/missing`, { after, limit: 20 });
     removeMissingBooks = (library: number, removal: MissingRemoval) => this.post<{ runId: number }>(`api/libraries/${library}/missing/remove`, removal);
+    importKinds = (library: number) => this.get<string[]>(`api/libraries/${library}/import/kinds`);
+    importIntoLibrary = (library: number, input: ImportInput) => this.post<{ runId: number }>(`api/libraries/${library}/import`, input);
     task = (run: number) => this.get<TaskRunInfo>(`api/tasks/${run}`);
     cancelTask = (run: number) => this.post<void>(`api/tasks/${run}/cancel`);
     schedules = (library: number) => this.get<ScheduleInfo[]>(`api/libraries/${library}/schedules`);

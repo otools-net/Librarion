@@ -65,7 +65,8 @@ public abstract class ImportFormat
     /// <summary>Null when <paramref name="path"/> (an existing file) is a source of this kind; else why not, as a message.</summary>
     public abstract string? Check(string path);
 
-    public abstract IImportSource Open(string path);
+    /// <summary>The source at <paramref name="path"/>, its books' files in <paramref name="filesFolder"/> (full).</summary>
+    public abstract IImportSource Open(string path, string filesFolder);
 }
 
 /// <summary>The kinds of source known, by key (registered in the services: a test adds its own).</summary>

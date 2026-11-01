@@ -242,7 +242,7 @@ public sealed class ImportTests
 
         public override string? Check(string path) => File.ReadAllText(path).Contains('|') ? null : "no records";
 
-        public override IImportSource Open(string path) => new TestSource(File.ReadAllLines(path).Select(line => line.Split('|'))
+        public override IImportSource Open(string path, string filesFolder) => new TestSource(File.ReadAllLines(path).Select(line => line.Split('|'))
             .Select(p => new ImportRecord(p[0], new BookMetadata(ImportTagSourceKind.Calibre, p[1]), [new ImportFile(Path.Combine(Path.GetDirectoryName(path)!, p[2]))]))
             .ToList());
     }

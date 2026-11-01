@@ -189,7 +189,7 @@ describe('LibraryPanel', () => {
         api.libraryRoots.mockResolvedValue([{ id: 1, libraryId: 5, path: '/srv/books', created: '', exists: false }]);
         api.schedules.mockResolvedValue([]);
         api.libraryTasks.mockResolvedValueOnce([run({ outcome: 'succeeded', finished: '2026-11-01T10:01:00Z',
-            counts: { added: 3, changed: 0, removed: 0, unchanged: 9, archivesRead: 1, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: ['a.zip: broken'], missing: 1, returned: 2 } })]);
+            counts: { added: 3, changed: 0, removed: 0, unchanged: 9, archivesRead: 1, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: ['a.zip: broken'], missing: 1, returned: 2, skipped: 0 } })]);
         api.addLibraryRoot.mockResolvedValue({ id: 2, libraryId: 5, path: '/srv/more', created: '', exists: true });
         api.scanLibrary.mockResolvedValue({ runId: 8, started: true });
         const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
@@ -204,7 +204,7 @@ describe('LibraryPanel', () => {
         await stable();
         expect(api.addLibraryRoot).toHaveBeenCalledWith(5, '/srv/more');
 
-        api.libraryTasks.mockResolvedValue([run({ id: 8, progress: { filesSeen: 120, archivesDone: 1, added: 40, changed: 0, removed: 0, current: 'x.fb2', missing: 0, returned: 0 } })]);
+        api.libraryTasks.mockResolvedValue([run({ id: 8, progress: { filesSeen: 120, archivesDone: 1, added: 40, changed: 0, removed: 0, current: 'x.fb2', missing: 0, returned: 0, skipped: 0 } })]);
         click(element, 'Scan now');
         await stable();
         expect(api.scanLibrary).toHaveBeenCalledWith(5);
@@ -250,6 +250,52 @@ describe('LibraryPanel', () => {
         await stable();
         expect(api.removeMissingBooks).toHaveBeenCalledWith(5, { all: true });
         vi.restoreAllMocks();
+    });
+
+    it('starts an import from another program with its kind, source and files folder', async () => {
+        const api = mockApi();
+        api.libraryRoots.mockResolvedValue([]);
+        api.schedules.mockResolvedValue([]);
+        api.libraryTasks.mockResolvedValue([]);
+        api.missingBooks.mockResolvedValue({ items: [], next: null, total: 0, ready: 0, keepDays: 30 });
+        api.importKinds.mockResolvedValue(['calibre', 'inpx']);
+        api.importIntoLibrary.mockResolvedValue({ runId: 4 });
+        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan', 'library.import']);
+        await stable();
+
+        expect(element.textContent).toContain('Import from another program');
+        const select = element.querySelector<HTMLSelectElement>('select[aria-label="Kind of source"]')!;
+        expect([...select.options].map(option => option.textContent?.trim())).toEqual(['Calibre library', 'INPX catalog']);
+        select.value = 'inpx';
+        select.dispatchEvent(new Event('change'));
+        await stable();
+        const source = element.querySelector<HTMLInputElement>('input[aria-label="Path of the source on the server"]')!;
+        expect(source.placeholder).toBe('Path of the .inpx file');
+        source.value = 'D:/books/librusec.inpx';
+        source.dispatchEvent(new Event('input'));
+        const files = element.querySelector<HTMLInputElement>(`input[aria-label="Folder of the books' files (optional)"]`)!;
+        files.value = 'D:/books/archives';
+        files.dispatchEvent(new Event('input'));
+        await stable();
+        click(element, 'Import');
+        await stable();
+        expect(api.importIntoLibrary).toHaveBeenCalledWith(5, { kind: 'inpx', source: 'D:/books/librusec.inpx', files: 'D:/books/archives' });
+        expect(api.libraryRoots).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows an import run with its own counts', async () => {
+        const api = mockApi();
+        api.libraryRoots.mockResolvedValue([]);
+        api.schedules.mockResolvedValue([]);
+        api.missingBooks.mockResolvedValue({ items: [], next: null, total: 0, ready: 0, keepDays: 30 });
+        api.libraryTasks.mockResolvedValue([run({ id: 3, task: 'import', outcome: 'succeeded', finished: '2026-11-01T10:05:00Z',
+            counts: { added: 5, changed: 2, removed: 0, unchanged: 7, archivesRead: 0, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: [], missing: 0, returned: 0, skipped: 1 } })]);
+        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
+        await stable();
+
+        expect(element.textContent).toContain('Import from another source');
+        expect(element.textContent).toContain('5 added · 2 updated · 7 unchanged · 1 skipped');
+        expect(element.textContent).not.toContain('Import from another program');
     });
 
     it('shows only the folders without the scan right, and adds a weekly schedule', async () => {

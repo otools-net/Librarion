@@ -1,11 +1,12 @@
 # Imports from other sources: Calibre, INPX
 
 Code: `Core/Imports/` (`ImportSource.cs`: `ImportRecord`, `ImportFile`, `IImportSource`, `ImportFormat`, `ImportFormats`,
-`ImportReport`; `CatalogImporter`), `Core/Imports/Calibre/CalibreSource.cs`, `CatalogWriter.ImportAsync` /
+`ImportReport`; `CatalogImporter`), `Core/Imports/Calibre/CalibreSource.cs`, `Core/Imports/Inpx/InpxSource.cs`, `CatalogWriter.ImportAsync` /
 `RefreshAsync`, `Books.MetadataSource` / `ImportHash`, `BookProperties`, `LibraryRoots.RootForAsync`, task kind
 `Import` (`BackgroundTasks.StartImportAsync`), route `POST api/libraries/{id}/import` (`Api/Endpoints/TaskEndpoints.cs`),
 Calibre covers in `CoverService.CalibreAsync`. Tests: `ImportTests` (the pipeline, with a test source and a test kind),
-`CalibreImportTests` (sample `metadata.db` files written from SQL). Plan: [stage 4](../development/stage-4-calibre-plan.md).
+`CalibreImportTests` (sample `metadata.db` files written from SQL), `InpxImportTests` (INPX files and zips written by
+the test); client `admin/library-panel.ts` (the form, import runs' counts), `admin.spec.ts`. Plan: [stage 4](../development/stage-4-calibre-plan.md).
 
 **The user's rule (2026-11-01):** a Calibre library or an INPX catalog comes in by a manual import of data from a
 different source. An administrator starts it, the source is read once, and what it says is stored in our database.
@@ -13,7 +14,7 @@ The source is never read live and never written; importing again is how its chan
 
 ## Pipeline
 
-- One class per kind of source (as [book-formats](book-formats.md)): an `ImportFormat` (key, `Check(path)`, `Open`)
+- One class per kind of source (as [book-formats](book-formats.md)): an `ImportFormat` (key, `Check(path)`, `Open(path, filesFolder)`)
   registered in the services (`AddSingleton<ImportFormat, …>`; a test adds its own), opening an `IImportSource` that
   yields `ImportRecord`s (source id, `BookMetadata`, files, cover flag) front to back and reports what it can't use to
   `ImportReport` (skipped, the first 100 problems), never throwing.
@@ -75,8 +76,27 @@ The source is never read live and never written; importing again is how its chan
   view into the cover cache (same limits as extracted covers); not there → the generated cover; a broken picture marks
   the book `Failed` until a re-import resets it.
 
+## INPX
+
+- The `.inpx` is a zip read with `ZipDirectory` (not unpacked): `structure.info` gives the fields' order (else
+  `AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS`), the first line of
+  `collection.info` the collection's name (else the file's name); every `.inp` but `extra.inp` (an online collection's
+  books that aren't local) is read line by line, streamed. Layout learnt from MyHomeLib (MIT:
+  `Program/ImportImpl/unit_ImportInpxThread.pas`).
+- A line: fields split by `\x04`; authors `last,first,middle` separated by `:` → `author` ("First Middle Last", sort
+  "Last, First Middle"); genres `code:` → `category` through `Fb2Genres`; `SERIES` + `SERNO` → `series`; `LANG` →
+  `language`; `KEYWORDS` split by `,` → plain tags under "Imported: INPX" (20 at most); `LIBRATE` 1–5 → rating 2–10;
+  `LIBID` → identifier `libid`. `DATE` (when the library added it) isn't used.
+- The book: entry `FILE.EXT` of the zip `FOLDER` (relative to the files' folder), else of the zip named as its `.inp`.
+  A format Librarion doesn't know, or a line without `FILE`/`EXT`, is skipped and reported (`name.inp:line`).
+- `DEL` = 1 (anything sorting at or after `"1"`, as MyHomeLib) is skipped and counted (the user's decision,
+  2026-11-01); since the zip is written done, a later scan doesn't add its entry either.
+- Source id `<collection>:<LIBID>` (scheme `inpx`), else `<collection>:<zip>/<entry>`.
+- `.inp` text is UTF-8; a file that isn't valid UTF-8 is read as windows-1251 (older catalogs). Checking costs one
+  extra read of each `.inp`.
+
 ## Limits, later
 
 - A Calibre tag with dots (`Fiction.Fantasy`) is one plain tag, not a parent chain yet.
 - A custom column's field is named by its key; Calibre's display name isn't used for the field yet.
-- INPX: [stage 4.3](../development/stage-4-calibre-plan.md).
+- An option to import INPX records marked deleted as hidden books.

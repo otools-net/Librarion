@@ -2,14 +2,15 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
-import { LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleKind, TaskRunInfo } from '../core/models';
+import { ImportInput, LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleKind, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
 
 const POLL_MS = 1500;
 
 /**
  * A library's folders, scans and schedules (agents/docs/features/tasks.md): folders added and removed, a scan started
- * and followed while it runs, the last runs with what they did, schedules added and deleted.
+ * and followed while it runs, an import from another source started (agents/docs/features/imports.md), the last runs
+ * with what they did, schedules added and deleted.
  */
 @Component({
     selector: 'lib-library-panel',
@@ -49,7 +50,11 @@ const POLL_MS = 1500;
                             @if (run.waiting) {
                                 {{ 'tasks.waiting' | t }}
                             } @else if (run.progress; as progress) {
-                                {{ 'tasks.progress' | t: { files: progress.filesSeen, added: progress.added, changed: progress.changed, missing: progress.missing, removed: progress.removed } }}
+                                @if (run.task === 'import') {
+                                    {{ 'tasks.importProgress' | t: { records: progress.filesSeen, added: progress.added, changed: progress.changed, skipped: progress.skipped } }}
+                                } @else {
+                                    {{ 'tasks.progress' | t: { files: progress.filesSeen, added: progress.added, changed: progress.changed, missing: progress.missing, removed: progress.removed } }}
+                                }
                             } @else {
                                 {{ 'tasks.starting' | t }}
                             }
@@ -69,7 +74,11 @@ const POLL_MS = 1500;
                                         {{ 'tasks.bySchedule' | t }}
                                     }
                                     @if (run.counts; as counts) {
-                                        {{ 'tasks.counts' | t: { added: counts.added, changed: counts.changed, missing: counts.missing, returned: counts.returned, removed: counts.removed, unchanged: counts.unchanged } }}
+                                        @if (run.task === 'import') {
+                                            {{ 'tasks.importCounts' | t: { added: counts.added, changed: counts.changed, unchanged: counts.unchanged, skipped: counts.skipped } }}
+                                        } @else {
+                                            {{ 'tasks.counts' | t: { added: counts.added, changed: counts.changed, missing: counts.missing, returned: counts.returned, removed: counts.removed, unchanged: counts.unchanged } }}
+                                        }
                                     }
                                     @if (run.summary) {
                                         {{ run.summary }}
@@ -94,6 +103,23 @@ const POLL_MS = 1500;
                         <li class="row muted">{{ 'tasks.noRuns' | t }}</li>
                     }
                 </ul>
+
+                @if (canImport() && importKinds().length > 0) {
+                    <h3 class="field-label">{{ 'import.title' | t }}</h3>
+                    <p class="row-meta">{{ 'import.explain' | t }}</p>
+                    <form class="import-form" novalidate (submit)="startImport($event)">
+                        <select [attr.aria-label]="'import.kind' | t" [value]="importKind()" (change)="importKind.set(valueOf($event))">
+                            @for (key of importKinds(); track key) {
+                                <option [value]="key">{{ ('importKind.' + key) | t }}</option>
+                            }
+                        </select>
+                        <input type="text" [placeholder]="('importKind.' + importKind() + '.source') | t" [attr.aria-label]="'import.source' | t"
+                               [value]="importSource()" (input)="importSource.set(valueOf($event))">
+                        <input type="text" [placeholder]="'import.files' | t" [attr.aria-label]="'import.files' | t" [title]="'import.filesHint' | t"
+                               [value]="importFiles()" (input)="importFiles.set(valueOf($event))">
+                        <button type="submit" class="button" [title]="'import.startHint' | t" [disabled]="busy() || running() !== null || !importSource().trim()">{{ 'import.start' | t }}</button>
+                    </form>
+                }
 
                 @if (missing(); as page) {
                     @if (page.total > 0) {
@@ -197,6 +223,12 @@ export class LibraryPanel implements OnInit, OnDestroy {
     protected readonly error = signal<string | null>(null);
 
     protected readonly canScan = computed(() => this.session.can('library.scan'));
+    protected readonly canImport = computed(() => this.session.can('library.import'));
+    /** The kinds of source the server can import from (`calibre`, `inpx`), and the form's values. */
+    protected readonly importKinds = signal<string[]>([]);
+    protected readonly importKind = signal('calibre');
+    protected readonly importSource = signal('');
+    protected readonly importFiles = signal('');
     protected readonly running = computed(() => this.runs().find(run => run.outcome === 'running') ?? null);
     protected readonly valueOf = valueOf;
     /** Sunday first, as the schedule's day bits. */
@@ -216,6 +248,32 @@ export class LibraryPanel implements OnInit, OnDestroy {
         // On its own: the panel is usable while the missing books load.
         if (this.canScan())
             void this.refreshMissing().catch(error => this.error.set(errorText(this.i18n, error)));
+        if (this.canScan() && this.canImport())
+            void this.loadImportKinds().catch(error => this.error.set(errorText(this.i18n, error)));
+    }
+
+    private async loadImportKinds(): Promise<void> {
+        const kinds = await this.api.importKinds(this.library().id);
+        if (this.destroyed)
+            return;
+        this.importKinds.set(kinds);
+        if (!kinds.includes(this.importKind()) && kinds.length > 0)
+            this.importKind.set(kinds[0]);
+    }
+
+    /** An import from another source: nothing in the source is changed, and no book is removed, so no confirmation. */
+    protected async startImport(event: Event): Promise<void> {
+        event.preventDefault();
+        const input: ImportInput = { kind: this.importKind(), source: this.importSource().trim() };
+        if (this.importFiles().trim())
+            input.files = this.importFiles().trim();
+        await this.run(async () => {
+            await this.api.importIntoLibrary(this.library().id, input);
+            this.importSource.set('');
+            this.importFiles.set('');
+            this.roots.set(await this.api.libraryRoots(this.library().id));
+            await this.refreshRuns();
+        });
     }
 
     ngOnDestroy(): void {

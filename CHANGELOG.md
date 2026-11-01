@@ -6,11 +6,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
-- Imports from other programs: a Calibre library (its `metadata.db`: authors, series, publishers, languages, tags,
-  ratings, descriptions, identifiers, custom columns, covers) is imported into a library and stored in Librarion's
-  database; the Calibre library is only read. Importing again brings in what changed and never removes a book; books
-  already scanned are matched by their files, and a later scan keeps the imported metadata. New right **Import**
-  (`library.import`), given to Administrators. Started through the API for now (`POST api/libraries/{id}/import`).
+- Imports from other programs, from the library's panel: a Calibre library (its `metadata.db`: authors, series,
+  publishers, languages, tags, ratings, descriptions, identifiers, custom columns, covers) or an INPX catalog with its
+  zips (authors, genres, series, languages, keywords, ratings; deleted records left out) is imported into a library and
+  stored in Librarion's database; the source is only read. Importing again brings in what changed and never removes a
+  book; books already scanned are matched by their files, and a later scan keeps the imported metadata. New right
+  **Import** (`library.import`), given to Administrators.
 
 ### Changed
 

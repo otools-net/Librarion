@@ -207,6 +207,8 @@ export interface ScanProgress {
     missing: number;
     /** Missing books found again. */
     returned: number;
+    /** Records an import left out. */
+    skipped: number;
 }
 
 export interface ScanCounts {
@@ -221,13 +223,21 @@ export interface ScanCounts {
     problems: string[];
     missing: number;
     returned: number;
+    skipped: number;
+}
+
+/** An import from another source: its kind, the source's path on the server, the folder of its books' files (default: the source's). */
+export interface ImportInput {
+    kind: string;
+    source: string;
+    files?: string;
 }
 
 /** A run of a background task (`api/libraries/{id}/tasks`, `api/tasks/{run}`). */
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;

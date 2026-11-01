@@ -158,7 +158,7 @@ public static class TaskEndpoints
                     return Invalid("files", Code(problem).Replace("path.", "files."));
                 if (added)
                     await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"root added: {root!.Path}");
-                var (runId, _) = await tasks.StartImportAsync(tenantId, library, root!.Id, () => format.Open(source), state.User?.Id, context.RequestAborted);
+                var (runId, _) = await tasks.StartImportAsync(tenantId, library, root!.Id, () => format.Open(source, LibraryRoots.Normalize(files!)), state.User?.Id, context.RequestAborted);
                 await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"import from {format.Key}: {source}");
                 return Results.Accepted(value: new TaskStarted(runId, true));
             })

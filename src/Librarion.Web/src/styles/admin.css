@@ -207,3 +207,17 @@ button.row-main:hover .row-title {
 .schedule-form .check.day {
     min-height: 44px;
 }
+
+/* An import from another source: kind, source and files' folder, one under the other on a phone, in a row when there is room. */
+.import-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+}
+
+.import-form input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 0;
+}

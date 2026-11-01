@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MissingBooks>();
         services.AddSingleton<Librarion.Core.Imports.CatalogImporter>();
         services.AddSingleton<Librarion.Core.Imports.ImportFormat, Librarion.Core.Imports.Calibre.CalibreFormat>();
+        services.AddSingleton<Librarion.Core.Imports.ImportFormat, Librarion.Core.Imports.Inpx.InpxFormat>();
         services.TryAddSingleton<Librarion.Core.Imports.ImportFormats>();
         services.Configure<LibraryOptions>(configuration.GetSection(LibraryOptions.SectionName));
         services.AddSingleton<LibraryRoots>();

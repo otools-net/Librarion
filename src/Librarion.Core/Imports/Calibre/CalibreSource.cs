@@ -24,7 +24,7 @@ public sealed class CalibreFormat : ImportFormat
         }
     }
 
-    public override IImportSource Open(string path) => new CalibreSource(path);
+    public override IImportSource Open(string path, string filesFolder) => new CalibreSource(path, filesFolder);
 }
 
 /// <summary>
@@ -43,9 +43,10 @@ public sealed class CalibreSource : IImportSource
     private readonly HashSet<string> tables = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> bookColumns = new(StringComparer.OrdinalIgnoreCase);
 
-    public CalibreSource(string path)
+    /// <param name="filesFolder">The library's folder, where <c>books.path</c> starts (default: the database's folder).</param>
+    public CalibreSource(string path, string? filesFolder = null)
     {
-        folder = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        folder = filesFolder ?? Path.GetDirectoryName(Path.GetFullPath(path))!;
         // Read-only and unpooled: the database stays Calibre's, and the file isn't held once the import ends.
         connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
