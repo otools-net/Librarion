@@ -11,6 +11,7 @@ As found on 2026-10-31 (Windows 11).
   10-31).
 - **Little memory:** stop what you started right after use: `docker stop librarion-pg`, Docker Desktop's processes,
   `wsl --shutdown`.
+- `D:\Temp` is for temporary and test data (generated catalogs, benchmark databases): ~220 GB free, C: ~26 GB.
 - Shells: Git Bash (the Bash tool) and Windows PowerShell 5.1. Git's `core.autocrlf=true`: see
   [line-endings](line-endings.md).
 - SFE (the design reference) is in `C:\workspace\GIT\SimpleFileExplorer`, MyHomeLib in

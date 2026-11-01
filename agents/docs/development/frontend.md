@@ -37,6 +37,10 @@ Ported from SFE's `frontend.md` (its phone, touch and overflow rules come from r
   built-in control flow, `strict` + `strictTemplates`.
 - Only `core/api.service.ts` makes HTTP requests; URLs stay relative (virtual directory).
 - Global CSS in `src/styles/` (one partial per area), no component styles.
-- The client hides what a right forbids (`config.can(...)`).
+- The client hides what a right forbids (`SessionService.can(...)`).
+- Server refusals carry codes (`userName.taken`, `tenant.lastAdministrator`; a 409's problem `type` is its code):
+  `core/errors.ts` shows them as `error.<code>` texts, by field for validation errors; a new code needs its text
+  (`ClientI18nTests.EveryNameTheServerSendsHasItsText`).
+- `Api` sends 401 to the sign-in page (`login?return=`), 503 `setup-required` to `/setup`.
 - Every button has a `title` saying what it does.
 - Anything polling stops while the tab is hidden (battery).

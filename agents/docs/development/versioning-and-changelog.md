@@ -5,9 +5,10 @@ Files: `Directory.Build.props` (`<Version>`), `CHANGELOG.md`. Same workflow as S
 ## Branches
 
 - **`edge`**: all work is committed there until it is ready. No version bump there.
-- **`main`**: gets `edge` when the user says it is ready, with the version bump in the merge. Never commit work
-  directly on `main`.
-- Commit messages: `claude: <short summary>`; commit only when asked.
+- **`main`**: gets `edge` when a roadmap stage's exit criteria are met (automatically, the user's decision of
+  2026-11-01), with the version bump in the merge commit. Never commit work directly on `main`; after the merge,
+  `main` is merged back into `edge`.
+- Commit messages: `claude: <short summary>`; commits after each finished piece with green tests.
 
 ## Versioning
 

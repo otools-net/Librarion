@@ -69,9 +69,10 @@ note rather than inventing a new one.
 - **Database:** both providers (SQLite, PostgreSQL) work; every model change makes a migration for each
   ([database](agents/docs/development/database.md)).
 - **Texts:** every UI text is a translation key in `src/i18n/en.json` ([frontend](agents/docs/development/frontend.md)).
-- **Git:** work is committed on the `edge` branch, merged into `main` when the user says; messages
-  `claude: <short summary>`; a commit after each finished stage or functionality of importance, green tests only
-  (decided 2026-10-31). Pushing, merging and tags only when the user asks.
+- **Git:** work is committed on the `edge` branch; messages `claude: <short summary>`; a commit after each finished
+  stage or functionality of importance, green tests only (decided 2026-10-31). `edge` is pushed after each finished
+  stage and merged into `main` with the version bump when a stage's exit criteria are met, without asking (the
+  user's decision, 2026-11-01); tags only when the user asks.
 - **Agent tools:** put any reusable helper (scripts, generators, drivers) in `agents/tools/<job>/` with a `README.md`,
   never only in the scratchpad; work output goes to a temp folder, not the repo.
 
@@ -91,8 +92,6 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
-| [stage-0-foundation-plan](agents/docs/development/stage-0-foundation-plan.md) | stage 0 work items and exit criteria (repo, build, tests, privacy guards, i18n, shell, CI) | |
-| [stage-1-access-plan](agents/docs/development/stage-1-access-plan.md) | **stage 1 in progress**: what is built (accounts, tenants, rights, setup, settings, security log, admin UI), what is left (e2e, notes, docs), decisions taken | `Core/Access/`, `Core/Settings/`, `Api/Endpoints/`, `app/account/`, `app/admin/` |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
