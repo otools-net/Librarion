@@ -2,6 +2,8 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## Unreleased
+
 ## 0.5.0
 
 ### Added
