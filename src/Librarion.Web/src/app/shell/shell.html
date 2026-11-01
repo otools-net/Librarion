@@ -1,0 +1,61 @@
+<lib-icon-sprite />
+<a class="skip-link" href="#main">{{ 'app.skipToContent' | t }}</a>
+
+<header class="topbar">
+    <button type="button" class="icon-button menu-button" (click)="toggleDrawer()"
+            [attr.aria-expanded]="drawerOpen()" aria-controls="main-nav"
+            [title]="(drawerOpen() ? 'shell.menu.close' : 'shell.menu.open') | t"
+            [attr.aria-label]="(drawerOpen() ? 'shell.menu.close' : 'shell.menu.open') | t">
+        <svg [libIcon]="drawerOpen() ? 'close' : 'menu'"></svg>
+    </button>
+
+    <a class="brand" routerLink="/" [attr.aria-label]="'app.name' | t">
+        <img src="favicon.svg" alt="" width="24" height="24">
+        <span>{{ 'app.name' | t }}</span>
+    </a>
+
+    <form class="search" role="search" (submit)="$event.preventDefault()">
+        <svg libIcon="search"></svg>
+        <input type="search" name="q" disabled
+               [attr.aria-label]="'shell.search.label' | t"
+               [placeholder]="'shell.search.placeholder' | t"
+               [title]="'shell.nav.soon' | t">
+    </form>
+
+    <button type="button" class="icon-button" (click)="theme.toggle()"
+            [title]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t"
+            [attr.aria-label]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t">
+        <svg [libIcon]="theme.current() === 'dark' ? 'sun' : 'moon'"></svg>
+    </button>
+</header>
+
+<div class="layout">
+    <nav id="main-nav" class="sidebar" [class.open]="drawerOpen()" [attr.aria-label]="'shell.nav.label' | t">
+        <ul>
+            @for (item of nav; track item.label) {
+                <li>
+                    @if (item.link) {
+                        <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
+                           [routerLinkActiveOptions]="{ exact: true }" [title]="item.label | t">
+                            <svg [libIcon]="item.icon"></svg>
+                            <span>{{ item.label | t }}</span>
+                        </a>
+                    } @else {
+                        <span class="nav-item" aria-disabled="true" [title]="'shell.nav.soon' | t">
+                            <svg [libIcon]="item.icon"></svg>
+                            <span>{{ item.label | t }}</span>
+                        </span>
+                    }
+                </li>
+            }
+        </ul>
+    </nav>
+
+    @if (drawerOpen()) {
+        <div class="drawer-backdrop" (pointerdown)="closeDrawer()"></div>
+    }
+
+    <main id="main" class="page" tabindex="-1">
+        <router-outlet />
+    </main>
+</div>

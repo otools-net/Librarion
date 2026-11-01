@@ -1,0 +1,53 @@
+/*
+ * Design tokens: colors per theme (data-theme on <html>, set before first paint by theme-boot.ts), and the compact
+ * spacing scale (priority 3: dense by default). System fonts only: nothing is loaded from elsewhere.
+ */
+:root {
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+    --font-size: 14px;
+    --line-height: 1.4;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+
+    --radius: 6px;
+    --topbar-height: 48px;
+    --sidebar-width: 200px;
+    /* Buttons and links people tap: 32 px with a mouse, 44 px on touch screens (base.css). */
+    --target: 32px;
+
+    --phone-max: 640px;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #15181c;
+    --surface: #1e2227;
+    --surface-2: #262b31;
+    --border: #343a42;
+    --text: #e6e8eb;
+    --text-muted: #a1a8b1;
+    --accent: #7fb0e0;
+    --accent-text: #0d1b29;
+    --danger: #f08a80;
+    --backdrop: rgb(0 0 0 / 55%);
+    --focus: #a8cdf5;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --surface-2: #eeece7;
+    --border: #d8d4cc;
+    --text: #1d2024;
+    --text-muted: #5b6168;
+    --accent: #2f5d8a;
+    --accent-text: #ffffff;
+    --danger: #b3261e;
+    --backdrop: rgb(0 0 0 / 35%);
+    --focus: #2f5d8a;
+}

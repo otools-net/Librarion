@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    The version of Librarion, for every project: starts at 0.0.0, bumped only when edge is merged into main, and
+    stays 0.x until the MVP, which is 1.0.0 (agents/docs/development/versioning-and-changelog.md). The SDK appends the
+    commit to the informational version (0.0.0+<sha>), which the app shows next to it (AppVersion.cs).
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- CI (GitHub sets CI=true) treats warnings as errors; locally they stay warnings. -->
+    <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

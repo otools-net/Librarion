@@ -1,0 +1,175 @@
+/* The app's frame (app/shell): top bar, sidebar / drawer, page. Phones ≤ 640 px. */
+
+.shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--topbar-height);
+    padding: 0 max(var(--space-2), env(safe-area-inset-right)) 0 max(var(--space-2), env(safe-area-inset-left));
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.menu-button {
+    display: none;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--target);
+    padding: 0 var(--space-1);
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.search {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    max-width: 520px;
+    height: var(--target);
+    margin-inline: auto;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text-muted);
+}
+
+.search input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    outline: none;
+}
+
+.search input:disabled {
+    cursor: not-allowed;
+}
+
+.layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.sidebar {
+    flex-shrink: 0;
+    width: var(--sidebar-width);
+    padding: var(--space-2);
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.sidebar ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--target);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+}
+
+a.nav-item:hover {
+    background: var(--surface-2);
+}
+
+.nav-item.active {
+    background: var(--surface-2);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.nav-item[aria-disabled="true"] {
+    color: var(--text-muted);
+    cursor: default;
+}
+
+.page {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-4) max(var(--space-4), env(safe-area-inset-right)) var(--space-5) var(--space-4);
+    outline: none;
+}
+
+.drawer-backdrop {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .menu-button {
+        display: inline-flex;
+    }
+
+    /* The name stays as the icon only: the search field gets the room. */
+    .brand span {
+        display: none;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: var(--topbar-height);
+        bottom: 0;
+        left: 0;
+        z-index: 30;
+        width: min(280px, 85vw);
+        padding-left: max(var(--space-2), env(safe-area-inset-left));
+        padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        transform: translateX(-100%);
+        visibility: hidden;
+        transition: transform 0.18s ease, visibility 0s linear 0.18s;
+    }
+
+    .sidebar.open {
+        transform: none;
+        visibility: visible;
+        transition: transform 0.18s ease;
+    }
+
+    .drawer-backdrop {
+        position: fixed;
+        inset: var(--topbar-height) 0 0 0;
+        z-index: 25;
+        display: block;
+        background: var(--backdrop);
+        touch-action: none;
+    }
+
+    .page {
+        padding: var(--space-3) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .sidebar.open {
+        transition: none;
+    }
+}

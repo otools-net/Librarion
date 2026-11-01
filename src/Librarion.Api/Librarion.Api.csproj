@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Librarion.Core\Librarion.Core.csproj" />
+    <InternalsVisibleTo Include="Librarion.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Development's local database and caches (git-ignored): never part of a build or a publish. -->
+    <Content Update="data/**" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <!--
+    The web client: the Angular app in ../Librarion.Web, built with npm into wwwroot (git-ignored) before the static
+    web assets are collected (as SFE: agents/docs/environment/build.md). Needs Node.js (npm) on the PATH. Skipped when
+    its sources are older than wwwroot/index.html; -p:LibrarionSkipWebClient=true skips it altogether.
+  -->
+  <PropertyGroup>
+    <LibrarionWebRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Librarion.Web'))\</LibrarionWebRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <LibrarionWebSource Include="$(LibrarionWebRoot)src\**\*;$(LibrarionWebRoot)public\**\*;$(LibrarionWebRoot)*.json" />
+  </ItemGroup>
+
+  <!-- Also when package-lock.json changed since the last install (a pull adding packages): npm ci rewrites the copy. -->
+  <Target Name="LibrarionWebInstall" Condition="'$(LibrarionSkipWebClient)' != 'true'"
+          Inputs="$(LibrarionWebRoot)package-lock.json" Outputs="$(LibrarionWebRoot)node_modules\.package-lock.json">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(LibrarionWebRoot)" EnvironmentVariables="NG_CLI_ANALYTICS=false" />
+  </Target>
+
+  <Target Name="LibrarionWebBuild" BeforeTargets="BeforeBuild" DependsOnTargets="LibrarionWebInstall" Condition="'$(LibrarionSkipWebClient)' != 'true'"
+          Inputs="@(LibrarionWebSource)" Outputs="wwwroot\index.html">
+    <Exec Command="npm run build" WorkingDirectory="$(LibrarionWebRoot)" EnvironmentVariables="NG_CLI_ANALYTICS=false" />
+  </Target>
+
+  <!--
+    The files of the client as they are now: the build replaces them (their names carry a hash of their content). The
+    items globbed when the project was read are removed by name: a wildcard Remove inside a target matches files on
+    disk, so it missed the previous build's chunks, and DefineStaticWebAssets then failed once after every client
+    change ("No file exists for the asset", SFE's build.md).
+  -->
+  <Target Name="LibrarionWebContent" AfterTargets="LibrarionWebBuild" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <_LibrarionStaleWebContent Include="@(Content)" Condition="$([System.String]::Copy('%(Content.Identity)').Replace('/', '\').StartsWith('wwwroot\'))" />
+      <Content Remove="@(_LibrarionStaleWebContent)" />
+      <Content Include="wwwroot\**" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>
