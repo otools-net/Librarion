@@ -119,6 +119,7 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
+| [design](agents/docs/features/design.md) | the look: tokens, ink and paper palette, layered surfaces, type scale, motion, tested contrast (SFE's approach) | `src/styles/tokens.css`, `ClientDesignTests` |
 | [rights](agents/docs/features/rights.md) | rights catalog, scopes, built-in groups, evaluation and its cache, route rule; planned rights and content filters | `Core/Access/`, `Api/Security/` |
 | [accounts](agents/docs/features/accounts.md) | accounts and groups, passwords, sign-in throttle and lockout, session cookie and stamp, recovery codes | `Core/Access/`, `Api/Security/`, `app/account/`, `app/admin/` |
 | [tenants](agents/docs/features/tenants.md) | tenants and libraries, isolation by query filters (`TenantDb`), server administrators across tenants | `Core/Data/`, `Core/Access/`, `app/admin/` |

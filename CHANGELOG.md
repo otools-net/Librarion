@@ -4,6 +4,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ## Unreleased
 
+### Changed
+
+- New colours, "ink and paper": warm paper with ink-blue in the light theme, deep blue-grey in the dark one, every
+  text readable at WCAG AA contrast in both.
+
 ## 0.5.0
 
 ### Added

@@ -71,6 +71,32 @@ order: design foundation (5.0), then the administration with its search (5.1), t
 - **D-5.8 Facets with capped counts:** counts from `TagCounts` when nothing narrows the list; within a search, counted
   over at most the first 10,000 matches and shown "1000+" past the cap (never a count over the catalog per request).
 
+## Todo (the order of work; the user's rule, 2026-11-01: one chunk at a time, commit it, then ask before the next)
+
+A session may end early: this list is the state of the work. Tick a chunk when it is committed. Chunks are commits on
+`edge` only: the version is bumped once, when the stage is complete and merged (the user, 2026-11-01).
+
+1. [x] Tokens: layered surfaces, radii, shadow, type scale, motion (reduced motion honoured), ink and paper palette;
+       contrast test over the tokens (both themes, AA).
+2. [ ] Icon sprite (inline SVG, shipped) and the icon component; existing icons moved to it.
+3. [ ] Controls restyled: buttons (primary, secondary, quiet, danger), fields, selects, checkboxes, chips, badges,
+       cards, focus rings.
+4. [ ] Dialogs as phone sheets, toasts, empty states, skeleton placeholders.
+5. [ ] The shell: top bar (library switcher, search box, account menu), desktop sidebar, phone menu sheet.
+6. [ ] Administration structure: `admin-sections.ts` (groups, sections, sub-pages, rights), routes
+       `admin/:section/:page`, overview cards, sidebar, breadcrumbs, moved-addresses table.
+7. [ ] Administration on phones: list of sections, section pages with chips, back to the list.
+8. [ ] Library pages split into sub-pages (folders, runs, import, missing books, schedules).
+9. [ ] Settings forms in groups with hints, save bar, unsaved marks, leave guard.
+10. [ ] Administration search (normalize, every word, marks, reveal and flash; every key found).
+11. [ ] Browse: library grid and list, sort and view, keyset scrolling, scroll restored.
+12. [ ] Field and tag pages with counts.
+13. [ ] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
+14. [ ] Search: parser and server query, results page, suggestions.
+15. [ ] Facets with capped counts.
+16. [ ] Docs, CHANGELOG, feature notes; p95 budgets through the UI's calls; e2e on every device; axe AA; close the
+        stage (merge 0.6.0).
+
 ## Work items
 
 ### 5.0 Design foundation
