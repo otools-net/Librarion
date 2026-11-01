@@ -145,7 +145,8 @@ public sealed class TaskApiTests
 
         // While a run goes, a due schedule is recorded as skipped.
         var tasks = factory.Services.GetRequiredService<BackgroundTasks>();
-        await tasks.RecordSkippedAsync(session.Tenant!.Id, library.Id, 99, Cancel);
+        await tasks.RecordUnstartedAsync(new TaskSchedule { Id = 99, TenantId = session.Tenant!.Id, LibraryId = library.Id, Task = BackgroundTaskKind.LibraryScan },
+            TaskOutcome.Skipped, null, Cancel);
         Assert.AreEqual(TaskOutcome.Skipped, (await admin.GetAsync<List<TaskRunInfo>>($"/api/libraries/{library.Id}/tasks", Cancel))[0].Outcome);
     }
 

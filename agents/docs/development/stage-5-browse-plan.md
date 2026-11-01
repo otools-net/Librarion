@@ -102,7 +102,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        sections, sub-pages, rights), routes `admin/:section/:page`, overview cards, breadcrumbs, moved-addresses table.
 7. [x] Administration on phones: list of sections, section pages with chips, back to the list.
 8. [x] Library pages split into sub-pages (folders, runs, import, missing books, schedules).
-9. [ ] Schedules redesigned (D-5.10): task first (scan, Calibre import, INPX import) with its fields, server stores
+9. [x] Schedules redesigned (D-5.10): task first (scan, Calibre import, INPX import) with its fields, server stores
        and runs import schedules, list as task · source · when · next, add/edit in a dialog, enable switch.
 10. [ ] Settings forms in groups with hints, save bar, unsaved marks, leave guard.
 11. [ ] Administration search (normalize, every word, marks, reveal and flash; every key found).

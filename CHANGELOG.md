@@ -27,6 +27,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   own with its pages as tabs, and the back arrow returns to the list.
 - Each library has its own pages instead of one long panel: Folders, Runs, Import, Missing books and Schedules as
   tabs under its name (`/admin/libraries/1/runs`), with Scan now and the progress of a running scan above every tab.
+- Schedules say what they run: a folder scan, or an import from Calibre or INPX (new: imports can run on a
+  schedule, checked as an import started by hand). They are set in a dialog that asks what, then where from, then
+  when, and listed with what they run, when, their next time and an on/off switch.
 
 ## 0.5.0
 

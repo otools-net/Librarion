@@ -88,19 +88,23 @@ public sealed class BackgroundTasks : IDisposable
     /// Starts an import from another source into the library (waits for a scan of the library to end first), its files
     /// under <paramref name="rootId"/> (agents/docs/features/imports.md).
     /// </summary>
-    public Task<(long RunId, bool Started)> StartImportAsync(int tenantId, int libraryId, int rootId, Func<IImportSource> open, int? userId, CancellationToken cancellationToken) =>
-        StartAsync(tenantId, libraryId, BackgroundTaskKind.Import, TaskTrigger.Manual, userId, null,
+    public Task<(long RunId, bool Started)> StartImportAsync(int tenantId, int libraryId, int rootId, Func<IImportSource> open, TaskTrigger trigger, int? userId,
+        int? scheduleId, CancellationToken cancellationToken) =>
+        StartAsync(tenantId, libraryId, BackgroundTaskKind.Import, trigger, userId, scheduleId,
             (progress, cancel) => importer.ImportAsync(tenantId, libraryId, rootId, open, progress, cancel), cancellationToken);
 
-    /// <summary>A schedule came due while the library's run was still going: recorded, not started.</summary>
-    public async Task RecordSkippedAsync(int tenantId, int libraryId, int scheduleId, CancellationToken cancellationToken)
+    /// <summary>
+    /// A schedule came due and its task didn't start: skipped (the library's run was still going) or failed (an import's
+    /// source or folder is gone, <paramref name="summary"/> says which). Recorded as a run that started and ended now.
+    /// </summary>
+    public async Task RecordUnstartedAsync(TaskSchedule schedule, TaskOutcome outcome, string? summary, CancellationToken cancellationToken)
     {
-        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        await using var db = await tenantDb.ForTenantAsync(schedule.TenantId, cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
         db.TaskRuns.Add(new TaskRun
         {
-            TenantId = tenantId, LibraryId = libraryId, Task = BackgroundTaskKind.LibraryScan, Trigger = TaskTrigger.Schedule, ScheduleId = scheduleId,
-            Started = now, Finished = now, Outcome = TaskOutcome.Skipped,
+            TenantId = schedule.TenantId, LibraryId = schedule.LibraryId, Task = schedule.Task, Trigger = TaskTrigger.Schedule, ScheduleId = schedule.Id,
+            Started = now, Finished = now, Outcome = outcome, Summary = summary,
         });
         await db.SaveChangesAsync(cancellationToken);
     }

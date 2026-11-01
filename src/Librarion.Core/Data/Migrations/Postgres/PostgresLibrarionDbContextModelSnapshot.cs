@@ -796,6 +796,14 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Files")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ImportKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<int>("IntervalMinutes")
                         .HasColumnType("integer");
 
@@ -807,6 +815,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.Property<int>("LibraryId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("Start")
                         .HasColumnType("timestamp with time zone");

@@ -32,8 +32,12 @@ unchanged archive is skipped without being read.
   already read stays).
 - The **Runs** tab shows each scan: when, how it ended, how many books were added, changed and removed, and the
   first files that couldn't be read.
-- The **Schedules** tab sets scans that run by themselves: every few hours (at least every 15 minutes), or on chosen days at a time of day.
-  A scan that comes due while another runs is skipped, and missed ones are not made up later.
+- The **Schedules** tab sets work that runs by itself. **New schedule** asks, in order: **what it runs** (a folder
+  scan, or an import from Calibre or INPX if you may import), for an import **where it comes from** (as on the Import
+  tab), then **when**: every few hours (at least every 15 minutes), or on chosen days at a time of day. Each schedule
+  shows what it runs, when, and its next time; its switch turns it off without deleting it. One that comes due while
+  another scan or import of the library runs is skipped, and missed ones are not made up later. An import whose source
+  file or files folder is gone shows as a failed run saying so.
 
 ## Importing from another program
 

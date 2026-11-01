@@ -90,6 +90,7 @@ export class Api {
     cancelTask = (run: number) => this.post<void>(`api/tasks/${run}/cancel`);
     schedules = (library: number) => this.get<ScheduleInfo[]>(`api/libraries/${library}/schedules`);
     addSchedule = (library: number, input: ScheduleInput) => this.post<ScheduleInfo>(`api/libraries/${library}/schedules`, input);
+    updateSchedule = (library: number, schedule: number, input: ScheduleInput) => this.put<ScheduleInfo>(`api/libraries/${library}/schedules/${schedule}`, input);
     deleteSchedule = (library: number, schedule: number) => this.delete<void>(`api/libraries/${library}/schedules/${schedule}`);
 
     /** `admins`: the server administrators instead of the tenant's accounts; `after`: the last name of the page before. */

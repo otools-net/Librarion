@@ -39,6 +39,15 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
 
 ## Schedules
 
+- A schedule says what it runs first (D-5.10, the user's point of 2026-11-01): `task` `libraryScan`, or `import` with
+  `importKind`, `source` and `files`. Saving an import schedule runs `ImportRequests.CheckAsync` (the checks of
+  `POST …/import`, the right Import too; its files folder becomes a root then, as a manual import's does). When due,
+  `ImportRequests.StartScheduledAsync` checks again but never adds a root back (a removed one would come back by
+  itself): source or folder gone → a `failed` run saying why; the library busy → `skipped` (`RecordUnstartedAsync`).
+- Client: `admin/schedules-tab.ts` (the library's Schedules tab): rows "task · when · next" with the source of an
+  import and an on/off switch (`role=switch` over a checkbox, `PUT` with the same values), Edit and Delete (asks); a
+  dialog (`Sheet`) in numbered steps: what it runs (choice cards: Folder scan, Import from <kind> for each kind the
+  account may import), where the import comes from, when.
 - `TaskSchedules` rows per library: `interval` (≥ 15 minutes from `start`) or `weekly` (`days` bit 0 = Sunday, at
   `start`'s time of day in the server's time zone). Next run is computed by `ScheduleCalculator` (strictly after a
   moment; skipped DST times run later, repeated ones the first time).

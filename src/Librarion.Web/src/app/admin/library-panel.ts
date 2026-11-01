@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
-import { ImportInput, LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleKind, TaskRunInfo } from '../core/models';
+import { ImportInput, LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, TaskRunInfo } from '../core/models';
 import { Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
 import { EmptyState } from '../shared/placeholders';
+import { SchedulesTab } from './schedules-tab';
 
 const POLL_MS = 1500;
 
@@ -17,13 +18,14 @@ export type LibraryTab = typeof LIBRARY_TABS[number];
 
 /**
  * One sub-page of a library (`tab`; agents/docs/features/tasks.md): its folders added and removed, the last runs with
- * what they did, an import from another source (agents/docs/features/imports.md), its missing books, its schedules.
+ * what they did, an import from another source (agents/docs/features/imports.md), its missing books, its schedules
+ * (`SchedulesTab`).
  * Above every tab, the scan bar: a scan started, or the run going on followed with its progress. The data loads once
  * for all tabs (the component stays while the tab changes), and runs are polled while one goes.
  */
 @Component({
     selector: 'lib-library-panel',
-    imports: [TranslatePipe, EmptyState],
+    imports: [TranslatePipe, EmptyState, SchedulesTab],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="library-panel">
@@ -174,41 +176,7 @@ export type LibraryTab = typeof LIBRARY_TABS[number];
                     }
                 }
                 @case ('schedules') {
-                    <ul class="rows" [attr.aria-label]="'schedules.title' | t">
-                        @for (schedule of schedules(); track schedule.id) {
-                            <li class="row">
-                                <span class="row-main">
-                                    <span class="row-title">{{ describe(schedule) }}</span>
-                                    @if (schedule.nextRun) {
-                                        <span class="row-meta">{{ 'schedules.next' | t: { time: when(schedule.nextRun) } }}</span>
-                                    }
-                                </span>
-                                <button type="button" class="button danger" [title]="'schedules.deleteHint' | t" [disabled]="busy()" (click)="deleteSchedule(schedule)">{{ 'common.delete' | t }}</button>
-                            </li>
-                        } @empty {
-                            <li class="row" libEmpty="clock">{{ 'schedules.none' | t }}</li>
-                        }
-                    </ul>
-                    <form class="toolbar schedule-form" novalidate (submit)="addSchedule($event)">
-                        <select [attr.aria-label]="'schedules.kind' | t" [value]="kind()" (change)="kind.set($any(valueOf($event)))">
-                            <option value="interval">{{ 'schedules.interval' | t }}</option>
-                            <option value="weekly">{{ 'schedules.weekly' | t }}</option>
-                        </select>
-                        @if (kind() === 'interval') {
-                            <label class="inline">{{ 'schedules.everyHours' | t }}
-                                <input type="number" min="1" max="744" [value]="hours()" (input)="hours.set(+valueOf($event))">
-                            </label>
-                        } @else {
-                            @for (day of dayNames; track $index) {
-                                <label class="check day">
-                                    <input type="checkbox" [checked]="hasDay($index)" (change)="toggleDay($index)">
-                                    <span>{{ day }}</span>
-                                </label>
-                            }
-                            <input type="time" [attr.aria-label]="'schedules.time' | t" [value]="time()" (input)="time.set(valueOf($event))">
-                        }
-                        <button type="submit" class="button" [title]="'schedules.addHint' | t" [disabled]="busy() || (kind() === 'weekly' && days() === 0)">{{ 'schedules.add' | t }}</button>
-                    </form>
+                    <lib-schedules-tab [library]="library()" [importKinds]="canImport() ? importKinds() : []" />
                 }
             }
             @if (error(); as error) {
@@ -229,15 +197,10 @@ export class LibraryPanel implements OnInit, OnDestroy {
 
     protected readonly roots = signal<LibraryRootInfo[]>([]);
     protected readonly runs = signal<TaskRunInfo[]>([]);
-    protected readonly schedules = signal<ScheduleInfo[]>([]);
     /** The library's missing books: the first page's counts, and the rows loaded so far. */
     protected readonly missing = signal<MissingBookPage | null>(null);
     protected readonly missingItems = signal<MissingBookItem[]>([]);
     protected readonly path = signal('');
-    protected readonly kind = signal<ScheduleKind>('interval');
-    protected readonly hours = signal(24);
-    protected readonly days = signal(0b111_1111);
-    protected readonly time = signal('03:00');
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);
 
@@ -250,8 +213,6 @@ export class LibraryPanel implements OnInit, OnDestroy {
     protected readonly importFiles = signal('');
     protected readonly running = computed(() => this.runs().find(run => run.outcome === 'running') ?? null);
     protected readonly valueOf = valueOf;
-    /** Sunday first, as the schedule's day bits. */
-    protected readonly dayNames = [...Array(7).keys()].map(day => new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(new Date(2026, 10, 1 + day)));
 
     private timer: ReturnType<typeof setTimeout> | null = null;
     private destroyed = false;
@@ -260,7 +221,6 @@ export class LibraryPanel implements OnInit, OnDestroy {
         await this.run(async () => {
             this.roots.set(await this.api.libraryRoots(this.library().id));
             if (this.canScan()) {
-                this.schedules.set(await this.api.schedules(this.library().id));
                 await this.refreshRuns();
             }
         });
@@ -339,47 +299,6 @@ export class LibraryPanel implements OnInit, OnDestroy {
             await this.api.cancelTask(run.id);
             await this.refreshRuns();
         });
-    }
-
-    protected hasDay(day: number): boolean {
-        return (this.days() & (1 << day)) !== 0;
-    }
-
-    protected toggleDay(day: number): void {
-        this.days.set(this.days() ^ (1 << day));
-    }
-
-    protected async addSchedule(event: Event): Promise<void> {
-        event.preventDefault();
-        const [hour, minute] = this.time().split(':').map(Number);
-        const start = new Date();
-        if (this.kind() === 'weekly')
-            start.setHours(hour || 0, minute || 0, 0, 0);
-        await this.run(async () => {
-            await this.api.addSchedule(this.library().id, {
-                kind: this.kind(),
-                start: start.toISOString(),
-                intervalMinutes: this.kind() === 'interval' ? Math.max(1, this.hours()) * 60 : 0,
-                days: this.kind() === 'weekly' ? this.days() : 0,
-                enabled: true,
-            });
-            this.schedules.set(await this.api.schedules(this.library().id));
-        });
-    }
-
-    protected async deleteSchedule(schedule: ScheduleInfo): Promise<void> {
-        await this.run(async () => {
-            await this.api.deleteSchedule(this.library().id, schedule.id);
-            this.schedules.set(this.schedules().filter(s => s.id !== schedule.id));
-        });
-    }
-
-    protected describe(schedule: ScheduleInfo): string {
-        if (schedule.kind === 'interval')
-            return this.i18n.t('schedules.everyHoursText', { hours: Math.round(schedule.intervalMinutes / 6) / 10 });
-        const days = this.dayNames.filter((_, day) => (schedule.days & (1 << day)) !== 0).join(', ');
-        const time = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(schedule.start));
-        return this.i18n.t('schedules.weeklyText', { days, time });
     }
 
     /** Removing one missing book: only after the user accepts. */

@@ -5,7 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { ApiMock, groupInfo, mockApi, sessionInfo, settle, testProviders, userInfo } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { Media } from '../core/media';
-import { RightInfo, TaskRunInfo } from '../core/models';
+import { RightInfo, ScheduleInfo, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
@@ -13,6 +13,7 @@ import { AdminPage, adminMatcher } from './admin-page';
 import { GroupsSection } from './groups-section';
 import { LibrariesSection } from './libraries-section';
 import { LibraryPanel, LibraryTab } from './library-panel';
+import { SchedulesTab } from './schedules-tab';
 import { SecuritySection } from './security-section';
 import { TenantsSection } from './tenants-section';
 import { UsersSection } from './users-section';
@@ -432,29 +433,122 @@ describe('LibraryPanel', () => {
         expect(element.textContent).not.toContain('Import from another program');
     });
 
-    it('shows only the folders without the scan right, and adds a weekly schedule', async () => {
+    it('shows only the folders without the scan right', async () => {
         const api = mockApi();
         api.libraryRoots.mockResolvedValue([]);
         const { element } = await panel(api, ['tenant.libraries']);
         expect(element.textContent).not.toContain('Scan now');
         expect(api.libraryTasks).not.toHaveBeenCalled();
+    });
+});
 
-        const scheduling = mockApi();
-        scheduling.libraryRoots.mockResolvedValue([]);
-        scheduling.libraryTasks.mockResolvedValue([]);
-        scheduling.schedules.mockResolvedValue([]);
-        scheduling.addSchedule.mockResolvedValue({} as never);
-        const { element: form, stable } = await panel(scheduling, ['tenant.libraries', 'library.scan'], 'schedules');
-        const kind = form.querySelector<HTMLSelectElement>('.schedule-form select')!;
-        kind.value = 'weekly';
-        kind.dispatchEvent(new Event('change'));
+describe('SchedulesTab', () => {
+    const library = { id: 5, tenantId: 1, name: 'Books', created: '', bookCount: 0 };
+    const schedule = (overrides: Partial<ScheduleInfo>): ScheduleInfo => ({
+        id: 1, libraryId: 5, task: 'libraryScan', importKind: null, source: null, files: null, kind: 'interval', start: '2026-11-01T03:00:00Z',
+        intervalMinutes: 24 * 60, days: 0, enabled: true, lastRun: null, nextRun: '2026-11-02T03:00:00Z', ...overrides,
+    });
+
+    async function tab(api: ReturnType<typeof mockApi>, importKinds: string[] = []) {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({ providers: testProviders(api) });
+        const fixture = TestBed.createComponent(SchedulesTab);
+        fixture.componentRef.setInput('library', library);
+        fixture.componentRef.setInput('importKinds', importKinds);
+        await fixture.whenStable();
+        await settle();
+        await fixture.whenStable();
+        const element = fixture.nativeElement as HTMLElement;
+        return { element, stable: async () => { await settle(); await fixture.whenStable(); } };
+    }
+
+    it('says what each schedule runs first, then when, and whether it is on', async () => {
+        const api = mockApi();
+        api.schedules.mockResolvedValue([
+            schedule({}),
+            schedule({ id: 2, task: 'import', importKind: 'calibre', source: '/srv/calibre/metadata.db', files: '/srv/calibre', enabled: false }),
+        ]);
+        const { element } = await tab(api);
+
+        const rows = [...element.querySelectorAll('.schedule-row')];
+        expect(rows.map(row => row.querySelector('.row-title')?.textContent)).toEqual(['Folder scan', 'Import from Calibre library']);
+        expect(rows[0].textContent).toContain('Every 24 h');
+        expect(rows[0].textContent).toContain('next');
+        expect(rows[1].textContent).toContain('/srv/calibre/metadata.db');
+        expect(rows[1].textContent).toContain('off');
+        expect(rows[1].classList).toContain('off');
+        expect(rows[1].querySelector<HTMLInputElement>('input[role="switch"]')!.checked).toBe(false);
+    });
+
+    it('adds an import schedule in steps: what it runs, its source, when', async () => {
+        const api = mockApi();
+        api.schedules.mockResolvedValue([]);
+        api.addSchedule.mockResolvedValue(schedule({}));
+        const { element, stable } = await tab(api, ['calibre', 'inpx']);
+
+        click(element, 'New schedule');
         await stable();
-        const boxes = form.querySelectorAll<HTMLInputElement>('.schedule-form input[type="checkbox"]');
-        expect(boxes).toHaveLength(7);
-        boxes[0].dispatchEvent(new Event('change'));
-        form.querySelector('form.schedule-form')!.dispatchEvent(new Event('submit'));
+        const dialog = element.querySelector('dialog')!;
+        expect([...dialog.querySelectorAll('.choice-card strong')].map(s => s.textContent)).toEqual(['Folder scan', 'Import from Calibre library', 'Import from INPX catalog']);
+        expect(dialog.querySelector('#schedule-source')).toBeNull();
+        expect([...dialog.querySelectorAll('legend')].map(l => l.textContent?.trim())).toEqual(['1What it runs', '2When']);
+
+        const inpx = dialog.querySelectorAll<HTMLInputElement>('.choice-card input')[2];
+        inpx.dispatchEvent(new Event('change'));
         await stable();
-        expect(scheduling.addSchedule).toHaveBeenCalledWith(5, expect.objectContaining({ kind: 'weekly', days: 0b111_1110, intervalMinutes: 0 }));
+        expect([...dialog.querySelectorAll('legend')].map(l => l.textContent?.trim())).toEqual(['1What it runs', '2Where the import comes from', '3When']);
+        expect(dialog.querySelector('label[for="schedule-source"]')?.textContent).toBe('Path of the .inpx file');
+        const save = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.trim() === 'Save')!;
+        expect(save.disabled).toBe(true);
+        type(dialog, '#schedule-source', '/srv/librusec/librusec.inpx');
+        click(dialog, 'On days of the week');
+        await stable();
+        dialog.querySelectorAll<HTMLInputElement>('.day-checks input')[0].dispatchEvent(new Event('change'));
+        await stable();
+        expect(save.disabled).toBe(false);
+        dialog.querySelector('form')!.dispatchEvent(new Event('submit'));
+        await stable();
+
+        expect(api.addSchedule).toHaveBeenCalledWith(5, expect.objectContaining({
+            task: 'import', importKind: 'inpx', source: '/srv/librusec/librusec.inpx', files: null, kind: 'weekly', days: 0b111_1110, intervalMinutes: 0, enabled: true,
+        }));
+        expect(TestBed.inject(ToastService).toasts().map(t => t.message)).toEqual(['Schedule added.']);
+        expect(element.querySelector('dialog')).toBeNull();
+    });
+
+    it('shows the server\'s refusal next to the source, the dialog staying open', async () => {
+        const api = mockApi();
+        api.schedules.mockResolvedValue([]);
+        api.addSchedule.mockRejectedValue(new ApiError(400, 'x', { source: ['source.missing'] }));
+        const { element, stable } = await tab(api, ['calibre']);
+
+        click(element, 'New schedule');
+        await stable();
+        element.querySelectorAll<HTMLInputElement>('.choice-card input')[1].dispatchEvent(new Event('change'));
+        await stable();
+        type(element, '#schedule-source', '/srv/none/metadata.db');
+        await stable();
+        element.querySelector('dialog form')!.dispatchEvent(new Event('submit'));
+        await stable();
+
+        expect(element.querySelector('#schedule-source')?.getAttribute('aria-invalid')).toBe('true');
+        expect(element.querySelector('dialog .field-error')?.textContent).toContain('can\'t find this file');
+    });
+
+    it('turns a schedule off with its switch, keeping what it runs and when', async () => {
+        const api = mockApi();
+        const calibre = schedule({ id: 2, task: 'import', importKind: 'calibre', source: '/srv/c/metadata.db', files: '/srv/c' });
+        api.schedules.mockResolvedValue([calibre]);
+        api.updateSchedule.mockResolvedValue({ ...calibre, enabled: false, nextRun: null });
+        const { element, stable } = await tab(api, ['calibre']);
+
+        const toggle = element.querySelector<HTMLInputElement>('input[role="switch"]')!;
+        expect(toggle.getAttribute('aria-label')).toBe('Import from Calibre library on');
+        toggle.dispatchEvent(new Event('change'));
+        await stable();
+
+        expect(api.updateSchedule).toHaveBeenCalledWith(5, 2, expect.objectContaining({ task: 'import', importKind: 'calibre', source: '/srv/c/metadata.db', files: '/srv/c', enabled: false }));
+        expect(element.querySelector('.schedule-row')?.classList).toContain('off');
     });
 });
 

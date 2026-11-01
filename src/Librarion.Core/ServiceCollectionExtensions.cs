@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LibraryRoots>();
         services.AddSingleton<BackgroundTasks>();
         services.AddSingleton<TaskSchedules>();
+        services.AddSingleton<Librarion.Core.Imports.ImportRequests>();
         services.AddHostedService<TaskScheduleWorker>();
         return services;
     }

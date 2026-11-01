@@ -276,6 +276,11 @@ export interface MissingRemoval {
 export type ScheduleKind = 'interval' | 'weekly';
 
 export interface ScheduleInput {
+    /** What it runs: a scan of the library's folders, or an import (with its kind, source and files folder). */
+    task: 'libraryScan' | 'import';
+    importKind: string | null;
+    source: string | null;
+    files: string | null;
     kind: ScheduleKind;
     /** UTC; for weekly schedules its time of day (server's zone) is the time. */
     start: string;

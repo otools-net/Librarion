@@ -60,4 +60,31 @@ test.describe('@library', () => {
         expect(cover.status()).toBe(200);
         expect(cover.headers()['content-type']).toBe('image/webp');
     });
+
+    test('a schedule says what it runs: chosen first in its dialog, then when, and turned off by its switch @desktop', async ({ page, isMobile }, testInfo) => {
+        const libraryName = uniqueName('Scheduled', testInfo);
+        await page.goto('./admin/libraries');
+        await page.getByLabel('Name of a new library').fill(libraryName);
+        await press(page.getByRole('button', { name: 'Add', exact: true }), isMobile);
+        await press(page.getByRole('link', { name: libraryName }), isMobile);
+        await press(libraryTab(page, 'Schedules'), isMobile);
+
+        await press(page.getByRole('button', { name: 'New schedule' }), isMobile);
+        const dialog = page.getByRole('dialog', { name: 'New schedule' });
+        await expect(dialog.getByRole('group', { name: 'What it runs' })).toBeVisible();
+        await press(dialog.getByText('Folder scan', { exact: true }), isMobile);
+        await press(dialog.getByRole('radio', { name: 'On days of the week' }), isMobile);
+        await dialog.getByLabel('Time of day').fill('04:30');
+        await press(dialog.getByRole('button', { name: 'Save' }), isMobile);
+        await expect(dialog).toBeHidden();
+
+        const row = page.getByRole('list', { name: 'Schedules' }).getByRole('listitem').first();
+        await expect(row).toContainText('Folder scan');
+        await expect(row).toContainText('next');
+        const toggle = row.getByRole('switch', { name: 'Folder scan on' });
+        await expect(toggle).toBeChecked();
+        await press(toggle, isMobile);
+        await expect(row).toContainText('off');
+        await expect(toggle).not.toBeChecked();
+    });
 });

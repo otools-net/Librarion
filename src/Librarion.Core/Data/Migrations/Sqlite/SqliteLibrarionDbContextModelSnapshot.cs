@@ -769,6 +769,14 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Files")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImportKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("IntervalMinutes")
                         .HasColumnType("INTEGER");
 
@@ -780,6 +788,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.Property<int>("LibraryId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("Start")
                         .HasColumnType("TEXT");

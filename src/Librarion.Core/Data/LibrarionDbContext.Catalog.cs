@@ -84,6 +84,9 @@ public abstract partial class LibrarionDbContext
         {
             entity.HasOne(s => s.Library).WithMany().HasForeignKey(s => s.LibraryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(s => s.LibraryId);
+            entity.Property(s => s.ImportKind).HasMaxLength(20);
+            entity.Property(s => s.Source).HasMaxLength(LibraryRoot.MaxPathLength);
+            entity.Property(s => s.Files).HasMaxLength(LibraryRoot.MaxPathLength);
             Filter(entity, s => s.TenantId == CurrentTenantId);
         });
 

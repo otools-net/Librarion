@@ -512,19 +512,6 @@ a.row-main {
     overflow-wrap: anywhere;
 }
 
-.schedule-form label.inline {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-}
-
-.schedule-form input[type="number"] {
-    width: 5em;
-}
-
-.schedule-form .check.day {
-    min-height: 44px;
-}
 
 /* An import from another source: kind, source and files' folder, one under the other on a phone, in a row when there is room. */
 .import-form {
@@ -538,4 +525,179 @@ a.row-main {
 .import-form input[type="text"] {
     flex: 1 1 220px;
     min-width: 0;
+}
+
+/* Schedules (schedules-tab.ts): rows with what they run first, an on/off switch; the dialog in numbered steps. */
+.schedule-row .row-icon {
+    color: var(--accent);
+}
+
+.schedule-row.off .row-icon,
+.schedule-row.off .row-title {
+    color: var(--text-muted);
+}
+
+.schedule-row .path {
+    overflow-wrap: anywhere;
+}
+
+.schedule-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.step legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    padding: 0;
+    font-weight: 600;
+}
+
+.step-number {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: 700;
+}
+
+.choice-cards {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.choice-card {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease), background-color var(--duration-fast) var(--ease);
+}
+
+.choice-card:hover {
+    border-color: var(--border-strong);
+}
+
+.choice-card.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.choice-card input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.choice-card > .icon {
+    color: var(--accent);
+}
+
+.choice-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.choice-text small {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.field.narrow input {
+    max-width: 180px;
+}
+
+.day-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-3);
+}
+
+.day-checks .check {
+    min-width: 64px;
+}
+
+/* An on/off switch over a real checkbox (role=switch): the box is there for keyboards and screen readers. */
+.switch {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    min-height: var(--target);
+    cursor: pointer;
+}
+
+.switch input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.switch-track {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    transition: background-color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+
+.switch-track::after {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: var(--radius-pill);
+    background: var(--text-muted);
+    content: "";
+    transition: transform var(--duration-fast) var(--ease), background-color var(--duration-fast) var(--ease);
+}
+
+.switch input:checked + .switch-track {
+    border-color: var(--accent);
+    background: var(--accent);
+}
+
+.switch input:checked + .switch-track::after {
+    background: var(--accent-text);
+    transform: translateX(16px);
+}
+
+.switch input:focus-visible + .switch-track {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.switch input:disabled + .switch-track {
+    opacity: .5;
 }
