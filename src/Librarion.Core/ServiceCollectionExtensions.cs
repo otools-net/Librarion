@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<BookVisibilities>();
         services.AddSingleton<BookQueries>();
         services.AddSingleton<TagQueries>();
+        services.AddSingleton<Librarion.Core.Reading.BookDownloads>();
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();
         services.AddSingleton<LibraryScanner>();
         services.Configure<LibraryOptions>(configuration.GetSection(LibraryOptions.SectionName));

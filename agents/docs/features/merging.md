@@ -1,7 +1,21 @@
 # Duplicates and merging: books and tags (planned)
 
 Built (stage 2): `Books.MergedIntoId`, `WorkKey`, the `(TenantId, Size, Crc32)` file index and `BookIdentifiers`
-([catalog](catalog.md)); detection and merging are planned.
+([catalog](catalog.md)). Built (stage 3): **identical files at import** (`CatalogWriter.CopiesAsync`, tests in
+`LibraryScannerTests`), below. The rest of detection and merging is planned.
+
+## Identical files at import (built)
+
+- A new archive entry whose size and CRC-32 match a file **of the same library** (or an earlier entry of the same
+  batch) is hashed (SHA-256) with it; same hash = another file of that book, no new book, no tag counts moved.
+  Different bytes under the same CRC stay a book of their own.
+- Hashes are computed only on a size + CRC match, then kept in `BookFiles.ContentHash` (a stored file is hashed once,
+  read through `BookDownloads.Open`); a file that can't be read (damaged, gone) is never called a copy.
+- Same library only: a book belongs to one library, and download rights are checked in the file's library.
+- Loose files have no CRC at import, so they are not matched yet (hashing every loose file would read whole books).
+- A removed copy leaves the book with its other files; a changed copy re-reads the book's metadata from that file.
+- Always on for now: the tenant setting to turn it off, and undo / split, come with stage 6. `ScanResult.Added`
+  counts books; `CatalogWriter.Copies` the files that joined a book.
 
 Code (planned): `src/Librarion.Core/Merging/` (`DuplicateFinder`, `BlockingKeys`, `BookMerger`, `BookSplitter`,
 `TagDuplicateFinder`, `MergeLog`), entities `DuplicateGroups`, `DuplicateMembers`, `NotDuplicates`, `MergeLog`;

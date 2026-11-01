@@ -95,7 +95,8 @@ public sealed partial class ClientI18nTests
             wanted.AddRange(ErrorCode().Matches(text).Select(m => m.Groups[1].Value).Where(code => !named.Contains(code)).Select(code => $"error.{code}"));
         }
 
-        wanted.AddRange(ErrorCode().Matches(File.ReadAllText(RepositoryFiles.PathOf("src/Librarion.Api/Endpoints/TaskEndpoints.cs"))).Select(m => $"error.{m.Groups[1].Value}"));
+        foreach (var endpoints in new[] { "TaskEndpoints.cs", "BookEndpoints.cs" })
+            wanted.AddRange(ErrorCode().Matches(File.ReadAllText(RepositoryFiles.PathOf($"src/Librarion.Api/Endpoints/{endpoints}"))).Select(m => $"error.{m.Groups[1].Value}"));
 
         var kinds = File.ReadAllText(Path.Combine(AppFolder, "admin", "security-section.ts"));
         var missing = wanted.Distinct().Where(key => !keys.Contains(key)).ToList();

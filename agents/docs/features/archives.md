@@ -3,8 +3,8 @@
 Built: `src/Librarion.Core/Containers/` (`ZipDirectory` with `Fingerprint`, `BoundedStreams`, `ArchiveEntryNames`,
 `ArchiveEntry`, `ArchiveException`; tests `ZipDirectoryTests`), ported from SFE `src/Sfe.Core/Files/Compression/`
 (see its `archive-reading.md`) without the ciphers: an encrypted entry is listed and refused when opened. Every entry
-is CRC-checked at its end. Planned:
-`src/Librarion.Core/Import/ArchiveScanner`, `src/Librarion.Core/Reading/BookStreams`, `ExtractCache`. Reference for
+is CRC-checked at its end. Download: `src/Librarion.Core/Reading/BookDownloads.cs`, route in
+`Api/Endpoints/BookEndpoints.cs` (tests `BookDownloadTests`). Planned: `ExtractCache`. Reference for
 the library side: MyHomeLib (`C:\workspace\GIT\reference-projects\MyHomeLib`: `unit_MHLArchiveHelpers.pas`,
 `unit_ImportFB2Thread.pas`, `TBookRecord.GetBookStream` in `unit_Globals.pas`).
 
@@ -47,10 +47,17 @@ They are **indexed and read in place: never unpacked to disk**.
 - **Open = one seek:** the stored locator gives the local header; its name and sizes are checked against the row
   (a mismatch re-lists the archive, the archive's size + mtime are checked first). Data streams through SFE's
   `DeclaredSizeStream` / `WindowStream` (a lying directory or a zip bomb can't overrun).
-- **Download / OPDS acquisition:** the entry is streamed decompressed straight to the response, with
-  `Content-Length` from the directory and `ETag` from the CRC; no temp file. FB2 also offered as `fb2.zip`, zipped on
-  the fly (many readers want it). Range requests: served for stored entries (a seek), for deflated ones only from
-  the extract cache.
+- **Download** (built, `GET api/books/{id}/files/{fileId}`, right `library.download` in the book's library, the book
+  visible to the caller or 404): the entry is streamed decompressed straight to the response, `Content-Length` from
+  the directory (set by hand: the stream can't seek), `ETag` = CRC + size (loose files: size + time),
+  `Content-Disposition` with the file's name; no temp file. Range for loose files and stored entries (`StoredRange`,
+  a slice of the zip); a deflated entry answers a range with the whole file.
+- **Checks at open:** an archive whose size differs from the scan's is rebuilt (stale locators): 409 `file.changed`,
+  the next scan fixes it; same size (touched) is opened, the local header's signature checked, the CRC at the end
+  catches the rest (the response is cut). A loose file of another size: 409 `file.changed`; missing, a link in its
+  place, or a path leaving its root: 410 `file.gone`; a method or damage the reader refuses: 409 `file.unreadable`.
+- **Planned:** OPDS acquisition (same code), FB2 also offered as `fb2.zip` zipped on the fly (many readers want it),
+  Range on deflated entries only from the extract cache.
 - **In-browser reading** needs random access into EPUB / CBZ (their own entries) and PDF (ranges): a deflated book is
   decompressed once into the **extract cache** (disk, sharded, LRU with a size cap, e.g. 2 GB, under the server's data
   folder), then served from there; stored entries are read through a window without it.

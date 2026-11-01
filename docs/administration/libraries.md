@@ -31,3 +31,9 @@ removed ones leave. An unchanged archive is skipped without being read.
   first files that couldn't be read.
 - **Schedules** scan by themselves: every few hours (at least every 15 minutes), or on chosen days at a time of day.
   A scan that comes due while another runs is skipped, and missed ones are not made up later.
+
+## Downloads
+
+Readers with the right **Download** in a library get its books' files as they are in the folders, also straight out
+of a ZIP archive (nothing is unpacked on the server). A file that moved or changed since the last scan can't be
+downloaded until the library is scanned again.

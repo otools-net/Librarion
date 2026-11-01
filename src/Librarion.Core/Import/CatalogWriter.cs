@@ -1,12 +1,14 @@
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
+using Librarion.Core.Reading;
 using Librarion.Core.Tagging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Librarion.Core.Import;
 
 /// <summary>A book file found by a scan, with what its head says (null: nothing, the file name is its title).</summary>
-public sealed record ScannedFile(BookFile File, BookMetadata? Metadata);
+/// <param name="Open">Its bytes again, while the scan holds its archive open: hashed when its size and CRC match another file.</param>
+public sealed record ScannedFile(BookFile File, BookMetadata? Metadata, Func<Stream>? Open = null);
 
 /// <summary>
 /// Writes what a scan found into the catalog, a batch at a time: new books with their files, field values and plain
@@ -25,18 +27,38 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     public int Refreshed { get; private set; }
     public int Removed { get; private set; }
 
-    /// <summary>New books, one per file.</summary>
+    /// <summary>Files that came in as another copy of a book already there (the same bytes), not as a book.</summary>
+    public int Copies { get; private set; }
+
+    /// <summary>New books, one per file; a file with the same bytes as one of the library becomes another file of its book (D19).</summary>
     public async Task AddAsync(LibrarionDbContext db, IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
     {
         if (files.Count == 0)
             return;
-        await resolver.ResolveAsync(db, files.SelectMany(f => Names(f.Metadata)), cancellationToken);
+        var copies = await CopiesAsync(db, files, cancellationToken);
+        await resolver.ResolveAsync(db, files.Where((_, i) => copies[i] == default).SelectMany(f => Names(f.Metadata)), cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
-        foreach (var file in files)
+        var books = new Book?[files.Count];
+        var added = 0;
+        for (var i = 0; i < files.Count; i++)
         {
-            var book = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now };
+            var file = files[i];
             file.File.TenantId = tenantId;
             file.File.LibraryId = libraryId;
+            if (copies[i].BookId is { } bookId)
+            {
+                file.File.BookId = bookId;
+                db.BookFiles.Add(file.File);
+                continue;
+            }
+
+            if (copies[i].Earlier is { } earlier)
+            {
+                books[earlier]!.Files.Add(file.File);
+                continue;
+            }
+
+            var book = books[i] = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now };
             book.Files.Add(file.File);
             Apply(book, file.File.Path, file.Metadata, new HashSet<int>(), out var links);
             foreach (var link in links)
@@ -46,12 +68,99 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             }
 
             db.Books.Add(book);
+            added++;
         }
 
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
-        Added += files.Count;
-        bookDelta += files.Count;
+        Added += added;
+        Copies += files.Count - added;
+        bookDelta += added;
+    }
+
+    /// <summary>
+    /// For each file, the book it is a copy of: one of the library's (<c>BookId</c>) or an earlier file of the batch
+    /// (<c>Earlier</c>); default for a new book. Candidates share size and CRC-32 (the index
+    /// <c>BookFiles (TenantId, Size, Crc32)</c>; zip entries give both for free), and only then are both hashed (SHA-256,
+    /// kept in <see cref="BookFile.ContentHash"/>) and compared. Loose files have no CRC at import: never matched here.
+    /// </summary>
+    private async Task<(int? BookId, int? Earlier)[]> CopiesAsync(LibrarionDbContext db, IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
+    {
+        var result = new (int? BookId, int? Earlier)[files.Count];
+        var candidates = Enumerable.Range(0, files.Count).Where(i => files[i].File.Crc32 is not null && files[i].Open is not null).ToList();
+        if (candidates.Count == 0)
+            return result;
+        var sizes = candidates.Select(i => files[i].File.Size).Distinct().ToList();
+        var crcs = candidates.Select(i => files[i].File.Crc32).Distinct().ToList();
+        var stored = (await BookDownloads.StoredAsync(db.BookFiles.Where(f => f.LibraryId == libraryId && sizes.Contains(f.Size) && crcs.Contains(f.Crc32)), cancellationToken))
+            .GroupBy(f => (f.Target.Size, (long?)f.Target.Crc)).ToDictionary(g => g.Key, g => g.ToList());
+        // Files of this batch that became books, by size and CRC: a later copy in the batch joins one of them.
+        var earlier = new Dictionary<(long, long?), List<int>>();
+
+        foreach (var i in candidates)
+        {
+            var file = files[i].File;
+            var key = (file.Size, file.Crc32);
+            var others = stored.GetValueOrDefault(key);
+            var mates = earlier.GetValueOrDefault(key);
+            if ((others is not null || mates is not null) && (file.ContentHash = Hash(files[i].Open!)) is { } hash)
+            {
+                if (await SameAsAsync(db, hash, others, cancellationToken) is { } bookId)
+                {
+                    result[i] = (bookId, null);
+                    continue;
+                }
+
+                if (mates?.FindIndex(j => (files[j].File.ContentHash ??= Hash(files[j].Open!))?.AsSpan().SequenceEqual(hash) == true) is >= 0 and var found)
+                {
+                    result[i] = (null, mates[found]);
+                    continue;
+                }
+            }
+
+            if (mates is null)
+                earlier[key] = mates = [];
+            mates.Add(i);
+        }
+
+        return result;
+    }
+
+    /// <summary>The book of a stored file with these bytes; a stored file's hash is computed and kept the first time it is needed.</summary>
+    private static async Task<int?> SameAsAsync(LibrarionDbContext db, byte[] hash, List<StoredBookFile>? others, CancellationToken cancellationToken)
+    {
+        for (var at = 0; at < (others?.Count ?? 0); at++)
+        {
+            var other = others![at];
+            if (other.ContentHash is null)
+            {
+                var (content, _) = BookDownloads.Open(other.Target);
+                if (content is null || Hash(() => content.Stream) is not { } computed)
+                    continue;
+                others[at] = other = other with { ContentHash = computed };
+                var fileId = other.Target.FileId;
+                await db.BookFiles.Where(f => f.Id == fileId).ExecuteUpdateAsync(s => s.SetProperty(f => f.ContentHash, computed), cancellationToken);
+            }
+
+            if (other.ContentHash.AsSpan().SequenceEqual(hash))
+                return other.BookId;
+        }
+
+        return null;
+    }
+
+    /// <summary>SHA-256 of the bytes; null when they can't be read (a damaged entry is never called a copy).</summary>
+    private static byte[]? Hash(Func<Stream> open)
+    {
+        try
+        {
+            using var stream = open();
+            return System.Security.Cryptography.SHA256.HashData(stream);
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Books whose file changed, read again: title, description, identifiers and imported links replaced.</summary>

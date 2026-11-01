@@ -283,7 +283,7 @@ public sealed class InnerZip : IDisposable
     {
         if (entry.Size > max)
             throw new ArchiveException("An entry of the book is too large to be its metadata.");
-        return directory.OpenEntry(stream, entry);
+        return directory.OpenEntry(stream, entry, leaveOpen: true);
     }
 
     public void Dispose() => stream.Dispose();

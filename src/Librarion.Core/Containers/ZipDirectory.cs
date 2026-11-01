@@ -197,9 +197,10 @@ public sealed class ZipDirectory
 
     /// <summary>
     /// The data of <paramref name="entry"/>, decompressed, held to its declared size and checked against its CRC at the
-    /// end. Encrypted entries are refused (books are not encrypted).
+    /// end. Encrypted entries are refused (books are not encrypted). Disposing it disposes <paramref name="stream"/>
+    /// unless <paramref name="leaveOpen"/>.
     /// </summary>
-    public Stream OpenEntry(Stream stream, ArchiveEntry entry)
+    public Stream OpenEntry(Stream stream, ArchiveEntry entry, bool leaveOpen = false)
     {
         if (entry.Encrypted)
             throw new ArchiveException("This entry is encrypted: Librarion doesn't read encrypted books.");
@@ -207,7 +208,7 @@ public sealed class ZipDirectory
         // An entry's data never runs into the directory (overlapping entries are how some zip bombs multiply).
         if (entry.Packed < 0 || dataStart + entry.Packed > Start)
             throw new ArchiveException("An entry of the zip runs past its data: the archive is broken.");
-        Stream packed = new WindowStream(stream, dataStart, entry.Packed);
+        Stream packed = new WindowStream(stream, dataStart, entry.Packed, leaveOpen: leaveOpen);
         Stream data = entry.Method switch
         {
             0 when entry.Packed == entry.Size => packed,

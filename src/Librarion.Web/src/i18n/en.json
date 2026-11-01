@@ -339,5 +339,8 @@
     "error.path.overlaps": "This folder is inside or around another folder of the tenant's libraries.",
     "error.intervalMinutes.invalid": "Scans can run at most every 15 minutes.",
     "error.days.invalid": "Choose at least one day.",
-    "error.kind.invalid": "Choose how often."
+    "error.kind.invalid": "Choose how often.",
+    "error.file.gone": "This file is no longer where the last scan found it.",
+    "error.file.changed": "This file changed since the last scan: scan the library again.",
+    "error.file.unreadable": "The archive holding this file can't give it."
 }

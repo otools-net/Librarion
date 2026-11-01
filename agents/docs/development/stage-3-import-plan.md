@@ -63,7 +63,9 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 ### 3.6 Duplicates at import, download
 
-- [ ] Identical files merged, formats of one work joined; download route with Range and ETag.
+- [x] Download route with Range and ETag (`Core/Reading/BookDownloads`, `BookDownloadTests`; [archives](../features/archives.md)).
+- [x] Identical files merged at import (`CatalogWriter.CopiesAsync`; [merging](../features/merging.md)).
+- [ ] Formats of one work joined (same identifier or `WorkKey`): optional in this stage, else stage 6.
 
 ### 3.7 Benchmark, e2e, notes
 
@@ -97,14 +99,18 @@ since: run it before the next commit (commands below). Docker and WSL are stoppe
 
 **Next, in this order:**
 
-1. **3.6 download** (small, needed by the e2e): `GET api/books/{id}/files/{fileId}`, right `library.download`, the
+Done since (2026-11-01, second session): items 1 and 2 below (download, identical files), and a scanner fix: entries
+after the first of a zip lost their metadata because `OpenEntry`'s stream closed the archive (now `leaveOpen`).
+Start at item 3.
+
+1. ~~**3.6 download**~~ (done) (small, needed by the e2e): `GET api/books/{id}/files/{fileId}`, right `library.download`, the
    book visible to the caller (`BookVisibilities`, else 404). Loose file: from root + path, check it is still inside
    the root. Archive entry: open the archive (root + `Archives.Path`), build an `ArchiveEntry` from the row (locator,
    method, packed size, CRC; as `ScannedLibrary.ReadEntry` in `LibraryScannerTests` does) and
    `ZipDirectory.OpenEntry`. A local header that doesn't match means a rebuilt archive: answer 409/410 and let the
    next scan fix it. `Content-Length` from the size, `ETag` from the CRC, `Content-Disposition` with the file name,
    Range for loose files and stored entries (`StoredRange`). Never a temp file.
-2. **3.6 identical files at import** (D19, [merging](../features/merging.md)): in `CatalogWriter.AddAsync`, an
+2. ~~**3.6 identical files at import**~~ (done, same library only, archive entries only) (D19, [merging](../features/merging.md)): in `CatalogWriter.AddAsync`, an
    archive entry whose (size, CRC) matches a file of the tenant (index `BookFiles (TenantId, Size, Crc32)`) is
    compared by SHA-256 (`ContentHash`, computed only then) and added as a second file of the existing book instead
    of a new book. Joining different formats of one work (same identifier or `WorkKey`) is optional in this stage.
@@ -148,6 +154,8 @@ since: run it before the next commit (commands below). Docker and WSL are stoppe
   write the script with the Write tool into the scratchpad and run it.
 - Error codes sent to the client are `field.code` (`path.notAllowed`); `ClientI18nTests` reads them from the access
   services and `TaskEndpoints.cs`. A new endpoint file with codes must be added there.
+- `ZipDirectory.OpenEntry` disposes the archive stream with the entry's stream unless `leaveOpen: true`: anything
+  reading several entries through one handle must pass it.
 - PostgreSQL keeps microseconds: times compared with stored ones are cut to microseconds (`LibraryScanner.Moment`).
 
 **Commands** ([commands](../environment/commands.md), [dev-machine](../environment/dev-machine.md)):

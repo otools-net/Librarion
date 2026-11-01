@@ -13,6 +13,10 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   removed ones leave, unchanged archives are skipped. Scans run in the background with progress, can be cancelled,
   are listed with what they did, and can be scheduled.
 - Rights **Download** and **Scan**.
+- Downloading a book's file (`api/books/{id}/files/{fileId}`): streamed from the folder or straight out of its ZIP
+  archive, never unpacked, with resumable ranges where the file allows them.
+- The same book file found again in an archive (the same bytes) becomes another copy of the book already there, not
+  a second book.
 
 ## 0.3.0
 

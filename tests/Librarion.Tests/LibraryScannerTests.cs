@@ -201,6 +201,78 @@ public sealed class LibraryScannerTests
     }
 
     [TestMethod]
+    public async Task EveryFb2OfAZipComesInWithItsMetadata()
+    {
+        await using var library = await ScannedLibrary.CreateAsync(Cancel);
+        static string Fb2(string title) => $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <FictionBook><description><title-info><book-title>{title}</book-title></title-info></description><body/></FictionBook>
+            """;
+        library.Zip("fb2.zip", ("1.fb2", Fb2("One")), ("2.fb2", Fb2("Two")), ("3.fb2", Fb2("Three")));
+
+        var result = await library.ScanAsync(Cancel, new Librarion.Core.Import.Metadata.MetadataReaders());
+
+        Assert.IsEmpty(result.Problems, string.Join("; ", result.Problems));
+        await using var db = await library.DbAsync(Cancel);
+        CollectionAssert.AreEquivalent(new[] { "One", "Two", "Three" }, await db.Books.Select(b => b.Title).ToListAsync(Cancel),
+            "the archive stays open after each entry is read");
+    }
+
+    [TestMethod]
+    public async Task TheSameFileInTwoArchivesOrTwiceInOneIsOneBookWithSeveralFiles()
+    {
+        await using var library = await ScannedLibrary.CreateAsync(Cancel);
+        var text = string.Concat(Enumerable.Repeat("the same book ", 500));
+        library.Zip("a.zip", ("Author/Book.fb2", text));
+        library.Zip("b.zip", ("copy of book.fb2", text), ("unique.fb2", "unique"));
+        library.Zip("c.zip", ("twice-1.fb2", "twice"), ("twice-2.fb2", "twice"));
+
+        var result = await library.ScanAsync(Cancel);
+
+        Assert.AreEqual(3, result.Added, "the book, the unique one, the one twice");
+        await using (var db = await library.DbAsync(Cancel))
+        {
+            Assert.AreEqual(3, await db.Books.CountAsync(Cancel));
+            Assert.AreEqual(5, await db.BookFiles.CountAsync(Cancel));
+            var copies = await db.BookFiles.Where(f => f.Size == text.Length).ToListAsync(Cancel);
+            Assert.AreEqual(1, copies.Select(f => f.BookId).Distinct().Count());
+            Assert.IsTrue(copies.All(f => f.ContentHash is { Length: 32 }), "both hashed, the stored one kept for the next time");
+            Assert.IsNull((await db.BookFiles.SingleAsync(f => f.Path == "unique.fb2", Cancel)).ContentHash, "no other file of its size and CRC: never hashed");
+            Assert.AreEqual(1, await db.BookFiles.Where(f => f.Path.StartsWith("twice")).Select(f => f.BookId).Distinct().CountAsync(Cancel));
+            Assert.AreEqual(3, (await db.Libraries.SingleAsync(l => l.Id == library.LibraryId, Cancel)).BookCount);
+        }
+
+        File.Delete(Path.Combine(library.Root, "a.zip"));
+        await library.ScanAsync(Cancel);
+        await using (var db = await library.DbAsync(Cancel))
+        {
+            Assert.AreEqual(3, await db.Books.CountAsync(Cancel), "the book keeps its other copy");
+            Assert.AreEqual("copy of book.fb2", (await db.BookFiles.SingleAsync(f => f.Size == text.Length, Cancel)).Path);
+        }
+    }
+
+    [TestMethod]
+    public async Task AFileWithTheSameSizeAndCrcButOtherBytesIsAnotherBook()
+    {
+        await using var library = await ScannedLibrary.CreateAsync(Cancel);
+        library.Zip("a.zip", ("first.fb2", "AAAA"));
+        await library.ScanAsync(Cancel);
+        await using var db = await library.DbAsync(Cancel);
+        var stored = await db.BookFiles.SingleAsync(Cancel);
+        var writer = new CatalogWriter(library.TenantId, library.LibraryId, await ImportTagResolver.CreateAsync(db, library.TenantId, Cancel), TimeProvider.System);
+        ScannedFile Lookalike(string name, string bytes) => new(
+            new BookFile { ArchiveId = stored.ArchiveId, Path = name, PathKey = Librarion.Core.Catalog.PathKeys.Of(name), Format = "fb2", Size = stored.Size, Crc32 = stored.Crc32 },
+            null, () => new MemoryStream(System.Text.Encoding.UTF8.GetBytes(bytes)));
+
+        await writer.AddAsync(db, [Lookalike("forged.fb2", "BBBB"), Lookalike("real-copy.fb2", "AAAA")], Cancel);
+
+        Assert.AreEqual(1, writer.Added, "the forged one is a book of its own");
+        Assert.AreEqual(1, writer.Copies);
+        Assert.AreEqual(stored.BookId, (await db.BookFiles.SingleAsync(f => f.Path == "real-copy.fb2", Cancel)).BookId);
+        Assert.AreNotEqual(stored.BookId, (await db.BookFiles.SingleAsync(f => f.Path == "forged.fb2", Cancel)).BookId);
+    }
+
+    [TestMethod]
     public async Task HostileAndBrokenArchivesAreReportedAndTheRestIsRead()
     {
         await using var library = await ScannedLibrary.CreateAsync(Cancel);

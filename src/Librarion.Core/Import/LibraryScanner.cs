@@ -334,7 +334,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
                 {
                     current = $"{path}/{entry.Name}";
                     var format = BookFormats.Of(entry.Name)!;
-                    var metadata = Read($"{path}: {Printable(entry.Name)}", format, () => directory.OpenEntry(stream, entry), entry.Size, cancellationToken);
+                    var metadata = Read($"{path}: {Printable(entry.Name)}", format, () => directory.OpenEntry(stream, entry, leaveOpen: true), entry.Size, cancellationToken);
                     if (fileId == 0)
                     {
                         added.Add(new ScannedFile(new BookFile
@@ -342,7 +342,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
                             ArchiveId = archiveId, Path = entry.Name, PathKey = PathKeys.Of(entry.Name), Format = format, Size = entry.Size, Crc32 = entry.Crc,
                             Modified = entry.Time is { } t ? Moment(DateTime.SpecifyKind(t, DateTimeKind.Local).ToUniversalTime()) : null,
                             Locator = entry.Locator, Method = (short)entry.Method, PackedSize = entry.Packed,
-                        }, metadata));
+                        }, metadata, () => directory.OpenEntry(stream, entry, leaveOpen: true)));
                         continue;
                     }
 

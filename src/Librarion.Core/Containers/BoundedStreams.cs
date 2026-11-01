@@ -2,9 +2,10 @@ namespace Librarion.Core.Containers;
 
 /// <summary>
 /// A window of <paramref name="length"/> bytes of <paramref name="inner"/> from <paramref name="start"/>: an entry's
-/// packed data, so a decompressor never reads its neighbours or the directory.
+/// packed data, so a decompressor never reads its neighbours or the directory. Disposes <paramref name="inner"/> unless
+/// <paramref name="leaveOpen"/> (a scan reads many entries through one handle).
 /// </summary>
-internal sealed class WindowStream(Stream inner, long start, long length, IDisposable? owner = null) : Stream
+internal sealed class WindowStream(Stream inner, long start, long length, IDisposable? owner = null, bool leaveOpen = false) : Stream
 {
     private long position;
     private bool positioned;
@@ -41,7 +42,8 @@ internal sealed class WindowStream(Stream inner, long start, long length, IDispo
     {
         if (disposing)
         {
-            inner.Dispose();
+            if (!leaveOpen)
+                inner.Dispose();
             owner?.Dispose();
         }
         base.Dispose(disposing);
