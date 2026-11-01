@@ -97,6 +97,18 @@ order: design foundation (5.0), then the administration with its search (5.1), t
   `archivesDone`, `added`, `changed`, `missing`, `removed`, `returned`, `skipped`, `current`) plus its start and end
   times; Cancel uses the existing `POST …/runs/{run}/cancel` (`CancelTask`). Polling stays as it is (one run's row, not the
   catalog). Replaces the one-line `scan-bar` text in `library-panel.ts`.
+  **Also in the administration, as SFE's "Background tasks" (the user, 2026-11-02;
+  `Sfe.Web/src/app/tasks/tasks-section.component.ts`):** a section under Tenant and server (`admin/tasks/...`) with
+  sub-pages Tasks, Schedules and History. Tasks: a summary line on top ("Running: scan of Comics · next: import of
+  Fiction tomorrow 03:00", `aria-live`), then a card per task kind (folder scan, Calibre import, INPX import): icon,
+  name, what it does, state (Idle / Running with a spinner and the elapsed time), a progress bar while running, the
+  library and the counts so far, Last run (its outcome, linking to the run in History) and Next run (time, "in 5 h",
+  which schedule), with Cancel (asks first) and Run now (asks which library) and Schedule. Schedules and History:
+  every library's, each row naming its library and linking to the library's own tab. Refreshed every 2 s while shown
+  and the page is visible. Server: one route across the tenant's libraries (`GET /api/tasks/overview`: the running
+  runs, the latest run of each kind, the schedules with their next times; bounded by the libraries, not the catalog)
+  and the history as a keyset page across libraries; only libraries where the account holds `Rights.scan` (or
+  `Rights.import` for imports) appear.
 
 ## Todo (the order of work; the user's rule, 2026-11-01: one chunk at a time, commit it, then ask before the next)
 
@@ -120,7 +132,9 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 10. [x] Settings forms in groups with hints, save bar, unsaved marks, leave guard.
 11. [ ] Administration search (normalize, every word, marks, reveal and flash; every key found).
 12. [ ] Scan progress panel as SFE's (D-5.11): sticky panel, indeterminate bar, title, elapsed, counts so far,
-        current file, Cancel, result until dismissed, toast when done; shown on library pages and while browsing.
+        current file, Cancel, result until dismissed, toast when done; shown on library pages and while browsing;
+        and the administration's Background tasks section (task cards with progress, schedules and history across
+        libraries; overview route on the server).
 13. [ ] Browse: library grid and list, sort and view, keyset scrolling, scroll restored.
 14. [ ] Field and tag pages with counts.
 15. [ ] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
@@ -146,6 +160,8 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 - [ ] Administration search (port of `admin-search.ts`: normalize, every word, marks, reveal and flash); spec: every
       setting key found.
 - [ ] Scan progress panel as SFE's (D-5.11); e2e: a scan started shows the panel with counts, then its result.
+- [ ] Background tasks section (D-5.11): overview route (both providers), task cards, schedules and history across
+      libraries; e2e: a running scan shows on its card with Cancel.
 
 ### 5.2 Browse
 - [ ] Library grid / list, sort, view, keyset scrolling, scroll restored; field and tag pages with counts.
