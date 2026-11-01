@@ -261,7 +261,7 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     LibraryId = table.Column<int>(type: "integer", nullable: false),
                     Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     SortTitle = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    SortAuthor = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    SortAuthor = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
                     SeriesId = table.Column<int>(type: "integer", nullable: true),
                     SeriesNumber = table.Column<double>(type: "double precision", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: true),

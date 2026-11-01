@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Librarion.Core\Librarion.Core.csproj" />
     <ProjectReference Include="..\..\src\Librarion.Api\Librarion.Api.csproj" />
+    <ProjectReference Include="..\Librarion.Benchmarks\Librarion.Benchmarks.csproj" />
   </ItemGroup>
 
 </Project>

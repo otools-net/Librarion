@@ -21,8 +21,11 @@ public sealed class Book
     /// <summary>The title, else the file name, normalised for sorting; never null.</summary>
     public string SortTitle { get; set; } = string.Empty;
 
-    /// <summary>The first author's sort name ("King, Stephen"), kept by imports and edits; null without an author.</summary>
-    public string? SortAuthor { get; set; }
+    /// <summary>
+    /// The first author's sort name ("King, Stephen"), kept by imports and edits; empty without an author (not null:
+    /// the providers sort nulls at opposite ends, and keyset paging needs one order).
+    /// </summary>
+    public string SortAuthor { get; set; } = string.Empty;
 
     /// <summary>The first series (a tag under the <c>series</c> field) and the book's number in it, for sorting.</summary>
     public int? SeriesId { get; set; }

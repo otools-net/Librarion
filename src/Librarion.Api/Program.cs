@@ -64,6 +64,7 @@ api.MapSessionEndpoints();
 api.MapSystemEndpoints();
 api.MapTenantEndpoints();
 api.MapLibraryEndpoints();
+api.MapBookEndpoints();
 api.MapUserEndpoints();
 api.MapGroupEndpoints();
 api.MapSettingsEndpoints();

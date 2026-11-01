@@ -99,6 +99,7 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("REAL");
 
                     b.Property<string>("SortAuthor")
+                        .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
 

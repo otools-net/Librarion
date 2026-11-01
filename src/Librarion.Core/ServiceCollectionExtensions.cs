@@ -1,4 +1,5 @@
 using Librarion.Core.Access;
+using Librarion.Core.Catalog;
 using Librarion.Core.Data;
 using Librarion.Core.Settings;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +44,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SecurityLog>();
         services.AddHostedService<SecurityLogCleanup>();
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<BookVisibilities>();
+        services.AddSingleton<BookQueries>();
+        services.AddSingleton<TagQueries>();
         return services;
     }
 }

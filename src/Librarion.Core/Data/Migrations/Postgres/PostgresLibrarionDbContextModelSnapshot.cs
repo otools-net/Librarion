@@ -108,6 +108,7 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("double precision");
 
                     b.Property<string>("SortAuthor")
+                        .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 

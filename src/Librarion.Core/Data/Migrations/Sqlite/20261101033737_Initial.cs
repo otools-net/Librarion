@@ -260,7 +260,7 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
                     Title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     SortTitle = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    SortAuthor = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
+                    SortAuthor = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
                     SeriesId = table.Column<int>(type: "INTEGER", nullable: true),
                     SeriesNumber = table.Column<double>(type: "REAL", nullable: true),
                     Description = table.Column<string>(type: "TEXT", nullable: true),
