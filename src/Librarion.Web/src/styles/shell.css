@@ -1,4 +1,7 @@
-/* The app's frame (app/shell): top bar, sidebar / drawer, page. Phones ≤ 640 px. */
+/*
+ * The app's frame (app/shell, agents/docs/features/shell.md): top bar, library sidebar (a sheet on phones ≤ 640 px),
+ * menus (sheets on phones), page. The administration hides the sidebar, switcher and search (.admin-frame).
+ */
 
 .shell {
     display: flex;
@@ -14,7 +17,7 @@
     align-items: center;
     gap: var(--space-2);
     height: var(--topbar-height);
-    padding: 0 max(var(--space-2), env(safe-area-inset-right)) 0 max(var(--space-2), env(safe-area-inset-left));
+    padding: 0 max(var(--space-3), env(safe-area-inset-right)) 0 max(var(--space-2), env(safe-area-inset-left));
     border-bottom: 1px solid var(--border);
     background: var(--surface);
 }
@@ -30,8 +33,61 @@
     min-height: var(--target);
     padding: 0 var(--space-1);
     color: var(--text);
-    font-weight: 600;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    letter-spacing: -.01em;
     text-decoration: none;
+    white-space: nowrap;
+}
+
+/* Beside the brand, after a divider: where the person is (the library, or the administration). */
+.library-switch,
+.library-name,
+.topbar-title {
+    margin-inline-start: var(--space-1);
+    padding-inline-start: var(--space-3);
+    border-inline-start: 1px solid var(--border);
+}
+
+.topbar-title {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.switch-button,
+.library-name {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 240px;
+    min-height: var(--target);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.switch-button {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.switch-button:hover,
+.switch-button[aria-expanded="true"] {
+    background: var(--surface-2);
+}
+
+.switch-button .icon:last-child {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+}
+
+.switch-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -41,27 +97,193 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    max-width: 520px;
+    max-width: 560px;
     height: var(--target);
     margin-inline: auto;
-    padding: 0 var(--space-2);
+    padding: 0 var(--space-3);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-pill);
     background: var(--bg);
     color: var(--text-muted);
+}
+
+.search:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .search input {
     flex: 1;
     min-width: 0;
     height: 100%;
+    padding: 0;
     border: 0;
     background: transparent;
     outline: none;
 }
 
+.search input:focus-visible {
+    box-shadow: none;
+}
+
 .search input:disabled {
     cursor: not-allowed;
+}
+
+.admin-frame .account-menu {
+    margin-inline-start: auto;
+}
+
+/* Menus: a panel under their button on wider screens, a sheet from the bottom on phones. */
+.menu-anchor {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: max-content;
+    min-width: 220px;
+    max-width: min(320px, calc(100vw - 2 * var(--space-3)));
+    max-height: calc(100dvh - var(--topbar-height) - var(--space-4));
+    padding: var(--space-2);
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    animation: menu-in var(--duration-fast) var(--ease);
+}
+
+.library-switch .menu-panel {
+    left: 0;
+}
+
+.account-menu .menu-panel {
+    right: 0;
+}
+
+.menu-panel .group-label {
+    margin: var(--space-1) var(--space-2);
+}
+
+.menu-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-2) var(--space-3);
+    margin-bottom: var(--space-1);
+    border-bottom: 1px solid var(--border);
+}
+
+.menu-head-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.menu-head-text > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: var(--target);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.menu-item:hover {
+    background: var(--surface-2);
+}
+
+.menu-item > .icon {
+    color: var(--text-muted);
+}
+
+.menu-item[aria-pressed="true"] {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.menu-item[aria-pressed="true"] > .icon {
+    color: var(--accent);
+}
+
+.menu-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-separator {
+    width: 100%;
+    margin: var(--space-1) 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+}
+
+@keyframes menu-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+/* The account: its initial in a disc. */
+.account-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--target);
+    height: var(--target);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    cursor: pointer;
+}
+
+.avatar {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+    transition: box-shadow var(--duration-fast) var(--ease);
+}
+
+.avatar.large {
+    width: 40px;
+    height: 40px;
+    font-size: var(--text-lg);
+}
+
+.account-button:hover .avatar,
+.account-button[aria-expanded="true"] .avatar {
+    box-shadow: 0 0 0 2px var(--accent);
 }
 
 .layout {
@@ -70,39 +292,74 @@
     min-height: 0;
 }
 
+/* The library's navigation: sticky beside the page, its own scroll, the administration link at its foot. */
 .sidebar {
+    position: sticky;
+    top: var(--topbar-height);
+    align-self: flex-start;
+    display: flex;
     flex-shrink: 0;
+    flex-direction: column;
+    gap: var(--space-4);
     width: var(--sidebar-width);
-    padding: var(--space-2);
+    height: calc(100dvh - var(--topbar-height));
+    padding: var(--space-4) var(--space-2) var(--space-3);
+    overflow-y: auto;
     border-right: 1px solid var(--border);
     background: var(--surface);
 }
 
 .sidebar ul {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
+.sidebar .group-label {
+    padding: 0 var(--space-2);
+}
+
+.nav-foot {
+    margin-top: auto;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
 .nav-item {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
+    width: 100%;
     min-height: var(--target);
     padding: 0 var(--space-2);
+    border: 0;
     border-radius: var(--radius);
+    background: transparent;
     color: var(--text);
+    text-align: start;
     text-decoration: none;
+    cursor: pointer;
 }
 
-a.nav-item:hover {
+.nav-item > .icon {
+    color: var(--text-muted);
+}
+
+:is(a, button).nav-item:hover {
     background: var(--surface-2);
 }
 
 .nav-item.active {
-    background: var(--surface-2);
+    background: var(--accent-soft);
     color: var(--accent);
     font-weight: 600;
+}
+
+.nav-item.active > .icon {
+    color: var(--accent);
 }
 
 .nav-item[aria-disabled="true"] {
@@ -110,15 +367,45 @@ a.nav-item:hover {
     cursor: default;
 }
 
+.nav-item > .badge {
+    margin-inline-start: auto;
+}
+
+.phone-only {
+    display: none;
+}
+
+/* The libraries on a phone: one line of chips scrolling sideways, however many there are. */
+.library-chips {
+    display: flex;
+    gap: var(--space-2);
+    margin-inline: calc(-1 * var(--space-3));
+    padding: 2px var(--space-3) var(--space-1);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.library-chips .chip {
+    min-height: 36px;
+}
+
 .page {
     flex: 1;
     min-width: 0;
-    padding: var(--space-4) max(var(--space-4), env(safe-area-inset-right)) var(--space-5) var(--space-4);
+    padding: var(--space-5) max(var(--space-5), env(safe-area-inset-right)) var(--space-6) var(--space-5);
     outline: none;
 }
 
-.drawer-backdrop {
+.shell-backdrop {
     display: none;
+}
+
+/* Tablets: the search narrows before anything else. */
+@media (max-width: 1024px) {
+    .switch-button,
+    .library-name {
+        max-width: 160px;
+    }
 }
 
 @media (max-width: 640px) {
@@ -126,50 +413,96 @@ a.nav-item:hover {
         display: inline-flex;
     }
 
-    /* The name stays as the icon only: the search field gets the room. */
-    .brand span {
+    /* The name stays as the logo only, the library goes into the menu: the search field gets the room. */
+    .brand span,
+    .library-switch,
+    .library-name {
         display: none;
     }
 
-    .sidebar {
+    .phone-only {
+        display: block;
+    }
+
+    .topbar {
+        padding-inline-end: max(var(--space-2), env(safe-area-inset-right));
+    }
+
+    /* Sheets rising from the bottom: the navigation and the menus (SFE: popups opening low become sheets). */
+    .sidebar,
+    .menu-panel {
         position: fixed;
-        top: var(--topbar-height);
-        bottom: 0;
-        left: 0;
+        inset: auto 0 0 0;
+        top: auto;
         z-index: 30;
-        width: min(280px, 85vw);
-        padding-left: max(var(--space-2), env(safe-area-inset-left));
-        padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
+        width: 100%;
+        max-width: none;
+        height: auto;
+        max-height: 80dvh;
+        padding: var(--space-5) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
         overflow-y: auto;
         overscroll-behavior: contain;
-        transform: translateX(-100%);
+        border: 0;
+        border-top: 1px solid var(--border);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        box-shadow: var(--shadow);
+    }
+
+    .sidebar::before,
+    .menu-panel::before {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        width: 36px;
+        height: 4px;
+        border-radius: var(--radius-pill);
+        background: var(--border-strong);
+        content: "";
+        transform: translateX(-50%);
+    }
+
+    .menu-panel {
+        animation-name: sheet-up;
+        animation-duration: var(--duration);
+    }
+
+    .sidebar {
+        transform: translateY(100%);
         visibility: hidden;
-        transition: transform 0.18s ease, visibility 0s linear 0.18s;
+        transition: transform var(--duration) var(--ease), visibility 0s linear var(--duration);
     }
 
     .sidebar.open {
         transform: none;
         visibility: visible;
-        transition: transform 0.18s ease;
+        transition: transform var(--duration) var(--ease);
     }
 
-    .drawer-backdrop {
+    .nav-foot {
+        margin-top: 0;
+    }
+
+    .nav-item,
+    .menu-item {
+        min-height: 44px;
+    }
+
+    /* The navigation's backdrop is in .layout; the menus' is inside the top bar, under their panels (the bar's own
+       stacking would put a backdrop outside it over them). */
+    .shell-backdrop {
         position: fixed;
-        inset: var(--topbar-height) 0 0 0;
+        inset: 0;
         z-index: 25;
         display: block;
         background: var(--backdrop);
         touch-action: none;
     }
 
+    html:has(.shell-backdrop) {
+        overflow: hidden;
+    }
+
     .page {
         padding: var(--space-3) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .sidebar,
-    .sidebar.open {
-        transition: none;
     }
 }

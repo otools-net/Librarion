@@ -8,18 +8,23 @@ import { signedOut } from '../paths';
 test.describe('@a11y', () => {
     test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== 'android', 'once per run, on the android device'));
 
-    test('the home page in both themes, the drawer open', async ({ page }) => {
+    test('the home page in both themes, the navigation and the account menu open', async ({ page }) => {
         await page.goto('./');
         await expect(page.locator('.facts')).toBeVisible();
         await audit(page, 'home (dark)');
 
+        await page.locator('.account-button').tap();
+        await expect(page.locator('#account-menu')).toBeVisible();
+        await audit(page, 'account menu');
         await page.getByRole('button', { name: 'Switch to light colors' }).tap();
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#account-menu')).toHaveCount(0);
         await audit(page, 'home (light)');
 
         await page.locator('.menu-button').tap();
         await expect(page.locator('#main-nav')).toBeVisible();
-        await audit(page, 'drawer');
+        await audit(page, 'navigation sheet');
         await page.keyboard.press('Escape');
         await expect(page.locator('#main-nav')).toBeHidden();
     });

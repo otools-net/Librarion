@@ -67,5 +67,5 @@ export const test = base.extend<Options & { guard: void; finalLayout: void }>({
 
 export { expect };
 
-/** Phones up to 640 px wide: the navigation is a drawer (styles/shell.css). */
+/** Phones up to 640 px wide: the navigation and the menus are sheets from the bottom (styles/shell.css). */
 export const isPhoneWidth = (page: { viewportSize(): { width: number } | null }) => page.viewportSize()!.width <= 640;

@@ -96,7 +96,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 3. [x] Controls restyled: buttons (primary, secondary, quiet, danger), fields, selects, checkboxes, chips, badges,
        cards, focus rings.
 4. [x] Dialogs as phone sheets, toasts, empty states, skeleton placeholders.
-5. [ ] The shell: top bar (library switcher, search box, account menu), desktop library sidebar, phone menu sheet;
+5. [x] The shell: top bar (library switcher, search box, account menu), desktop library sidebar, phone menu sheet;
        the administration outside it (D-5.9).
 6. [ ] Administration structure: a page of its own with its own left column (D-5.9), `admin-sections.ts` (groups,
        sections, sub-pages, rights), routes `admin/:section/:page`, overview cards, breadcrumbs, moved-addresses table.

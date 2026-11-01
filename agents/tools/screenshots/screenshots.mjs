@@ -67,6 +67,8 @@ try {
     const [library] = await (await api.get('api/libraries')).json();
     await api.post(`api/libraries/${library.id}/roots`, { data: { path: books } });
     await api.post(`api/libraries/${library.id}/scan`);
+    // A second library: the top bar shows its switcher.
+    await api.post('api/libraries', { data: { name: 'Comics' } });
     const signedIn = await api.storageState();
     await api.dispose();
 
@@ -90,11 +92,17 @@ try {
                 await page.locator('button.row-main').first().click();
             else if (action === 'delete')
                 await page.getByRole('button', { name: 'Delete' }).first().click();
+            else if (action === 'account')
+                await page.locator('.account-button').click();
+            else if (action === 'library' && size === 'desktop')
+                await page.locator('.switch-button').click();
+            else if (action === 'menu' && size === 'phone')
+                await page.locator('.menu-button').click();
             await page.waitForLoadState('networkidle');
             // Dialogs and sheets rise in; the shot waits until they stand still.
             await page.waitForTimeout(400);
             const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
-            await page.screenshot({ path: file, fullPage: !action?.startsWith('delete') });
+            await page.screenshot({ path: file, fullPage: !action });
             console.log(file);
             await context.close();
         }

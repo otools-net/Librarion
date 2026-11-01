@@ -35,8 +35,8 @@ test.describe('@accounts', () => {
         await signIn(page, isMobile, account.userName, account.password);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
 
-        await press(page.getByRole('link', { name: `My account (${account.userName})` }), isMobile);
-        await press(page.getByRole('button', { name: 'Sign out' }), isMobile);
+        await press(page.getByRole('button', { name: `Account menu (${account.userName})` }), isMobile);
+        await press(page.locator('#account-menu').getByRole('button', { name: 'Sign out' }), isMobile);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in');
 
         await page.goto('./');

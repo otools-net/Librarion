@@ -14,7 +14,7 @@
 ## Server and tenant administrators
 
 - A **server administrator** runs the whole server: every tenant, every account, the server's settings. It belongs to
-  no tenant and picks the one it works in from the box in the top bar (shown when there are several tenants). The
+  no tenant and picks the one it works in from the account menu in the top bar (shown when there are several tenants). The
   first one is made at the [first start](../first-start.md).
 - A **tenant administrator** is an account in its tenant's **Administrators** group: it manages that tenant's
   accounts, groups, libraries and settings, and never sees other tenants or server administrators.

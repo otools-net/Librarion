@@ -12,7 +12,7 @@ administrator can unlock their own account from the sign-in page: see [first sta
 
 ## My account
 
-The person button at the top right opens **My account**:
+Your initial at the top right opens the account menu; **My account** there opens this page:
 
 - **Sign out** of this browser.
 - **Password:** enter the current one and the new one twice. Your other devices are signed out.
@@ -20,4 +20,4 @@ The person button at the top right opens **My account**:
   account on every device. A setting an administrator has locked can't be changed here. **Save** keeps the changes,
   **Discard** forgets them.
 
-The sun and moon button in the top bar switches colors in this browser only.
+**Switch to light colors** / **Switch to dark colors** in the account menu changes colors in this browser only.

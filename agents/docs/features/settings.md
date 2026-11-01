@@ -20,5 +20,5 @@ preferences on `account/account-page.ts`, `core/session.service.ts` (applies the
 - Keys so far: `ui.theme` (system/light/dark), `ui.density` (compact/comfortable), `ui.language` (browser/en),
   `ui.pageSize` (20–200, 50); `library.keepMissingDays` (library level and above, 0–3650, 30:
   [missing-books](missing-books.md)).
-- The theme button in the top bar changes only this browser (localStorage), not the account's preference.
+- The theme toggle in the account menu changes only this browser (localStorage), not the account's preference.
 - A new setting: one line in the catalog, its texts, and where the client uses it; no migration (rows hold JSON).

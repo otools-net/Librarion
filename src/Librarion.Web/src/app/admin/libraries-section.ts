@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
+import { LibraryContext } from '../core/library-context';
 import { LibraryInfo } from '../core/models';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
@@ -55,6 +56,7 @@ export class LibrariesSection implements OnInit {
     private readonly i18n = inject(I18n);
     private readonly confirm = inject(ConfirmService);
     private readonly toasts = inject(ToastService);
+    private readonly context = inject(LibraryContext);
 
     protected readonly libraries = signal<LibraryInfo[]>([]);
     protected readonly name = signal('');
@@ -75,7 +77,7 @@ export class LibrariesSection implements OnInit {
         await this.run(async () => {
             await this.api.createLibrary(this.name().trim());
             this.name.set('');
-            this.libraries.set(await this.api.libraries());
+            await this.reload();
         });
     }
 
@@ -89,7 +91,7 @@ export class LibrariesSection implements OnInit {
         await this.run(async () => {
             await this.api.renameLibrary(library.id, this.newName().trim());
             this.renaming.set(null);
-            this.libraries.set(await this.api.libraries());
+            await this.reload();
         });
     }
 
@@ -103,8 +105,14 @@ export class LibrariesSection implements OnInit {
         await this.run(async () => {
             await this.api.deleteLibrary(library.id);
             this.toasts.show(this.i18n.t('libraries.deleted', { name: library.name }));
-            this.libraries.set(await this.api.libraries());
+            await this.reload();
         });
+    }
+
+    /** The list here, and the top bar's library switcher. */
+    private async reload(): Promise<void> {
+        this.libraries.set(await this.api.libraries());
+        void this.context.load();
     }
 
     private async run(work: () => Promise<void>): Promise<void> {

@@ -13,6 +13,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   browser's box; deleting a tenant needs its name typed in it. Short messages ("Saved.", "Library deleted.", "Scan
   started") appear as toasts in the corner, kept while pointed at. Empty lists show an icon and what to do next, and
   pages that load show grey placeholders instead of "Loading…".
+- A new frame: the top bar shows the library being browsed (a switcher when there are several, remembered by the
+  browser) and an account menu (My account, Administration, light or dark colors, the tenant for server
+  administrators, Sign out) in place of the theme button and the tenant box. The navigation is grouped, with
+  Administration at its foot; on phones it and the menus rise from the bottom. The administration is a page of its
+  own, with an arrow back to the library.
 
 ## 0.5.0
 

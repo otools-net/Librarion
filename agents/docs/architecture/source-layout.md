@@ -20,7 +20,7 @@ src/Librarion.Web/         the Angular workspace (angular.json, package.json, pr
   src/testing/             setup.ts (jsdom stand-ins), fakes.ts (mockApi, testProviders, settle, setMediaQuery)
   src/app/core/            Api (the only HTTP client), models, I18n + `t` pipe, ThemeService, preferences
   src/app/shared/          Icon + IconSprite
-  src/app/shell/           the frame: top bar, sidebar / phone drawer, page
+  src/app/shell/           the frame: top bar, menus, sidebar / phone sheet, page
   src/app/home/            HomePage, NotFoundPage
 tests/Librarion.Tests/     MSTest; Infrastructure/ (TestCatalog, ApiClients, SlowWork, WarningLog, OutboundGuard,
                            RepositoryFiles)
