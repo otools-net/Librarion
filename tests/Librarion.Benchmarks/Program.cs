@@ -1,7 +1,9 @@
 // Librarion's scale benchmark (agents/tools/benchmark/README.md): generates real-shaped catalogs of millions of books
 // and measures the main queries against the budgets (agents/docs/development/scale.md).
 //   generate --provider sqlite|postgres --connection <string> [--books 2000000] [--seed 1] [--work <folder>]
+//   run --provider sqlite|postgres --connection <string> [--iterations 20] [--work <folder>]
 using System.Globalization;
+using Librarion.Benchmarks.Bench;
 using Librarion.Benchmarks.Data;
 using Librarion.Benchmarks.Generation;
 
@@ -25,8 +27,13 @@ switch (command)
         await GenerateCommand.RunAsync(target, shape, work, Console.WriteLine, cancel.Token);
         return 0;
     }
+    case "run":
+    {
+        var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
+        return await RunCommand.RunAsync(target, work, int.Parse(Option("iterations", "20"), CultureInfo.InvariantCulture), Console.WriteLine, cancel.Token);
+    }
     default:
-        Console.Error.WriteLine("Commands: generate (see agents/tools/benchmark/README.md)");
+        Console.Error.WriteLine("Commands: generate, run (see agents/tools/benchmark/README.md)");
         return 2;
 }
 

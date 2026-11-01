@@ -47,14 +47,15 @@ public sealed class BookQueries(TenantDb tenantDb)
         if (request.LibraryId is { } only && !visibility.Libraries.ContainsKey(only))
             return new Page<BookListItem>([], null);
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
-        var query = await VisibleAsync(db, visibility, request.LibraryId, cancellationToken);
+        var limit = Math.Clamp(request.Limit, 1, MaxLimit);
+        var query = await VisibleAsync(db, visibility, request.LibraryId, cancellationToken, limit);
         if (request.TagId is { } tagId)
         {
-            var tagged = db.BookTags.Where(l => db.TagClosure.Where(c => c.AncestorId == tagId).Select(c => c.DescendantId).Contains(l.TagId)).Select(l => l.BookId);
-            query = query.Where(b => tagged.Contains(b.Id));
+            var libraries = request.LibraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
+            var tags = await DescendantsAsync(db, [tagId], cancellationToken);
+            query = query.Where(await NarrowAsync(db, [tagId], libraries, limit, cancellationToken) ? From(db, tags) : Probe(db, tags));
         }
 
-        var limit = Math.Clamp(request.Limit, 1, MaxLimit);
         var after = KeysetCursor.Decode(request.After);
         var rows = await Order(query, request.Sort, after)
             .Take(limit + 1)
@@ -65,7 +66,8 @@ public sealed class BookQueries(TenantDb tenantDb)
             rows.RemoveAt(limit);
 
         var ids = rows.Select(r => r.Id).ToList();
-        var authorField = await db.Tags.Where(t => t.BuiltIn == BuiltInTag.Author).Select(t => t.Id).FirstOrDefaultAsync(cancellationToken);
+        // By key: the unique index (TenantId, FieldKey) finds it; BuiltIn has no index (650k tags at 2M books).
+        var authorField = await db.Tags.Where(t => t.FieldKey == "author").Select(t => t.Id).FirstOrDefaultAsync(cancellationToken);
         var authors = (await db.BookTags.Where(l => ids.Contains(l.BookId) && l.Tag!.FieldId == authorField)
                 .Select(l => new { l.BookId, l.Ordinal, l.Tag!.Name })
                 .ToListAsync(cancellationToken))
@@ -131,7 +133,8 @@ public sealed class BookQueries(TenantDb tenantDb)
     }
 
     /// <summary>The books the account may see, not merged away: one library or all, with the groups' content filters.</summary>
-    public static async Task<IQueryable<Book>> VisibleAsync(LibrarionDbContext db, BookVisibility visibility, int? libraryId, CancellationToken cancellationToken)
+    /// <param name="limit">The page size: it decides how a content filter is joined (<see cref="NarrowAsync"/>).</param>
+    public static async Task<IQueryable<Book>> VisibleAsync(LibrarionDbContext db, BookVisibility visibility, int? libraryId, CancellationToken cancellationToken, int limit = 1)
     {
         var books = db.Books.Where(b => b.MergedIntoId == null);
         var libraries = libraryId is { } one
@@ -153,7 +156,10 @@ public sealed class BookQueries(TenantDb tenantDb)
             if (!profiles.Any(p => p.IsOpen))
             {
                 foreach (var profile in profiles)
-                    admitted = Or(admitted, Admits(db, profile));
+                {
+                    var narrow = profile.Allowed.Count > 0 && await NarrowAsync(db, profile.Allowed, [library], limit, cancellationToken);
+                    admitted = Or(admitted, await AdmitsAsync(db, profile, narrow, cancellationToken));
+                }
             }
 
             any = Or(any, admitted is null ? inLibrary : And(inLibrary, admitted));
@@ -162,23 +168,84 @@ public sealed class BookQueries(TenantDb tenantDb)
         return books.Where(any!);
     }
 
-    private static Expression<Func<Book, bool>> Admits(LibrarionDbContext db, FilterProfile profile)
+    private static async Task<Expression<Func<Book, bool>>> AdmitsAsync(LibrarionDbContext db, FilterProfile profile, bool narrow, CancellationToken cancellationToken)
     {
         Expression<Func<Book, bool>>? result = null;
         if (profile.Allowed.Count > 0)
         {
-            var allowed = profile.Allowed;
-            result = b => db.BookTags.Any(l => l.BookId == b.Id && db.TagClosure.Any(c => c.DescendantId == l.TagId && allowed.Contains(c.AncestorId)));
+            var allowed = await DescendantsAsync(db, profile.Allowed, cancellationToken);
+            result = narrow ? From(db, allowed) : Probe(db, allowed);
         }
 
         if (profile.Denied.Count > 0)
         {
-            var denied = profile.Denied;
-            Expression<Func<Book, bool>> none = b => !db.BookTags.Any(l => l.BookId == b.Id && db.TagClosure.Any(c => c.DescendantId == l.TagId && denied.Contains(c.AncestorId)));
+            var denied = await DescendantsAsync(db, profile.Denied, cancellationToken);
+            var none = Probe(db, denied);
+            none = Expression.Lambda<Func<Book, bool>>(Expression.Not(none.Body), none.Parameters);
             result = result is null ? none : And(result, none);
         }
 
         return result ?? (b => true);
+    }
+
+    /// <summary>The largest descendant list given to a query as values; a tag with more (a field: every author) is joined through the closure instead.</summary>
+    private const int MaxListedTags = 500;
+
+    /// <summary>
+    /// The tags and their descendants, resolved once: a book's test is then one seek on the key (BookId, TagId) of
+    /// <see cref="BookTag"/>, not a join of each of its tags with the closure (the probe of a 1 % filter at 2M books).
+    /// </summary>
+    private static async Task<TagSet> DescendantsAsync(LibrarionDbContext db, IReadOnlyList<int> tagIds, CancellationToken cancellationToken)
+    {
+        var listed = await db.TagClosure.Where(c => tagIds.Contains(c.AncestorId)).Select(c => c.DescendantId).Take(MaxListedTags + 1).ToListAsync(cancellationToken);
+        return listed.Count > MaxListedTags ? new TagSet(tagIds, null) : new TagSet(tagIds, listed.Distinct().ToList());
+    }
+
+    /// <param name="Descendants">Every tag of the set with its descendants, when few enough to list; else null (joined through the closure).</param>
+    private sealed record TagSet(IReadOnlyList<int> Ancestors, IReadOnlyList<int>? Descendants);
+
+    /// <summary>
+    /// Whether books with one of <paramref name="tagIds"/> (or a descendant) are few enough to start from them. Two ways
+    /// to fill a page of books having a tag (D22, measured at 2M books by the stage 2 benchmark):
+    /// <list type="bullet">
+    /// <item>walk the sort index and test each book (<see cref="Probe"/>): about page ÷ share tests, cheap for a broad tag,
+    /// 780 ms for a 0.1 % filter;</item>
+    /// <item>start from the tag's books and sort them (<see cref="From"/>): share × books rows sorted, cheap for a narrow
+    /// tag, 2.9 s for category Fiction.</item>
+    /// </list>
+    /// They cost the same near share = √(page ÷ books); the counts come from <see cref="TagCount"/> (with descendants).
+    /// </summary>
+    private static async Task<bool> NarrowAsync(LibrarionDbContext db, IReadOnlyList<int> tagIds, IReadOnlyCollection<int> libraryIds, int limit, CancellationToken cancellationToken)
+    {
+        var tagged = await db.TagCounts.Where(c => tagIds.Contains(c.TagId) && libraryIds.Contains(c.LibraryId)).SumAsync(c => (long)c.BookCount, cancellationToken);
+        var books = await db.Libraries.Where(l => libraryIds.Contains(l.Id)).SumAsync(l => (long)l.BookCount, cancellationToken);
+        return tagged < Math.Sqrt((double)limit * Math.Max(books, 1));
+    }
+
+    /// <summary>Books having one of the tags or a descendant, tested book by book (the outer query walks its sort index).</summary>
+    private static Expression<Func<Book, bool>> Probe(LibrarionDbContext db, TagSet tags)
+    {
+        if (tags.Descendants is { } listed)
+            return b => db.BookTags.Any(l => l.BookId == b.Id && listed.Contains(l.TagId));
+        var ancestors = tags.Ancestors;
+        return b => db.BookTags.Any(l => l.BookId == b.Id && db.TagClosure.Any(c => c.DescendantId == l.TagId && ancestors.Contains(c.AncestorId)));
+    }
+
+    /// <summary>Books having one of the tags or a descendant, gathered from the tags' links (index (TagId, BookId)).</summary>
+    private static Expression<Func<Book, bool>> From(LibrarionDbContext db, TagSet tags)
+    {
+        IQueryable<int> tagged;
+        if (tags.Descendants is { } listed)
+        {
+            tagged = db.BookTags.Where(l => listed.Contains(l.TagId)).Select(l => l.BookId);
+        }
+        else
+        {
+            var ancestors = tags.Ancestors;
+            tagged = db.BookTags.Where(l => db.TagClosure.Where(c => ancestors.Contains(c.AncestorId)).Select(c => c.DescendantId).Contains(l.TagId)).Select(l => l.BookId);
+        }
+
+        return b => tagged.Contains(b.Id);
     }
 
     private static IQueryable<Book> Order(IQueryable<Book> books, BookSort sort, KeysetCursor? after)

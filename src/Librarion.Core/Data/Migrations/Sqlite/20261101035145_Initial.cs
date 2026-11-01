@@ -600,6 +600,16 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 columns: new[] { "SeriesId", "SeriesNumber", "Id" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Books_TenantId_Added_Id",
+                table: "Books",
+                columns: new[] { "TenantId", "Added", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Books_TenantId_SortAuthor_Id",
+                table: "Books",
+                columns: new[] { "TenantId", "SortAuthor", "Id" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Books_TenantId_SortTitle_Id",
                 table: "Books",
                 columns: new[] { "TenantId", "SortTitle", "Id" });

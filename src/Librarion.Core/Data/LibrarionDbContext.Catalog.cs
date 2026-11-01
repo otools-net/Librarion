@@ -22,11 +22,14 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(b => new { b.LibraryId, b.SortTitle, b.Id });
             entity.HasIndex(b => new { b.LibraryId, b.SortAuthor, b.Id });
             entity.HasIndex(b => new { b.LibraryId, b.Added, b.Id });
-            // Every library of the tenant at once (most accounts see them all).
+            // Every library of the tenant at once (most accounts see them all): the library ones can't give one order
+            // over several libraries, and a small library inside a big tenant can't use these without scanning far.
             entity.HasIndex(b => new { b.TenantId, b.SortTitle, b.Id });
+            entity.HasIndex(b => new { b.TenantId, b.SortAuthor, b.Id });
+            entity.HasIndex(b => new { b.TenantId, b.Added, b.Id });
             entity.HasIndex(b => new { b.SeriesId, b.SeriesNumber, b.Id });
             entity.HasIndex(b => new { b.TenantId, b.WorkKey });
-            entity.HasQueryFilter(b => TenantScope == null || b.TenantId == TenantScope);
+            Filter(entity, b => b.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<BookFile>(entity =>
@@ -41,7 +44,7 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(f => new { f.ArchiveId, f.PathKey });
             // "Same file" duplicates: candidates by size and CRC first (agents/docs/features/merging.md).
             entity.HasIndex(f => new { f.TenantId, f.Size, f.Crc32 });
-            entity.HasQueryFilter(f => TenantScope == null || f.TenantId == TenantScope);
+            Filter(entity, f => f.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<Archive>(entity =>
@@ -49,7 +52,7 @@ public abstract partial class LibrarionDbContext
             entity.Property(a => a.Path).HasMaxLength(BookFile.MaxPathLength);
             entity.HasOne(a => a.Library).WithMany().HasForeignKey(a => a.LibraryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(a => new { a.LibraryId, a.PathKey });
-            entity.HasQueryFilter(a => TenantScope == null || a.TenantId == TenantScope);
+            Filter(entity, a => a.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<BookIdentifier>(entity =>
@@ -59,7 +62,7 @@ public abstract partial class LibrarionDbContext
             entity.Property(i => i.Value).HasMaxLength(BookIdentifier.MaxValueLength);
             entity.HasOne(i => i.Book).WithMany(b => b.Identifiers).HasForeignKey(i => i.BookId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(i => new { i.TenantId, i.Scheme, i.Value });
-            entity.HasQueryFilter(i => TenantScope == null || i.TenantId == TenantScope);
+            Filter(entity, i => i.TenantId == CurrentTenantId);
         });
     }
 
@@ -80,7 +83,7 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(t => new { t.TenantId, t.FieldId, t.NormalizedName });
             entity.HasIndex(t => new { t.TenantId, t.FieldId, t.SortName, t.Id });
             entity.HasIndex(t => new { t.TenantId, t.FieldKey }).IsUnique();
-            entity.HasQueryFilter(t => TenantScope == null || t.TenantId == TenantScope);
+            Filter(entity, t => t.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<TagAlias>(entity =>
@@ -90,7 +93,7 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(a => a.Tag).WithMany(t => t.Aliases).HasForeignKey(a => a.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(a => new { a.TenantId, a.NormalizedName });
             entity.HasIndex(a => a.TagId);
-            entity.HasQueryFilter(a => TenantScope == null || a.TenantId == TenantScope);
+            Filter(entity, a => a.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<TagParent>(entity =>
@@ -99,7 +102,7 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(p => p.Child).WithMany().HasForeignKey(p => p.ChildId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(p => p.Parent).WithMany().HasForeignKey(p => p.ParentId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(p => p.ParentId);
-            entity.HasQueryFilter(p => TenantScope == null || p.TenantId == TenantScope);
+            Filter(entity, p => p.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<TagClosure>(entity =>
@@ -109,7 +112,7 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(c => c.Ancestor).WithMany().HasForeignKey(c => c.AncestorId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(c => c.Descendant).WithMany().HasForeignKey(c => c.DescendantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(c => new { c.DescendantId, c.AncestorId });
-            entity.HasQueryFilter(c => TenantScope == null || c.TenantId == TenantScope);
+            Filter(entity, c => c.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<BookTag>(entity =>
@@ -118,7 +121,7 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(l => l.Book).WithMany(b => b.Tags).HasForeignKey(l => l.BookId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(l => l.Tag).WithMany().HasForeignKey(l => l.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(l => new { l.TagId, l.BookId });
-            entity.HasQueryFilter(l => TenantScope == null || l.TenantId == TenantScope);
+            Filter(entity, l => l.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<TagCount>(entity =>
@@ -127,7 +130,7 @@ public abstract partial class LibrarionDbContext
             entity.HasOne<Library>().WithMany().HasForeignKey(c => c.LibraryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Tag>().WithMany().HasForeignKey(c => c.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(c => c.TagId);
-            entity.HasQueryFilter(c => TenantScope == null || c.TenantId == TenantScope);
+            Filter(entity, c => c.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<GroupTagFilter>(entity =>
@@ -136,7 +139,7 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(f => f.Group).WithMany(g => g.TagFilters).HasForeignKey(f => f.GroupId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(f => f.Tag).WithMany().HasForeignKey(f => f.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(f => f.TagId);
-            entity.HasQueryFilter(f => TenantScope == null || f.Group!.TenantId == TenantScope);
+            Filter(entity, f => f.Group!.TenantId == CurrentTenantId);
         });
     }
 }

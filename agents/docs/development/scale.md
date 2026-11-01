@@ -11,6 +11,12 @@
   unchanged files by size + mtime (+ partial hash on doubt).
 - Covers and thumbnails are made lazily into a sharded disk cache (`ab/cd/rest`), never at import for every book.
 - Order every `Take`; a query on a big table that can't use an index is a bug.
+- Keyset conditions are written `sort >= x AND (sort > x OR id > y)`: the redundant `>=` gives the index its start
+  (the bare `OR` form made PostgreSQL walk the index from the beginning on deep pages).
+- Query filters must be plain equalities (`TenantId = @t`): a filter with an `OR` on a parameter defeats every index
+  ([tenants](../features/tenants.md#isolation-in-the-database)).
+- Lists over every library of a tenant use `(TenantId, sort, Id)` indexes, one library's `(LibraryId, sort, Id)`.
+- Long strings (paths) are indexed through a 64-bit hash column (`PathKeys`), compared after.
 - The benchmark (`tests/Librarion.Benchmarks/`, planned) runs the main queries over the generated 2M catalog and fails
   past the budgets in [foundation-plan](foundation-plan.md#scale-budgets-checked-by-the-benchmark-see-scale); a 10M
   catalog run before each release checks that times grow with the page, not with the catalog.

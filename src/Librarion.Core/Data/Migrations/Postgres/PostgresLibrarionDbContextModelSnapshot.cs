@@ -142,6 +142,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.HasIndex("SeriesId", "SeriesNumber", "Id");
 
+                    b.HasIndex("TenantId", "Added", "Id");
+
+                    b.HasIndex("TenantId", "SortAuthor", "Id");
+
                     b.HasIndex("TenantId", "SortTitle", "Id");
 
                     b.ToTable("Books");

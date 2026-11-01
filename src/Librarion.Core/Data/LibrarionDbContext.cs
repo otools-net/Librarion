@@ -15,8 +15,25 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     /// <summary>
     /// The tenant this context works for: every tenant-owned set then shows that tenant's rows only (query filters,
     /// agents/docs/features/tenants.md). Null = the whole server, for server-wide code (<see cref="TenantDb.ForServerAsync"/>).
+    /// Set before the context's first use (<see cref="TenantDb"/> does): it chooses the model.
     /// </summary>
+    /// <remarks>
+    /// Two models, one with the filters and one without (<see cref="ScopeModelCacheKeyFactory"/>), rather than one
+    /// filter saying <c>TenantScope == null || TenantId == TenantScope</c>: EF sends that as <c>(@p OR "TenantId" = @s)</c>,
+    /// which no index serves, and every big query then scanned and sorted the whole table (found by the stage 2
+    /// benchmark at 20k books). The filters read <c>"TenantId" = @s</c> and the indexes starting with it work.
+    /// </remarks>
     public int? TenantScope { get; set; }
+
+    /// <summary>The scope's tenant as the filters read it (never null in a scoped model).</summary>
+    public int CurrentTenantId => TenantScope ?? 0;
+
+    private void Filter<TEntity>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> entity,
+        System.Linq.Expressions.Expression<Func<TEntity, bool>> filter) where TEntity : class
+    {
+        if (TenantScope is not null)
+            entity.HasQueryFilter(filter);
+    }
 
     public DbSet<ServerProperty> ServerProperties => Set<ServerProperty>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -55,7 +72,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.Property(t => t.Slug).HasMaxLength(MaxNameLength);
             entity.Property(t => t.Name).HasMaxLength(MaxNameLength);
             entity.HasIndex(t => t.Slug).IsUnique();
-            entity.HasQueryFilter(t => TenantScope == null || t.Id == TenantScope);
+            Filter(entity, t => t.Id == CurrentTenantId);
         });
 
         modelBuilder.Entity<Library>(entity =>
@@ -63,7 +80,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.Property(l => l.Name).HasMaxLength(MaxNameLength);
             entity.HasOne(l => l.Tenant).WithMany(t => t.Libraries).HasForeignKey(l => l.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(l => new { l.TenantId, l.Name });
-            entity.HasQueryFilter(l => TenantScope == null || l.TenantId == TenantScope);
+            Filter(entity, l => l.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<UserAccount>(entity =>
@@ -80,7 +97,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.HasIndex(u => new { u.TenantId, u.NormalizedUserName });
             entity.HasIndex(u => new { u.Source, u.ExternalId });
             entity.HasOne(u => u.Tenant).WithMany().HasForeignKey(u => u.TenantId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasQueryFilter(u => TenantScope == null || u.TenantId == TenantScope);
+            Filter(entity, u => u.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<UserGroup>(entity =>
@@ -91,7 +108,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.Property(g => g.BuiltIn).HasConversion<string>().HasMaxLength(30);
             entity.HasOne(g => g.Tenant).WithMany(t => t.Groups).HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(g => new { g.TenantId, g.Name });
-            entity.HasQueryFilter(g => TenantScope == null || g.TenantId == TenantScope);
+            Filter(entity, g => g.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<GroupMember>(entity =>
@@ -100,7 +117,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.HasOne(m => m.Group).WithMany(g => g.Members).HasForeignKey(m => m.GroupId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(m => m.User).WithMany(u => u.Groups).HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(m => m.UserId);
-            entity.HasQueryFilter(m => TenantScope == null || m.Group!.TenantId == TenantScope);
+            Filter(entity, m => m.Group!.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<GroupRight>(entity =>
@@ -108,7 +125,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.HasKey(r => new { r.GroupId, r.Right });
             entity.Property(r => r.Right).HasMaxLength(MaxNameLength);
             entity.HasOne(r => r.Group).WithMany(g => g.Rights).HasForeignKey(r => r.GroupId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasQueryFilter(r => TenantScope == null || r.Group!.TenantId == TenantScope);
+            Filter(entity, r => r.Group!.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<GroupLibrary>(entity =>
@@ -117,7 +134,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.HasOne(l => l.Group).WithMany(g => g.Libraries).HasForeignKey(l => l.GroupId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(l => l.Library).WithMany().HasForeignKey(l => l.LibraryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(l => l.LibraryId);
-            entity.HasQueryFilter(l => TenantScope == null || l.Group!.TenantId == TenantScope);
+            Filter(entity, l => l.Group!.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<TenantDisabledRight>(entity =>
@@ -125,7 +142,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.HasKey(r => new { r.TenantId, r.Right });
             entity.Property(r => r.Right).HasMaxLength(MaxNameLength);
             entity.HasOne(r => r.Tenant).WithMany(t => t.DisabledRights).HasForeignKey(r => r.TenantId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasQueryFilter(r => TenantScope == null || r.TenantId == TenantScope);
+            Filter(entity, r => r.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<Setting>(entity =>
@@ -135,7 +152,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.Property(s => s.Key).HasMaxLength(MaxNameLength);
             entity.Property(s => s.Value).HasMaxLength(4000);
             entity.HasIndex(s => s.TenantId);
-            entity.HasQueryFilter(s => TenantScope == null || s.TenantId == TenantScope);
+            Filter(entity, s => s.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<SecurityEvent>(entity =>
@@ -146,12 +163,19 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.Property(e => e.Detail).HasMaxLength(SecurityEvent.MaxTextLength);
             entity.HasIndex(e => new { e.TenantId, e.Id });
             entity.HasIndex(e => e.Time);
-            entity.HasQueryFilter(e => TenantScope == null || e.TenantId == TenantScope);
+            Filter(entity, e => e.TenantId == CurrentTenantId);
         });
 
         ConfigureCatalog(modelBuilder);
         ConfigureTags(modelBuilder);
     }
+}
+
+/// <summary>Builds one model for tenant contexts (with the query filters) and one for server contexts (without).</summary>
+public sealed class ScopeModelCacheKeyFactory : Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime) =>
+        (context.GetType(), context is LibrarionDbContext { TenantScope: not null }, designTime);
 }
 
 /// <summary>The SQLite flavour of <see cref="LibrarionDbContext"/>: its migrations are in <c>Data/Migrations/Sqlite</c>.</summary>

@@ -27,10 +27,12 @@ public static class LibrarionDatabase
     }
 
     internal static void ConfigureSqlite(DbContextOptionsBuilder builder, string connectionString) =>
-        builder.UseSqlite(connectionString, sqlite => sqlite.MigrationsHistoryTable("__EFMigrationsHistory"));
+        builder.UseSqlite(connectionString, sqlite => sqlite.MigrationsHistoryTable("__EFMigrationsHistory"))
+            .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, ScopeModelCacheKeyFactory>();
 
     internal static void ConfigurePostgres(DbContextOptionsBuilder builder, string connectionString) =>
-        builder.UseNpgsql(connectionString, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory"));
+        builder.UseNpgsql(connectionString, postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory"))
+            .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, ScopeModelCacheKeyFactory>();
 
     /// <summary>
     /// Applies the provider's migrations and records <paramref name="version"/> as the installed one. Before the first
