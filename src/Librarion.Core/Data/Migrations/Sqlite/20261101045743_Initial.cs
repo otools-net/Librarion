@@ -1,10 +1,9 @@
 using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Librarion.Core.Data.Migrations.Postgres
+namespace Librarion.Core.Data.Migrations.Sqlite
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -16,15 +15,15 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "SecurityEvents",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Time = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Kind = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: true),
-                    UserId = table.Column<int>(type: "integer", nullable: true),
-                    UserName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    Address = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    Detail = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Time = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Kind = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: true),
+                    UserId = table.Column<int>(type: "INTEGER", nullable: true),
+                    UserName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    Address = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
+                    Detail = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -35,8 +34,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "ServerProperties",
                 columns: table => new
                 {
-                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Value = table.Column<string>(type: "text", nullable: true)
+                    Key = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Value = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -47,12 +46,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Settings",
                 columns: table => new
                 {
-                    Level = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    OwnerId = table.Column<int>(type: "integer", nullable: false),
-                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: true),
-                    Value = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    Locked = table.Column<bool>(type: "boolean", nullable: false)
+                    Level = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    OwnerId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Key = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Value = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: true),
+                    Locked = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -63,12 +62,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Tenants",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Slug = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Disabled = table.Column<bool>(type: "boolean", nullable: false),
-                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Slug = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Disabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -79,13 +78,13 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Groups",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    BuiltIn = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
-                    ExternalName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    AllLibraries = table.Column<bool>(type: "boolean", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    BuiltIn = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
+                    ExternalName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    AllLibraries = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -102,12 +101,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Libraries",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    BookCount = table.Column<int>(type: "integer", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    BookCount = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -124,20 +123,20 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Tags",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    NormalizedName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    SortName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    Shorthand = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    Color = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    IsCategory = table.Column<bool>(type: "boolean", nullable: false),
-                    IsHidden = table.Column<bool>(type: "boolean", nullable: false),
-                    DisambiguationParentId = table.Column<int>(type: "integer", nullable: true),
-                    FieldKey = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    FieldId = table.Column<int>(type: "integer", nullable: true),
-                    BuiltIn = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    SortName = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    Shorthand = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                    Color = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
+                    IsCategory = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsHidden = table.Column<bool>(type: "INTEGER", nullable: false),
+                    DisambiguationParentId = table.Column<int>(type: "INTEGER", nullable: true),
+                    FieldKey = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                    FieldId = table.Column<int>(type: "INTEGER", nullable: true),
+                    BuiltIn = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -160,8 +159,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TenantDisabledRights",
                 columns: table => new
                 {
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Right = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Right = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -178,22 +177,22 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: true),
-                    UserName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    NormalizedUserName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    DisplayName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    Source = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    ExternalId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    PasswordHash = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    IsServerAdmin = table.Column<bool>(type: "boolean", nullable: false),
-                    Disabled = table.Column<bool>(type: "boolean", nullable: false),
-                    SecurityStamp = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    FailedSignIns = table.Column<int>(type: "integer", nullable: false),
-                    LockedUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastSignIn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: true),
+                    UserName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    DisplayName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    Source = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    ExternalId = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    PasswordHash = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    IsServerAdmin = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Disabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    SecurityStamp = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    FailedSignIns = table.Column<int>(type: "INTEGER", nullable: false),
+                    LockedUntil = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSignIn = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -210,8 +209,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "GroupRights",
                 columns: table => new
                 {
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    Right = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
+                    GroupId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Right = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -228,17 +227,17 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Archives",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    LibraryId = table.Column<int>(type: "integer", nullable: false),
-                    Path = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
-                    PathKey = table.Column<long>(type: "bigint", nullable: false),
-                    Size = table.Column<long>(type: "bigint", nullable: false),
-                    Modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Fingerprint = table.Column<long>(type: "bigint", nullable: true),
-                    EntryCount = table.Column<int>(type: "integer", nullable: false),
-                    ScanState = table.Column<int>(type: "integer", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Path = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    PathKey = table.Column<long>(type: "INTEGER", nullable: false),
+                    Size = table.Column<long>(type: "INTEGER", nullable: false),
+                    Modified = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Fingerprint = table.Column<long>(type: "INTEGER", nullable: true),
+                    EntryCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    ScanState = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -255,25 +254,25 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Books",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    LibraryId = table.Column<int>(type: "integer", nullable: false),
-                    Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    SortTitle = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    SortAuthor = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    SeriesId = table.Column<int>(type: "integer", nullable: true),
-                    SeriesNumber = table.Column<double>(type: "double precision", nullable: true),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    Rating = table.Column<byte>(type: "smallint", nullable: true),
-                    Added = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CoverSource = table.Column<int>(type: "integer", nullable: false),
-                    GeneratedTemplate = table.Column<short>(type: "smallint", nullable: true),
-                    GeneratedVariant = table.Column<short>(type: "smallint", nullable: true),
-                    CoverState = table.Column<int>(type: "integer", nullable: false),
-                    MergedIntoId = table.Column<int>(type: "integer", nullable: true),
-                    WorkKey = table.Column<long>(type: "bigint", nullable: true)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    SortTitle = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    SortAuthor = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    SeriesId = table.Column<int>(type: "INTEGER", nullable: true),
+                    SeriesNumber = table.Column<double>(type: "REAL", nullable: true),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    Rating = table.Column<byte>(type: "INTEGER", nullable: true),
+                    Added = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Updated = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CoverSource = table.Column<int>(type: "INTEGER", nullable: false),
+                    GeneratedTemplate = table.Column<short>(type: "INTEGER", nullable: true),
+                    GeneratedVariant = table.Column<short>(type: "INTEGER", nullable: true),
+                    CoverState = table.Column<int>(type: "INTEGER", nullable: false),
+                    MergedIntoId = table.Column<int>(type: "INTEGER", nullable: true),
+                    WorkKey = table.Column<long>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -296,8 +295,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "GroupLibraries",
                 columns: table => new
                 {
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    LibraryId = table.Column<int>(type: "integer", nullable: false)
+                    GroupId = table.Column<int>(type: "INTEGER", nullable: false),
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -320,9 +319,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "GroupTagFilters",
                 columns: table => new
                 {
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    TagId = table.Column<int>(type: "integer", nullable: false),
-                    Deny = table.Column<bool>(type: "boolean", nullable: false)
+                    GroupId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TagId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Deny = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -345,12 +344,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TagAliases",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    TagId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    NormalizedName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TagId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -367,10 +366,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TagClosure",
                 columns: table => new
                 {
-                    AncestorId = table.Column<int>(type: "integer", nullable: false),
-                    DescendantId = table.Column<int>(type: "integer", nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Depth = table.Column<int>(type: "integer", nullable: false)
+                    AncestorId = table.Column<int>(type: "INTEGER", nullable: false),
+                    DescendantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Depth = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -393,10 +392,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TagCounts",
                 columns: table => new
                 {
-                    LibraryId = table.Column<int>(type: "integer", nullable: false),
-                    TagId = table.Column<int>(type: "integer", nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    BookCount = table.Column<int>(type: "integer", nullable: false)
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TagId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    BookCount = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -419,9 +418,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TagParents",
                 columns: table => new
                 {
-                    ChildId = table.Column<int>(type: "integer", nullable: false),
-                    ParentId = table.Column<int>(type: "integer", nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: false)
+                    ChildId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ParentId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -444,8 +443,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "GroupMembers",
                 columns: table => new
                 {
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    UserId = table.Column<int>(type: "integer", nullable: false)
+                    GroupId = table.Column<int>(type: "INTEGER", nullable: false),
+                    UserId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -468,22 +467,22 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "BookFiles",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    LibraryId = table.Column<int>(type: "integer", nullable: false),
-                    BookId = table.Column<int>(type: "integer", nullable: false),
-                    ArchiveId = table.Column<int>(type: "integer", nullable: true),
-                    Path = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
-                    PathKey = table.Column<long>(type: "bigint", nullable: false),
-                    Format = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Size = table.Column<long>(type: "bigint", nullable: false),
-                    Crc32 = table.Column<long>(type: "bigint", nullable: true),
-                    Modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Locator = table.Column<long>(type: "bigint", nullable: true),
-                    Method = table.Column<short>(type: "smallint", nullable: true),
-                    PackedSize = table.Column<long>(type: "bigint", nullable: true),
-                    ContentHash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    BookId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ArchiveId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Path = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    PathKey = table.Column<long>(type: "INTEGER", nullable: false),
+                    Format = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    Size = table.Column<long>(type: "INTEGER", nullable: false),
+                    Crc32 = table.Column<long>(type: "INTEGER", nullable: true),
+                    Modified = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Locator = table.Column<long>(type: "INTEGER", nullable: true),
+                    Method = table.Column<short>(type: "INTEGER", nullable: true),
+                    PackedSize = table.Column<long>(type: "INTEGER", nullable: true),
+                    ContentHash = table.Column<byte[]>(type: "BLOB", maxLength: 32, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -506,10 +505,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "BookIdentifiers",
                 columns: table => new
                 {
-                    BookId = table.Column<int>(type: "integer", nullable: false),
-                    Scheme = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Value = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: false)
+                    BookId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Scheme = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    Value = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -526,12 +525,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "BookTags",
                 columns: table => new
                 {
-                    BookId = table.Column<int>(type: "integer", nullable: false),
-                    TagId = table.Column<int>(type: "integer", nullable: false),
-                    Source = table.Column<byte>(type: "smallint", nullable: false),
-                    TenantId = table.Column<int>(type: "integer", nullable: false),
-                    Ordinal = table.Column<int>(type: "integer", nullable: true),
-                    Number = table.Column<double>(type: "double precision", nullable: true)
+                    BookId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TagId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Source = table.Column<byte>(type: "INTEGER", nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Ordinal = table.Column<int>(type: "INTEGER", nullable: true),
+                    Number = table.Column<double>(type: "REAL", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -624,6 +623,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "IX_BookTags_TagId_BookId",
                 table: "BookTags",
                 columns: new[] { "TagId", "BookId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BookTags_TagId_Number_BookId",
+                table: "BookTags",
+                columns: new[] { "TagId", "Number", "BookId" },
+                filter: "\"Number\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GroupLibraries_LibraryId",

@@ -145,6 +145,22 @@ public sealed class CatalogQueryTests
     }
 
     [TestMethod]
+    public async Task ASeriesPageWalksItsBooksByNumber()
+    {
+        await using var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel);
+        var seriesField = _target.Fields[BuiltInTag.Series];
+        var series = await db.TagCounts.Where(c => db.Tags.Any(t => t.Id == c.TagId && t.FieldId == seriesField))
+            .OrderByDescending(c => c.BookCount).Select(c => c.TagId).FirstAsync(Cancel);
+        var expected = await db.BookTags.Where(l => l.TagId == series && l.Number != null)
+            .OrderBy(l => l.Number).ThenBy(l => l.BookId).Select(l => l.BookId).ToListAsync(Cancel);
+
+        var walked = await WalkAsync(Everything(), BookSort.Number, tag: series, limit: 3);
+
+        Assert.IsGreaterThan(3, expected.Count, "A series of several pages");
+        CollectionAssert.AreEqual(expected, walked.Select(b => b.Id).ToList());
+    }
+
+    [TestMethod]
     public async Task TheRoutesAnswerWhatTheCallerMayBrowse()
     {
         var (admin, _) = await ApiClients.SetUpAsync(_factory, Cancel);

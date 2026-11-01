@@ -29,7 +29,7 @@ public static class RunCommand
 
     public static async Task<int> RunAsync(BenchTarget target, string workFolder, int iterations, Action<string> report, CancellationToken cancellationToken)
     {
-        using var host = await BenchDatabase.OpenAsync(target, workFolder, cancellationToken);
+        using var host = await BenchDatabase.OpenAsync(target, workFolder, cancellationToken, migrate: false);
         var services = host.Services;
         var tenantDb = services.GetRequiredService<TenantDb>();
         var books = services.GetRequiredService<BookQueries>();
@@ -97,7 +97,8 @@ public static class RunCommand
             ("one library by title, middle page", ListBudget, _ => List(open, new BookPageRequest(libraryId, After: titleCursor))),
             ("books of the most prolific author", ListBudget, _ => List(open, new BookPageRequest(TagId: prolificAuthor))),
             ("books of an author with 5-20 books", ListBudget, _ => List(open, new BookPageRequest(TagId: middleAuthor))),
-            ("books of the biggest series", ListBudget, _ => List(open, new BookPageRequest(TagId: bigSeries))),
+            ("books of the biggest series, by number", ListBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Number, TagId: bigSeries))),
+            ("books of the biggest series, by title", ListBudget, _ => List(open, new BookPageRequest(TagId: bigSeries))),
             ("books of category Fiction (with subcategories)", ListBudget, _ => List(open, new BookPageRequest(TagId: fiction))),
             ("authors A-Z, first page", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, null, 100, cancellationToken))!.Items.Count),
             ("authors A-Z, middle page", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, middleValueCursor, 100, cancellationToken))!.Items.Count),

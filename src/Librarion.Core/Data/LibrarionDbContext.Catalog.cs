@@ -121,6 +121,8 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(l => l.Book).WithMany(b => b.Tags).HasForeignKey(l => l.BookId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(l => l.Tag).WithMany().HasForeignKey(l => l.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(l => new { l.TagId, l.BookId });
+            // A series' books by number, walked in order whatever the series' size; only links with a number (small).
+            entity.HasIndex(l => new { l.TagId, l.Number, l.BookId }).HasFilter("\"Number\" IS NOT NULL");
             Filter(entity, l => l.TenantId == CurrentTenantId);
         });
 

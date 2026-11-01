@@ -48,8 +48,12 @@ public static class BenchDatabase
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
     }
 
-    /// <summary>Core's services on the target, the schema migrated (nothing started: no background tasks run).</summary>
-    public static async Task<IHost> OpenAsync(BenchTarget target, string workFolder, CancellationToken cancellationToken)
+    /// <summary>Core's services on the target, the schema migrated unless <paramref name="migrate"/> is off (nothing started: no background tasks run).</summary>
+    /// <param name="migrate">
+    /// Off for <c>run</c>: before 1.0 the <c>Initial</c> migration is regenerated on model changes, and a generated
+    /// catalog (40 minutes at 10M) is benchmarked as it is rather than refused.
+    /// </param>
+    public static async Task<IHost> OpenAsync(BenchTarget target, string workFolder, CancellationToken cancellationToken, bool migrate = true)
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true, ContentRootPath = workFolder });
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -63,7 +67,8 @@ public static class BenchDatabase
         builder.Services.AddLibrarionCore(builder.Configuration, workFolder);
         var host = builder.Build();
         var factory = host.Services.GetRequiredService<IDbContextFactory<LibrarionDbContext>>();
-        await LibrarionDatabase.InitializeAsync(factory, "benchmark", host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Benchmark"), cancellationToken);
+        if (migrate)
+            await LibrarionDatabase.InitializeAsync(factory, "benchmark", host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Benchmark"), cancellationToken);
         return host;
     }
 }

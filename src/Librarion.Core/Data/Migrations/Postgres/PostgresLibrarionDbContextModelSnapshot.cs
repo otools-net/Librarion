@@ -266,6 +266,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.HasIndex("TagId", "BookId");
 
+                    b.HasIndex("TagId", "Number", "BookId")
+                        .HasFilter("\"Number\" IS NOT NULL");
+
                     b.ToTable("BookTags");
                 });
 

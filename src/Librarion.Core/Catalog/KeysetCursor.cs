@@ -8,7 +8,7 @@ namespace Librarion.Core.Catalog;
 /// Where a page ends: the last row's sort value and id, opaque to clients (base64url of a small JSON). The next page
 /// starts after it by index, never by offset (agents/docs/development/scale.md).
 /// </summary>
-public sealed record KeysetCursor(string? Text, long? Number, int Id)
+public sealed record KeysetCursor(string? Text, long? Number, int Id, double? Real = null)
 {
     public string Encode() => Base64Url.EncodeToString(JsonSerializer.SerializeToUtf8Bytes(this));
 

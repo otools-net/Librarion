@@ -11,6 +11,8 @@ public enum BookSort
     Author,
     /// <summary>Newest first.</summary>
     Added,
+    /// <summary>By the number on the tag's link (a series' order); only with a tag, books without a number left out.</summary>
+    Number,
 }
 
 /// <param name="LibraryId">One library; null = every library the account browses.</param>
@@ -49,6 +51,8 @@ public sealed class BookQueries(TenantDb tenantDb)
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var limit = Math.Clamp(request.Limit, 1, MaxLimit);
         var query = await VisibleAsync(db, visibility, request.LibraryId, cancellationToken, limit);
+        if (request is { Sort: BookSort.Number, TagId: { } numbered })
+            return await NumberedAsync(db, query, numbered, request.After, limit, cancellationToken);
         if (request.TagId is { } tagId)
         {
             var libraries = request.LibraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
@@ -59,12 +63,33 @@ public sealed class BookQueries(TenantDb tenantDb)
         var after = KeysetCursor.Decode(request.After);
         var rows = await Order(query, request.Sort, after)
             .Take(limit + 1)
-            .Select(b => new { b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource })
+            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource))
             .ToListAsync(cancellationToken);
         var more = rows.Count > limit;
         if (more)
             rows.RemoveAt(limit);
 
+        var items = await ItemsAsync(db, rows, cancellationToken);
+        string? next = null;
+        if (more)
+        {
+            var last = rows[^1];
+            next = (request.Sort switch
+            {
+                BookSort.Author => new KeysetCursor(last.SortAuthor, null, last.Id),
+                BookSort.Added => new KeysetCursor(null, last.Added.Ticks, last.Id),
+                _ => new KeysetCursor(last.SortTitle, null, last.Id),
+            }).Encode();
+        }
+
+        return new Page<BookListItem>(items, next);
+    }
+
+    private sealed record BookRow(int Id, int LibraryId, string? Title, string SortTitle, string SortAuthor, DateTime Added, int? SeriesId, double? SeriesNumber, CoverSource CoverSource);
+
+    /// <summary>The page's rows with their authors, series and formats: one query each for the whole page.</summary>
+    private static async Task<List<BookListItem>> ItemsAsync(LibrarionDbContext db, IReadOnlyList<BookRow> rows, CancellationToken cancellationToken)
+    {
         var ids = rows.Select(r => r.Id).ToList();
         // By key: the unique index (TenantId, FieldKey) finds it; BuiltIn has no index (650k tags at 2M books).
         var authorField = await db.Tags.Where(t => t.FieldKey == "author").Select(t => t.Id).FirstOrDefaultAsync(cancellationToken);
@@ -85,20 +110,32 @@ public sealed class BookQueries(TenantDb tenantDb)
                 authors.GetValueOrDefault(r.Id) ?? [], r.SeriesId is { } s ? series.GetValueOrDefault(s) : null, r.SeriesNumber,
                 bookFiles.Select(f => f.Format).Distinct().ToList(), r.CoverSource);
         }).ToList();
+        return items;
+    }
 
-        string? next = null;
+    /// <summary>
+    /// A tag's books by the number on their link (a series), walking the partial index (TagId, Number, BookId) in order
+    /// and keeping the visible ones: as fast for a series of 20k books as for one of 3.
+    /// </summary>
+    private static async Task<Page<BookListItem>> NumberedAsync(LibrarionDbContext db, IQueryable<Book> visible, int tagId, string? after, int limit, CancellationToken cancellationToken)
+    {
+        var links = db.BookTags.Where(l => l.TagId == tagId && l.Number != null);
+        if (KeysetCursor.Decode(after) is { Real: { } number } cursor)
+            links = links.Where(l => l.Number >= number && (l.Number > number || l.BookId > cursor.Id));
+        var rows = await links.OrderBy(l => l.Number).ThenBy(l => l.BookId)
+            .Where(l => visible.Any(b => b.Id == l.BookId))
+            .Select(l => new { l.BookId, l.Number })
+            .Take(limit + 1)
+            .ToListAsync(cancellationToken);
+        var more = rows.Count > limit;
         if (more)
-        {
-            var last = rows[^1];
-            next = (request.Sort switch
-            {
-                BookSort.Author => new KeysetCursor(last.SortAuthor, null, last.Id),
-                BookSort.Added => new KeysetCursor(null, last.Added.Ticks, last.Id),
-                _ => new KeysetCursor(last.SortTitle, null, last.Id),
-            }).Encode();
-        }
-
-        return new Page<BookListItem>(items, next);
+            rows.RemoveAt(limit);
+        var ids = rows.Select(r => r.BookId).ToList();
+        var books = await db.Books.Where(b => ids.Contains(b.Id))
+            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource))
+            .ToDictionaryAsync(b => b.Id, cancellationToken);
+        var page = await ItemsAsync(db, ids.Select(id => books[id]).ToList(), cancellationToken);
+        return new Page<BookListItem>(page, more ? new KeysetCursor(null, null, rows[^1].BookId, rows[^1].Number).Encode() : null);
     }
 
     /// <summary>One book with its tags by field, files and identifiers; null when it doesn't exist or the account can't see it.</summary>
