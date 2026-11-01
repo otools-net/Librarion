@@ -9,6 +9,10 @@
 - Rights and content filters are part of the query (`Visible()`), never a filter after paging.
 - Imports and scans write in batches (1000 rows, `ChangeTracker.Clear()` between), resume after a stop, and skip
   unchanged files by size + mtime (+ partial hash on doubt).
+- Rows by the thousand whose keys are known go past EF (`Data/BulkRows`: PostgreSQL binary `COPY`, ids from the
+  sequence; SQLite prepared inserts in a transaction), and counters move by one upsert per batch, never a row per
+  counter through EF ([imports](../features/imports.md#scale)).
+- During a big write PostgreSQL's statistics lag behind: prefer plain indexed lookups to joins in per-batch queries.
 - Covers and thumbnails are made lazily into a sharded disk cache (`ab/cd/rest`), never at import for every book.
 - Order every `Take`; a query on a big table that can't use an index is a bug.
 - Keyset conditions are written `sort >= x AND (sort > x OR id > y)`: the redundant `>=` gives the index its start
@@ -59,6 +63,8 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   (`--evict`: a 24 GB file read before the cold phases), database on the SSD: list 647 ms, index 154 s (651 a second:
   processor-bound, the disk reads forward), unchanged 4.7 ms, first byte p50 9.6 ms / p95 24 ms (real seeks). All
   within budget: folders stay indexed from the books (D11); INPX and Calibre come in as manual imports (stage 4).
+- Imports (stage 4, `import` command, 2026-11-01, PostgreSQL): Calibre 2M books 27.1 min, unchanged again 2.6 min;
+  INPX 1M records 8.9 min, unchanged 38 s; all within budget ([imports](../features/imports.md#scale)).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
   author or date, fields found by scanning `BuiltIn`, tag pages joined one way for every size (before: Fiction 2.9 s, a
   0.1 % filter 0.8 s), parallel workers on PostgreSQL, a big series by number walked from its title.

@@ -45,5 +45,5 @@ a user accepts it** (SFE forgets on its own after its retention; Librarion never
 
 - A present book with one missing copy keeps that file row as missing until the copy comes back; the removal only
   takes missing *books*.
-- Imports from other sources ([stage 4](../development/stage-4-calibre-plan.md)) follow the same rule: books whose
+- Imports from other sources ([imports](imports.md)) follow the same rule: books whose
   files are gone become missing, a re-import never removes.

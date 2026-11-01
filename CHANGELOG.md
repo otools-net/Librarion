@@ -15,6 +15,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Changed
 
+- Scans and imports write tag counts with one statement per batch, and imports write new books' rows in bulk: a 2M-book
+  Calibre library imports in 27 minutes on PostgreSQL, a 1M-record INPX catalog in 9.
+
 - A book whose files a scan no longer finds is kept as a missing book (hidden, with its metadata and tags) instead of
   being deleted; it comes back when the file is put back or found moved. Missing books are removed only when an
   administrator accepts it in the library's panel; they are offered for removal after a number of days set per

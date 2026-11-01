@@ -94,13 +94,16 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
 
             var rows = await RowsAsync(locations.SelectMany(l => l).Distinct().ToList(), cancellationToken);
             var values = records.Select(r => Cut(r.SourceId)).Where(v => v.Length > 0).Distinct().ToList();
-            var bySourceId = (await db.BookIdentifiers.Where(i => i.Scheme == source.IdScheme && values.Contains(i.Value))
-                    .Join(db.Books.Where(b => b.LibraryId == root.LibraryId), i => i.BookId, b => b.Id, (i, b) => new { i.Value, Book = b.MergedIntoId ?? b.Id })
+            // Two plain lookups, no join: while an import grows the tables, PostgreSQL's statistics lag behind and a join
+            // was planned as a walk over every book of the tenant per identifier (30 s at 9,000 books).
+            var identified = await db.BookIdentifiers.Where(i => i.Scheme == source.IdScheme && values.Contains(i.Value))
+                .Select(i => new { i.Value, i.BookId }).ToListAsync(cancellationToken);
+            var candidates = identified.Select(i => i.BookId).Concat(rows.Values.Select(r => r.BookId)).Distinct().ToList();
+            var books = (await db.Books.Where(b => candidates.Contains(b.Id)).Select(b => new { b.Id, b.LibraryId, b.MetadataSource, b.ImportHash, b.MergedIntoId })
                     .ToListAsync(cancellationToken))
-                .GroupBy(i => i.Value, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Min(i => i.Book), StringComparer.Ordinal);
-            var bookIds = rows.Values.Select(r => r.BookId).Concat(bySourceId.Values).Distinct().ToList();
-            var books = (await db.Books.Where(b => bookIds.Contains(b.Id)).Select(b => new { b.Id, b.MetadataSource, b.ImportHash, b.MergedIntoId }).ToListAsync(cancellationToken))
                 .ToDictionary(b => b.Id);
+            var bySourceId = identified.Where(i => books.TryGetValue(i.BookId, out var b) && b.LibraryId == root.LibraryId)
+                .GroupBy(i => i.Value, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Min(i => books[i.BookId].MergedIntoId ?? i.BookId), StringComparer.Ordinal);
 
             var written = new List<CatalogWriter.ImportedBook>();
             var claimed = new HashSet<Location>();

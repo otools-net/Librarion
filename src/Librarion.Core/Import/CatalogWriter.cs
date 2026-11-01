@@ -24,6 +24,20 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
 {
     private const int MaxIdentifiers = 20;
     private const int MaxProperties = 50;
+    private static readonly string[] BookColumns =
+    [
+        "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added", "Updated", "CoverSource",
+        "GeneratedTemplate", "GeneratedVariant", "CoverState", "WorkKey", "MetadataSource", "ImportHash",
+    ];
+
+    private static object?[] BookRow(Book b) =>
+    [
+        b.Id, b.TenantId, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.SeriesId, b.SeriesNumber, b.Description, b.Rating, b.Added, b.Updated, (int)b.CoverSource,
+        b.GeneratedTemplate, b.GeneratedVariant, (int)b.CoverState, b.WorkKey, (byte)b.MetadataSource, b.ImportHash,
+    ];
+
+    private static readonly string[] FileColumns =
+        ["TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
     private readonly Dictionary<int, int> tagDeltas = [];
     private int bookDelta;
 
@@ -254,28 +268,49 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         if (fresh.Count > 0)
         {
             await resolver.ResolveAsync(db, fresh.SelectMany(r => Names(r.Metadata)), cancellationToken);
+            // The books through EF (their ids come back), everything hanging on them in bulk: EF's per-row cost was
+            // most of an import's time (agents/docs/features/imports.md#scale).
+            var made = new List<(Book Book, ImportedBook Record, List<BookTag> Links, List<BookIdentifier> Ids, List<BookProperty> Properties)>(fresh.Count);
             foreach (var record in fresh)
             {
                 var book = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now, MetadataSource = record.Owner, ImportHash = record.Hash };
-                foreach (var file in record.Files)
-                {
-                    file.TenantId = tenantId;
-                    file.LibraryId = libraryId;
-                    book.Files.Add(file);
-                }
-
                 Apply(book, record.Path, record.Metadata, new HashSet<int>(), out var links);
                 foreach (var link in links)
-                {
-                    book.Tags.Add(link);
                     Move(link.TagId, +1);
-                }
-
                 SourceCover(book, record);
-                db.Books.Add(book);
+                made.Add((book, record, links, book.Identifiers, book.Properties));
+                book.Identifiers = [];
+                book.Properties = [];
             }
 
-            await db.SaveChangesAsync(cancellationToken);
+            await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
+            {
+                if (await BulkRows.ReserveIdsAsync(db, "Books", made.Count, cancellationToken) is { } reserved)
+                {
+                    // PostgreSQL: ids from the table's sequence (safe beside other writers), the books copied too.
+                    for (var i = 0; i < made.Count; i++)
+                        made[i].Book.Id = checked((int)reserved[i]);
+                    await BulkRows.InsertAsync(db, "Books", BookColumns, made.Select(m => BookRow(m.Book)).ToList(), cancellationToken);
+                }
+                else
+                {
+                    db.Books.AddRange(made.Select(m => m.Book));
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+
+                await BulkRows.InsertAsync(db, "BookFiles", FileColumns, made.SelectMany(m => m.Record.Files.Select(f => new object?[]
+                {
+                    tenantId, libraryId, m.Book.Id, f.RootId, f.ArchiveId, f.Path, f.PathKey, f.Format, f.Size, f.Crc32, f.Modified, f.Locator, f.Method, f.PackedSize,
+                })).ToList(), cancellationToken);
+                await BulkRows.InsertAsync(db, "BookTags", ["TenantId", "BookId", "TagId", "Source", "Ordinal", "Number"],
+                    made.SelectMany(m => m.Links.Select(l => new object?[] { tenantId, m.Book.Id, l.TagId, (byte)l.Source, l.Ordinal, l.Number })).ToList(), cancellationToken);
+                await BulkRows.InsertAsync(db, "BookIdentifiers", ["BookId", "TenantId", "Scheme", "Value"],
+                    made.SelectMany(m => m.Ids.Select(i => new object?[] { m.Book.Id, tenantId, i.Scheme, i.Value })).ToList(), cancellationToken);
+                await BulkRows.InsertAsync(db, "BookProperties", ["BookId", "TenantId", "Name", "Value"],
+                    made.SelectMany(m => m.Properties.Select(p => new object?[] { m.Book.Id, tenantId, p.Name, p.Value })).ToList(), cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+
             db.ChangeTracker.Clear();
             Added += fresh.Count;
             bookDelta += fresh.Count;
@@ -377,22 +412,13 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         var touched = tagDeltas.Where(d => d.Value != 0).ToList();
         foreach (var chunk in touched.Chunk(1000))
         {
+            // One upsert per chunk (a row per tag through EF was most of a big import's time: thousands of authors per
+            // batch), then the rows left at zero or below among these tags removed.
+            await BulkRows.AddCountsAsync(db, tenantId, libraryId, chunk, cancellationToken);
             var ids = chunk.Select(d => d.Key).ToList();
-            var rows = await db.TagCounts.Where(c => c.LibraryId == libraryId && ids.Contains(c.TagId)).ToDictionaryAsync(c => c.TagId, cancellationToken);
-            foreach (var (tagId, delta) in chunk)
-            {
-                if (rows.TryGetValue(tagId, out var row))
-                    row.BookCount = Math.Max(0, row.BookCount + delta);
-                else if (delta > 0)
-                    db.TagCounts.Add(new TagCount { TenantId = tenantId, LibraryId = libraryId, TagId = tagId, BookCount = delta });
-            }
-
-            await db.SaveChangesAsync(cancellationToken);
-            db.ChangeTracker.Clear();
+            await db.TagCounts.Where(c => c.LibraryId == libraryId && ids.Contains(c.TagId) && c.BookCount <= 0).ExecuteDeleteAsync(cancellationToken);
         }
 
-        if (touched.Count > 0)
-            await db.TagCounts.Where(c => c.LibraryId == libraryId && c.BookCount == 0).ExecuteDeleteAsync(cancellationToken);
         if (bookDelta != 0)
         {
             var delta = bookDelta;

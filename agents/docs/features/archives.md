@@ -102,4 +102,4 @@ MyHomeLib). **Folders are still indexed from the books themselves** (always in s
 every collection; fast enough even on a slow hard disk: [scale](../development/scale.md#measured)). An INPX is
 **imported by hand as a different source** (the user, 2026-11-01, D11): its records are stored in our database,
 matched to the archive entries they name, and own those books' metadata from then on; a scan doesn't re-read their
-heads. Plan: [stage 4](../development/stage-4-calibre-plan.md).
+heads ([imports](imports.md#inpx)).

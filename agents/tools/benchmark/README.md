@@ -79,3 +79,21 @@ dotnet $bench archive --provider sqlite --connection "Data Source=D:/Temp/librar
 - Hard disk: `--work F:/claude-test` (the user's USB HDD, 2026-11-01) with the database on the SSD; copy the zip there
   rather than generating it (the disk writes ~10 MB/s).
 - Small-size test: `ArchiveBenchTests` (500 entries, both providers).
+
+## What `import` measures (stage 4, [imports](../../docs/features/imports.md#scale))
+
+```sh
+agents/tools/benchmark/import.sh postgres [inpx-records 1000000] [calibre-books 2000000] [work D:/Temp/librarion-bench]
+# one source: dotnet $bench import --provider sqlite|postgres --connection "…" --source inpx|calibre --records N --work D:/Temp/librarion-bench
+```
+
+- The source is generated in `<work>/import-<source>-<records>/` from the catalog generator's book plans (same authors,
+  series, tags, languages by Zipf), made once and kept: a Calibre `metadata.db` with one empty EPUB per book (a folder
+  per thousand books: 2M files take a while to create, once), or an `.inpx` with `.inp` files of 10,000 records and
+  their zips (stored one-byte entries; one record in a hundred `DEL=1`).
+- Into a fresh database (the target is recreated): the source's folder added as a root, the real `CatalogImporter`
+  run, then run again with the source unchanged (must write nothing).
+- Budgets (checked only at their sizes): Calibre 2M < 30 min, INPX 1M < 15 min, each unchanged re-import < 5 min;
+  exit 1 past one. Report `import-<source>-<provider>-<records>-<time>.json` in the work folder.
+- `import.sh` builds the benchmark in Release, starts the PostgreSQL container for `postgres` (Docker Desktop must
+  run), and runs INPX then Calibre (0 skips one).

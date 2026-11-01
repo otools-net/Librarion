@@ -6,7 +6,7 @@ Code: `Core/Imports/` (`ImportSource.cs`: `ImportRecord`, `ImportFile`, `IImport
 `Import` (`BackgroundTasks.StartImportAsync`), route `POST api/libraries/{id}/import` (`Api/Endpoints/TaskEndpoints.cs`),
 Calibre covers in `CoverService.CalibreAsync`. Tests: `ImportTests` (the pipeline, with a test source and a test kind),
 `CalibreImportTests` (sample `metadata.db` files written from SQL), `InpxImportTests` (INPX files and zips written by
-the test); client `admin/library-panel.ts` (the form, import runs' counts), `admin.spec.ts`. Plan: [stage 4](../development/stage-4-calibre-plan.md).
+the test); client `admin/library-panel.ts` (the form, import runs' counts), `admin.spec.ts`.
 
 **The user's rule (2026-11-01):** a Calibre library or an INPX catalog comes in by a manual import of data from a
 different source. An administrator starts it, the source is read once, and what it says is stored in our database.
@@ -94,6 +94,31 @@ The source is never read live and never written; importing again is how its chan
 - Source id `<collection>:<LIBID>` (scheme `inpx`), else `<collection>:<zip>/<entry>`.
 - `.inp` text is UTF-8; a file that isn't valid UTF-8 is read as windows-1251 (older catalogs). Checking costs one
   extra read of each `.inp`.
+
+## Scale
+
+Measured 2026-11-01 (`import` command, [benchmark](../../tools/benchmark/README.md#what-import-measures),
+`agents/tools/benchmark/import.sh`), NVMe SSD, PostgreSQL in Docker:
+
+| Source | Import | Unchanged re-import | Budget |
+|---|---|---|---|
+| Calibre, 2M books (one EPUB each, 500k authors) | 27.1 min (1,232 a second) | 2.6 min | 30 min / 5 min |
+| INPX, 1M records (100 zips, 1 % deleted) | 8.9 min (1,845 a second) | 38 s | 15 min / 5 min |
+| SQLite, 100k: Calibre / INPX | 92 s / 75 s | 15 s / 10 s | recorded |
+
+What it took (each found by the benchmark):
+- New books' rows past EF: the books saved by EF only on SQLite; on PostgreSQL their ids are taken from the sequence
+  (`BulkRows.ReserveIdsAsync`) and books, files, links, identifiers and properties copied (`BulkRows.InsertAsync`,
+  binary `COPY`; SQLite: one prepared insert per row in a transaction). EF's per-row cost was 80 % of the time
+  (580 → 1,566 records a second on PostgreSQL).
+- `TagCounts` moved by one upsert per 1000 tags (`BulkRows.AddCountsAsync`), not a row per tag through EF: with 500k
+  authors nearly every author of a batch is a different tag, and the per-row updates made 2M books take over an hour.
+  Scans use the same flush.
+- The source-id lookup is two plain queries (identifiers by `(TenantId, Scheme, Value)`, then books by key): as a join,
+  PostgreSQL's statistics lagged the growing tables and planned a walk over every book per identifier (a 30 s timeout
+  at 9,000 books).
+- Calibre's own indexes on its link tables (`books_authors_link_bidx`…) are what makes reading by book fast; a
+  database without them (the first generated one) reads each link table whole per batch (2.4 min per 100k books).
 
 ## Limits, later
 
