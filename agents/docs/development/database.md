@@ -30,3 +30,5 @@ Code: `src/Librarion.Core/Data/` (`LibrarionDbContext`, `DatabaseOptions`, `Libr
   no installs exist ([production-upgrades](production-upgrades.md)):
   [regen-migrations](../../tools/regen-migrations/README.md) does it (a plain `rm` of the migration folders' globs is
   stopped by the agent's safety check; the tool removes them by `git rm` of their listed names).
+- PostgreSQL keeps times to the microsecond, .NET to 100 ns: a time compared with a stored one is cut to
+  microseconds first (`LibraryScanner.Moment`), or an unchanged file looks changed on PostgreSQL only.

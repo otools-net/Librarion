@@ -1,4 +1,4 @@
-# Duplicates and merging: books and tags (planned)
+# Duplicates and merging: books and tags
 
 Built (stage 2): `Books.MergedIntoId`, `WorkKey`, the `(TenantId, Size, Crc32)` file index and `BookIdentifiers`
 ([catalog](catalog.md)). Built (stage 3): **identical files at import** (`CatalogWriter.CopiesAsync`, tests in

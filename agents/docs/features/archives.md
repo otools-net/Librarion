@@ -1,4 +1,4 @@
-# Books inside archives (in progress, stage 3)
+# Books inside archives
 
 Built: `src/Librarion.Core/Containers/` (`ZipDirectory` with `Fingerprint`, `BoundedStreams`, `ArchiveEntryNames`,
 `ArchiveEntry`, `ArchiveException`; tests `ZipDirectoryTests`), ported from SFE `src/Sfe.Core/Files/Compression/`
@@ -71,6 +71,11 @@ They are **indexed and read in place: never unpacked to disk**.
   elsewhere); `MaxEntries` per archive (10M); encrypted entries listed as unreadable; truncated archives keep what was
   read, marked incomplete.
 - Head reads and in-memory inner books have size and time limits; XML readers with DTDs off and entity expansion off.
+- An archive marked `Incomplete` (broken, cut off) is skipped by later scans until its size or time changes (decided
+  2026-11-01): a broken zip isn't read again on every scan.
+- `ZipDirectory.OpenEntry` disposes the archive's stream with the entry's unless `leaveOpen: true`: whatever reads
+  several entries through one handle (the scanner, `InnerZip`) passes it. Forgetting it cost every entry after the
+  first its metadata ("Cannot access a closed file", found 2026-11-01).
 
 ## Scale budgets (benchmark, [scale](../development/scale.md))
 

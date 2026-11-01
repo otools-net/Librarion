@@ -15,3 +15,6 @@ SFE's `testing-client.md`.
 - One spec file: `npm test -- --include src/app/shell/shell.spec.ts`; plain `npx vitest run` fails (no Angular build).
 - Literal texts and missing translation keys are caught by the backend test `ClientI18nTests` (it reads the
   templates), not by a spec.
+- Error codes the server sends are `field.code` (`path.notAllowed`, `file.gone`); `ClientI18nTests` collects them
+  from the access services and from the endpoint files it lists (`TaskEndpoints.cs`, `BookEndpoints.cs`): a new
+  endpoint file with codes is added to that list, and each code gets `error.<code>` in `en.json`.

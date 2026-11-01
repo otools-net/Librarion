@@ -44,3 +44,4 @@ Ported from SFE's `frontend.md` (its phone, touch and overflow rules come from r
 - `Api` sends 401 to the sign-in page (`login?return=`), 503 `setup-required` to `/setup`.
 - Every button has a `title` saying what it does.
 - Anything polling stops while the tab is hidden (battery).
+- Angular templates have no bitwise operators (`days & 1`): put the test in a method of the component.
