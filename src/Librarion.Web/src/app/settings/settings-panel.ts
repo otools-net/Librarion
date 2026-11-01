@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { Api } from '../core/api.service';
 import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SettingLevel, SettingState } from '../core/models';
 import { ToastService } from '../core/toast.service';
 import { UnsavedChanges } from '../core/unsaved-changes';
+import { SettingReveal } from './setting-reveal';
 import { Skeleton } from '../shared/placeholders';
 
 /**
@@ -91,6 +92,7 @@ export class SettingsPanel {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
     private readonly toasts = inject(ToastService);
+    private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
     readonly level = input.required<SettingLevel>();
     /** The library (or another tenant) whose settings these are; none = the session's own. */
@@ -129,6 +131,15 @@ export class SettingsPanel {
             const level = this.level();
             const owner = this.owner();
             untracked(() => void this.load(level, owner));
+        });
+        // A setting picked in the administration's search, once this level's settings are shown.
+        const reveal = inject(SettingReveal);
+        const injector = inject(Injector);
+        effect(() => {
+            const pending = reveal.pending();
+            const states = this.states();
+            if (pending && pending.level === this.level() && states?.some(s => s.key === pending.key))
+                afterNextRender(() => this.reveal(pending.key, reveal), { injector });
         });
     }
 
@@ -200,6 +211,20 @@ export class SettingsPanel {
         } finally {
             this.busy.set(false);
         }
+    }
+
+    /** Scrolls to the setting `key`, focuses its control and flashes its row (again when found again). */
+    private reveal(key: string, reveal: SettingReveal): void {
+        const row = this.host.querySelector<HTMLElement>(`#setting-row-${CSS.escape(key)}`);
+        if (!row || reveal.pending()?.key !== key)
+            return;
+        reveal.pending.set(null);
+        row.scrollIntoView?.({ block: 'center' });
+        this.host.querySelector<HTMLElement>(`#setting-${CSS.escape(key)}`)?.focus({ preventScroll: true });
+        row.classList.remove('setting-found');
+        void row.offsetWidth;
+        row.classList.add('setting-found');
+        row.addEventListener('animationend', () => row.classList.remove('setting-found'), { once: true });
     }
 
     private async load(level: SettingLevel, owner: number | undefined): Promise<void> {

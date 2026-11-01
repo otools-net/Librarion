@@ -98,6 +98,11 @@ try {
                 await page.locator('.switch-button').click();
             else if (action === 'menu' && size === 'phone')
                 await page.locator('.menu-button').click();
+            else if (action?.startsWith('search=') || action?.startsWith('found=')) {
+                await page.locator('.admin-search input').fill(decodeURIComponent(action.slice(action.indexOf('=') + 1)));
+                if (action.startsWith('found='))
+                    await page.locator('.admin-search-results a').first().click();
+            }
             await page.waitForLoadState('networkidle');
             // Dialogs and sheets rise in; the shot waits until they stand still.
             await page.waitForTimeout(400);

@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingLevel, SettingState, SetupInput,
+    GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
@@ -112,6 +112,8 @@ export class Api {
         level === 'user'
             ? this.patch<SettingState[]>('api/me/preferences', changes)
             : this.patch<SettingState[]>(withQuery('api/settings', { level, owner }), changes);
+    /** Every setting key, with the narrowest level that may set it (the administration's search). */
+    settingCatalog = () => this.get<SettingInfo[]>('api/settings/catalog');
 
     /** Newest first; `before`: the last id of the page before; `all`: every tenant's (server administrators). */
     securityEvents = (query: { before?: number; kind?: string; user?: string; all?: boolean } = {}) =>

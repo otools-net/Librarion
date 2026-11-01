@@ -32,6 +32,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   when, and listed with what they run, when, their next time and an on/off switch.
 - Settings come in groups, each setting with a line on what it does; changed ones are marked, a bar at the bottom
   counts the changes with Save and Discard, and leaving a page with unsaved changes asks first.
+- The administration has a search box (as in SFE): it finds sections, pages and settings by every word typed, in
+  their names, descriptions and choices, accents and capitals aside, with the words marked; a setting opens on its
+  page scrolled into view, selected and briefly highlighted.
 
 ### Fixed
 

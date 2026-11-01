@@ -1,7 +1,8 @@
 # Settings by level
 
 Code: `src/Librarion.Core/Settings/` (`SettingCatalog`, `SettingsService`), `Api/Endpoints/SettingsEndpoints.cs`
-(`api/settings`, `api/me/preferences`); client `settings/settings-panel.ts`, `admin/settings-section.ts`, the
+(`api/settings`, `api/me/preferences`, `api/settings/catalog`: the keys without values, for the
+[administration's search](admin-search.md)); client `settings/settings-panel.ts`, `admin/settings-section.ts`, the
 preferences on `account/account-page.ts`, `core/session.service.ts` (applies theme, density). Ported from SFE
 (`settings-levels.md` there), all levels in the database. Tests `SettingsTests`.
 

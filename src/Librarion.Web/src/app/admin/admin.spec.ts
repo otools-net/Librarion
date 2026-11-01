@@ -2,7 +2,7 @@ import { Type, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { ApiMock, groupInfo, mockApi, sessionInfo, settle, testProviders, userInfo } from '../../testing/fakes';
+import { ApiMock, groupInfo, mockApi, sessionInfo, settingCatalog, settingState, settle, testProviders, userInfo } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { Media } from '../core/media';
 import { UnsavedChanges } from '../core/unsaved-changes';
@@ -178,6 +178,70 @@ describe('AdminPage', () => {
         await harness.fixture.whenStable();
         expect(element.querySelectorAll('.admin-nav .admin-mark')).toHaveLength(2);
         expect(element.querySelector('.admin-subnav a[aria-current="page"] .admin-mark')).not.toBeNull();
+    });
+
+    /** Types `query` in the column's search box. */
+    async function find(element: HTMLElement, harness: RouterTestingHarness, query: string) {
+        const box = element.querySelector<HTMLInputElement>('.admin-search input')!;
+        box.dispatchEvent(new Event('focus'));
+        box.value = query;
+        box.dispatchEvent(new Event('input'));
+        await settle();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        return box;
+    }
+
+    it('finds sections, sub-pages and settings from the column, the words marked, instead of the groups', async () => {
+        const api = mockApi();
+        api.settingCatalog.mockResolvedValue(settingCatalog());
+        const { element, harness } = await open('/admin', ['account.preferences', 'tenant.users', 'tenant.settings'], api);
+
+        const box = await find(element, harness, 'côlors');
+        expect(api.settingCatalog).toHaveBeenCalledTimes(1);
+        expect(element.querySelector('.admin-nav .group-label')).toBeNull();
+        expect(element.querySelector('.admin-search-count')?.textContent).toBe('2 found');
+        const results = [...element.querySelectorAll('.admin-search-results a')];
+        expect(results.map(a => a.querySelector('.admin-search-where')?.textContent)).toEqual(['My account › Interface', 'Settings › Interface']);
+        expect(results[0].querySelector('mark')?.textContent).toBe('Colors');
+
+        await find(element, harness, 'nosuchthing');
+        expect(element.querySelector('.admin-search-count')?.textContent).toBe('Nothing found');
+
+        box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        expect(box.value).toBe('');
+        expect(element.querySelector('.admin-search-results')).toBeNull();
+        expect(element.querySelectorAll('.admin-nav .group-label').length).toBeGreaterThan(0);
+        expect(api.settingCatalog).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens a setting found on its page, scrolled to, focused and flashed', async () => {
+        const api = mockApi();
+        api.settingCatalog.mockResolvedValue(settingCatalog());
+        api.settings.mockResolvedValue([settingState(), settingState({ key: 'ui.density', choices: ['compact', 'comfortable'], value: 'compact' })]);
+        const { element, harness, router } = await open('/admin/settings/tenant', ['tenant.settings', 'server.settings'], api);
+
+        await find(element, harness, 'comfortable');
+        const result = [...element.querySelectorAll<HTMLAnchorElement>('.admin-search-results a')]
+            .find(a => a.querySelector('.admin-search-where')?.textContent === 'Settings › Whole server › Interface')!;
+        result.click();
+        await settle();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        await settle();
+
+        expect(router.url).toBe('/admin/settings/server');
+        expect(api.settings).toHaveBeenLastCalledWith('server', undefined);
+        expect(element.querySelector('#setting-row-ui\\.density')?.classList).toContain('setting-found');
+        expect(document.activeElement?.id).toBe('setting-ui.density');
+
+        // Enter opens the first one found.
+        await find(element, harness, 'this tenant');
+        element.querySelector('.admin-search input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+        await settle();
+        expect(router.url).toBe('/admin/settings');
     });
 
     it('says when there is nothing to administer', async () => {

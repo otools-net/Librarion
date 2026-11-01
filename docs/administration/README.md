@@ -18,12 +18,22 @@ overview, its group and its section. The arrow at the top left returns to the li
 | Tenant and server | [Security log](security-log.md) | sign-ins and access changes | tenant administrators (their tenant), server administrators (all) |
 | Tenant and server | System | the server's version, build and database | tenant administrators, server administrators |
 
+Each page has an address of its own (`/admin/settings/server`, `/admin/users`…) to bookmark; addresses of pages
+that move later keep working.
+
+## Finding a setting
+
+The box at the top of the left column (on a phone, above the list of sections) finds sections, pages and
+settings by the words typed, in their names, descriptions and choices; capitals and accents don't matter, and every
+word must be there. A setting shows once for each page where it can be set (your preferences, a library, the tenant,
+the whole server) with where it is. Choosing one opens its page with the setting in view and selected. **Enter** opens
+the first one found, **Esc** clears the box.
+
+## On a phone
+
 On a phone, the administration opens on the list of sections, each with what it holds; a section opens as a page of
 its own, its pages as tabs in a row at the top (slide it sideways when there are many). The arrow at the top left goes
 back to the list, and from the list back to the library.
-
-Each page has an address of its own (`/admin/settings/server`, `/admin/users`…) to bookmark; addresses of pages
-that move later keep working.
 
 ## Server and tenant administrators
 

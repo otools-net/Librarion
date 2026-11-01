@@ -86,7 +86,9 @@ test.describe('@smoke', () => {
             await press(page.getByRole('button', { name: 'Back to the sections of the administration' }), isMobile);
             await expect(page.getByRole('heading', { level: 1 })).toHaveText('Administration');
         }
-        await expect(page.getByRole('search')).toHaveCount(0);
+        // The library's search is not here (the administration has its own, for settings).
+        await expect(page.getByRole('searchbox', { name: 'Search books' })).toHaveCount(0);
+        await expect(page.getByRole('searchbox', { name: 'Find a setting or a page' })).toBeVisible();
 
         await press(page.getByRole('button', { name: 'Back to the library' }), isMobile);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');

@@ -114,4 +114,28 @@ test.describe('@admin', () => {
         await page.goto('./admin/settings/tenant');
         await expect(page.getByLabel('Books per page')).toHaveValue(before);
     });
+
+    test('the search finds a setting and opens it on its page, focused @desktop', async ({ page, isMobile }) => {
+        // On a phone the box is above the list of sections; on wider screens above the column.
+        await page.goto('./admin');
+        const box = page.getByRole('searchbox', { name: 'Find a setting or a page' });
+        await box.fill('books per page');
+        const results = page.getByRole('list', { name: 'Found' });
+        await expect(page.locator('.admin-search-count')).toHaveText(/^\d+ found$/);
+        // Each word marked, the titles holding them all first.
+        await expect(results.locator('.admin-search-title').first()).toHaveText('Books per page');
+        await expect(results.locator('.admin-search-title').first().locator('mark')).toHaveText(['Books', 'per', 'page']);
+
+        await press(results.getByRole('link').filter({ hasText: 'Settings › Whole server › Interface' }), isMobile);
+        await expect(page).toHaveURL(/\/admin\/settings\/server$/);
+        await expect(page.getByLabel('Books per page')).toBeFocused();
+
+        // Esc clears the box and the sections come back (wider screens: the column stays beside the page).
+        if (!isPhoneWidth(page)) {
+            await expect(box).toHaveValue('books per page');
+            await box.press('Escape');
+            await expect(box).toHaveValue('');
+            await expect(adminSection(page, 'Accounts')).toBeVisible();
+        }
+    });
 });

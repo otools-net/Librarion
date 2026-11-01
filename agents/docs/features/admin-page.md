@@ -9,7 +9,7 @@ the [stage 5 plan](../development/stage-5-browse-plan.md).
 - `ADMIN_SECTIONS`: groups (`account`, `libraries`, `people`, `server`) › sections (icon) › sub-pages (rights). A
   sub-page shows with one of its rights, a section with one of its sub-pages (`visibleSections`). Texts:
   `adminGroup.<g>`, `adminSection.<s>` + `.hint`, and for sections of several sub-pages `adminPage.<s>.<p>` + `.hint`
-  (`admin-sections.spec.ts` fails on a missing one). The search (chunk 11) reads the same catalog.
+  (`admin-sections.spec.ts` fails on a missing one). The search reads the same catalog ([admin-search](admin-search.md)).
 - One route (`adminMatcher`: `admin`, `admin/:section`, `admin/:section/:page`) so `AdminPage` and its column stay
   while moving; `@switch` on the section renders its component. The route has no right guard: unknown or hidden
   sections go to `/admin` (replaceUrl), the API checks every call anyway. `/account` redirects to `admin/account`.

@@ -7,11 +7,14 @@
 
 import { IconName } from '../shared/icon';
 import { Rights } from '../core/rights';
+import { SettingLevel } from '../core/models';
 
 export interface AdminSubpage {
     id: string;
     /** Rights, one of which shows it. */
     rights: readonly string[];
+    /** The settings level its form edits (the search finds the keys that level may set there). */
+    settings?: SettingLevel;
 }
 
 export interface AdminSection {
@@ -23,15 +26,16 @@ export interface AdminSection {
 }
 
 const page = (id: string, ...rights: string[]): AdminSubpage => ({ id, rights });
+const settingsPage = (id: string, settings: SettingLevel, ...rights: string[]): AdminSubpage => ({ id, rights, settings });
 
 export const ADMIN_SECTIONS: AdminSection[] = [
-    { id: 'account', group: 'account', icon: 'user', subpages: [page('preferences', Rights.ownPreferences), page('password', Rights.ownPassword)] },
+    { id: 'account', group: 'account', icon: 'user', subpages: [settingsPage('preferences', 'user', Rights.ownPreferences), page('password', Rights.ownPassword)] },
     { id: 'libraries', group: 'libraries', icon: 'library', subpages: [page('list', Rights.manageLibraries, Rights.manageTenants)] },
-    { id: 'librarySettings', group: 'libraries', icon: 'sliders', subpages: [page('settings', Rights.librarySettings, Rights.manageTenants)] },
+    { id: 'librarySettings', group: 'libraries', icon: 'sliders', subpages: [settingsPage('settings', 'library', Rights.librarySettings, Rights.manageTenants)] },
     { id: 'users', group: 'people', icon: 'users', subpages: [page('list', Rights.manageUsers, Rights.manageAllUsers)] },
     { id: 'groups', group: 'people', icon: 'key', subpages: [page('list', Rights.manageUsers, Rights.manageTenants)] },
     { id: 'tenants', group: 'server', icon: 'tenant', subpages: [page('list', Rights.manageTenants)] },
-    { id: 'settings', group: 'server', icon: 'settings', subpages: [page('tenant', Rights.tenantSettings), page('server', Rights.serverSettings)] },
+    { id: 'settings', group: 'server', icon: 'settings', subpages: [settingsPage('tenant', 'tenant', Rights.tenantSettings), settingsPage('server', 'server', Rights.serverSettings)] },
     { id: 'security', group: 'server', icon: 'shield', subpages: [page('log', Rights.tenantSecurityLog, Rights.serverSecurityLog)] },
     { id: 'system', group: 'server', icon: 'server', subpages: [page('about', Rights.apiDocs, Rights.serverSettings)] },
 ];

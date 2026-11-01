@@ -143,7 +143,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 9. [x] Schedules redesigned (D-5.10): task first (scan, Calibre import, INPX import) with its fields, server stores
        and runs import schedules, list as task · source · when · next, add/edit in a dialog, enable switch.
 10. [x] Settings forms in groups with hints, save bar, unsaved marks, leave guard.
-11. [ ] Administration search (normalize, every word, marks, reveal and flash; every key found).
+11. [x] Administration search (normalize, every word, marks, reveal and flash; every key found).
 12. [ ] Scan progress panel as SFE's (D-5.11): sticky panel, indeterminate bar, title, elapsed, counts so far,
         current file, Cancel, result until dismissed, toast when done; shown on library pages and while browsing;
         and the administration's Background tasks section (task cards with progress, schedules and history across

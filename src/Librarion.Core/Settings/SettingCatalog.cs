@@ -27,6 +27,10 @@ public sealed record SettingDefinition(
     };
 }
 
+/// <summary>A key of the catalog as the client sees it (the administration's search): no default, no value.</summary>
+public sealed record SettingInfo(
+    string Key, string Section, SettingKind Kind, IReadOnlyList<string>? Choices, int Min, int Max, SettingLevel LowestLevel);
+
 /// <summary>
 /// Every setting the levels can hold (agents/docs/features/settings.md). The right editing a level comes from the level
 /// (<see cref="RightFor"/>); the user level is one's own preferences.

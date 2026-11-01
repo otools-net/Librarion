@@ -166,6 +166,18 @@ export interface SettingState {
     editable: boolean;
 }
 
+/** A key of the settings catalog (`api/settings/catalog`): what the administration's search looks in. */
+export interface SettingInfo {
+    key: string;
+    section: string;
+    kind: 'choice' | 'integer';
+    choices: string[] | null;
+    min: number;
+    max: number;
+    /** The narrowest level that may set it. */
+    lowestLevel: SettingLevel;
+}
+
 export interface SettingChanges {
     values?: Record<string, unknown>;
     lock?: string[];
