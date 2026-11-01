@@ -6,8 +6,8 @@
     }
     @if (inAdmin()) {
         <button type="button" class="icon-button back-button" (click)="back()"
-                [title]="(backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t"
-                [attr.aria-label]="(backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t">
+                [title]="(inLibrary() ? 'shell.backToLibraries' : backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t"
+                [attr.aria-label]="(inLibrary() ? 'shell.backToLibraries' : backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t">
             <svg libIcon="back"></svg>
         </button>
     } @else {

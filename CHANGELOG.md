@@ -25,6 +25,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   version and database.
 - On phones the administration opens on the list of sections (each with its description); a section opens on its
   own with its pages as tabs, and the back arrow returns to the list.
+- Each library has its own pages instead of one long panel: Folders, Runs, Import, Missing books and Schedules as
+  tabs under its name (`/admin/libraries/1/runs`), with Scan now and the progress of a running scan above every tab.
 
 ## 0.5.0
 

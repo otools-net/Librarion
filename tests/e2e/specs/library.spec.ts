@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { uniqueName } from '../fixtures/accounts';
+import { libraryTab } from '../fixtures/admin';
 import { press } from '../fixtures/press';
 import { expect, test } from '../fixtures/test';
 import { fb2, writeZip } from '../fixtures/zip';
@@ -23,13 +24,16 @@ test.describe('@library', () => {
         await page.goto('./admin/libraries');
         await page.getByLabel('Name of a new library').fill(libraryName);
         await press(page.getByRole('button', { name: 'Add', exact: true }), isMobile);
-        await press(page.getByRole('button', { name: libraryName }), isMobile);
+        await press(page.getByRole('link', { name: libraryName }), isMobile);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(libraryName);
 
         await page.getByLabel('Full path of a folder on the server').fill(folder);
         await press(page.getByRole('button', { name: 'Add folder' }), isMobile);
         await expect(page.getByRole('list', { name: 'Folders' }).getByText(folder)).toBeVisible();
 
+        // The scan bar is over every tab: started from Folders, followed on Runs.
         await press(page.getByRole('button', { name: 'Scan now' }), isMobile);
+        await press(libraryTab(page, 'Runs'), isMobile);
         const run = page.getByRole('list', { name: 'Runs' }).getByRole('listitem').first();
         await expect(run).toContainText('done', { timeout: 30_000 });
         await expect(run).toContainText('2 added');

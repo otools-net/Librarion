@@ -12,7 +12,7 @@ import { ConfirmService } from '../shared/confirm';
 import { AdminPage, adminMatcher } from './admin-page';
 import { GroupsSection } from './groups-section';
 import { LibrariesSection } from './libraries-section';
-import { LibraryPanel } from './library-panel';
+import { LibraryPanel, LibraryTab } from './library-panel';
 import { SecuritySection } from './security-section';
 import { TenantsSection } from './tenants-section';
 import { UsersSection } from './users-section';
@@ -129,6 +129,42 @@ describe('AdminPage', () => {
         element.querySelector('.admin-chips')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
         await settle();
         expect(router.url).toBe('/admin/settings/tenant');
+    });
+
+    it('opens a library\'s own pages: breadcrumbs, its name, the tabs its rights allow', async () => {
+        const api = mockApi();
+        api.libraries.mockResolvedValue([{ id: 5, tenantId: 1, name: 'Books', created: '' }]);
+        api.libraryRoots.mockResolvedValue([]);
+        api.libraryTasks.mockResolvedValue([]);
+        api.schedules.mockResolvedValue([]);
+        api.missingBooks.mockResolvedValue({ items: [], next: null, total: 0, ready: 0, keepDays: 30 });
+        const { element, harness } = await open('/admin/libraries/5/missing', ['tenant.libraries', 'library.scan'], api);
+        await settle();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+
+        expect([...element.querySelectorAll('.admin-crumbs li')].map(li => li.textContent?.trim())).toEqual(['Administration', 'Libraries', 'Libraries', 'Books']);
+        expect(element.querySelector('.admin-head h1')?.textContent).toBe('Books');
+        expect([...element.querySelectorAll('.library-tabs a')].map(a => a.textContent?.trim())).toEqual(['Folders', 'Runs', 'Missing books', 'Schedules']);
+        expect(element.querySelector('.library-tabs a[aria-current="page"]')?.textContent?.trim()).toBe('Missing books');
+        expect(element.querySelector('.empty')?.textContent).toContain('No missing books');
+        expect(element.querySelector('.admin-nav a[aria-current="page"]')?.textContent?.trim()).toBe('Libraries');
+    });
+
+    it('opens the first allowed tab for an unknown one, and says when the library isn\'t there', async () => {
+        const api = mockApi();
+        api.libraries.mockResolvedValue([{ id: 5, tenantId: 1, name: 'Books', created: '' }]);
+        api.libraryRoots.mockResolvedValue([]);
+        const { router, harness, element } = await open('/admin/libraries/5/import', ['tenant.libraries'], api);
+        await settle();
+        harness.detectChanges();
+        expect(router.url).toBe('/admin/libraries/5/folders');
+        expect([...element.querySelectorAll('.library-tabs a')].map(a => a.textContent?.trim())).toEqual(['Folders']);
+
+        const gone = await open('/admin/libraries/9', ['tenant.libraries'], api);
+        await settle();
+        gone.harness.detectChanges();
+        expect(gone.element.querySelector('.empty')?.textContent).toContain('doesn\'t exist');
     });
 
     it('says when there is nothing to administer', async () => {
@@ -262,18 +298,22 @@ describe('LibraryPanel', () => {
         summary: null, counts: null, progress: null, waiting: false, ...overrides,
     });
 
-    async function panel(api: ReturnType<typeof mockApi>, rights: string[]) {
+    async function panel(api: ReturnType<typeof mockApi>, rights: string[], tab: LibraryTab = 'folders') {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({ providers: testProviders(api) });
         TestBed.inject(SessionService).set(sessionInfo(rights));
         const fixture = TestBed.createComponent(LibraryPanel);
         fixture.componentRef.setInput('library', library);
+        fixture.componentRef.setInput('tab', tab);
         fixture.detectChanges();
         await fixture.whenStable();
         await settle();
         await fixture.whenStable();
         const element = fixture.nativeElement as HTMLElement;
-        return { element, stable: async () => { await settle(); await fixture.whenStable(); } };
+        const stable = async () => { await settle(); await fixture.whenStable(); };
+        /** Another tab of the same panel: nothing is loaded again. */
+        const show = async (other: LibraryTab) => { fixture.componentRef.setInput('tab', other); await stable(); };
+        return { element, stable, show };
     }
 
     it('adds a folder, scans, follows the run and lists what it did', async () => {
@@ -284,17 +324,20 @@ describe('LibraryPanel', () => {
             counts: { added: 3, changed: 0, removed: 0, unchanged: 9, archivesRead: 1, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: ['a.zip: broken'], missing: 1, returned: 2, skipped: 0 } })]);
         api.addLibraryRoot.mockResolvedValue({ id: 2, libraryId: 5, path: '/srv/more', created: '', exists: true });
         api.scanLibrary.mockResolvedValue({ runId: 8, started: true });
-        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
+        const { element, stable, show } = await panel(api, ['tenant.libraries', 'library.scan']);
 
         expect(element.textContent).toContain('/srv/books');
         expect(element.querySelector('.badge.danger')?.textContent).toContain('missing');
-        expect(element.textContent).toContain('3 added · 0 changed · 1 missing · 2 back · 0 removed · 9 unchanged');
-        expect(element.querySelector('details')?.textContent).toContain('a.zip: broken');
-
         type(element, 'form.toolbar input', '/srv/more');
         element.querySelector('form.toolbar')!.dispatchEvent(new Event('submit'));
         await stable();
         expect(api.addLibraryRoot).toHaveBeenCalledWith(5, '/srv/more');
+
+        await show('runs');
+        expect(element.textContent).toContain('3 added · 0 changed · 1 missing · 2 back · 0 removed · 9 unchanged');
+        expect(element.querySelector('details')?.textContent).toContain('a.zip: broken');
+        expect(element.textContent).not.toContain('/srv/books');
+        expect(api.libraryRoots).toHaveBeenCalledTimes(2);
 
         api.libraryTasks.mockResolvedValue([run({ id: 8, progress: { filesSeen: 120, archivesDone: 1, added: 40, changed: 0, removed: 0, current: 'x.fb2', missing: 0, returned: 0, skipped: 0 } })]);
         click(element, 'Scan now');
@@ -317,7 +360,7 @@ describe('LibraryPanel', () => {
             next: null, total: 2, ready: 1, keepDays: 30,
         });
         api.removeMissingBooks.mockResolvedValue({ runId: 9 });
-        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
+        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan'], 'missing');
         await stable();
 
         const list = element.querySelector('[aria-label="Missing books"]')!;
@@ -352,10 +395,9 @@ describe('LibraryPanel', () => {
         api.missingBooks.mockResolvedValue({ items: [], next: null, total: 0, ready: 0, keepDays: 30 });
         api.importKinds.mockResolvedValue(['calibre', 'inpx']);
         api.importIntoLibrary.mockResolvedValue({ runId: 4 });
-        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan', 'library.import']);
+        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan', 'library.import'], 'import');
         await stable();
 
-        expect(element.textContent).toContain('Import from another program');
         const select = element.querySelector<HTMLSelectElement>('select[aria-label="Kind of source"]')!;
         expect([...select.options].map(option => option.textContent?.trim())).toEqual(['Calibre library', 'INPX catalog']);
         select.value = 'inpx';
@@ -382,7 +424,7 @@ describe('LibraryPanel', () => {
         api.missingBooks.mockResolvedValue({ items: [], next: null, total: 0, ready: 0, keepDays: 30 });
         api.libraryTasks.mockResolvedValue([run({ id: 3, task: 'import', outcome: 'succeeded', finished: '2026-11-01T10:05:00Z',
             counts: { added: 5, changed: 2, removed: 0, unchanged: 7, archivesRead: 0, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: [], missing: 0, returned: 0, skipped: 1 } })]);
-        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
+        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan'], 'runs');
         await stable();
 
         expect(element.textContent).toContain('Import from another source');
@@ -402,7 +444,7 @@ describe('LibraryPanel', () => {
         scheduling.libraryTasks.mockResolvedValue([]);
         scheduling.schedules.mockResolvedValue([]);
         scheduling.addSchedule.mockResolvedValue({} as never);
-        const { element: form, stable } = await panel(scheduling, ['tenant.libraries', 'library.scan']);
+        const { element: form, stable } = await panel(scheduling, ['tenant.libraries', 'library.scan'], 'schedules');
         const kind = form.querySelector<HTMLSelectElement>('.schedule-form select')!;
         kind.value = 'weekly';
         kind.dispatchEvent(new Event('change'));

@@ -6,6 +6,9 @@ A tenant holds one or more libraries; groups give their library rights in every 
 - **Add:** type the name of a new library and add it.
 - **Rename** a library.
 - **Delete** a library with everything in it, after confirming.
+- **Open** a library (its name) for its own pages, as tabs under its name: **Folders**, **Runs**, **Import**,
+  **Missing books** and **Schedules** (the last four with the scan right; Import with the import right too). **Scan
+  now**, and the progress of a scan or import going on, stay above every tab.
 
 ## Folders
 
@@ -25,18 +28,18 @@ Scanning reads what changed in the folders: new books come in with their title, 
 metadata from the book itself (a book without a title is shown by its file name), changed ones are read again. An
 unchanged archive is skipped without being read.
 
-- **Scan now** starts a scan (right **Scan**); its progress shows while it runs, and it can be cancelled (what it
+- **Scan now** (above the tabs) starts a scan (right **Scan**); its progress shows while it runs, and it can be cancelled (what it
   already read stays).
-- The list of **runs** shows each scan: when, how it ended, how many books were added, changed and removed, and the
+- The **Runs** tab shows each scan: when, how it ended, how many books were added, changed and removed, and the
   first files that couldn't be read.
-- **Schedules** scan by themselves: every few hours (at least every 15 minutes), or on chosen days at a time of day.
+- The **Schedules** tab sets scans that run by themselves: every few hours (at least every 15 minutes), or on chosen days at a time of day.
   A scan that comes due while another runs is skipped, and missed ones are not made up later.
 
 ## Importing from another program
 
 A library can take in the books of a **Calibre library** or of an **INPX catalog** (MyHomeLib, Lib.rus.ec and similar
-collections): in the library's panel, under **Import from another program**, choose the kind of source, type the path
-of its file on the server, and start the import. It runs in the background and shows with the library's runs.
+collections): on the library's **Import** tab, choose the kind of source, type the path
+of its file on the server, and start the import. It runs in the background and shows on the **Runs** tab.
 
 - **Calibre:** the path of the library's `metadata.db`. Titles, authors, series and numbers, publishers, languages,
   tags, ratings, descriptions, identifiers (ISBN and others) and covers come in; custom columns too (text, series,
@@ -62,9 +65,9 @@ lists, but everything about it is kept (its metadata, its tags, your changes), i
 - Put the file back where it was, or move it (rename its folder or its archive): the next scan finds it and the book
   is back as it was. A moved file is recognised when exactly one new file matches it (same size and contents for books
   in archives, same size and name for loose files).
-- The library's panel lists its missing books, oldest first. Those missing longer than the library's setting
+- The library's **Missing books** tab lists them, oldest first. Those missing longer than the library's setting
   **Days before missing books are offered for removal** (30 by default) are marked *ready to remove*.
-- **Nothing is removed by itself.** Remove one book, all the ready ones or all of them from the panel; each asks you
+- **Nothing is removed by itself.** Remove one book, all the ready ones or all of them from that tab; each asks you
   to confirm first, and removal can't be undone.
 - Removing a folder from the library still removes its books right away (you confirm that removal).
 

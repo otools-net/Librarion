@@ -89,7 +89,7 @@ try {
             else if (action === 'edit')
                 await page.getByRole('button', { name: 'Edit' }).first().click();
             else if (action === 'open')
-                await page.locator('button.row-main').first().click();
+                await page.locator('.row-main').first().click();
             else if (action === 'delete')
                 await page.getByRole('button', { name: 'Delete' }).first().click();
             else if (action === 'account')

@@ -10,21 +10,33 @@ import { EmptyState } from '../shared/placeholders';
 import { AdminSection, groupAnchor, groupsOf, movedPage, visibleSections } from './admin-sections';
 import { GroupsSection } from './groups-section';
 import { LibrariesSection } from './libraries-section';
+import { LibraryPage } from './library-page';
 import { SecuritySection } from './security-section';
 import { SettingsSection } from './settings-section';
 import { SystemSection } from './system-section';
 import { TenantsSection } from './tenants-section';
 import { UsersSection } from './users-section';
 
-/** `admin`, `admin/:section`, `admin/:section/:page`: one route, so the page (and its column) stays between sections. */
+/**
+ * `admin`, `admin/:section`, `admin/:section/:page`, and a library's pages `admin/libraries/:library/:page`: one route,
+ * so the page (and its column) stays between sections.
+ */
 export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
-    if (segments[0]?.path !== 'admin' || segments.length > 3)
+    if (segments[0]?.path !== 'admin')
+        return null;
+    const library = segments[1]?.path === 'libraries' && /^\d+$/.test(segments[2]?.path ?? '');
+    if (segments.length > (library ? 4 : 3))
         return null;
     const posParams: Record<string, UrlSegment> = {};
     if (segments[1])
         posParams['section'] = segments[1];
-    if (segments[2])
+    if (library) {
+        posParams['library'] = segments[2];
+        if (segments[3])
+            posParams['page'] = segments[3];
+    } else if (segments[2]) {
         posParams['page'] = segments[2];
+    }
     return { consumed: segments, posParams };
 }
 
@@ -38,7 +50,7 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 @Component({
     selector: 'lib-admin-page',
     imports: [RouterLink, TranslatePipe, Icon, EmptyState, AccountSection, UsersSection, GroupsSection, LibrariesSection, TenantsSection,
-        SettingsSection, SecuritySection, SystemSection],
+        SettingsSection, SecuritySection, SystemSection, LibraryPage],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'admin-page' },
     template: `
@@ -118,6 +130,8 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
                                 </div>
                             </section>
                         }
+                    } @else if (library(); as id) {
+                        <lib-library-page [libraryId]="id" [page]="params().get('page')" />
                     } @else if (section(); as section) {
                         @let many = section.subpages.length > 1;
                         <header class="admin-head">
@@ -177,7 +191,7 @@ export class AdminPage {
     private readonly injector = inject(Injector);
     protected readonly phone = inject(Media).phone;
 
-    private readonly params = toSignal(this.route.paramMap, { requireSync: true });
+    protected readonly params = toSignal(this.route.paramMap, { requireSync: true });
     private readonly fragment = toSignal(this.route.fragment);
 
     protected readonly sections = computed(() => {
@@ -191,6 +205,8 @@ export class AdminPage {
         return section?.subpages.find(page => page.id === this.params().get('page')) ?? section?.subpages[0];
     });
     protected readonly overview = computed(() => !this.params().get('section') && this.sections().length > 1);
+    /** A library's own pages, in the Libraries section. */
+    protected readonly library = computed(() => this.section()?.id === 'libraries' ? Number(this.params().get('library')) || null : null);
     /** Phones: the overview is the list of sections. */
     protected readonly sectionList = computed(() => this.phone() && this.overview());
 

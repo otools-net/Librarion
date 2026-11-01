@@ -25,8 +25,14 @@ the [stage 5 plan](../development/stage-5-browse-plan.md).
   tabpanel). The breadcrumbs drop the group. Links from the list push history (back returns to it); on wider screens
   section and sub-page links replace it (back leaves the administration, as SFE). The shell's back arrow on a phone in
   a section goes to `/admin` ("Back to the sections of the administration").
+- A library's pages: `admin/libraries/:id/:tab` (the matcher takes a 4th segment only there, a numeric id) render
+  `LibraryPage` (`library-page.ts`) instead of the section's header: breadcrumbs › library name, `h1` the name, tabs
+  as chip links (`LIBRARY_TABS`: folders, runs, import, missing, schedules; `TAB_RIGHTS`: the scan right for all but
+  folders, plus import for Import; unknown or hidden tabs go to the first, replaceUrl), then `LibraryPanel [tab]`.
+  The panel stays while the tab changes (no reload); the scan bar is above every tab. On a phone the shell's arrow
+  goes from a library back to `/admin/libraries`.
 - e2e: `adminSection(page, title)` (`fixtures/admin.ts`) finds a section link by its exact title: on phones the
-  link's text includes the description.
+  link's text includes the description. `libraryTab(page, name)` presses a library's tab.
 - The shell is in its admin frame there ([shell](shell.md)): `.admin-frame .page` has no padding, the column is
   sticky under the top bar with its own scroll, in place of the library's sidebar.
 - Gotcha: a Python edit script turned the CSS escape `\203A` into an octal escape (U+0083 + "A"): write CSS escapes

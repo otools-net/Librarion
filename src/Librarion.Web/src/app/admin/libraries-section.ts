@@ -7,12 +7,12 @@ import { LibraryInfo } from '../core/models';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
 import { EmptyState } from '../shared/placeholders';
-import { LibraryPanel } from './library-panel';
+import { RouterLink } from '@angular/router';
 
-/** Libraries of the tenant: added, renamed in place, deleted; each opens its folders, scans and schedules. */
+/** Libraries of the tenant: added, renamed in place, deleted; each opens its own pages (`LibraryPage`). */
 @Component({
     selector: 'lib-libraries-section',
-    imports: [TranslatePipe, LibraryPanel, EmptyState],
+    imports: [RouterLink, TranslatePipe, EmptyState],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <form class="toolbar" novalidate (submit)="create($event)">
@@ -33,16 +33,12 @@ import { LibraryPanel } from './library-panel';
                             <button type="button" class="button" [title]="'common.cancelHint' | t" (click)="renaming.set(null)">{{ 'common.cancel' | t }}</button>
                         </form>
                     } @else {
-                        <button type="button" class="row-main" [attr.aria-expanded]="open() === library.id" [title]="'libraries.openHint' | t: { name: library.name }"
-                                (click)="open.set(open() === library.id ? null : library.id)">
+                        <a class="row-main" [routerLink]="['/admin/libraries', library.id]" [title]="'libraries.openHint' | t: { name: library.name }">
                             <span class="row-title">{{ library.name }}</span>
                             <span class="row-meta">{{ 'libraries.books' | t: { count: library.bookCount ?? 0 } }}</span>
-                        </button>
+                        </a>
                         <button type="button" class="button" [title]="'libraries.renameHint' | t: { name: library.name }" (click)="startRename(library)">{{ 'libraries.rename' | t }}</button>
                         <button type="button" class="button danger" [title]="'libraries.deleteHint' | t: { name: library.name }" [disabled]="busy()" (click)="remove(library)">{{ 'common.delete' | t }}</button>
-                    }
-                    @if (open() === library.id) {
-                        <lib-library-panel class="row-panel" [library]="library" />
                     }
                 </li>
             } @empty {
@@ -61,7 +57,6 @@ export class LibrariesSection implements OnInit {
     protected readonly libraries = signal<LibraryInfo[]>([]);
     protected readonly name = signal('');
     protected readonly renaming = signal<number | null>(null);
-    protected readonly open = signal<number | null>(null);
     protected readonly newName = signal('');
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);

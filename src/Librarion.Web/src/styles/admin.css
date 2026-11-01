@@ -283,7 +283,7 @@
     border-top: 1px solid var(--border);
 }
 
-.row:has(> button.row-main):not(:has(.row-panel)):hover {
+.row:has(> .row-main:is(a, button)):hover {
     background: var(--surface-2);
 }
 
@@ -461,10 +461,33 @@ button.row-main:hover .row-title {
     }
 }
 
-/* A library's folders, scans and schedules, opened under its row. */
-.row-panel {
-    flex: 1 1 100%;
-    min-width: 0;
+/* A library's pages: its tabs (one line of chips, sideways on phones), the scan bar over every tab. */
+.library-tabs {
+    display: flex;
+    gap: var(--space-2);
+    max-width: 720px;
+    margin: 0 0 var(--space-4);
+    padding: 2px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.library-tabs .chip {
+    flex-shrink: 0;
+    min-height: 34px;
+}
+
+.scan-bar {
+    max-width: 720px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-2);
+}
+
+a.row-main {
+    color: inherit;
+    text-decoration: none;
 }
 
 .library-panel {

@@ -51,7 +51,9 @@ export class Shell {
     protected readonly inAdmin = computed(() => /^\/admin(?:[/?#]|$)/.test(this.url()));
     private readonly phone = inject(Media).phone;
     /** Phones, in a section of the administration: the arrow goes back to the list of sections, not the library. */
-    protected readonly backToSections = computed(() => this.phone() && /^\/admin\/[^/?#]+/.test(this.url()));
+    protected readonly backToSections = computed(() => this.phone() && /^\/admin\/[^/?#]+/.test(this.url()) && !this.inLibrary());
+    /** Phones, on a library's pages: the arrow goes back to the list of libraries. */
+    protected readonly inLibrary = computed(() => this.phone() && /^\/admin\/libraries\/\d+/.test(this.url()));
 
     protected readonly nav: NavItem[] = [
         { label: 'shell.nav.home', icon: 'home', link: '/' },
@@ -132,7 +134,7 @@ export class Shell {
     }
 
     protected back(): void {
-        void this.router.navigateByUrl(this.backToSections() ? '/admin' : this.lastLibraryUrl);
+        void this.router.navigateByUrl(this.inLibrary() ? '/admin/libraries' : this.backToSections() ? '/admin' : this.lastLibraryUrl);
     }
 
     protected async signOut(): Promise<void> {

@@ -36,7 +36,7 @@ a user accepts it** (SFE forgets on its own after its retention; Librarion never
   retention) or `all`: a background run (`RemoveMissing`, waits for the library's scan) removes the books still missing
   in batches (files, links, empty missing archives); a book that came back in the meantime stays. Counts don't move
   (they went down when the books went missing). Logged in the security log (`LibraryChanged`).
-- The library panel lists them (title or file name, where the file was, since when, "ready to remove") and removes one,
+- The library's Missing books tab (`library-panel.ts`) lists them (title or file name, where the file was, since when, "ready to remove") and removes one,
   the ready ones or all, each after a confirmation that says it can't be undone.
 - **Removing a folder** from a library (`DELETE …/roots/{id}`, confirmed by the user) still removes its books directly:
   the confirmation is the acceptance.
