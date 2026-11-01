@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, UrlMatchResult, UrlSegment } from '@angular/router';
 import { AccountSection } from '../account/account-section';
 import { TranslatePipe } from '../core/i18n.service';
+import { Media } from '../core/media';
 import { SessionService } from '../core/session.service';
 import { Icon } from '../shared/icon';
 import { EmptyState } from '../shared/placeholders';
@@ -30,7 +31,9 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 /**
  * The administration (port of SFE's AdminPageComponent; agents/docs/features/admin-page.md): its own left column of
  * groups and sections (the open section's sub-pages under it), breadcrumbs, the sub-page's title and description, then
- * the sub-page. `/admin` alone is the overview, cards by group, unless the session sees a single section.
+ * the sub-page. `/admin` alone is the overview, cards by group, unless the session sees a single section. Phones: `/admin`
+ * is the list of sections (description and chevron each), a section a page of its own with its sub-pages as chips;
+ * back (the top bar's arrow or the browser's) returns to the list.
  */
 @Component({
     selector: 'lib-admin-page',
@@ -42,37 +45,49 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
         @if (sections().length === 0) {
             <p class="empty large" libEmpty="shield">{{ 'admin.nothing' | t }}</p>
         } @else {
-            <div class="admin-layout">
-                <nav class="admin-nav" [attr.aria-label]="'admin.sections' | t">
-                    @for (group of groups(); track group.id) {
-                        <p class="group-label">{{ 'adminGroup.' + group.id | t }}</p>
-                        <ul>
-                            @for (item of group.sections; track item.id) {
-                                @let open = !overview() && item.id === section()?.id;
-                                <li>
-                                    <a class="admin-nav-item" [routerLink]="['/admin', item.id]" [class.open]="open"
-                                       [attr.aria-current]="open && item.subpages.length === 1 ? 'page' : null" [title]="'adminSection.' + item.id + '.hint' | t">
-                                        <svg [libIcon]="item.icon"></svg>
-                                        <span>{{ 'adminSection.' + item.id | t }}</span>
-                                    </a>
-                                    @if (open && item.subpages.length > 1) {
-                                        <ul class="admin-subnav" [attr.aria-label]="'adminSection.' + item.id | t">
-                                            @for (sub of item.subpages; track sub.id) {
-                                                <li>
-                                                    <a [routerLink]="['/admin', item.id, sub.id]" [attr.aria-current]="sub.id === subpage()?.id ? 'page' : null"
-                                                       [title]="'adminPage.' + item.id + '.' + sub.id + '.hint' | t">{{ 'adminPage.' + item.id + '.' + sub.id | t }}</a>
-                                                </li>
+            <div class="admin-layout" [class.section-list]="sectionList()">
+                @if (sectionList()) {
+                    <header class="admin-head">
+                        <h1>{{ 'admin.title' | t }}</h1>
+                        <p>{{ 'admin.overview' | t }}</p>
+                    </header>
+                }
+                @if (!phone() || sectionList()) {
+                    <nav class="admin-nav" [attr.aria-label]="'admin.sections' | t">
+                        @for (group of groups(); track group.id) {
+                            <p class="group-label">{{ 'adminGroup.' + group.id | t }}</p>
+                            <ul>
+                                @for (item of group.sections; track item.id) {
+                                    @let open = !overview() && item.id === section()?.id;
+                                    <li>
+                                        <a class="admin-nav-item" [routerLink]="['/admin', item.id]" [replaceUrl]="!phone()" [class.open]="open"
+                                           [attr.aria-current]="open && item.subpages.length === 1 ? 'page' : null" [title]="'adminSection.' + item.id + '.hint' | t">
+                                            <svg [libIcon]="item.icon"></svg>
+                                            <span class="admin-nav-title">{{ 'adminSection.' + item.id | t }}</span>
+                                            @if (phone()) {
+                                                <small class="admin-nav-description">{{ 'adminSection.' + item.id + '.hint' | t }}</small>
+                                                <svg libIcon="chevron-right" class="admin-nav-chevron"></svg>
                                             }
-                                        </ul>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    }
-                </nav>
+                                        </a>
+                                        @if (open && item.subpages.length > 1) {
+                                            <ul class="admin-subnav" [attr.aria-label]="'adminSection.' + item.id | t">
+                                                @for (sub of item.subpages; track sub.id) {
+                                                    <li>
+                                                        <a [routerLink]="['/admin', item.id, sub.id]" replaceUrl [attr.aria-current]="sub.id === subpage()?.id ? 'page' : null"
+                                                           [title]="'adminPage.' + item.id + '.' + sub.id + '.hint' | t">{{ 'adminPage.' + item.id + '.' + sub.id | t }}</a>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </nav>
+                }
 
                 <div class="admin-main">
-                    @if (overview()) {
+                    @if (overview() && !sectionList()) {
                         <header class="admin-head">
                             <h1>{{ 'admin.title' | t }}</h1>
                             <p>{{ 'admin.overview' | t }}</p>
@@ -123,7 +138,19 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
                             <h1>{{ (many ? 'adminPage.' + section.id + '.' + subpage()!.id : 'adminSection.' + section.id) | t }}</h1>
                             <p>{{ (many ? 'adminPage.' + section.id + '.' + subpage()!.id + '.hint' : 'adminSection.' + section.id + '.hint') | t }}</p>
                         </header>
-                        <div class="admin-panel">
+                        @if (phone() && many) {
+                            <div class="admin-chips" role="tablist" [attr.aria-label]="'adminSection.' + section.id | t" (keydown)="chipKey($event, section)">
+                                @for (sub of section.subpages; track sub.id) {
+                                    <button type="button" role="tab" class="chip" [id]="'admin-chip-' + sub.id" aria-controls="admin-panel"
+                                            [attr.aria-selected]="sub.id === subpage()!.id" [tabIndex]="sub.id === subpage()!.id ? 0 : -1"
+                                            [title]="'adminPage.' + section.id + '.' + sub.id + '.hint' | t" (click)="choose(section, sub.id)">
+                                        {{ 'adminPage.' + section.id + '.' + sub.id | t }}
+                                    </button>
+                                }
+                            </div>
+                        }
+                        <div id="admin-panel" class="admin-panel" [attr.role]="phone() && many ? 'tabpanel' : null"
+                             [attr.aria-labelledby]="phone() && many ? 'admin-chip-' + subpage()!.id : null">
                             @switch (section.id) {
                                 @case ('account') { <lib-account-section [page]="subpage()!.id" /> }
                                 @case ('libraries') { <lib-libraries-section /> }
@@ -148,6 +175,7 @@ export class AdminPage {
     private readonly route = inject(ActivatedRoute);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     private readonly injector = inject(Injector);
+    protected readonly phone = inject(Media).phone;
 
     private readonly params = toSignal(this.route.paramMap, { requireSync: true });
     private readonly fragment = toSignal(this.route.fragment);
@@ -163,6 +191,8 @@ export class AdminPage {
         return section?.subpages.find(page => page.id === this.params().get('page')) ?? section?.subpages[0];
     });
     protected readonly overview = computed(() => !this.params().get('section') && this.sections().length > 1);
+    /** Phones: the overview is the list of sections. */
+    protected readonly sectionList = computed(() => this.phone() && this.overview());
 
     protected readonly anchor = groupAnchor;
 
@@ -180,11 +210,35 @@ export class AdminPage {
             else if (!section && sections.length === 1)
                 void this.router.navigate(['/admin', sections[0].id], { replaceUrl: true });
         });
+        // Phones: the chosen chip in view (its line scrolls sideways; SFE's chip-in-view rule).
+        effect(() => {
+            const page = this.subpage()?.id;
+            if (page && this.phone())
+                afterNextRender(() => this.host.querySelector('.admin-chips [aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }),
+                    { injector: this.injector });
+        });
         // The breadcrumbs' group: its heading on the overview (no router anchor scrolling).
         effect(() => {
             const fragment = this.fragment();
             if (fragment && this.overview())
                 afterNextRender(() => this.host.querySelector(`#${CSS.escape(fragment)}`)?.scrollIntoView?.({ block: 'start' }), { injector: this.injector });
         });
+    }
+
+    protected choose(section: AdminSection, page: string): void {
+        void this.router.navigate(['/admin', section.id, page], { replaceUrl: true });
+    }
+
+    /** The chips are tabs: arrows, Home and End move between them (and open the one reached). */
+    protected chipKey(event: KeyboardEvent, section: AdminSection): void {
+        const pages = section.subpages.map(page => page.id);
+        const at = pages.indexOf(this.subpage()!.id);
+        const next = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: pages.length - 1 }[event.key];
+        if (next === undefined)
+            return;
+        event.preventDefault();
+        const page = pages[(next + pages.length) % pages.length];
+        this.choose(section, page);
+        afterNextRender(() => this.host.querySelector<HTMLElement>(`#admin-chip-${page}`)?.focus(), { injector: this.injector });
     }
 }

@@ -1,9 +1,10 @@
-import { Type } from '@angular/core';
+import { Type, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ApiMock, groupInfo, mockApi, sessionInfo, settle, testProviders, userInfo } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
+import { Media } from '../core/media';
 import { RightInfo, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
 import { ToastService } from '../core/toast.service';
@@ -44,9 +45,9 @@ const right = (id: string, area: string, kind: 'read' | 'write' = 'read', scope:
 
 describe('AdminPage', () => {
     /** The page at `url` through the real route matcher. */
-    async function open(url: string, rights: string[], api = mockApi()) {
+    async function open(url: string, rights: string[], api = mockApi(), phone = false) {
         TestBed.resetTestingModule();
-        TestBed.configureTestingModule({ providers: testProviders(api) });
+        TestBed.configureTestingModule({ providers: testProviders(api, { provide: Media, useValue: { phone: signal(phone) } }) });
         TestBed.inject(SessionService).set(sessionInfo(rights));
         const router = TestBed.inject(Router);
         router.resetConfig([{ matcher: adminMatcher, component: AdminPage }, { path: '**', children: [] }]);
@@ -98,6 +99,36 @@ describe('AdminPage', () => {
         const single = await open('/admin', ['account.preferences', 'account.password']);
         expect(single.router.url).toBe('/admin/account');
         expect(single.element.querySelector('.admin-head h1')?.textContent).toBe('Preferences');
+    });
+
+    it('on a phone, lists the sections with their descriptions instead of the cards', async () => {
+        const { element } = await open('/admin', ['account.preferences', 'tenant.users'], mockApi(), true);
+
+        const links = [...element.querySelectorAll<HTMLAnchorElement>('.admin-nav a')];
+        expect(links.map(a => a.querySelector('.admin-nav-title')?.textContent)).toEqual(['My account', 'Accounts', 'Groups']);
+        expect(links[1].querySelector('.admin-nav-description')?.textContent).toContain('Who can sign in');
+        expect(links[1].querySelector('.admin-nav-chevron')).not.toBeNull();
+        expect(element.querySelector('.admin-card')).toBeNull();
+        expect(element.querySelector('h1')?.textContent).toBe('Administration');
+    });
+
+    it('on a phone, opens a section alone with its sub-pages as tabs that arrows move between', async () => {
+        const { element, router, harness } = await open('/admin/settings', ['tenant.settings', 'server.settings'], mockApi(), true);
+
+        expect(element.querySelector('.admin-nav')).toBeNull();
+        const tabs = [...element.querySelectorAll<HTMLButtonElement>('.admin-chips [role="tab"]')];
+        expect(tabs.map(tab => [tab.textContent?.trim(), tab.getAttribute('aria-selected'), tab.tabIndex])).toEqual([['This tenant', 'true', 0], ['Whole server', 'false', -1]]);
+        expect(element.querySelector('#admin-panel')?.getAttribute('aria-labelledby')).toBe('admin-chip-tenant');
+
+        tabs[1].click();
+        await settle();
+        harness.detectChanges();
+        expect(router.url).toBe('/admin/settings/server');
+        expect(element.querySelector('.admin-head h1')?.textContent).toBe('Whole server');
+
+        element.querySelector('.admin-chips')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+        await settle();
+        expect(router.url).toBe('/admin/settings/tenant');
     });
 
     it('says when there is nothing to administer', async () => {

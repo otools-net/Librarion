@@ -40,9 +40,14 @@ test.describe('@a11y', () => {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preferences');
         await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
         await audit(page, 'account');
+        // On this phone, the overview is the list of sections; a section with sub-pages shows them as tabs.
         await page.goto('./admin');
-        await expect(page.locator('.admin-card').first()).toBeVisible();
-        await audit(page, 'administration overview');
+        await expect(page.locator('.admin-nav a').first()).toBeVisible();
+        await audit(page, 'administration: list of sections');
+        await page.goto('./admin/settings/server');
+        await expect(page.getByRole('tab', { name: 'Whole server' })).toHaveAttribute('aria-selected', 'true');
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+        await audit(page, 'administration: section with tabs');
     });
 
     test('the administration with its editors open', async ({ page }) => {
@@ -63,7 +68,7 @@ test.describe('@a11y', () => {
 
         for (const section of ['libraries', 'settings', 'librarySettings', 'security', 'system']) {
             await page.goto(`./admin/${section}`);
-            await expect(page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link', { name: /./ }).first()).toBeVisible();
+            await expect(page.locator('.admin-head h1')).toBeVisible();
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
             await audit(page, section);
         }

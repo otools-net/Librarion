@@ -1,5 +1,6 @@
 // The app's frame on every device: it opens, its navigation works by finger, the theme sticks, unknown pages say so.
 import { expect, isPhoneWidth, test } from '../fixtures/test';
+import { adminSection } from '../fixtures/admin';
 import { press } from '../fixtures/press';
 
 test.describe('@smoke', () => {
@@ -70,10 +71,21 @@ test.describe('@smoke', () => {
         await press(page.locator('#main-nav').getByRole('link', { name: 'Administration' }), isMobile);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Administration');
         await expect(page.locator('#main-nav')).toHaveCount(0);
-        // Its own column of sections, and breadcrumbs once a section is open.
-        await press(page.locator('.admin-card').getByRole('link', { name: 'Whole server' }), isMobile);
+        // Its own column of sections (on a phone, the list of sections), and breadcrumbs once a section is open.
+        if (isPhoneWidth(page)) {
+            await press(adminSection(page, 'Settings'), isMobile);
+            await press(page.getByRole('tab', { name: 'Whole server' }), isMobile);
+        } else {
+            await press(page.locator('.admin-card').getByRole('link', { name: 'Whole server' }), isMobile);
+            await expect(page.getByRole('navigation', { name: 'Where this page is' })).toContainText('Tenant and server');
+        }
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Whole server');
-        await expect(page.getByRole('navigation', { name: 'Where this page is' })).toContainText('Tenant and server');
+        await expect(page.getByRole('navigation', { name: 'Where this page is' })).toContainText('Settings');
+        if (isPhoneWidth(page)) {
+            // Back to the list, then out to the library.
+            await press(page.getByRole('button', { name: 'Back to the sections of the administration' }), isMobile);
+            await expect(page.getByRole('heading', { level: 1 })).toHaveText('Administration');
+        }
         await expect(page.getByRole('search')).toHaveCount(0);
 
         await press(page.getByRole('button', { name: 'Back to the library' }), isMobile);

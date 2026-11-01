@@ -19,6 +19,14 @@ the [stage 5 plan](../development/stage-5-browse-plan.md).
   › section › sub-page; the separator is CSS `content: "\203A" / ""` (silent for screen readers).
 - Moving a sub-page: add `'oldSection/oldPage'` to `ADMIN_MOVED`, never remove an entry (bookmarks). The stage 4
   addresses (`admin/users`, `admin/libraries`…) kept their section ids, so they need none.
+- Phones (`Media.phone`, `core/media.ts`, ≤ 640 px as the styles): `/admin` is the list of sections (`sectionList`:
+  a card of rows with description and chevron, no overview cards); a section hides the list and shows its sub-pages
+  as chips (`role=tablist`, arrows/Home/End move and open, the chosen one scrolled into view, `#admin-panel` its
+  tabpanel). The breadcrumbs drop the group. Links from the list push history (back returns to it); on wider screens
+  section and sub-page links replace it (back leaves the administration, as SFE). The shell's back arrow on a phone in
+  a section goes to `/admin` ("Back to the sections of the administration").
+- e2e: `adminSection(page, title)` (`fixtures/admin.ts`) finds a section link by its exact title: on phones the
+  link's text includes the description.
 - The shell is in its admin frame there ([shell](shell.md)): `.admin-frame .page` has no padding, the column is
   sticky under the top bar with its own scroll, in place of the library's sidebar.
 - Gotcha: a Python edit script turned the CSS escape `\203A` into an octal escape (U+0083 + "A"): write CSS escapes

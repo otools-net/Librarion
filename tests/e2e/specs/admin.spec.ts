@@ -2,8 +2,9 @@
 // account, signed in, finds that right and nothing else (only the libraries section) and uses it. Deleting asks in the
 // page's own dialog (a sheet from the bottom on phones) and says it is done in a toast.
 import { signIn, uniqueName } from '../fixtures/accounts';
+import { adminSection } from '../fixtures/admin';
 import { press } from '../fixtures/press';
-import { expect, test } from '../fixtures/test';
+import { expect, isPhoneWidth, test } from '../fixtures/test';
 
 test.describe('@admin', () => {
     test('an account given a right through a group can use it, and only it @desktop', async ({ page, isMobile }, testInfo) => {
@@ -12,10 +13,11 @@ test.describe('@admin', () => {
         const groupName = uniqueName('Librarians', testInfo);
         const libraryName = uniqueName('Shelf', testInfo);
 
-        // The overview: a card per section, by group.
+        // The overview: a card per section, by group (on a phone, the list of sections).
         await page.goto('./admin');
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Administration');
-        await press(page.locator('.admin-card').getByRole('link', { name: 'Accounts' }), isMobile);
+        const accounts = isPhoneWidth(page) ? adminSection(page, 'Accounts') : page.locator('.admin-card').getByRole('link', { name: 'Accounts' });
+        await press(accounts, isMobile);
         await expect(page).toHaveURL(/\/admin\/users$/);
 
         // The account, in the built-in Users group.
@@ -28,7 +30,10 @@ test.describe('@admin', () => {
         await expect(page.getByRole('list', { name: 'Accounts' }).getByText(userName).first()).toBeVisible();
 
         // A group managing the libraries, with the account in it.
-        await press(page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link', { name: 'Groups' }), isMobile);
+        // On a phone a section is a page of its own: back to the list of sections first.
+        if (isPhoneWidth(page))
+            await press(page.getByRole('button', { name: 'Back to the sections of the administration' }), isMobile);
+        await press(adminSection(page, 'Groups'), isMobile);
         await press(page.getByRole('button', { name: 'New group' }), isMobile);
         await page.getByLabel('Name', { exact: true }).fill(groupName);
         await press(page.getByRole('checkbox', { name: /^Manage libraries/ }), isMobile);
@@ -38,12 +43,13 @@ test.describe('@admin', () => {
 
         // The account signs in here (this browser only: the administrator's saved sign-in stays good).
         await page.context().clearCookies();
-        await page.goto('./admin/libraries');
+        await page.goto('./admin');
         await signIn(page, isMobile, userName, password);
 
+        await expect(page).toHaveURL(/\/admin$/);
+        await expect(page.locator('.admin-nav .admin-nav-title')).toHaveText(['My account', 'Libraries']);
+        await press(adminSection(page, 'Libraries'), isMobile);
         await expect(page).toHaveURL(/\/admin\/libraries$/);
-        const sections = page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link');
-        await expect(sections).toHaveText(['My account', 'Libraries']);
 
         await page.getByLabel('Name of a new library').fill(libraryName);
         await press(page.getByRole('button', { name: 'Add' }), isMobile);

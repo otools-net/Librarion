@@ -1,14 +1,16 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { mockApi, sessionInfo, settle, testProviders } from '../../testing/fakes';
 import { Router } from '@angular/router';
 import { LibraryContext } from '../core/library-context';
+import { Media } from '../core/media';
 import { SessionService } from '../core/session.service';
 import { Shell } from './shell';
 
 describe('Shell', () => {
-    async function render(session = sessionInfo(), api = mockApi()) {
+    async function render(session = sessionInfo(), api = mockApi(), phone = false) {
         TestBed.resetTestingModule();
-        TestBed.configureTestingModule({ providers: testProviders(api) });
+        TestBed.configureTestingModule({ providers: testProviders(api, { provide: Media, useValue: { phone: signal(phone) } }) });
         TestBed.inject(SessionService).set(session);
         const fixture = TestBed.createComponent(Shell);
         await fixture.whenStable();
@@ -192,5 +194,21 @@ describe('Shell', () => {
         await fixture.whenStable();
         expect(router.url).toBe('/');
         expect(element.querySelector('#main-nav')).not.toBeNull();
+    });
+
+    it('on a phone, takes a section of the administration back to the list of sections', async () => {
+        const { fixture, element } = await render(sessionInfo(['tenant.users']), mockApi(), true);
+        const router = TestBed.inject(Router);
+        router.resetConfig([{ path: '**', children: [] }]);
+        await router.navigateByUrl('/admin/users');
+        await fixture.whenStable();
+
+        const back = element.querySelector<HTMLButtonElement>('.back-button')!;
+        expect(back.title).toBe('Back to the sections of the administration');
+        back.click();
+        await settle();
+        await fixture.whenStable();
+        expect(router.url).toBe('/admin');
+        expect(element.querySelector<HTMLButtonElement>('.back-button')!.title).toBe('Back to the library');
     });
 });

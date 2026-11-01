@@ -23,6 +23,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   (`/admin/settings/server`). My account is its first section (`/account` still opens it), settings are split by
   level (library settings under Libraries; this tenant and the whole server under Settings), and System shows the
   version and database.
+- On phones the administration opens on the list of sections (each with its description); a section opens on its
+  own with its pages as tabs, and the back arrow returns to the list.
 
 ## 0.5.0
 

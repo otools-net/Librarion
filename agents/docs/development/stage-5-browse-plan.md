@@ -100,7 +100,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        the administration outside it (D-5.9).
 6. [x] Administration structure: a page of its own with its own left column (D-5.9), `admin-sections.ts` (groups,
        sections, sub-pages, rights), routes `admin/:section/:page`, overview cards, breadcrumbs, moved-addresses table.
-7. [ ] Administration on phones: list of sections, section pages with chips, back to the list.
+7. [x] Administration on phones: list of sections, section pages with chips, back to the list.
 8. [ ] Library pages split into sub-pages (folders, runs, import, missing books, schedules).
 9. [ ] Schedules redesigned (D-5.10): task first (scan, Calibre import, INPX import) with its fields, server stores
        and runs import schedules, list as task · source · when · next, add/edit in a dialog, enable switch.

@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { MessageKey, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
+import { Media } from '../core/media';
 import { ADMIN_RIGHTS, Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
 import { ThemeService } from '../core/theme.service';
@@ -48,6 +49,9 @@ export class Shell {
     /** The account and tenant the libraries were loaded for. */
     private loadedFor = '';
     protected readonly inAdmin = computed(() => /^\/admin(?:[/?#]|$)/.test(this.url()));
+    private readonly phone = inject(Media).phone;
+    /** Phones, in a section of the administration: the arrow goes back to the list of sections, not the library. */
+    protected readonly backToSections = computed(() => this.phone() && /^\/admin\/[^/?#]+/.test(this.url()));
 
     protected readonly nav: NavItem[] = [
         { label: 'shell.nav.home', icon: 'home', link: '/' },
@@ -128,7 +132,7 @@ export class Shell {
     }
 
     protected back(): void {
-        void this.router.navigateByUrl(this.lastLibraryUrl);
+        void this.router.navigateByUrl(this.backToSections() ? '/admin' : this.lastLibraryUrl);
     }
 
     protected async signOut(): Promise<void> {

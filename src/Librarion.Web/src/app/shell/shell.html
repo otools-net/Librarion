@@ -5,7 +5,9 @@
         <div class="shell-backdrop" (pointerdown)="close()"></div>
     }
     @if (inAdmin()) {
-        <button type="button" class="icon-button back-button" [title]="'shell.backToLibrary' | t" [attr.aria-label]="'shell.backToLibrary' | t" (click)="back()">
+        <button type="button" class="icon-button back-button" (click)="back()"
+                [title]="(backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t"
+                [attr.aria-label]="(backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t">
             <svg libIcon="back"></svg>
         </button>
     } @else {

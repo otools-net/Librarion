@@ -42,6 +42,7 @@
     "shell.myAccountHint": "Your preferences and password",
     "shell.home": "Librarion: the home page",
     "shell.backToLibrary": "Back to the library",
+    "shell.backToSections": "Back to the sections of the administration",
     "shell.library.label": "Libraries",
     "shell.library.choose": "Library: {name}. Choose another",
     "shell.library.open": "Browse {name}",
