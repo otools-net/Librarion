@@ -46,8 +46,9 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 ### 3.3 Scanner
 
-- [ ] Folder walk, loose files, containers listed and diffed, batched writes, resumable, deletions of missing files.
-- [ ] Titles with the file-name fallback, `WorkKey`, `FileStemKey`, `TagCounts` and `BookCount` kept.
+- [x] Folder walk, loose files, containers listed and diffed, batched writes, resumable, deletions of missing files
+      (`Core/Import/LibraryScanner`, `CatalogWriter`, `ImportTagResolver`, `BookFormats`; `LibraryScannerTests`).
+- [x] Titles with the file-name fallback, `WorkKey`, `TagCounts` and `BookCount` kept by differences.
 
 ### 3.4 Metadata readers
 

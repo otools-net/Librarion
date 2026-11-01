@@ -1,6 +1,7 @@
 using Librarion.Core.Access;
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
+using Librarion.Core.Import;
 using Librarion.Core.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<BookVisibilities>();
         services.AddSingleton<BookQueries>();
         services.AddSingleton<TagQueries>();
+        services.TryAddSingleton<IMetadataReader, NoMetadataReader>();
+        services.AddSingleton<LibraryScanner>();
         return services;
     }
 }
