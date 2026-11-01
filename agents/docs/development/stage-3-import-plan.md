@@ -77,3 +77,86 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 100k-entry zip indexed within budget, unchanged archive skipped, changed one diffed; hostile samples and images
 refused; every template renders long titles and other scripts; HDD / NAS measured (closes D11); e2e: add library,
 scan with progress, download from a zip.
+
+## Handover (2026-11-01, end of a session)
+
+**State.** `main` = 0.3.0 (stage 2 merged and pushed). `edge` is 7 commits past it, the last `1f6465b`, **not
+pushed** (edge is pushed when the stage ends; push earlier if you want a backup). Working tree clean. Last runs: 101
+backend tests and 47 client tests green on SQLite. PostgreSQL was last run after the scanner commit (`bd87f70`), not
+since: run it before the next commit (commands below). Docker and WSL are stopped.
+
+**Done in stage 3** (details in the linked notes):
+
+- 3.1 ZIP reader `Core/Containers/` ([archives](../features/archives.md)).
+- Schema: `LibraryRoots`, `Archives.RootId`, `BookFiles.RootId`, `TaskRuns`, `TaskSchedules`, `ImportTagMappings`
+  (with `FieldId`). Initial migrations regenerated with [regen-migrations](../../tools/regen-migrations/README.md).
+- 3.3 scanner, 3.4 metadata readers ([metadata-readers](../features/metadata-readers.md)), 3.2 roots, background
+  runs, schedules, API and the library panel UI ([tasks](../features/tasks.md)).
+- Rights `library.download` (for 3.6) and `library.scan`. CHANGELOG `Unreleased` and `docs/administration/libraries.md`,
+  `docs/configuration.md` (`Librarion:Libraries:*`) already cover what is built.
+
+**Next, in this order:**
+
+1. **3.6 download** (small, needed by the e2e): `GET api/books/{id}/files/{fileId}`, right `library.download`, the
+   book visible to the caller (`BookVisibilities`, else 404). Loose file: from root + path, check it is still inside
+   the root. Archive entry: open the archive (root + `Archives.Path`), build an `ArchiveEntry` from the row (locator,
+   method, packed size, CRC; as `ScannedLibrary.ReadEntry` in `LibraryScannerTests` does) and
+   `ZipDirectory.OpenEntry`. A local header that doesn't match means a rebuilt archive: answer 409/410 and let the
+   next scan fix it. `Content-Length` from the size, `ETag` from the CRC, `Content-Disposition` with the file name,
+   Range for loose files and stored entries (`StoredRange`). Never a temp file.
+2. **3.6 identical files at import** (D19, [merging](../features/merging.md)): in `CatalogWriter.AddAsync`, an
+   archive entry whose (size, CRC) matches a file of the tenant (index `BookFiles (TenantId, Size, Crc32)`) is
+   compared by SHA-256 (`ContentHash`, computed only then) and added as a second file of the existing book instead
+   of a new book. Joining different formats of one work (same identifier or `WorkKey`) is optional in this stage.
+3. **3.5 covers** ([book-display](../features/book-display.md)): add SkiaSharp + HarfBuzzSharp to
+   `Directory.Packages.props` (check the NuGet cache in `~/.nuget/packages` first; check the native assets for
+   linux-x64/arm64; privacy: no telemetry). Cover extraction per format (FB2 `<coverpage>` → `<binary>`, read to the
+   end of the file this time; EPUB cover from the OPF manifest; CBZ first image; PDF none in v1), a sharded disk cache
+   under the data folder (`ab/cd/rest`, sizes s/m/l, WebP), generated templates (`GeneratedTemplate`,
+   `GeneratedVariant` assigned at import in `CatalogWriter.Apply`, which leaves them null today), a route
+   `GET api/books/{id}/cover/{size}` with long cache headers. Hostile images: a size limit before decoding,
+   dimension limits.
+4. **3.7 benchmark**: a generator of a 100k-entry FB2 zip (in `tests/Librarion.Benchmarks`, output to `D:\Temp`),
+   timed list, unchanged skip, index from heads, first byte. Run it on C: (SSD) and D:. **Ask the user** whether D:
+   is an HDD/NAS that may stand in for D11, or which disk to use.
+5. **e2e** (`tests/e2e`, see [testing-e2e](testing-e2e.md)): add a folder under the e2e work folder, scan, see the
+   progress and the run, download a book from a zip. The e2e build needs a ZIP made at test time: Node has no zip
+   writer, so write the sample from the server side or commit a tiny zip under `tests/e2e/samples/`.
+6. **Close the stage**: update the feature notes (archives, book-display, tags, metadata-tags, merging: they still say
+   "planned" in parts), move what stays true out of this plan, delete it with its AGENTS.md line, run check-links, run
+   both providers, `npm test`, the e2e grep set; merge into `main` as **0.4.0**, then merge `main` back into `edge`
+   and push both ([versioning-and-changelog](versioning-and-changelog.md)). Then write the stage 4 plan (Calibre
+   import) from the [foundation-plan](foundation-plan.md).
+
+**Decisions taken this session (the user may revise):**
+
+- Only server administrators add folders unless `Librarion:Libraries:Folders` lists allowed ones.
+- At most 2 scans at once (`MaxParallelScans`).
+- Image library: SkiaSharp + HarfBuzzSharp (D17's leading option, not installed yet).
+- FB2 genres are named in English (`Fb2Genres`, written from memory: MyHomeLib's genre lists are not on this machine).
+- An archive marked `Incomplete` (broken) is skipped until its size or time changes.
+- New plain tags go under the "Imported: <source>" category; field values go straight under their field.
+
+**Gotchas met this session:**
+
+- XmlReader loops: `x ??= F(SafeXml.Text(xml))` doesn't move the reader once `x` is set and hangs. Read first, then
+  assign. Use `--blame-hang-timeout`, and run long suites as `timeout 550 dotnet test ... > log` ([testing-backend](testing-backend.md)).
+- Angular templates have no bitwise operators: use a method.
+- `rm` of a glob under the repo is stopped by the agent's safety check: use `git rm` of listed names (the
+  regen-migrations tool does).
+- Bash heredocs containing apostrophes break inside `python - <<'EOF'` when the command also holds other quoting:
+  write the script with the Write tool into the scratchpad and run it.
+- Error codes sent to the client are `field.code` (`path.notAllowed`); `ClientI18nTests` reads them from the access
+  services and `TaskEndpoints.cs`. A new endpoint file with codes must be added there.
+- PostgreSQL keeps microseconds: times compared with stored ones are cut to microseconds (`LibraryScanner.Moment`).
+
+**Commands** ([commands](../environment/commands.md), [dev-machine](../environment/dev-machine.md)):
+
+```sh
+timeout 550 dotnet test --blame-hang-timeout 60s > /d/Temp/all-test.log 2>&1; grep -E "Passed!|Failed!" /d/Temp/all-test.log
+# PostgreSQL: start Docker Desktop first (PowerShell: Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe", wait for docker info)
+LIBRARION_TEST_POSTGRES="$(agents/tools/postgres-dev/start.sh)" dotnet test --no-build
+# then stop Docker Desktop's processes and run wsl --shutdown (the machine has little memory)
+cd src/Librarion.Web && timeout 400 npm test > /d/Temp/npm-test.log 2>&1
+node agents/tools/screenshots/screenshots.mjs /d/Temp/screens admin/libraries#open   # look at a page by eye
+```
