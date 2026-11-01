@@ -24,6 +24,9 @@ Code: `src/Librarion.Core/Data/` (`LibrarionDbContext`, `DatabaseOptions`, `Libr
   comment why.
 - Start: `LibrarionDatabase.InitializeAsync` sets SQLite to WAL, applies pending migrations, records the version in
   `ServerProperties`. Before the MVP nothing gates this ([production-upgrades](production-upgrades.md)).
+- A database with an applied migration the build doesn't know (made before the `Initial` migrations were regenerated)
+  stops the start untouched: `DatabaseFromAnotherBuildException`, logged as critical with the file to delete, exit
+  code 1. Without the check EF re-ran `Initial` and crashed on "table already exists".
 - Indexed strings need a max length (PostgreSQL `character varying(n)`, SQLite ignores it but the model agrees).
 - Order every `Take`; keyset paging only ([scale](scale.md)).
 - Before 1.0 the `Initial` migrations (both providers) are regenerated on a model change instead of adding new ones:

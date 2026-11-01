@@ -62,6 +62,13 @@ public static class LibrarionDatabase
             await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
         }
 
+        // Before 1.0 the Initial migrations are regenerated on a model change: a database made by an older build has a
+        // migration this one doesn't know, and migrating it would create its tables again.
+        var known = db.Database.GetMigrations().ToHashSet(StringComparer.Ordinal);
+        var unknown = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).Where(m => !known.Contains(m)).ToList();
+        if (unknown.Count > 0)
+            throw new DatabaseFromAnotherBuildException(unknown, db.Database.IsSqlite() ? db.Database.GetDbConnection().DataSource : null);
+
         var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
         if (pending.Count > 0)
             logger.LogInformation("Bringing the database up: {Migrations}", string.Join(", ", pending));
@@ -84,6 +91,21 @@ public static class LibrarionDatabase
         public async Task<LibrarionDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
             await inner.CreateDbContextAsync(cancellationToken);
     }
+}
+
+/// <summary>
+/// The database was made by another build: it has migrations this one doesn't know (before 1.0 the schema is rebuilt,
+/// not migrated: agents/docs/development/production-upgrades.md). Nothing was changed in it.
+/// </summary>
+public sealed class DatabaseFromAnotherBuildException(IReadOnlyList<string> unknownMigrations, string? sqliteFile)
+    : InvalidOperationException(
+        $"The database was made by another build of Librarion (migrations unknown to this one: {string.Join(", ", unknownMigrations)}). " +
+        "Until version 1.0 the database is not upgraded between builds: " +
+        (sqliteFile is null
+            ? "drop and recreate the PostgreSQL database, then start again."
+            : $"delete {sqliteFile} (and its -wal and -shm files), then start again."))
+{
+    public IReadOnlyList<string> UnknownMigrations { get; } = unknownMigrations;
 }
 
 /// <summary><c>dotnet ef migrations add … --context SqliteLibrarionDbContext</c> (no database is opened).</summary>

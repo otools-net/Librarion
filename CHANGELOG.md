@@ -33,6 +33,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - Settings come in groups, each setting with a line on what it does; changed ones are marked, a bar at the bottom
   counts the changes with Save and Discard, and leaving a page with unsaved changes asks first.
 
+### Fixed
+
+- Starting on a database made by an older build (before 1.0 the database is not upgraded between builds) stopped
+  with "table already exists" halfway; it now stops before touching it and says which file to delete.
+
 ## 0.5.0
 
 ### Added

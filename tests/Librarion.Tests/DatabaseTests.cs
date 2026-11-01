@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Librarion.Tests;
 
@@ -39,6 +40,29 @@ public sealed class DatabaseTests
         using var response = await client.GetAsync("/api/session", TestContext.CancellationToken);
 
         response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// A database made by an older build (before 1.0 the Initial migrations are regenerated) stops the start with what
+    /// to do, instead of failing halfway while creating its tables again.
+    /// </summary>
+    [TestMethod]
+    public async Task ADatabaseFromAnotherBuildStopsTheStartUntouched()
+    {
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        using (ApiClients.Create(factory)) { }
+        var contexts = factory.Services.GetRequiredService<IDbContextFactory<LibrarionDbContext>>();
+        await using (var db = await contexts.CreateDbContextAsync(TestContext.CancellationToken))
+            await db.Database.ExecuteSqlRawAsync(
+                "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('20260101000000_Initial', '10.0.0')",
+                TestContext.CancellationToken);
+
+        var error = await Assert.ThrowsExactlyAsync<DatabaseFromAnotherBuildException>(() =>
+            LibrarionDatabase.InitializeAsync(contexts, AppVersion.Version, NullLogger.Instance, TestContext.CancellationToken));
+
+        CollectionAssert.AreEqual(new[] { "20260101000000_Initial" }, error.UnknownMigrations.ToArray());
+        StringAssert.Contains(error.Message, "start again");
     }
 
     /// <summary>A model change without its migration (for either provider) fails here, not at a user's start.</summary>
