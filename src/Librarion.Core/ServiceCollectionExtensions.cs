@@ -3,6 +3,7 @@ using Librarion.Core.Catalog;
 using Librarion.Core.Data;
 using Librarion.Core.Import;
 using Librarion.Core.Settings;
+using Librarion.Core.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,6 +51,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TagQueries>();
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();
         services.AddSingleton<LibraryScanner>();
+        services.Configure<LibraryOptions>(configuration.GetSection(LibraryOptions.SectionName));
+        services.AddSingleton<LibraryRoots>();
+        services.AddSingleton<BackgroundTasks>();
+        services.AddSingleton<TaskSchedules>();
+        services.AddHostedService<TaskScheduleWorker>();
         return services;
     }
 }

@@ -4,6 +4,8 @@ public enum BackgroundTaskKind : byte
 {
     /// <summary>A library's roots walked, new and changed books read, missing ones removed.</summary>
     LibraryScan,
+    /// <summary>A root taken out of a library: its files and the books left without one removed in batches.</summary>
+    RemoveRoot,
 }
 
 public enum TaskTrigger : byte

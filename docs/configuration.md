@@ -34,6 +34,13 @@ and starting workers only slowed it down). A connection string with its own `Opt
 `Urls` sets where the server listens (default `http://localhost:5090`, this computer only). To reach it from other
 devices: `"Urls": "http://0.0.0.0:5090"`.
 
+## Libraries
+
+| Setting | Values |
+|---|---|
+| `Librarion:Libraries:Folders` | folders under which tenant administrators may add library folders (a list: `Librarion__Libraries__Folders__0=/srv/books`); empty (the default): only server administrators add folders |
+| `Librarion:Libraries:MaxParallelScans` | scans running at once on the server (default 2); more wait their turn |
+
 ## Setup
 
 | Setting | Values |

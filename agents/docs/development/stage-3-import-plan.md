@@ -41,8 +41,9 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 ### 3.2 Libraries, roots, tasks
 
-- [ ] `LibraryRoots`, admin UI for roots (validated: exists, readable, not inside another root).
-- [ ] `TaskRuns`, `BackgroundTasks` (scan per library), schedules, tasks page with progress and history.
+- [x] `LibraryRoots` (validated: exists, not inside or around another root, allowed folders for tenant administrators).
+- [x] `TaskRuns`, `BackgroundTasks` (scan per library), schedules; API ([tasks](../features/tasks.md)).
+- [ ] Tasks UI: roots, scan now with progress, history, schedules in the library editor.
 
 ### 3.3 Scanner
 

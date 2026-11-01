@@ -4,6 +4,16 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ## Unreleased
 
+### Added
+
+- Library folders: books are found in them as loose files or inside ZIP archives (read in place, never unpacked);
+  tenant administrators add folders only under the ones the configuration allows (`Librarion:Libraries:Folders`).
+- Scanning: new books come in with their metadata (title, authors, series, genres, language, publisher, year,
+  description, identifiers) read from FB2, EPUB, CBZ, MOBI / AZW3 and PDF files; changed books are read again,
+  removed ones leave, unchanged archives are skipped. Scans run in the background with progress, can be cancelled,
+  are listed with what they did, and can be scheduled.
+- Rights **Download** and **Scan**.
+
 ## 0.3.0
 
 ### Added

@@ -68,6 +68,29 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
         return run.Result();
     }
 
+    /// <summary>
+    /// A root taken out of its library: its files, archives and the books left without a file removed in batches (one
+    /// cascade over millions of rows would be one huge transaction), the counts moved, the root's row last.
+    /// </summary>
+    public async Task<ScanResult> RemoveRootAsync(int tenantId, int rootId, IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
+    {
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var root = await db.LibraryRoots.SingleOrDefaultAsync(r => r.Id == rootId, cancellationToken);
+        if (root is null)
+            return new ScanResult(0, 0, 0, 0, 0, 0, 0, [], []);
+        var run = new Run(this, db, new CatalogWriter(tenantId, root.LibraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time), progress);
+        try
+        {
+            await run.RemoveAllAsync(root, cancellationToken);
+        }
+        finally
+        {
+            await run.Writer.FlushCountsAsync(db, CancellationToken.None);
+        }
+
+        return run.Result();
+    }
+
     private sealed class Run(LibraryScanner scanner, LibrarionDbContext db, CatalogWriter writer, IProgress<ScanProgress>? progress)
     {
         public CatalogWriter Writer => writer;
@@ -109,6 +132,18 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
             await SweepLooseAsync(root, seenFiles, cancellationToken);
             await SweepArchivesAsync(root, seenArchives, cancellationToken);
             await writer.FlushCountsAsync(db, cancellationToken);
+            Report(null);
+        }
+
+        public async Task RemoveAllAsync(LibraryRoot root, CancellationToken cancellationToken)
+        {
+            var lastFile = await db.BookFiles.Where(f => f.RootId == root.Id).MaxAsync(f => (int?)f.Id, cancellationToken) ?? 0;
+            var lastArchive = await db.Archives.Where(a => a.RootId == root.Id).MaxAsync(a => (int?)a.Id, cancellationToken) ?? 0;
+            // Nothing seen: everything of the root goes.
+            await SweepLooseAsync(root, new Bits(lastFile), cancellationToken);
+            await SweepArchivesAsync(root, new Bits(lastArchive), cancellationToken);
+            await writer.FlushCountsAsync(db, cancellationToken);
+            await db.LibraryRoots.Where(r => r.Id == root.Id).ExecuteDeleteAsync(cancellationToken);
             Report(null);
         }
 
