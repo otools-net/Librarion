@@ -203,6 +203,10 @@ export interface ScanProgress {
     changed: number;
     removed: number;
     current: string | null;
+    /** Books that went missing (kept, not removed). */
+    missing: number;
+    /** Missing books found again. */
+    returned: number;
 }
 
 export interface ScanCounts {
@@ -215,13 +219,15 @@ export interface ScanCounts {
     unreadable: number;
     missingRoots: string[];
     problems: string[];
+    missing: number;
+    returned: number;
 }
 
 /** A run of a background task (`api/libraries/{id}/tasks`, `api/tasks/{run}`). */
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;
@@ -230,6 +236,31 @@ export interface TaskRunInfo {
     counts: ScanCounts | null;
     progress: ScanProgress | null;
     waiting: boolean;
+}
+
+/** A book whose files are gone, kept until they come back or its removal is accepted (`api/libraries/{id}/missing`). */
+export interface MissingBookItem {
+    id: number;
+    name: string;
+    path: string;
+    missingSince: string;
+    /** Missing longer than the library's retention: offered for removal first. */
+    ready: boolean;
+}
+
+export interface MissingBookPage {
+    items: MissingBookItem[];
+    next: string | null;
+    total: number;
+    ready: number;
+    keepDays: number;
+}
+
+/** Which missing books the user accepted to remove: chosen ones, those past the retention, or all. */
+export interface MissingRemoval {
+    bookIds?: number[];
+    ready?: boolean;
+    all?: boolean;
 }
 
 export type ScheduleKind = 'interval' | 'weekly';

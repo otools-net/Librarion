@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261101121004_Initial")]
+    [Migration("20261101165048_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -41,6 +41,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.Property<int>("LibraryId")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("Modified")
                         .HasColumnType("timestamp with time zone");
@@ -106,6 +109,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<int?>("MergedIntoId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<byte?>("Rating")
                         .HasColumnType("smallint");
 
@@ -143,6 +149,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("TenantId", "WorkKey");
 
                     b.HasIndex("LibraryId", "Added", "Id");
+
+                    b.HasIndex("LibraryId", "MissingSince", "Id")
+                        .HasFilter("\"MissingSince\" IS NOT NULL");
 
                     b.HasIndex("LibraryId", "SortAuthor", "Id");
 
@@ -194,6 +203,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<short?>("Method")
                         .HasColumnType("smallint");
 
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("timestamp with time zone");
 
@@ -224,6 +236,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("ArchiveId", "PathKey");
 
                     b.HasIndex("RootId", "PathKey");
+
+                    b.HasIndex("LibraryId", "Size", "Id")
+                        .HasFilter("\"MissingSince\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "Size", "Crc32");
 

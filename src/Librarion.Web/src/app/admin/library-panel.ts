@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
-import { LibraryInfo, LibraryRootInfo, ScheduleInfo, ScheduleKind, TaskRunInfo } from '../core/models';
+import { LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleKind, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
 
 const POLL_MS = 1500;
@@ -49,7 +49,7 @@ const POLL_MS = 1500;
                             @if (run.waiting) {
                                 {{ 'tasks.waiting' | t }}
                             } @else if (run.progress; as progress) {
-                                {{ 'tasks.progress' | t: { files: progress.filesSeen, added: progress.added, changed: progress.changed, removed: progress.removed } }}
+                                {{ 'tasks.progress' | t: { files: progress.filesSeen, added: progress.added, changed: progress.changed, missing: progress.missing, removed: progress.removed } }}
                             } @else {
                                 {{ 'tasks.starting' | t }}
                             }
@@ -69,7 +69,7 @@ const POLL_MS = 1500;
                                         {{ 'tasks.bySchedule' | t }}
                                     }
                                     @if (run.counts; as counts) {
-                                        {{ 'tasks.counts' | t: { added: counts.added, changed: counts.changed, removed: counts.removed, unchanged: counts.unchanged } }}
+                                        {{ 'tasks.counts' | t: { added: counts.added, changed: counts.changed, missing: counts.missing, returned: counts.returned, removed: counts.removed, unchanged: counts.unchanged } }}
                                     }
                                     @if (run.summary) {
                                         {{ run.summary }}
@@ -94,6 +94,43 @@ const POLL_MS = 1500;
                         <li class="row muted">{{ 'tasks.noRuns' | t }}</li>
                     }
                 </ul>
+
+                @if (missing(); as page) {
+                    @if (page.total > 0) {
+                        <h3 class="field-label">{{ 'missing.title' | t }}</h3>
+                        <p class="row-meta">
+                            {{ 'missing.summary' | t: { total: page.total } }}
+                            @if (page.ready > 0) {
+                                {{ 'missing.readySummary' | t: { ready: page.ready, days: page.keepDays } }}
+                            }
+                        </p>
+                        <ul class="rows" [attr.aria-label]="'missing.title' | t">
+                            @for (book of missingItems(); track book.id) {
+                                <li class="row">
+                                    <span class="row-main">
+                                        <span class="row-title">{{ book.name }}</span>
+                                        <span class="row-meta">
+                                            @if (book.ready) {
+                                                <span class="badge danger">{{ 'missing.ready' | t }}</span>
+                                            }
+                                            {{ 'missing.since' | t: { time: when(book.missingSince) } }} · <span class="path">{{ book.path }}</span>
+                                        </span>
+                                    </span>
+                                    <button type="button" class="button danger" [title]="'missing.removeHint' | t" [disabled]="busy()" (click)="removeMissing(book)">{{ 'missing.remove' | t }}</button>
+                                </li>
+                            }
+                        </ul>
+                        <div class="toolbar">
+                            @if (page.next) {
+                                <button type="button" class="button" [disabled]="busy()" (click)="moreMissing()">{{ 'missing.more' | t }}</button>
+                            }
+                            @if (page.ready > 0) {
+                                <button type="button" class="button danger" [disabled]="busy() || running() !== null" (click)="removeReady(page)">{{ 'missing.removeReady' | t: { count: page.ready, days: page.keepDays } }}</button>
+                            }
+                            <button type="button" class="button danger" [disabled]="busy() || running() !== null" (click)="removeAllMissing(page)">{{ 'missing.removeAll' | t: { count: page.total } }}</button>
+                        </div>
+                    }
+                }
 
                 <h3 class="field-label">{{ 'schedules.title' | t }}</h3>
                 <ul class="rows" [attr.aria-label]="'schedules.title' | t">
@@ -148,6 +185,9 @@ export class LibraryPanel implements OnInit, OnDestroy {
     protected readonly roots = signal<LibraryRootInfo[]>([]);
     protected readonly runs = signal<TaskRunInfo[]>([]);
     protected readonly schedules = signal<ScheduleInfo[]>([]);
+    /** The library's missing books: the first page's counts, and the rows loaded so far. */
+    protected readonly missing = signal<MissingBookPage | null>(null);
+    protected readonly missingItems = signal<MissingBookItem[]>([]);
     protected readonly path = signal('');
     protected readonly kind = signal<ScheduleKind>('interval');
     protected readonly hours = signal(24);
@@ -173,6 +213,9 @@ export class LibraryPanel implements OnInit, OnDestroy {
                 await this.refreshRuns();
             }
         });
+        // On its own: the panel is usable while the missing books load.
+        if (this.canScan())
+            void this.refreshMissing().catch(error => this.error.set(errorText(this.i18n, error)));
     }
 
     ngOnDestroy(): void {
@@ -256,6 +299,48 @@ export class LibraryPanel implements OnInit, OnDestroy {
         return this.i18n.t('schedules.weeklyText', { days, time });
     }
 
+    /** Removing one missing book: only after the user accepts. */
+    protected async removeMissing(book: MissingBookItem): Promise<void> {
+        if (confirm(this.i18n.t('missing.confirmOne', { name: book.name })))
+            await this.startRemoval({ bookIds: [book.id] });
+    }
+
+    protected async removeReady(page: MissingBookPage): Promise<void> {
+        if (confirm(this.i18n.t('missing.confirmReady', { count: page.ready, days: page.keepDays })))
+            await this.startRemoval({ ready: true });
+    }
+
+    protected async removeAllMissing(page: MissingBookPage): Promise<void> {
+        if (confirm(this.i18n.t('missing.confirmAll', { count: page.total })))
+            await this.startRemoval({ all: true });
+    }
+
+    protected async moreMissing(): Promise<void> {
+        const next = this.missing()?.next;
+        if (!next)
+            return;
+        await this.run(async () => {
+            const page = await this.api.missingBooks(this.library().id, next);
+            this.missing.update(current => current ? { ...current, next: page.next } : page);
+            this.missingItems.update(items => [...items, ...page.items]);
+        });
+    }
+
+    private async startRemoval(removal: MissingRemoval): Promise<void> {
+        await this.run(async () => {
+            await this.api.removeMissingBooks(this.library().id, removal);
+            await this.refreshRuns();
+        });
+    }
+
+    private async refreshMissing(): Promise<void> {
+        const page = await this.api.missingBooks(this.library().id);
+        if (this.destroyed)
+            return;
+        this.missing.set(page);
+        this.missingItems.set(page.items);
+    }
+
     protected when(utc: string): string {
         return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(utc));
     }
@@ -268,7 +353,11 @@ export class LibraryPanel implements OnInit, OnDestroy {
         const runs = await this.api.libraryTasks(this.library().id);
         if (this.destroyed)
             return;
+        const wasRunning = this.running() !== null;
         this.runs.set(runs);
+        // A run that just ended (a scan, a removal) changes the missing books.
+        if (wasRunning && !runs.some(run => run.outcome === 'running'))
+            await this.refreshMissing();
         if (runs.some(run => run.outcome === 'running'))
             this.timer = setTimeout(() => void this.refreshRuns().catch(error => this.error.set(errorText(this.i18n, error))), POLL_MS);
     }

@@ -45,3 +45,6 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
 - The worker checks every 30 s: an occurrence in (last check, now], never before the schedule's last change (no runs
   for the past), missed ones not caught up; due while the library's run goes → a `skipped` run.
 - Routes: `GET|POST api/libraries/{id}/schedules`, `PUT|DELETE …/schedules/{scheduleId}`.
+- A scan never removes a book: files it doesn't find are marked missing, books whose files are all gone become missing
+  (hidden, kept) and come back when a file does ([missing-books](missing-books.md)). Their removal is a run of its own
+  (`RemoveMissing`), started only by a user from the library panel.

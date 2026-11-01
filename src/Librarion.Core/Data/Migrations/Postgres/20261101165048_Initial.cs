@@ -275,6 +275,7 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     GeneratedVariant = table.Column<short>(type: "smallint", nullable: true),
                     CoverState = table.Column<int>(type: "integer", nullable: false),
                     MergedIntoId = table.Column<int>(type: "integer", nullable: true),
+                    MissingSince = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     WorkKey = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
@@ -615,7 +616,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     Modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Fingerprint = table.Column<long>(type: "bigint", nullable: true),
                     EntryCount = table.Column<int>(type: "integer", nullable: false),
-                    ScanState = table.Column<int>(type: "integer", nullable: false)
+                    ScanState = table.Column<int>(type: "integer", nullable: false),
+                    MissingSince = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -654,7 +656,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     Locator = table.Column<long>(type: "bigint", nullable: true),
                     Method = table.Column<short>(type: "smallint", nullable: true),
                     PackedSize = table.Column<long>(type: "bigint", nullable: true),
-                    ContentHash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true)
+                    ContentHash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true),
+                    MissingSince = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -700,6 +703,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 column: "BookId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BookFiles_LibraryId_Size_Id",
+                table: "BookFiles",
+                columns: new[] { "LibraryId", "Size", "Id" },
+                filter: "\"MissingSince\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BookFiles_RootId_PathKey",
                 table: "BookFiles",
                 columns: new[] { "RootId", "PathKey" });
@@ -718,6 +727,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "IX_Books_LibraryId_Added_Id",
                 table: "Books",
                 columns: new[] { "LibraryId", "Added", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Books_LibraryId_MissingSince_Id",
+                table: "Books",
+                columns: new[] { "LibraryId", "MissingSince", "Id" },
+                filter: "\"MissingSince\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Books_LibraryId_SortAuthor_Id",

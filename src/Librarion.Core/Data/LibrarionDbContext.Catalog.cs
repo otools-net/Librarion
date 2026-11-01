@@ -29,6 +29,8 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(b => new { b.TenantId, b.Added, b.Id });
             entity.HasIndex(b => new { b.SeriesId, b.SeriesNumber, b.Id });
             entity.HasIndex(b => new { b.TenantId, b.WorkKey });
+            // The missing books of a library, oldest first: only missing rows are in it (agents/docs/features/missing-books.md).
+            entity.HasIndex(b => new { b.LibraryId, b.MissingSince, b.Id }).HasFilter("\"MissingSince\" IS NOT NULL");
             Filter(entity, b => b.TenantId == CurrentTenantId);
         });
 
@@ -46,6 +48,8 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(f => new { f.ArchiveId, f.PathKey });
             // "Same file" duplicates: candidates by size and CRC first (agents/docs/features/merging.md).
             entity.HasIndex(f => new { f.TenantId, f.Size, f.Crc32 });
+            // Missing files of a library by size: what a moved file is matched against after a scan.
+            entity.HasIndex(f => new { f.LibraryId, f.Size, f.Id }).HasFilter("\"MissingSince\" IS NOT NULL");
             Filter(entity, f => f.TenantId == CurrentTenantId);
         });
 

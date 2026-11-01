@@ -22,8 +22,8 @@ archives full of them, which are read where they are, never unpacked.
 ## Scanning
 
 Scanning reads what changed in the folders: new books come in with their title, authors, series, genres and other
-metadata from the book itself (a book without a title is shown by its file name), changed ones are read again,
-removed ones leave. An unchanged archive is skipped without being read.
+metadata from the book itself (a book without a title is shown by its file name), changed ones are read again. An
+unchanged archive is skipped without being read.
 
 - **Scan now** starts a scan (right **Scan**); its progress shows while it runs, and it can be cancelled (what it
   already read stays).
@@ -31,6 +31,20 @@ removed ones leave. An unchanged archive is skipped without being read.
   first files that couldn't be read.
 - **Schedules** scan by themselves: every few hours (at least every 15 minutes), or on chosen days at a time of day.
   A scan that comes due while another runs is skipped, and missed ones are not made up later.
+
+## Missing books
+
+A book whose files a scan no longer finds is **not deleted**: it becomes a *missing book*. It disappears from the
+lists, but everything about it is kept (its metadata, its tags, your changes), in case the file comes back.
+
+- Put the file back where it was, or move it (rename its folder or its archive): the next scan finds it and the book
+  is back as it was. A moved file is recognised when exactly one new file matches it (same size and contents for books
+  in archives, same size and name for loose files).
+- The library's panel lists its missing books, oldest first. Those missing longer than the library's setting
+  **Days before missing books are offered for removal** (30 by default) are marked *ready to remove*.
+- **Nothing is removed by itself.** Remove one book, all the ready ones or all of them from the panel; each asks you
+  to confirm first, and removal can't be undone.
+- Removing a folder from the library still removes its books right away (you confirm that removal).
 
 ## Downloads
 

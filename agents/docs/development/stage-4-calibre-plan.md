@@ -37,8 +37,10 @@ copied); MyHomeLib for INPX (`C:\workspace\MyHomeLib`, MIT: `Program/ImportImpl/
   A folder scan that sees an imported book's file changed updates the file (size, time, CRC) but **does not replace
   the imported metadata** (it re-reads heads only for `Heads` books). A re-import recomputes only its own source's
   `Imported` links; manual links, merges and edits stay. Migration on both providers.
-- **Re-import never deletes:** books gone from the source stay while their files exist (a scan removes books whose
-  files are gone); the run counts them as "not in the source any more".
+- **Nothing is deleted without the user** (the user's rule, 2026-11-01, as SFE's missing files): a re-import never
+  removes a book; books gone from the source stay while their files exist (counted as "not in the source any more");
+  books whose files are gone become missing books, kept with their metadata, found again when the file comes back,
+  removed only when a user accepts ([missing-books](../features/missing-books.md)).
 - **Calibre** (`metadata.db` opened `Mode=ReadOnly`, WAL honoured; the schema checked, unknown columns ignored):
   authors (sort from `authors.sort`) → `author`; series + `series_index` → `series` with number; publishers →
   `publisher`; languages → `language`; tags → plain tags, a dotted name (`Fiction.Fantasy`) → a parent chain;
@@ -57,6 +59,12 @@ copied); MyHomeLib for INPX (`C:\workspace\MyHomeLib`, MIT: `Program/ImportImpl/
   of 1M records < 15 min, unchanged re-import < 5 min (proposed). SQLite recorded.
 
 ## Work items
+
+### 4.0 Missing books (done before the imports: it changes what scans do)
+
+- [x] Files not found are marked missing, books whose files are all gone become missing (hidden, kept, counts down),
+      found again at the same place or relinked when moved, removed only after the user accepts in the library panel;
+      retention `library.keepMissingDays` (30) only decides what is offered first ([missing-books](../features/missing-books.md)).
 
 ### 4.1 Import pipeline
 

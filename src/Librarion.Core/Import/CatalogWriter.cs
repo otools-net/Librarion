@@ -95,7 +95,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             return result;
         var sizes = candidates.Select(i => files[i].File.Size).Distinct().ToList();
         var crcs = candidates.Select(i => files[i].File.Crc32).Distinct().ToList();
-        var stored = (await BookDownloads.StoredAsync(db.BookFiles.Where(f => f.LibraryId == libraryId && sizes.Contains(f.Size) && crcs.Contains(f.Crc32)), cancellationToken))
+        var stored = (await BookDownloads.StoredAsync(db.BookFiles.Where(f => f.LibraryId == libraryId && f.MissingSince == null && sizes.Contains(f.Size) && crcs.Contains(f.Crc32)), cancellationToken))
             .GroupBy(f => (f.Target.Size, (long?)f.Target.Crc)).ToDictionary(g => g.Key, g => g.ToList());
         // Files of this batch that became books, by size and CRC: a later copy in the batch joins one of them.
         var earlier = new Dictionary<(long, long?), List<int>>();
@@ -203,18 +203,72 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     }
 
     /// <summary>Of <paramref name="bookIds"/>, the books that have no file any more are removed with their links.</summary>
-    public async Task RemoveEmptyBooksAsync(LibrarionDbContext db, IReadOnlyCollection<int> bookIds, CancellationToken cancellationToken)
+    /// <param name="undoAdd">The books were added by this run (a moved file relinked to its old book): they are taken off
+    /// <see cref="Added"/> instead of counted as removed.</param>
+    public async Task RemoveEmptyBooksAsync(LibrarionDbContext db, IReadOnlyCollection<int> bookIds, CancellationToken cancellationToken, bool undoAdd = false)
     {
         foreach (var chunk in bookIds.Distinct().Chunk(1000))
         {
-            var empty = await db.Books.Where(b => chunk.Contains(b.Id) && !db.BookFiles.Any(f => f.BookId == b.Id)).Select(b => b.Id).ToListAsync(cancellationToken);
+            var empty = await db.Books.Where(b => chunk.Contains(b.Id) && !db.BookFiles.Any(f => f.BookId == b.Id))
+                .Select(b => new { b.Id, Missing = b.MissingSince != null }).ToListAsync(cancellationToken);
             if (empty.Count == 0)
                 continue;
-            foreach (var tag in await db.BookTags.Where(l => empty.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
+            // A missing book's counts went down when it went missing.
+            var counted = empty.Where(b => !b.Missing).Select(b => b.Id).ToList();
+            foreach (var tag in await db.BookTags.Where(l => counted.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
                 Move(tag.TagId, -1);
-            await db.Books.Where(b => empty.Contains(b.Id)).ExecuteDeleteAsync(cancellationToken);
-            Removed += empty.Count;
-            bookDelta -= empty.Count;
+            var ids = empty.Select(b => b.Id).ToList();
+            await db.Books.Where(b => ids.Contains(b.Id)).ExecuteDeleteAsync(cancellationToken);
+            if (undoAdd)
+                Added -= empty.Count;
+            else
+                Removed += empty.Count;
+            bookDelta -= counted.Count;
+        }
+    }
+
+    /// <summary>Books that became missing in this run (every file of theirs missing).</summary>
+    public int Missing { get; private set; }
+
+    /// <summary>Missing books that have a file again (found where it was, or moved and relinked).</summary>
+    public int Returned { get; private set; }
+
+    /// <summary>
+    /// Of <paramref name="bookIds"/>, the books none of whose files is present any more become missing (kept, hidden from
+    /// lists, their counts down) until a file comes back or a user accepts their removal
+    /// (agents/docs/features/missing-books.md).
+    /// </summary>
+    public async Task MarkMissingAsync(LibrarionDbContext db, IReadOnlyCollection<int> bookIds, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        foreach (var chunk in bookIds.Distinct().Chunk(1000))
+        {
+            var gone = await db.Books.Where(b => chunk.Contains(b.Id) && b.MissingSince == null && !db.BookFiles.Any(f => f.BookId == b.Id && f.MissingSince == null))
+                .Select(b => b.Id).ToListAsync(cancellationToken);
+            if (gone.Count == 0)
+                continue;
+            foreach (var tag in await db.BookTags.Where(l => gone.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
+                Move(tag.TagId, -1);
+            await db.Books.Where(b => gone.Contains(b.Id)).ExecuteUpdateAsync(s => s.SetProperty(b => b.MissingSince, now), cancellationToken);
+            Missing += gone.Count;
+            bookDelta -= gone.Count;
+        }
+    }
+
+    /// <summary>Of <paramref name="bookIds"/>, the missing books that have a present file again come back: listed and counted.</summary>
+    public async Task ReturnAsync(LibrarionDbContext db, IReadOnlyCollection<int> bookIds, CancellationToken cancellationToken)
+    {
+        foreach (var chunk in bookIds.Distinct().Chunk(1000))
+        {
+            var back = await db.Books.Where(b => chunk.Contains(b.Id) && b.MissingSince != null && db.BookFiles.Any(f => f.BookId == b.Id && f.MissingSince == null))
+                .Select(b => b.Id).ToListAsync(cancellationToken);
+            if (back.Count == 0)
+                continue;
+            foreach (var tag in await db.BookTags.Where(l => back.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
+                Move(tag.TagId, +1);
+            await db.Books.Where(b => back.Contains(b.Id)).ExecuteUpdateAsync(s => s.SetProperty(b => b.MissingSince, (DateTime?)null), cancellationToken);
+            Returned += back.Count;
+            bookDelta += back.Count;
         }
     }
 

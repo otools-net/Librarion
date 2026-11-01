@@ -38,12 +38,16 @@ public static class SettingCatalog
     public const string Language = "ui.language";
     public const string PageSize = "ui.pageSize";
 
+    /// <summary>Days a missing book waits before it is offered for removal (agents/docs/features/missing-books.md); never removed without a user.</summary>
+    public const string KeepMissingDays = "library.keepMissingDays";
+
     public static IReadOnlyList<SettingDefinition> All { get; } =
     [
         new(Theme, SettingKind.Choice, Json("\"system\""), SettingLevel.User, "interface", Choices: ["system", "light", "dark"]),
         new(Density, SettingKind.Choice, Json("\"compact\""), SettingLevel.User, "interface", Choices: ["compact", "comfortable"]),
         new(Language, SettingKind.Choice, Json("\"browser\""), SettingLevel.User, "interface", Choices: ["browser", "en"]),
         new(PageSize, SettingKind.Integer, Json("50"), SettingLevel.User, "interface", Min: 20, Max: 200),
+        new(KeepMissingDays, SettingKind.Integer, Json("30"), SettingLevel.Library, "libraries", Min: 0, Max: 3650),
     ];
 
     private static readonly Dictionary<string, SettingDefinition> ByKey = All.ToDictionary(s => s.Key, StringComparer.Ordinal);

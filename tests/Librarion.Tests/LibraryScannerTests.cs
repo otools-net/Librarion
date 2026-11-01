@@ -92,18 +92,20 @@ public sealed class LibraryScannerTests
 
         Assert.AreEqual(1, result.Added);
         Assert.AreEqual(1, result.Changed);
-        Assert.AreEqual(1, result.Removed);
+        Assert.AreEqual(1, result.Missing, "the entry gone is kept as missing, not removed");
+        Assert.AreEqual(0, result.Removed);
         Assert.AreEqual(2, reads.Reads, "only the new and the changed entry are read");
         await using var check = await library.DbAsync(Cancel);
-        var files = await check.BookFiles.OrderBy(f => f.Path).ToListAsync(Cancel);
+        var files = await check.BookFiles.Where(f => f.MissingSince == null).OrderBy(f => f.Path).ToListAsync(Cancel);
         CollectionAssert.AreEqual(new[] { "changed.fb2", "kept.fb2", "new.fb2" }, files.Select(f => f.Path).ToList());
+        Assert.IsNotNull((await check.BookFiles.SingleAsync(f => f.Path == "gone.fb2", Cancel)).MissingSince);
         Assert.AreEqual(changedBook, files[0].BookId, "a changed file stays the same book");
         Assert.AreEqual("kept", library.ReadEntry("b.zip", files[1]), "the kept entry moved (new.fb2 is first now): its locator follows");
         Assert.AreEqual(3, (await check.Libraries.SingleAsync(l => l.Id == library.LibraryId, Cancel)).BookCount);
     }
 
     [TestMethod]
-    public async Task BooksGoneFromTheRootGoAndAMissingRootKeepsItsBooks()
+    public async Task BooksGoneFromTheRootAreKeptAsMissingAndAMissingRootKeepsItsBooks()
     {
         await using var library = await ScannedLibrary.CreateAsync(Cancel);
         var loose = library.Write("a.fb2", "a");
@@ -114,12 +116,14 @@ public sealed class LibraryScannerTests
         File.Delete(loose);
         File.Delete(zip);
         var result = await library.ScanAsync(Cancel);
-        Assert.AreEqual(2, result.Removed);
+        Assert.AreEqual(2, result.Missing);
+        Assert.AreEqual(0, result.Removed, "nothing is removed without a user");
         await using (var db = await library.DbAsync(Cancel))
         {
-            Assert.AreEqual("b", (await db.Books.SingleAsync(Cancel)).SortTitle);
-            Assert.AreEqual(0, await db.Archives.CountAsync(Cancel));
-            Assert.AreEqual(1, (await db.Libraries.SingleAsync(l => l.Id == library.LibraryId, Cancel)).BookCount);
+            Assert.AreEqual(3, await db.Books.CountAsync(Cancel));
+            Assert.AreEqual("b", (await db.Books.SingleAsync(b => b.MissingSince == null, Cancel)).SortTitle);
+            Assert.IsNotNull((await db.Archives.SingleAsync(Cancel)).MissingSince);
+            Assert.AreEqual(1, (await db.Libraries.SingleAsync(l => l.Id == library.LibraryId, Cancel)).BookCount, "missing books don't count");
         }
 
         Directory.Delete(library.Root, recursive: true);
@@ -247,7 +251,8 @@ public sealed class LibraryScannerTests
         await using (var db = await library.DbAsync(Cancel))
         {
             Assert.AreEqual(3, await db.Books.CountAsync(Cancel), "the book keeps its other copy");
-            Assert.AreEqual("copy of book.fb2", (await db.BookFiles.SingleAsync(f => f.Size == text.Length, Cancel)).Path);
+            Assert.AreEqual(0, await db.Books.CountAsync(b => b.MissingSince != null, Cancel), "one copy left: the book is not missing");
+            Assert.AreEqual("copy of book.fb2", (await db.BookFiles.SingleAsync(f => f.Size == text.Length && f.MissingSince == null, Cancel)).Path);
         }
     }
 
@@ -355,6 +360,8 @@ internal sealed class ScannedLibrary : IAsyncDisposable
     public Task<ScanResult> ScanAsync(CancellationToken cancellationToken, IMetadataReader? reader = null) =>
         new LibraryScanner(factory.Services.GetRequiredService<TenantDb>(), reader ?? new NoMetadataReader(), TimeProvider.System, NullLogger<LibraryScanner>.Instance)
             .ScanAsync(TenantId, LibraryId, null, cancellationToken);
+
+    public T Service<T>() where T : notnull => factory.Services.GetRequiredService<T>();
 
     public Task<LibrarionDbContext> DbAsync(CancellationToken cancellationToken) =>
         factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(TenantId, cancellationToken);

@@ -2,6 +2,15 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## Unreleased
+
+### Changed
+
+- A book whose files a scan no longer finds is kept as a missing book (hidden, with its metadata and tags) instead of
+  being deleted; it comes back when the file is put back or found moved. Missing books are removed only when an
+  administrator accepts it in the library's panel; they are offered for removal after a number of days set per
+  library (30 by default).
+
 ## 0.4.0
 
 ### Added

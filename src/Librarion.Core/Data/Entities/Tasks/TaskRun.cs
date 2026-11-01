@@ -2,10 +2,12 @@ namespace Librarion.Core.Data;
 
 public enum BackgroundTaskKind : byte
 {
-    /// <summary>A library's roots walked, new and changed books read, missing ones removed.</summary>
+    /// <summary>A library's roots walked, new and changed books read, files not found marked missing (never removed).</summary>
     LibraryScan,
-    /// <summary>A root taken out of a library: its files and the books left without one removed in batches.</summary>
+    /// <summary>A root taken out of a library (the user confirmed): its files and the books left without one removed in batches.</summary>
     RemoveRoot,
+    /// <summary>Missing books whose removal a user accepted, removed in batches.</summary>
+    RemoveMissing,
 }
 
 public enum TaskTrigger : byte

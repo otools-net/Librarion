@@ -189,14 +189,14 @@ describe('LibraryPanel', () => {
         api.libraryRoots.mockResolvedValue([{ id: 1, libraryId: 5, path: '/srv/books', created: '', exists: false }]);
         api.schedules.mockResolvedValue([]);
         api.libraryTasks.mockResolvedValueOnce([run({ outcome: 'succeeded', finished: '2026-11-01T10:01:00Z',
-            counts: { added: 3, changed: 0, removed: 1, unchanged: 9, archivesRead: 1, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: ['a.zip: broken'] } })]);
+            counts: { added: 3, changed: 0, removed: 0, unchanged: 9, archivesRead: 1, archivesSkipped: 0, unreadable: 0, missingRoots: [], problems: ['a.zip: broken'], missing: 1, returned: 2 } })]);
         api.addLibraryRoot.mockResolvedValue({ id: 2, libraryId: 5, path: '/srv/more', created: '', exists: true });
         api.scanLibrary.mockResolvedValue({ runId: 8, started: true });
         const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
 
         expect(element.textContent).toContain('/srv/books');
         expect(element.querySelector('.badge.danger')?.textContent).toContain('missing');
-        expect(element.textContent).toContain('3 added · 0 changed · 1 removed · 9 unchanged');
+        expect(element.textContent).toContain('3 added · 0 changed · 1 missing · 2 back · 0 removed · 9 unchanged');
         expect(element.querySelector('details')?.textContent).toContain('a.zip: broken');
 
         type(element, 'form.toolbar input', '/srv/more');
@@ -204,12 +204,52 @@ describe('LibraryPanel', () => {
         await stable();
         expect(api.addLibraryRoot).toHaveBeenCalledWith(5, '/srv/more');
 
-        api.libraryTasks.mockResolvedValue([run({ id: 8, progress: { filesSeen: 120, archivesDone: 1, added: 40, changed: 0, removed: 0, current: 'x.fb2' } })]);
+        api.libraryTasks.mockResolvedValue([run({ id: 8, progress: { filesSeen: 120, archivesDone: 1, added: 40, changed: 0, removed: 0, current: 'x.fb2', missing: 0, returned: 0 } })]);
         click(element, 'Scan now');
         await stable();
         expect(api.scanLibrary).toHaveBeenCalledWith(5);
         expect(element.querySelector('[role="status"]')?.textContent).toContain('120 files seen · 40 added');
         expect(element.textContent).toContain('Cancel');
+    });
+
+    it('lists missing books and removes them only when the user accepts', async () => {
+        const api = mockApi();
+        api.libraryRoots.mockResolvedValue([]);
+        api.schedules.mockResolvedValue([]);
+        api.libraryTasks.mockResolvedValue([]);
+        api.missingBooks.mockResolvedValue({
+            items: [
+                { id: 11, name: 'Old book', path: 'lib/a.zip/1.fb2', missingSince: '2026-09-01T10:00:00Z', ready: true },
+                { id: 12, name: 'Recent book', path: 'b.fb2', missingSince: '2026-10-30T10:00:00Z', ready: false },
+            ],
+            next: null, total: 2, ready: 1, keepDays: 30,
+        });
+        api.removeMissingBooks.mockResolvedValue({ runId: 9 });
+        const { element, stable } = await panel(api, ['tenant.libraries', 'library.scan']);
+        await stable();
+
+        const list = element.querySelector('[aria-label="Missing books"]')!;
+        expect(list.textContent).toContain('Old book');
+        expect(list.textContent).toContain('ready to remove');
+        expect(element.textContent).toContain('2 books whose files are gone');
+        expect(element.textContent).toContain('1 missing for more than 30 days');
+
+        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+        list.querySelector<HTMLButtonElement>('button.danger')!.click();
+        await stable();
+        expect(api.removeMissingBooks).not.toHaveBeenCalled();
+
+        confirm.mockReturnValue(true);
+        list.querySelector<HTMLButtonElement>('button.danger')!.click();
+        await stable();
+        expect(api.removeMissingBooks).toHaveBeenCalledWith(5, { bookIds: [11] });
+        click(element, 'Remove the 1 missing over 30 days');
+        await stable();
+        expect(api.removeMissingBooks).toHaveBeenCalledWith(5, { ready: true });
+        click(element, 'Remove all 2');
+        await stable();
+        expect(api.removeMissingBooks).toHaveBeenCalledWith(5, { all: true });
+        vi.restoreAllMocks();
     });
 
     it('shows only the folders without the scan right, and adds a weekly schedule', async () => {

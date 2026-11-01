@@ -173,7 +173,8 @@ public sealed class BookQueries(TenantDb tenantDb)
     /// <param name="limit">The page size: it decides how a content filter is joined (<see cref="NarrowAsync"/>).</param>
     public static async Task<IQueryable<Book>> VisibleAsync(LibrarionDbContext db, BookVisibility visibility, int? libraryId, CancellationToken cancellationToken, int limit = 1)
     {
-        var books = db.Books.Where(b => b.MergedIntoId == null);
+        // Missing books are kept, not shown (agents/docs/features/missing-books.md).
+        var books = db.Books.Where(b => b.MergedIntoId == null && b.MissingSince == null);
         var libraries = libraryId is { } one
             ? visibility.Libraries.Where(l => l.Key == one).ToList()
             : visibility.Libraries.ToList();

@@ -51,6 +51,13 @@ public sealed class Book
     /// <summary>Set when the book was merged into another: it then only redirects there.</summary>
     public int? MergedIntoId { get; set; }
 
+    /// <summary>
+    /// Set when none of its files is where the scans found them any more (agents/docs/features/missing-books.md): the
+    /// book is kept with its metadata and curation, hidden from lists, until a file comes back or a user accepts its
+    /// removal. Never removed on its own.
+    /// </summary>
+    public DateTime? MissingSince { get; set; }
+
     /// <summary>Blocking key for "same work" duplicates: a hash of the normalized title (else file stem) and first author.</summary>
     public long? WorkKey { get; set; }
 
@@ -113,6 +120,9 @@ public sealed class BookFile
 
     /// <summary>SHA-256 of the bytes, computed only when size and CRC collide with another file.</summary>
     public byte[]? ContentHash { get; set; }
+
+    /// <summary>Set when a scan didn't find the file where it was: kept to be found again (same place, or moved).</summary>
+    public DateTime? MissingSince { get; set; }
 }
 
 /// <summary>A ZIP container of books in a library, indexed in place (agents/docs/features/archives.md).</summary>
@@ -136,6 +146,9 @@ public sealed class Archive
 
     public int EntryCount { get; set; }
     public ArchiveScanState ScanState { get; set; }
+
+    /// <summary>Set when a scan didn't find the archive: its entries are missing too, kept until they come back or are removed.</summary>
+    public DateTime? MissingSince { get; set; }
 }
 
 public enum ArchiveScanState

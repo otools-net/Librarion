@@ -10,6 +10,9 @@ public sealed record RootInput(string? Path);
 
 public sealed record TaskStarted(long RunId, bool Started);
 
+/// <summary>Which missing books to remove: chosen ones, those past the retention, or all of them (one of the three).</summary>
+public sealed record MissingRemovalInput(IReadOnlyList<int>? BookIds = null, bool Ready = false, bool All = false);
+
 /// <summary>
 /// A library's roots (<see cref="Rights.ManageLibraries"/>; another tenant's: <see cref="Rights.ManageTenants"/>) and
 /// its scans, runs and schedules (<see cref="Rights.Scan"/> in that library). A library the caller can't act on is not
@@ -76,6 +79,42 @@ public static class TaskEndpoints
                     : Results.NotFound())
             .WithName("ListLibraryTasks")
             .WithSummary("The library's task runs, newest first, with the running one's progress; `before` = the last id of the page before.");
+
+        library.MapGet("/missing", async (int library, string? after, int? limit, HttpContext context, CurrentAccess current, MissingBooks missing) =>
+                await ScanTenant(current, library) is { } state
+                    ? Results.Ok(await missing.ListAsync(state.TenantId!.Value, library, after, limit ?? 50, context.RequestAborted))
+                    : Results.NotFound())
+            .WithName("ListMissingBooks")
+            .WithSummary("Books whose files the scans no longer find, oldest first, kept until a file comes back or their removal is accepted.")
+            .WithDescription("`ready` marks the ones missing longer than the library's `library.keepMissingDays` (offered for removal first); `total` and `ready` count the library's missing books.");
+
+        library.MapPost("/missing/remove", async (int library, MissingRemovalInput input, HttpContext context, CurrentAccess current, MissingBooks missing,
+                BackgroundTasks tasks, SecurityLog log, TimeProvider time) =>
+            {
+                if (await ScanTenant(current, library) is not { } state)
+                    return Results.NotFound();
+                var tenantId = state.TenantId!.Value;
+                MissingRemoval removal;
+                string what;
+                if (input.BookIds is { Count: > 0 } ids)
+                    (removal, what) = (new MissingRemoval(ids.Take(MissingBooks.BatchSize).ToList(), null), $"{Math.Min(ids.Count, MissingBooks.BatchSize)} chosen");
+                else if (input.Ready)
+                {
+                    var days = await missing.KeepDaysAsync(tenantId, library, context.RequestAborted);
+                    (removal, what) = (new MissingRemoval(null, time.GetUtcNow().UtcDateTime.AddDays(-days)), $"missing over {days} days");
+                }
+                else if (input.All)
+                    (removal, what) = (new MissingRemoval(null, null), "all");
+                else
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["removal"] = ["removal.nothing"] });
+
+                var (runId, _) = await tasks.StartRemoveMissingAsync(tenantId, library, removal, state.User?.Id, context.RequestAborted);
+                await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"missing books removed: {what}");
+                return Results.Accepted(value: new TaskStarted(runId, true));
+            })
+            .WithName("RemoveMissingBooks")
+            .WithSummary("Removes missing books whose removal the user accepted, in the background: `bookIds` (up to 1000), `ready` (missing longer than the retention) or `all`.")
+            .WithDescription("Books that came back in the meantime are not removed. Nothing is ever removed without this call: the retention only decides what is offered first.");
 
         library.MapGet("/schedules", async (int library, HttpContext context, CurrentAccess current, TaskSchedules schedules) =>
                 await ScanTenant(current, library) is { } state && await schedules.ListAsync(state.TenantId!.Value, library, context.RequestAborted) is { } list
