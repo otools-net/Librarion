@@ -138,3 +138,38 @@ public sealed class GroupTagFilter
     public Tag? Tag { get; set; }
     public bool Deny { get; set; }
 }
+
+/// <summary>Where an imported name came from: each source's names are mapped on their own.</summary>
+public enum ImportTagSourceKind : byte
+{
+    Fb2,
+    Epub,
+    Mobi,
+    Pdf,
+    ComicInfo,
+    Calibre,
+}
+
+/// <summary>
+/// A raw imported name of a source, within a field (null: a plain tag), normalized
+/// (<see cref="Tagging.TagNames.Normalize"/>), and the tag it becomes, or ignored
+/// (agents/docs/features/tags.md#imported-tags, metadata-tags.md#import). Kept across re-imports: curation is never
+/// undone by a scan.
+/// </summary>
+public sealed class ImportTagMapping
+{
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public ImportTagSourceKind Source { get; set; }
+
+    /// <summary>The field the raw value was given for (<c>author:King</c> never meets <c>category:King</c>); null for plain tags.</summary>
+    public int? FieldId { get; set; }
+
+    public string NormalizedName { get; set; } = string.Empty;
+
+    /// <summary>The tag it maps to; null when <see cref="Ignored"/>.</summary>
+    public int? TagId { get; set; }
+    public Tag? Tag { get; set; }
+
+    public bool Ignored { get; set; }
+}

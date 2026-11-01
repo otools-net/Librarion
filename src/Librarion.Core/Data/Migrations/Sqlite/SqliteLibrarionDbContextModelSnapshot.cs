@@ -43,6 +43,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<long>("PathKey")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("RootId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("ScanState")
                         .HasColumnType("INTEGER");
 
@@ -54,7 +57,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LibraryId", "PathKey");
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("RootId", "PathKey");
 
                     b.ToTable("Archives");
                 });
@@ -189,6 +194,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<long>("PathKey")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("RootId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
@@ -201,7 +209,7 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("ArchiveId", "PathKey");
 
-                    b.HasIndex("LibraryId", "PathKey");
+                    b.HasIndex("RootId", "PathKey");
 
                     b.HasIndex("TenantId", "Size", "Crc32");
 
@@ -323,6 +331,43 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("GroupTagFilters");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.ImportTagMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FieldId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Ignored")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "Source", "FieldId", "NormalizedName");
+
+                    b.ToTable("ImportTagMappings");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.Property<int>("Id")
@@ -348,6 +393,33 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId", "Name");
 
                     b.ToTable("Libraries");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.LibraryRoot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("LibraryRoots");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.SecurityEvent", b =>
@@ -592,6 +664,99 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("TagParents");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.TaskRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Counts")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("Finished")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Outcome")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ScheduleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Started")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Task")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Trigger")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Outcome");
+
+                    b.HasIndex("TenantId", "Started", "Id");
+
+                    b.ToTable("TaskRuns");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TaskSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastRun")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Task")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("TaskSchedules");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>
                 {
                     b.Property<int>("Id")
@@ -747,7 +912,15 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
+                        .WithMany()
+                        .HasForeignKey("RootId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Library");
+
+                    b.Navigation("Root");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Book", b =>
@@ -780,9 +953,16 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
+                        .WithMany()
+                        .HasForeignKey("RootId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("Archive");
 
                     b.Navigation("Book");
+
+                    b.Navigation("Root");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.BookIdentifier", b =>
@@ -883,6 +1063,27 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Tag");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.ImportTagMapping", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tenant", "Tenant")
@@ -892,6 +1093,17 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.LibraryRoot", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
@@ -972,6 +1184,26 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Child");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TaskRun", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TaskSchedule", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.TenantDisabledRight", b =>

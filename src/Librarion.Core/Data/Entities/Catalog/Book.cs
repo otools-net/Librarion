@@ -85,11 +85,15 @@ public sealed class BookFile
     public int BookId { get; set; }
     public Book? Book { get; set; }
 
+    /// <summary>The root a loose file was found under; null for an archive entry (its archive has the root).</summary>
+    public int? RootId { get; set; }
+    public LibraryRoot? Root { get; set; }
+
     /// <summary>The container archive; null for a loose file.</summary>
     public int? ArchiveId { get; set; }
     public Archive? Archive { get; set; }
 
-    /// <summary>Path relative to the library's root, or the entry's name inside <see cref="Archive"/>.</summary>
+    /// <summary>Path relative to <see cref="Root"/> (<c>/</c> separators), or the entry's name inside <see cref="Archive"/>.</summary>
     public string Path { get; set; } = string.Empty;
 
     /// <summary>A 64-bit hash of <see cref="Path"/>: paths are too long to index themselves.</summary>
@@ -118,7 +122,10 @@ public sealed class Archive
     public int TenantId { get; set; }
     public int LibraryId { get; set; }
     public Library? Library { get; set; }
+    public int RootId { get; set; }
+    public LibraryRoot? Root { get; set; }
 
+    /// <summary>Relative to <see cref="Root"/>, <c>/</c> separators.</summary>
     public string Path { get; set; } = string.Empty;
     public long PathKey { get; set; }
     public long Size { get; set; }
@@ -152,4 +159,23 @@ public sealed class BookIdentifier
     public string Scheme { get; set; } = string.Empty;
 
     public string Value { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A folder a library's books are found under (several per library). Book paths are relative to it, so a library moved
+/// to another disk only changes this row. A root missing at scan time is not a deletion: its books stay.
+/// </summary>
+public sealed class LibraryRoot
+{
+    public const int MaxPathLength = 1000;
+
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public int LibraryId { get; set; }
+    public Library? Library { get; set; }
+
+    /// <summary>Absolute and full (<see cref="System.IO.Path.GetFullPath(string)"/>), without a trailing separator.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    public DateTime Created { get; set; }
 }

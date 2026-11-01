@@ -50,6 +50,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<long>("PathKey")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("RootId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("ScanState")
                         .HasColumnType("integer");
 
@@ -61,7 +64,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LibraryId", "PathKey");
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("RootId", "PathKey");
 
                     b.ToTable("Archives");
                 });
@@ -200,6 +205,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<long>("PathKey")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("RootId")
+                        .HasColumnType("integer");
+
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
@@ -212,7 +220,7 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.HasIndex("ArchiveId", "PathKey");
 
-                    b.HasIndex("LibraryId", "PathKey");
+                    b.HasIndex("RootId", "PathKey");
 
                     b.HasIndex("TenantId", "Size", "Crc32");
 
@@ -334,6 +342,45 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("GroupTagFilters");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.ImportTagMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("FieldId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Ignored")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "Source", "FieldId", "NormalizedName");
+
+                    b.ToTable("ImportTagMappings");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.Property<int>("Id")
@@ -361,6 +408,35 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("TenantId", "Name");
 
                     b.ToTable("Libraries");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.LibraryRoot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("LibraryRoots");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.SecurityEvent", b =>
@@ -611,6 +687,103 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("TagParents");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.TaskRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Counts")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("Finished")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("Outcome")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("ScheduleId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Started")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<byte>("Task")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("Trigger")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Outcome");
+
+                    b.HasIndex("TenantId", "Started", "Id");
+
+                    b.ToTable("TaskRuns");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TaskSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Days")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTime?>("LastRun")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte>("Task")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("TaskSchedules");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>
                 {
                     b.Property<int>("Id")
@@ -772,7 +945,15 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
+                        .WithMany()
+                        .HasForeignKey("RootId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Library");
+
+                    b.Navigation("Root");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Book", b =>
@@ -805,9 +986,16 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
+                        .WithMany()
+                        .HasForeignKey("RootId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("Archive");
 
                     b.Navigation("Book");
+
+                    b.Navigation("Root");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.BookIdentifier", b =>
@@ -908,6 +1096,27 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Tag");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.ImportTagMapping", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tenant", "Tenant")
@@ -917,6 +1126,17 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.LibraryRoot", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
@@ -997,6 +1217,26 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Child");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TaskRun", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TaskSchedule", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.TenantDisabledRight", b =>

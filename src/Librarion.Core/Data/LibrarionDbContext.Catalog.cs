@@ -39,8 +39,10 @@ public abstract partial class LibrarionDbContext
             entity.Property(f => f.ContentHash).HasMaxLength(32);
             entity.HasOne(f => f.Book).WithMany(b => b.Files).HasForeignKey(f => f.BookId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(f => f.Archive).WithMany().HasForeignKey(f => f.ArchiveId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(f => f.Root).WithMany().HasForeignKey(f => f.RootId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(f => f.BookId);
-            entity.HasIndex(f => new { f.LibraryId, f.PathKey });
+            // A scan looks its files up by path and sweeps the ones it didn't see by id, per root or per archive.
+            entity.HasIndex(f => new { f.RootId, f.PathKey });
             entity.HasIndex(f => new { f.ArchiveId, f.PathKey });
             // "Same file" duplicates: candidates by size and CRC first (agents/docs/features/merging.md).
             entity.HasIndex(f => new { f.TenantId, f.Size, f.Crc32 });
@@ -51,8 +53,34 @@ public abstract partial class LibrarionDbContext
         {
             entity.Property(a => a.Path).HasMaxLength(BookFile.MaxPathLength);
             entity.HasOne(a => a.Library).WithMany().HasForeignKey(a => a.LibraryId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(a => new { a.LibraryId, a.PathKey });
+            entity.HasOne(a => a.Root).WithMany().HasForeignKey(a => a.RootId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(a => new { a.RootId, a.PathKey });
             Filter(entity, a => a.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<LibraryRoot>(entity =>
+        {
+            entity.Property(r => r.Path).HasMaxLength(LibraryRoot.MaxPathLength);
+            entity.HasOne(r => r.Library).WithMany().HasForeignKey(r => r.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(r => r.LibraryId);
+            Filter(entity, r => r.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<TaskRun>(entity =>
+        {
+            entity.Property(r => r.Summary).HasMaxLength(TaskRun.MaxSummaryLength);
+            entity.Property(r => r.Counts).HasMaxLength(TaskRun.MaxSummaryLength);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(r => r.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(r => new { r.TenantId, r.Started, r.Id });
+            entity.HasIndex(r => r.Outcome);
+            Filter(entity, r => r.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<TaskSchedule>(entity =>
+        {
+            entity.HasOne(s => s.Library).WithMany().HasForeignKey(s => s.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(s => s.LibraryId);
+            Filter(entity, s => s.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<BookIdentifier>(entity =>
@@ -133,6 +161,17 @@ public abstract partial class LibrarionDbContext
             entity.HasOne<Tag>().WithMany().HasForeignKey(c => c.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(c => c.TagId);
             Filter(entity, c => c.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<ImportTagMapping>(entity =>
+        {
+            entity.Property(m => m.NormalizedName).HasMaxLength(Tag.MaxNameLength);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(m => m.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(m => m.Tag).WithMany().HasForeignKey(m => m.TagId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Tag>().WithMany().HasForeignKey(m => m.FieldId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(m => new { m.TenantId, m.Source, m.FieldId, m.NormalizedName });
+            entity.HasIndex(m => m.TagId);
+            Filter(entity, m => m.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<GroupTagFilter>(entity =>

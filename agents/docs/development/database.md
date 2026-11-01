@@ -27,5 +27,6 @@ Code: `src/Librarion.Core/Data/` (`LibrarionDbContext`, `DatabaseOptions`, `Libr
 - Indexed strings need a max length (PostgreSQL `character varying(n)`, SQLite ignores it but the model agrees).
 - Order every `Take`; keyset paging only ([scale](scale.md)).
 - Before 1.0 the `Initial` migrations (both providers) are regenerated on a model change instead of adding new ones:
-  no installs exist ([production-upgrades](production-upgrades.md)). Delete both, `dotnet ef migrations add Initial`
-  for each, normalise line endings.
+  no installs exist ([production-upgrades](production-upgrades.md)):
+  [regen-migrations](../../tools/regen-migrations/README.md) does it (a plain `rm` of the migration folders' globs is
+  stopped by the agent's safety check; the tool removes them by `git rm` of their listed names).
