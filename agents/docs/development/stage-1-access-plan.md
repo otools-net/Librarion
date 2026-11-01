@@ -68,10 +68,15 @@ holding several libraries**. Version stays `0.0.0` on `edge`; the merge into `ma
       account and every admin section ([testing-e2e](testing-e2e.md)).
 - [x] Looked at every page at 360 px and 1280 px (`agents/tools/screenshots`): fixed the two "Libraries" headings of
       the group editor, the stretched "Changes things" badges, and the sign-out button touching the panel below.
-- [ ] Feature notes: update `features/rights.md` (no longer planned: catalog, scopes, evaluation as built), new
-      `features/accounts.md`, `features/tenants.md`, `features/setup.md`, `features/settings.md`,
-      `features/security-log.md` (code comments already point at these names), and the AGENTS.md index lines.
-- [ ] `docs/`: first start (setup code), accounts, groups and rights, settings levels; README first-run lines.
+- [x] Feature notes: `features/rights.md` (as built, planned parts kept), `accounts.md`, `tenants.md`, `setup.md`,
+      `settings.md`, `security-log.md`; AGENTS.md index lines.
+- [x] `docs/`: `first-start.md`, `user-guide/account.md`, `administration/` (one page per section),
+      `reference/rights.md`, `reference/settings-levels.md`, configuration keys (setup, security, rights); README
+      first-run lines.
+- [ ] Screenshots in `docs/images/` (user-docs rule): no `agents/tools/docs-screenshots` yet; the
+      `agents/tools/screenshots` tool takes them, but images in the repo would change with every UI tweak before 1.0.
+      Ask the user whether to add them now or before 1.0.
+- [ ] Tenants page: switching rights off per tenant (`disabledRights`) is API-only so far.
 - [ ] PostgreSQL run: never run locally (Docker can't pull images on this machine); push `edge` when the user says.
 - [ ] When all is green: tick the exit criteria, commit "stage 1 done", ask the user about merging into `main` (0.2.0).
 

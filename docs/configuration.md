@@ -30,3 +30,36 @@ The database and its tables are created at the first start.
 
 `Urls` sets where the server listens (default `http://localhost:5090`, this computer only). To reach it from other
 devices: `"Urls": "http://0.0.0.0:5090"`.
+
+## Setup
+
+| Setting | Values |
+|---|---|
+| `Librarion:Setup:Code` | the code the setup page asks for, at least 12 characters; without one the server makes one ([first start](first-start.md)) |
+| `Librarion:Setup:CodeFile` | where a generated code is kept (default `data/setup-code.txt`); recovery codes go beside it |
+| `Librarion:Setup:Recover` | `true` opens the setup page again to reset or add a server administrator; turn it off afterwards |
+
+## Security
+
+| Setting | Default | |
+|---|---|---|
+| `Librarion:Security:MinimumPasswordLength` | 8 | shortest password accepted |
+| `Librarion:Security:MaxFailedSignIns` | 5 | wrong passwords for one name from one address before that address waits |
+| `Librarion:Security:LockoutMinutes` | 15 | how long it waits |
+| `Librarion:Security:AccountLockoutFailures` | 20 | wrong passwords in a row, from anywhere, before the account itself is locked (0: never) |
+| `Librarion:Security:SignInsPerMinute` | 20 | sign-in attempts per address and minute |
+| `Librarion:Security:SessionDays` | 30 | how long "keep me signed in" lasts without use |
+| `Librarion:Security:KeysDirectory` | `data/keys` | the keys signing sessions; keep them, or everyone is signed out |
+| `Librarion:Security:RequireHttps` | `false` | marks the session cookie secure (the server is only reached over https) |
+| `Librarion:Security:TrustedProxies` | none | reverse proxies whose forwarded addresses are believed, besides this computer |
+| `Librarion:Security:EventDays` | 365 | days the [security log](administration/security-log.md) keeps its events |
+
+## Rights
+
+`Librarion:Rights:Disabled` switches rights off for everyone, server administrators too: a list of right ids
+(`library.settings`), prefixes (`tenant.*`), or `kind:write` for a read-only server. The rights:
+[reference](reference/rights.md).
+
+```json
+{ "Librarion": { "Rights": { "Disabled": [ "kind:write" ] } } }
+```

@@ -119,7 +119,12 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [rights](agents/docs/features/rights.md) | rights catalog, scopes, evaluation (planned, ported from SFE) | `Core/Access/` |
+| [rights](agents/docs/features/rights.md) | rights catalog, scopes, built-in groups, evaluation and its cache, route rule; planned rights and content filters | `Core/Access/`, `Api/Security/` |
+| [accounts](agents/docs/features/accounts.md) | accounts and groups, passwords, sign-in throttle and lockout, session cookie and stamp, recovery codes | `Core/Access/`, `Api/Security/`, `app/account/`, `app/admin/` |
+| [tenants](agents/docs/features/tenants.md) | tenants and libraries, isolation by query filters (`TenantDb`), server administrators across tenants | `Core/Data/`, `Core/Access/`, `app/admin/` |
+| [setup](agents/docs/features/setup.md) | first start: setup code (configured or generated), 503 until set up, recovery mode | `Core/Access/`, `Api/Security/`, `app/account/` |
+| [settings](agents/docs/features/settings.md) | settings by level (server, tenant, library, user), locks, catalog of keys | `Core/Settings/`, `app/settings/` |
+| [security-log](agents/docs/features/security-log.md) | security events: what is logged (never secrets), retention, who reads | `Core/Access/SecurityLog.cs`, `app/admin/` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
 | [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
