@@ -8,6 +8,8 @@ public enum BackgroundTaskKind : byte
     RemoveRoot,
     /// <summary>Missing books whose removal a user accepted, removed in batches.</summary>
     RemoveMissing,
+    /// <summary>A manual import from another source (Calibre, INPX): its records written into the catalog.</summary>
+    Import,
 }
 
 public enum TaskTrigger : byte

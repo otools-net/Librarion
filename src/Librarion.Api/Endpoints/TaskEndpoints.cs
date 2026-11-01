@@ -2,6 +2,7 @@ using Librarion.Api.Security;
 using Librarion.Core.Access;
 using Librarion.Core.Data;
 using Librarion.Core.Import;
+using Librarion.Core.Imports;
 using Librarion.Core.Tasks;
 
 namespace Librarion.Api.Endpoints;
@@ -9,6 +10,10 @@ namespace Librarion.Api.Endpoints;
 public sealed record RootInput(string? Path);
 
 public sealed record TaskStarted(long RunId, bool Started);
+
+/// <summary>An import from another source: its kind, the source's path on the server, and the folder of its books' files
+/// (default: the source's folder).</summary>
+public sealed record ImportInput(string? Kind, string? Source, string? Files = null);
 
 /// <summary>Which missing books to remove: chosen ones, those past the retention, or all of them (one of the three).</summary>
 public sealed record MissingRemovalInput(IReadOnlyList<int>? BookIds = null, bool Ready = false, bool All = false);
@@ -116,6 +121,52 @@ public static class TaskEndpoints
             .WithSummary("Removes missing books whose removal the user accepted, in the background: `bookIds` (up to 1000), `ready` (missing longer than the retention) or `all`.")
             .WithDescription("Books that came back in the meantime are not removed. Nothing is ever removed without this call: the retention only decides what is offered first.");
 
+        var import = api.MapGroup("/libraries/{library:int}/import").WithTags("Tasks").RequireRight(Rights.Import);
+
+        import.MapGet("/kinds", async (int library, CurrentAccess current, ImportFormats formats) =>
+                await RightTenant(current, library, Rights.Import) is not null ? Results.Ok(formats.Keys.Order().ToList()) : Results.NotFound())
+            .WithName("ListImportKinds")
+            .WithSummary("The kinds of source a library can import from (`calibre`, `inpx`).");
+
+        import.MapPost("/", async (int library, ImportInput input, HttpContext context, CurrentAccess current, ImportFormats formats, LibraryRoots roots,
+                BackgroundTasks tasks, SecurityLog log, ILogger<ImportInput> logger) =>
+            {
+                if (await RightTenant(current, library, Rights.Import) is not { } state)
+                    return Results.NotFound();
+                var tenantId = state.TenantId!.Value;
+                var anywhere = state.Access.IsServerAdmin;
+                if (formats.Find(input.Kind) is not { } format)
+                    return Invalid("kind", "kind.unknown");
+                if (string.IsNullOrWhiteSpace(input.Source) || !Path.IsPathFullyQualified(input.Source.Trim()))
+                    return Invalid("source", "source.notAbsolute");
+                var source = LibraryRoots.Normalize(input.Source.Trim());
+                if (!roots.MayUse(source, anywhere))
+                    return Invalid("source", "source.notAllowed");
+                if (!File.Exists(source))
+                    return Invalid("source", "source.missing");
+                if (format.Check(source) is { } why)
+                {
+                    logger.LogInformation("Import source {Source} refused: {Why}", source, why);
+                    return Invalid("source", "source.invalid");
+                }
+
+                var files = string.IsNullOrWhiteSpace(input.Files) ? Path.GetDirectoryName(source) : input.Files;
+                var (problem, root, added) = await roots.RootForAsync(tenantId, library, files, anywhere, context.RequestAborted);
+                if (problem == RootProblem.LibraryMissing)
+                    return Results.NotFound();
+                if (problem != RootProblem.None)
+                    return Invalid("files", Code(problem).Replace("path.", "files."));
+                if (added)
+                    await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"root added: {root!.Path}");
+                var (runId, _) = await tasks.StartImportAsync(tenantId, library, root!.Id, () => format.Open(source), state.User?.Id, context.RequestAborted);
+                await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"import from {format.Key}: {source}");
+                return Results.Accepted(value: new TaskStarted(runId, true));
+            })
+            .WithName("ImportIntoLibrary")
+            .WithSummary("Imports a library of another program (`kind`: `calibre` with its `metadata.db`, `inpx` with its `.inpx` file) into the library, in the background.")
+            .WithDescription("What the source says is stored in Librarion's database; the source is read once and never written. `files` is the folder of its books' files "
+                + "(default: the source's folder), added to the library as a folder when it lies in none. Running it again brings in what changed; it never removes a book.");
+
         library.MapGet("/schedules", async (int library, HttpContext context, CurrentAccess current, TaskSchedules schedules) =>
                 await ScanTenant(current, library) is { } state && await schedules.ListAsync(state.TenantId!.Value, library, context.RequestAborted) is { } list
                     ? Results.Ok(list)
@@ -174,11 +225,16 @@ public static class TaskEndpoints
     }
 
     /// <summary>The caller's state when it may scan in <paramref name="library"/> of its own tenant.</summary>
-    private static async Task<AccessState?> ScanTenant(CurrentAccess current, int library)
+    private static Task<AccessState?> ScanTenant(CurrentAccess current, int library) => RightTenant(current, library, Rights.Scan);
+
+    /// <summary>The caller's state when it has <paramref name="right"/> in <paramref name="library"/> of its own tenant.</summary>
+    private static async Task<AccessState?> RightTenant(CurrentAccess current, int library, string right)
     {
         var state = await current.GetAsync();
-        return state.TenantId is not null && state.Access.HasIn(Rights.Scan, library) ? state : null;
+        return state.TenantId is not null && state.Access.HasIn(right, library) ? state : null;
     }
+
+    private static IResult Invalid(string field, string code) => TypedResults.ValidationProblem(new Dictionary<string, string[]> { [field] = [code] });
 
     private static async Task<TaskRunInfo?> RunOf(long run, HttpContext context, CurrentAccess current, BackgroundTasks tasks)
     {

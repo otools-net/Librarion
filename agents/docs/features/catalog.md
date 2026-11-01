@@ -14,7 +14,9 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
 - `BookFiles`: a book's copies and formats; `ArchiveId` null = loose file, `Path` relative to the root or the entry
   name, `PathKey` (64-bit hash, indexed instead of the string), size, CRC, ZIP locator and method
   ([archives](archives.md)). `Archives`: one row per ZIP container (filled in stage 3).
-- `BookIdentifiers` (scheme `isbn`, `uuid`, `fb2-id`, `calibre`; index tenant, scheme, value).
+- `BookIdentifiers` (scheme `isbn`, `uuid`, `fb2-id`, `calibre-uuid`, `inpx`…; index tenant, scheme, value).
+- `BookProperties` (book, name → value): imported values that are neither tags nor columns (Calibre custom columns);
+  `Books.MetadataSource` (`Heads`, `Calibre`, `Inpx`) and `ImportHash` ([imports](imports.md)).
 - `Tags` (plain tags, fields and field values in one table, D18), `TagAliases`, `TagParents`, `TagClosure` (ancestor,
   descendant, depth), `BookTags` (key BookId, TagId, Source; `Ordinal`, `Number`), `TagCounts` (library, tag, books),
   `Libraries.BookCount`; `GroupTagFilters` (group, tag, allow / deny): content filters

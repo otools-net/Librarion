@@ -23,6 +23,7 @@ public sealed record ScannedFile(BookFile File, BookMetadata? Metadata, Func<Str
 public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver resolver, TimeProvider time)
 {
     private const int MaxIdentifiers = 20;
+    private const int MaxProperties = 50;
     private readonly Dictionary<int, int> tagDeltas = [];
     private int bookDelta;
 
@@ -166,21 +167,50 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         }
     }
 
-    /// <summary>Books whose file changed, read again: title, description, identifiers and imported links replaced.</summary>
+    /// <summary>
+    /// Books whose file changed, read again: title, description, identifiers and imported links replaced. A book whose
+    /// metadata came from an import keeps it (agents/docs/features/imports.md): only its file changed.
+    /// </summary>
     public async Task RefreshAsync(LibrarionDbContext db, IReadOnlyList<(int BookId, string Path, BookMetadata? Metadata)> changed, CancellationToken cancellationToken)
     {
         if (changed.Count == 0)
             return;
+        var all = changed.Select(c => c.BookId).Distinct().ToList();
+        var books = await db.Books.Where(b => all.Contains(b.Id)).ToDictionaryAsync(b => b.Id, cancellationToken);
+        var now = time.GetUtcNow().UtcDateTime;
+        foreach (var book in books.Values.Where(b => b.MetadataSource != MetadataSource.Heads))
+            book.Updated = now;
+        var heads = changed.Where(c => books.TryGetValue(c.BookId, out var b) && b.MetadataSource == MetadataSource.Heads)
+            .Select(c => (c.BookId, c.Path, c.Metadata, (Action<Book>?)null)).ToList();
+        await ReplaceAsync(db, heads, books, cancellationToken);
+        Refreshed += changed.Count;
+    }
+
+    /// <summary>
+    /// Of each book of <paramref name="changed"/> (tracked in <paramref name="books"/>): the columns, identifiers and
+    /// <see cref="TagSource.Imported"/> links replaced from the metadata (manual and rule links stay), counts moved by
+    /// the differences, everything saved.
+    /// </summary>
+    private async Task ReplaceAsync(LibrarionDbContext db, IReadOnlyList<(int BookId, string Path, BookMetadata? Metadata, Action<Book>? Then)> changed,
+        Dictionary<int, Book> books, CancellationToken cancellationToken)
+    {
+        if (changed.Count == 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            db.ChangeTracker.Clear();
+            return;
+        }
+
         await resolver.ResolveAsync(db, changed.SelectMany(c => Names(c.Metadata)), cancellationToken);
         var ids = changed.Select(c => c.BookId).ToList();
         await db.BookIdentifiers.Where(i => ids.Contains(i.BookId)).ExecuteDeleteAsync(cancellationToken);
-        var books = await db.Books.Where(b => ids.Contains(b.Id)).ToDictionaryAsync(b => b.Id, cancellationToken);
+        await db.BookProperties.Where(p => ids.Contains(p.BookId)).ExecuteDeleteAsync(cancellationToken);
         var links = (await db.BookTags.Where(l => ids.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId, l.Source }).ToListAsync(cancellationToken))
             .GroupBy(l => l.BookId).ToDictionary(g => g.Key, g => g.ToList());
         await db.BookTags.Where(l => ids.Contains(l.BookId) && l.Source == TagSource.Imported).ExecuteDeleteAsync(cancellationToken);
 
         var now = time.GetUtcNow().UtcDateTime;
-        foreach (var (bookId, path, metadata) in changed)
+        foreach (var (bookId, path, metadata, then) in changed)
         {
             if (!books.TryGetValue(bookId, out var book))
                 continue;
@@ -195,11 +225,80 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             foreach (var tag in after.Except(before))
                 Move(tag, +1);
             book.Updated = now;
+            then?.Invoke(book);
         }
 
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
-        Refreshed += changed.Count;
+    }
+
+    /// <summary>A record of an import, for <see cref="ImportAsync"/>.</summary>
+    /// <param name="BookId">The book the record matched (by a file of it, or by its source id); null for a new book.</param>
+    /// <param name="Files">Files of the record not in the catalog yet: added to the book (a new book has at least one).</param>
+    /// <param name="Path">A path of the book's files: its title when the record has none.</param>
+    /// <param name="Cover">The source has the book's cover (<see cref="CoverSource.Calibre"/>).</param>
+    public sealed record ImportedBook(int? BookId, IReadOnlyList<BookFile> Files, string Path, BookMetadata Metadata, MetadataSource Owner, long Hash, bool Cover = false);
+
+    /// <summary>
+    /// Records of an import (agents/docs/features/imports.md): a matched book takes the record's metadata (its imported
+    /// links replaced, manual ones kept) and its new files, and comes back if it was missing; a record without a book
+    /// becomes one with all its files. The book is owned by the source afterwards (<see cref="Book.MetadataSource"/>).
+    /// No copy detection: the source says which files are one book.
+    /// </summary>
+    public async Task ImportAsync(LibrarionDbContext db, IReadOnlyList<ImportedBook> records, CancellationToken cancellationToken)
+    {
+        if (records.Count == 0)
+            return;
+        var now = time.GetUtcNow().UtcDateTime;
+        var fresh = records.Where(r => r.BookId is null && r.Files.Count > 0).ToList();
+        if (fresh.Count > 0)
+        {
+            await resolver.ResolveAsync(db, fresh.SelectMany(r => Names(r.Metadata)), cancellationToken);
+            foreach (var record in fresh)
+            {
+                var book = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now, MetadataSource = record.Owner, ImportHash = record.Hash };
+                foreach (var file in record.Files)
+                {
+                    file.TenantId = tenantId;
+                    file.LibraryId = libraryId;
+                    book.Files.Add(file);
+                }
+
+                Apply(book, record.Path, record.Metadata, new HashSet<int>(), out var links);
+                foreach (var link in links)
+                {
+                    book.Tags.Add(link);
+                    Move(link.TagId, +1);
+                }
+
+                SourceCover(book, record);
+                db.Books.Add(book);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            db.ChangeTracker.Clear();
+            Added += fresh.Count;
+            bookDelta += fresh.Count;
+        }
+
+        var matched = records.Where(r => r.BookId is not null).GroupBy(r => r.BookId!.Value).Select(g => g.First()).ToList();
+        if (matched.Count == 0)
+            return;
+        var ids = matched.Select(r => r.BookId!.Value).ToList();
+        var books = await db.Books.Where(b => ids.Contains(b.Id)).ToDictionaryAsync(b => b.Id, cancellationToken);
+        foreach (var record in matched)
+            foreach (var file in record.Files)
+            {
+                file.TenantId = tenantId;
+                file.LibraryId = libraryId;
+                file.BookId = record.BookId!.Value;
+                db.BookFiles.Add(file);
+            }
+
+        await ReplaceAsync(db, matched.Select<ImportedBook, (int, string, BookMetadata?, Action<Book>?)>(r => (r.BookId!.Value, r.Path, r.Metadata,
+            book => { book.MetadataSource = r.Owner; book.ImportHash = r.Hash; SourceCover(book, r); })).ToList(), books, cancellationToken);
+        Refreshed += matched.Count;
+        await ReturnAsync(db, ids, cancellationToken);
     }
 
     /// <summary>Of <paramref name="bookIds"/>, the books that have no file any more are removed with their links.</summary>
@@ -321,7 +420,9 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     {
         var title = metadata?.Title?.Trim() is { Length: > 0 } t ? Cut(t, Book.MaxTitleLength) : null;
         book.Title = title;
-        book.SortTitle = BookTitles.SortKey(title ?? FileTitles.FromPath(path));
+        book.SortTitle = BookTitles.SortKey(metadata?.SortTitle?.Trim() is { Length: > 0 } sortTitle ? sortTitle : title ?? FileTitles.FromPath(path));
+        if (metadata?.Source is ImportTagSourceKind.Calibre or ImportTagSourceKind.Inpx)
+            book.Rating = metadata.Rating is { } rating ? Math.Min(rating, (byte)10) : null;
         book.Description = metadata?.Description?.Trim() is { Length: > 0 } d ? d : null;
         links = [];
         string? firstAuthor = null;
@@ -355,6 +456,10 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             foreach (var (scheme, value) in metadata.Ids.DistinctBy(i => (i.Scheme, i.Value)).Take(MaxIdentifiers))
                 if (value.Trim() is { Length: > 0 and <= BookIdentifier.MaxValueLength } trimmed)
                     book.Identifiers.Add(new BookIdentifier { TenantId = tenantId, Scheme = scheme, Value = trimmed });
+
+            foreach (var (name, value) in (metadata.Properties ?? []).DistinctBy(p => p.Name.Trim()).Take(MaxProperties))
+                if (name.Trim() is { Length: > 0 and <= BookProperty.MaxNameLength } key && value.Trim() is { Length: > 0 } text)
+                    book.Properties.Add(new BookProperty { TenantId = tenantId, Name = key, Value = Cut(text, BookProperty.MaxValueLength) });
         }
 
         book.WorkKey = PathKeys.Of(TagNames.Normalize(title ?? FileTitles.FromPath(path)), firstAuthor is null ? "" : TagNames.Normalize(firstAuthor));
@@ -368,6 +473,17 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             book.CoverSource = CoverExtractor.HasCovers(BookFormats.Of(path) ?? "") ? CoverSource.Book : CoverSource.Generated;
             book.CoverState = CoverState.Unknown;
         }
+    }
+
+    /// <summary>The source's cover when it has one; else the book's own (or generated) again, looked for anew.</summary>
+    private static void SourceCover(Book book, ImportedBook record)
+    {
+        if (record.Cover)
+            book.CoverSource = CoverSource.Calibre;
+        else if (book.CoverSource == CoverSource.Calibre)
+            book.CoverSource = CoverExtractor.HasCovers(BookFormats.Of(record.Path) ?? "") ? CoverSource.Book : CoverSource.Generated;
+        if (record.Cover || book.CoverSource is CoverSource.Book or CoverSource.Generated)
+            book.CoverState = CoverState.Unknown;
     }
 
     private static string Cut(string text, int length) => text.Length > length ? text[..length] : text;

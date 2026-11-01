@@ -12,6 +12,7 @@ public static class Rights
     public const string Download = "library.download";
     public const string Scan = "library.scan";
     public const string LibrarySettings = "library.settings";
+    public const string Import = "library.import";
     public const string ManageUsers = "tenant.users";
     public const string ManageLibraries = "tenant.libraries";
     public const string TenantSettings = "tenant.settings";
@@ -63,6 +64,7 @@ public static class RightCatalog
         new(Rights.Download, RightScope.Library, R, Members, "library"),
         new(Rights.Scan, RightScope.Library, W, Administrators, "library"),
         new(Rights.LibrarySettings, RightScope.Library, W, Administrators, "library"),
+        new(Rights.Import, RightScope.Library, W, Administrators, "library"),
         new(Rights.ManageUsers, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.ManageLibraries, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.TenantSettings, RightScope.Tenant, W, Administrators, "tenant"),

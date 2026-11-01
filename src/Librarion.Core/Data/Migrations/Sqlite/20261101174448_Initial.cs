@@ -275,6 +275,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     CoverState = table.Column<int>(type: "INTEGER", nullable: false),
                     MergedIntoId = table.Column<int>(type: "INTEGER", nullable: true),
                     MissingSince = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    MetadataSource = table.Column<byte>(type: "INTEGER", nullable: false),
+                    ImportHash = table.Column<long>(type: "INTEGER", nullable: true),
                     WorkKey = table.Column<long>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
@@ -566,6 +568,26 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     table.PrimaryKey("PK_BookIdentifiers", x => new { x.BookId, x.Scheme, x.Value });
                     table.ForeignKey(
                         name: "FK_BookIdentifiers_Books_BookId",
+                        column: x => x.BookId,
+                        principalTable: "Books",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BookProperties",
+                columns: table => new
+                {
+                    BookId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Value = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BookProperties", x => new { x.BookId, x.Name });
+                    table.ForeignKey(
+                        name: "FK_BookProperties_Books_BookId",
                         column: x => x.BookId,
                         principalTable: "Books",
                         principalColumn: "Id",
@@ -931,6 +953,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
             migrationBuilder.DropTable(
                 name: "BookIdentifiers");
+
+            migrationBuilder.DropTable(
+                name: "BookProperties");
 
             migrationBuilder.DropTable(
                 name: "BookTags");

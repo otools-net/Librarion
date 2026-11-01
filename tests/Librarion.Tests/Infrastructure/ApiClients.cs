@@ -22,7 +22,9 @@ public static class ApiClients
     };
 
     /// <summary>A server on <paramref name="catalog"/>, with changes to its configuration.</summary>
-    public static WebApplicationFactory<Program> CreateFactory(TestCatalog catalog, Action<IDictionary<string, string?>>? configure = null)
+    /// <param name="services">Services added to the server's (a test's own import source).</param>
+    public static WebApplicationFactory<Program> CreateFactory(TestCatalog catalog, Action<IDictionary<string, string?>>? configure = null,
+        Action<IServiceCollection>? services = null)
     {
         var settings = catalog.Settings();
         configure?.Invoke(settings);
@@ -31,6 +33,8 @@ public static class ApiClients
             builder.UseEnvironment("Testing");
             foreach (var (key, value) in settings)
                 builder.UseSetting(key, value);
+            if (services is not null)
+                builder.ConfigureServices(services);
         });
     }
 

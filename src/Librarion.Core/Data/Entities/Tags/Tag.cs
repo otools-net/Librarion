@@ -148,6 +148,7 @@ public enum ImportTagSourceKind : byte
     Pdf,
     ComicInfo,
     Calibre,
+    Inpx,
 }
 
 /// <summary>

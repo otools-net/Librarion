@@ -342,10 +342,10 @@ internal sealed class ScannedLibrary : IAsyncDisposable
     public int TenantId { get; }
     public int LibraryId { get; }
 
-    public static async Task<ScannedLibrary> CreateAsync(CancellationToken cancellationToken)
+    public static async Task<ScannedLibrary> CreateAsync(CancellationToken cancellationToken, Action<IServiceCollection>? services = null)
     {
         var catalog = new TestCatalog();
-        var factory = ApiClients.CreateFactory(catalog);
+        var factory = ApiClients.CreateFactory(catalog, services: services);
         using (ApiClients.Create(factory)) { }
         var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("Shelf"), cancellationToken)).Value!;
         var root = Path.Combine(catalog.BasePath, "books");

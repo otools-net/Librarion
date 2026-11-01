@@ -72,17 +72,18 @@ accepted as proposed.
 
 ### 4.1 Import pipeline
 
-- [ ] `Core/Imports/`: `IImportSource`, `CatalogImporter` (matching, `MetadataSource`, batches of 1000, counts by
-      differences), task kind `import` in `BackgroundTasks`, right `library.import`, routes, the migration.
-- [ ] The scanner leaves imported metadata alone (`MetadataSource != Heads`); tests for scan-after-import and
+- [x] `Core/Imports/`: `IImportSource`, `CatalogImporter` (matching, `MetadataSource`, batches of 1000, counts by
+      differences), task kind `import` in `BackgroundTasks`, right `library.import`, routes, the migration
+      ([imports](../features/imports.md)).
+- [x] The scanner leaves imported metadata alone (`MetadataSource != Heads`); tests for scan-after-import and
       import-after-scan.
 
 ### 4.2 Calibre
 
-- [ ] `CalibreSource`: schema check, books in id order with their links (one query per link table per batch), custom
-      columns of every type; samples made by the test from SQL for several Calibre versions, a WAL database, a locked
-      one.
-- [ ] `CoverSource.Calibre` from `cover.jpg`.
+- [x] `CalibreSource`: schema check, books in id order with their links (one query per link table per batch), custom
+      columns of every type; samples made by the test from SQL (a recent and an old Calibre, a WAL database with an
+      open write). Left for later: dotted tags as parent chains, custom fields named by Calibre's display name.
+- [x] `CoverSource.Calibre` from `cover.jpg`.
 
 ### 4.3 INPX
 

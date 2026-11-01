@@ -32,9 +32,11 @@ public sealed record BookTagItem(int Id, string? Field, string Name, double? Num
 public sealed record BookFileItem(int Id, string Format, long Size, string Name, bool InArchive);
 
 /// <param name="MergedIntoId">Set when the book was merged into another: the client goes there.</param>
+/// <param name="Properties">Imported values that are neither tags nor columns (Calibre custom columns), by name.</param>
 public sealed record BookDetail(
     int Id, int LibraryId, string? Title, string? FileName, string? Description, byte? Rating, DateTime Added, CoverSource CoverSource,
-    IReadOnlyList<BookTagItem> Tags, IReadOnlyList<BookFileItem> Files, IReadOnlyList<KeyValuePair<string, string>> Identifiers, int? MergedIntoId);
+    IReadOnlyList<BookTagItem> Tags, IReadOnlyList<BookFileItem> Files, IReadOnlyList<KeyValuePair<string, string>> Identifiers, int? MergedIntoId,
+    IReadOnlyList<KeyValuePair<string, string>>? Properties = null);
 
 /// <summary>
 /// Book lists by key (agents/docs/development/scale.md): the account's visible books (<see cref="BookVisibility"/>) as
@@ -164,9 +166,11 @@ public sealed class BookQueries(TenantDb tenantDb)
             .Select(f => new BookFileItem(f.Id, f.Format, f.Size, f.Path[(f.Path.LastIndexOfAny(['/', '\\']) + 1)..], f.ArchiveId != null)).ToList();
         var identifiers = await db.BookIdentifiers.Where(i => i.BookId == id).OrderBy(i => i.Scheme).ThenBy(i => i.Value)
             .Select(i => new KeyValuePair<string, string>(i.Scheme, i.Value)).ToListAsync(cancellationToken);
+        var properties = await db.BookProperties.Where(p => p.BookId == id).OrderBy(p => p.Name)
+            .Select(p => new KeyValuePair<string, string>(p.Name, p.Value)).ToListAsync(cancellationToken);
         return new BookDetail(
             book.Id, book.LibraryId, book.Title, book.Title is null && files.Count > 0 ? FileTitles.FromPath(files[0].Name) : null, book.Description,
-            book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null);
+            book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null, properties);
     }
 
     /// <summary>The books the account may see, not merged away: one library or all, with the groups' content filters.</summary>

@@ -169,7 +169,7 @@ public sealed class ImportTagResolver
     {
         if (categories.TryGetValue(source, out var id))
             return id;
-        var name = $"Imported: {source switch { ImportTagSourceKind.Fb2 => "FB2", ImportTagSourceKind.Epub => "EPUB", ImportTagSourceKind.Mobi => "MOBI", ImportTagSourceKind.Pdf => "PDF", _ => source.ToString() }}";
+        var name = $"Imported: {source switch { ImportTagSourceKind.Fb2 => "FB2", ImportTagSourceKind.Epub => "EPUB", ImportTagSourceKind.Mobi => "MOBI", ImportTagSourceKind.Pdf => "PDF", ImportTagSourceKind.Inpx => "INPX", _ => source.ToString() }}";
         var normalized = TagNames.Normalize(name);
         id = await db.Tags.Where(t => t.FieldId == null && t.IsCategory && t.NormalizedName == normalized).Select(t => t.Id).FirstOrDefaultAsync(cancellationToken);
         if (id == 0)

@@ -7,13 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Librarion.Core.Import;
 
-/// <summary>Where a scan is, for the tasks page.</summary>
-public sealed record ScanProgress(int FilesSeen, int ArchivesDone, int Added, int Changed, int Removed, string? Current, int Missing = 0, int Returned = 0);
+/// <summary>Where a scan (or an import: <paramref name="FilesSeen"/> are its records) is, for the tasks page.</summary>
+public sealed record ScanProgress(int FilesSeen, int ArchivesDone, int Added, int Changed, int Removed, string? Current, int Missing = 0, int Returned = 0,
+    int Skipped = 0);
 
-/// <summary>What a scan did. <paramref name="Problems"/>: the first files it couldn't read, relative to their root.</summary>
+/// <summary>What a scan (or an import) did. <paramref name="Problems"/>: the first files it couldn't read, relative to their root.</summary>
+/// <param name="Skipped">Records an import left out (deleted in the source, broken, without a file).</param>
 public sealed record ScanResult(
     int Added, int Changed, int Removed, int Unchanged, int ArchivesRead, int ArchivesSkipped, int Unreadable,
-    IReadOnlyList<string> MissingRoots, IReadOnlyList<string> Problems, int Missing = 0, int Returned = 0);
+    IReadOnlyList<string> MissingRoots, IReadOnlyList<string> Problems, int Missing = 0, int Returned = 0, int Skipped = 0);
 
 /// <summary>
 /// Brings a library's catalog in step with its roots (agents/docs/features/archives.md): walks every root (links not

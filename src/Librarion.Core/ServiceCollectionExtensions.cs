@@ -57,6 +57,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();
         services.AddSingleton<LibraryScanner>();
         services.AddSingleton<MissingBooks>();
+        services.AddSingleton<Librarion.Core.Imports.CatalogImporter>();
+        services.AddSingleton<Librarion.Core.Imports.ImportFormat, Librarion.Core.Imports.Calibre.CalibreFormat>();
+        services.TryAddSingleton<Librarion.Core.Imports.ImportFormats>();
         services.Configure<LibraryOptions>(configuration.GetSection(LibraryOptions.SectionName));
         services.AddSingleton<LibraryRoots>();
         services.AddSingleton<BackgroundTasks>();

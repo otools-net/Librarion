@@ -4,6 +4,14 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ## Unreleased
 
+### Added
+
+- Imports from other programs: a Calibre library (its `metadata.db`: authors, series, publishers, languages, tags,
+  ratings, descriptions, identifiers, custom columns, covers) is imported into a library and stored in Librarion's
+  database; the Calibre library is only read. Importing again brings in what changed and never removes a book; books
+  already scanned are matched by their files, and a later scan keeps the imported metadata. New right **Import**
+  (`library.import`), given to Administrators. Started through the API for now (`POST api/libraries/{id}/import`).
+
 ### Changed
 
 - A book whose files a scan no longer finds is kept as a missing book (hidden, with its metadata and tags) instead of

@@ -134,6 +134,7 @@ note rather than inventing a new one.
 | [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
 | [book-formats](agents/docs/features/book-formats.md) | one class per format (key, extensions, media type, metadata, cover), the registry, adding a format | `Core/Formats/` |
 | [metadata-readers](agents/docs/features/metadata-readers.md) | FB2, EPUB, CBZ, MOBI, PDF heads: what each gives, limits, safe XML, the reader-loop gotcha | `Core/Import/Metadata/` |
+| [imports](agents/docs/features/imports.md) | imports from other sources (Calibre `metadata.db`, INPX): pipeline, matching, who owns metadata, the route, Calibre mapping | `Core/Imports/`, `CatalogWriter` |
 | [missing-books](agents/docs/features/missing-books.md) | books whose files are gone: kept, found again (same place or moved), removed only when a user accepts (SFE missing files) | `Core/Import/MissingBooks.cs`, `LibraryScanner` |
 | [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: detection, book-page panel, compare and merge, undo and split (planned) | `Core/Merging/` |
 | [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |

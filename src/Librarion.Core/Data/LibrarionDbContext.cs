@@ -50,6 +50,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<BookFile> BookFiles => Set<BookFile>();
     public DbSet<Archive> Archives => Set<Archive>();
     public DbSet<BookIdentifier> BookIdentifiers => Set<BookIdentifier>();
+    public DbSet<BookProperty> BookProperties => Set<BookProperty>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<TagAlias> TagAliases => Set<TagAlias>();
     public DbSet<TagParent> TagParents => Set<TagParent>();

@@ -56,7 +56,7 @@ public sealed class LibraryRoots(TenantDb tenantDb, IOptionsMonitor<LibraryOptio
         var full = Normalize(path.Trim());
         if (full.Length > LibraryRoot.MaxPathLength)
             return (RootProblem.NotAbsolute, null);
-        if (!anywhere && !options.CurrentValue.Folders.Any(folder => IsWithin(full, Normalize(folder))))
+        if (!MayUse(full, anywhere))
             return (RootProblem.NotAllowed, null);
         if (!Directory.Exists(full))
             return (RootProblem.Missing, null);
@@ -71,6 +71,27 @@ public sealed class LibraryRoots(TenantDb tenantDb, IOptionsMonitor<LibraryOptio
         db.LibraryRoots.Add(root);
         await db.SaveChangesAsync(cancellationToken);
         return (RootProblem.None, new LibraryRootInfo(root.Id, libraryId, full, root.Created, true));
+    }
+
+    /// <summary>Whether a tenant administrator (or, <paramref name="anywhere"/>, a server administrator) may use the full path.</summary>
+    public bool MayUse(string full, bool anywhere) => anywhere || options.CurrentValue.Folders.Any(folder => IsWithin(full, Normalize(folder)));
+
+    /// <summary>
+    /// The root of the library <paramref name="path"/> lies in, added (with <see cref="AddAsync"/>'s checks) when it lies
+    /// in none: an import's files become the library's (agents/docs/features/imports.md). <c>Added</c> when it is new.
+    /// </summary>
+    public async Task<(RootProblem Problem, LibraryRootInfo? Root, bool Added)> RootForAsync(int tenantId, int libraryId, string? path, bool anywhere,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path.Trim()))
+            return (RootProblem.NotAbsolute, null, false);
+        var full = Normalize(path.Trim());
+        if (await ListAsync(tenantId, libraryId, cancellationToken) is not { } roots)
+            return (RootProblem.LibraryMissing, null, false);
+        if (roots.Where(r => IsWithin(full, r.Path)).OrderByDescending(r => r.Path.Length).FirstOrDefault() is { } within)
+            return within.Exists ? (RootProblem.None, within, false) : (RootProblem.Missing, null, false);
+        var (problem, root) = await AddAsync(tenantId, libraryId, full, anywhere, cancellationToken);
+        return (problem, root, problem == RootProblem.None);
     }
 
     /// <summary>The full path without a trailing separator (a drive's root keeps its own).</summary>

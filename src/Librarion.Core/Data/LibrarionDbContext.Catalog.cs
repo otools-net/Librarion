@@ -96,6 +96,15 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(i => new { i.TenantId, i.Scheme, i.Value });
             Filter(entity, i => i.TenantId == CurrentTenantId);
         });
+
+        modelBuilder.Entity<BookProperty>(entity =>
+        {
+            entity.HasKey(p => new { p.BookId, p.Name });
+            entity.Property(p => p.Name).HasMaxLength(BookProperty.MaxNameLength);
+            entity.Property(p => p.Value).HasMaxLength(BookProperty.MaxValueLength);
+            entity.HasOne(p => p.Book).WithMany(b => b.Properties).HasForeignKey(p => p.BookId).OnDelete(DeleteBehavior.Cascade);
+            Filter(entity, p => p.TenantId == CurrentTenantId);
+        });
     }
 
     private void ConfigureTags(ModelBuilder modelBuilder)

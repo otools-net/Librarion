@@ -100,11 +100,17 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<short?>("GeneratedVariant")
                         .HasColumnType("smallint");
 
+                    b.Property<long?>("ImportHash")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("LibraryId")
                         .HasColumnType("integer");
 
                     b.Property<int?>("MergedIntoId")
                         .HasColumnType("integer");
+
+                    b.Property<byte>("MetadataSource")
+                        .HasColumnType("smallint");
 
                     b.Property<DateTime?>("MissingSince")
                         .HasColumnType("timestamp with time zone");
@@ -263,6 +269,28 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("TenantId", "Scheme", "Value");
 
                     b.ToTable("BookIdentifiers");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookProperty", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("BookId", "Name");
+
+                    b.ToTable("BookProperties");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
@@ -1024,6 +1052,17 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Book");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.BookProperty", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Properties")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Book", "Book")
@@ -1291,6 +1330,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Files");
 
                     b.Navigation("Identifiers");
+
+                    b.Navigation("Properties");
 
                     b.Navigation("Tags");
                 });

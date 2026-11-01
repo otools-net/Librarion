@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Librarion.Core.Data;
 using Librarion.Core.Import;
+using Librarion.Core.Imports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,11 +17,12 @@ public sealed record TaskRunInfo(
 /// <summary>What a finished run did, kept with it.</summary>
 /// <param name="Missing">Books that went missing (kept until a file comes back or a user accepts their removal).</param>
 /// <param name="Returned">Missing books that have a file again (found where it was, or moved).</param>
+/// <param name="Skipped">Records an import left out.</param>
 public sealed record ScanCounts(int Added, int Changed, int Removed, int Unchanged, int ArchivesRead, int ArchivesSkipped, int Unreadable,
-    IReadOnlyList<string> MissingRoots, IReadOnlyList<string> Problems, int Missing = 0, int Returned = 0);
+    IReadOnlyList<string> MissingRoots, IReadOnlyList<string> Problems, int Missing = 0, int Returned = 0, int Skipped = 0);
 
 /// <summary>
-/// Library scans and root removals in the background (as SFE's <c>BackgroundTasks</c> and <c>TaskHistory</c>): one
+/// Library scans, imports and removals in the background (as SFE's <c>BackgroundTasks</c> and <c>TaskHistory</c>): one
 /// run per library at a time, at most <see cref="LibraryOptions.MaxParallelScans"/> on the server (more wait), each a
 /// <see cref="TaskRun"/> row written at its start and completed at its end; cancelled on request or when the server
 /// stops; rows still running at start-up become <see cref="TaskOutcome.Interrupted"/>.
@@ -33,6 +35,7 @@ public sealed class BackgroundTasks : IDisposable
     private readonly TenantDb tenantDb;
     private readonly LibraryScanner scanner;
     private readonly MissingBooks missingBooks;
+    private readonly CatalogImporter importer;
     private readonly TimeProvider time;
     private readonly ILogger<BackgroundTasks> logger;
     private readonly SemaphoreSlim slots;
@@ -40,8 +43,10 @@ public sealed class BackgroundTasks : IDisposable
     private readonly ConcurrentDictionary<long, Active> active = new();
     private readonly Lock starting = new();
 
-    public BackgroundTasks(TenantDb tenantDb, LibraryScanner scanner, MissingBooks missingBooks, TimeProvider time, IOptions<LibraryOptions> options, ILogger<BackgroundTasks> logger)
+    public BackgroundTasks(TenantDb tenantDb, LibraryScanner scanner, MissingBooks missingBooks, CatalogImporter importer, TimeProvider time, IOptions<LibraryOptions> options,
+        ILogger<BackgroundTasks> logger)
     {
+        this.importer = importer;
         this.tenantDb = tenantDb;
         this.scanner = scanner;
         this.missingBooks = missingBooks;
@@ -78,6 +83,14 @@ public sealed class BackgroundTasks : IDisposable
     public Task<(long RunId, bool Started)> StartRemoveMissingAsync(int tenantId, int libraryId, MissingRemoval removal, int? userId, CancellationToken cancellationToken) =>
         StartAsync(tenantId, libraryId, BackgroundTaskKind.RemoveMissing, TaskTrigger.Manual, userId, null,
             (progress, cancel) => missingBooks.RemoveAsync(tenantId, libraryId, removal, progress, cancel), cancellationToken);
+
+    /// <summary>
+    /// Starts an import from another source into the library (waits for a scan of the library to end first), its files
+    /// under <paramref name="rootId"/> (agents/docs/features/imports.md).
+    /// </summary>
+    public Task<(long RunId, bool Started)> StartImportAsync(int tenantId, int libraryId, int rootId, Func<IImportSource> open, int? userId, CancellationToken cancellationToken) =>
+        StartAsync(tenantId, libraryId, BackgroundTaskKind.Import, TaskTrigger.Manual, userId, null,
+            (progress, cancel) => importer.ImportAsync(tenantId, libraryId, rootId, open, progress, cancel), cancellationToken);
 
     /// <summary>A schedule came due while the library's run was still going: recorded, not started.</summary>
     public async Task RecordSkippedAsync(int tenantId, int libraryId, int scheduleId, CancellationToken cancellationToken)
@@ -131,8 +144,8 @@ public sealed class BackgroundTasks : IDisposable
         string? summary = null;
         try
         {
-            // A removal waits for the library's scan to end; every run waits for a free slot.
-            while (kind is BackgroundTaskKind.RemoveRoot or BackgroundTaskKind.RemoveMissing && active.Values.Any(a => a.LibraryId == entry.LibraryId && a.TenantId == entry.TenantId && a.Id < entry.Id))
+            // A removal or an import waits for the library's run before it to end; every run waits for a free slot.
+            while (kind is BackgroundTaskKind.RemoveRoot or BackgroundTaskKind.RemoveMissing or BackgroundTaskKind.Import && active.Values.Any(a => a.LibraryId == entry.LibraryId && a.TenantId == entry.TenantId && a.Id < entry.Id))
                 await Task.Delay(500, entry.Cancel.Token);
             await slots.WaitAsync(entry.Cancel.Token);
             try
@@ -171,10 +184,10 @@ public sealed class BackgroundTasks : IDisposable
             await using var db = await tenantDb.ForTenantAsync(tenantId, CancellationToken.None);
             var counts = result is null ? null : JsonSerializer.Serialize(new ScanCounts(result.Added, result.Changed, result.Removed, result.Unchanged,
                 result.ArchivesRead, result.ArchivesSkipped, result.Unreadable, result.MissingRoots, result.Problems.Take(MaxStoredProblems).ToList(),
-                result.Missing, result.Returned), Json);
+                result.Missing, result.Returned, result.Skipped), Json);
             if (counts is { Length: > TaskRun.MaxSummaryLength })
                 counts = JsonSerializer.Serialize(new ScanCounts(result!.Added, result.Changed, result.Removed, result.Unchanged, result.ArchivesRead,
-                    result.ArchivesSkipped, result.Unreadable, result.MissingRoots.Take(5).ToList(), [], result.Missing, result.Returned), Json);
+                    result.ArchivesSkipped, result.Unreadable, result.MissingRoots.Take(5).ToList(), [], result.Missing, result.Returned, result.Skipped), Json);
             var finished = time.GetUtcNow().UtcDateTime;
             await db.TaskRuns.Where(r => r.Id == runId).ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Outcome, outcome).SetProperty(r => r.Finished, finished)
