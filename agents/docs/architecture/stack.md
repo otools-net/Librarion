@@ -1,7 +1,7 @@
 # Stack
 
 Code: `Librarion.slnx`, `Directory.Build.props`, `Directory.Packages.props`, `src/Librarion.Web/package.json`,
-`tests/e2e/package.json`. Design reference: SFE (`C:\workspace\GIT\SimpleFileExplorer`).
+`tests/e2e/package.json`. Design reference: SFE (`C:\workspace\SimpleFileExplorer`).
 
 | Area | Stack |
 |---|---|
@@ -11,6 +11,7 @@ Code: `Librarion.slnx`, `Directory.Build.props`, `Directory.Packages.props`, `sr
 | Data | EF Core 10, **SQLite** (`Microsoft.EntityFrameworkCore.Sqlite`) and **PostgreSQL** (`Npgsql.EntityFrameworkCore.PostgreSQL`), migrations per provider ([database](../development/database.md)) |
 | Frontend | **Angular 22** + TypeScript 6 in `src/Librarion.Web`: standalone, signals, zoneless, OnPush, `HttpClient` (fetch), router; global CSS; runtime translation keys; built into `src/Librarion.Api/wwwroot` (git-ignored) |
 | Tests | MSTest 4 (method-level parallelism), `WebApplicationFactory<Program>`; client: Vitest 5 via `ng test` (jsdom); e2e: Playwright 1.64.1 (pinned exactly) + axe-core |
+| Archives | own ZIP directory reader (`Core/Containers/`, ported from SFE); SharpCompress for other ZIP methods and 7z / RAR wrappers; `System.IO.Hashing` (CRC-32, XxHash64) |
 | CI | GitHub Actions: `build-test.yml` (Linux/Windows, SQLite and PostgreSQL), `e2e.yml` |
 | Hosting | Kestrel `:5090` by default (`appsettings.json` `Urls`); packaging comes in stage 11 |
 

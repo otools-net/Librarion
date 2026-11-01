@@ -18,7 +18,7 @@ Books come as loose files or by the hundred thousand inside ZIP archives, indexe
 Reference for how books are shown and read (covers, titles, the reader; behaviour only, its GPL-3 code is never
 copied): calibre-web (`C:\workspace\GIT\reference-projects\calibre-web`).
 
-Reference project for design, rights and philosophy: SimpleFileExplorer (`C:\workspace\GIT\SimpleFileExplorer`, SFE).
+Reference project for design, rights and philosophy: SimpleFileExplorer (`C:\workspace\SimpleFileExplorer`, SFE).
 When a pattern exists there (tenants, rights catalog, sessions, settings levels, tests), port it and say so in the
 note rather than inventing a new one.
 
@@ -92,6 +92,7 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
+| [stage-3-import-plan](agents/docs/development/stage-3-import-plan.md) | **stage 3 in progress**: ZIP containers, roots, tasks, scanner, metadata readers, covers, duplicates at import, download | `Core/Containers/`, `Core/Import/` |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |

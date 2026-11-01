@@ -14,5 +14,6 @@ As found on 2026-10-31 (Windows 11).
 - `D:\Temp` is for temporary and test data (generated catalogs, benchmark databases): ~220 GB free, C: ~26 GB.
 - Shells: Git Bash (the Bash tool) and Windows PowerShell 5.1. Git's `core.autocrlf=true`: see
   [line-endings](line-endings.md).
-- SFE (the design reference) is in `C:\workspace\GIT\SimpleFileExplorer`, MyHomeLib in
-  `C:\workspace\GIT\reference-projects\MyHomeLib`.
+- SFE (the design reference) is in `C:\workspace\SimpleFileExplorer`. MyHomeLib and calibre-web are **not on this
+  machine** (2026-11-01; the `C:\workspace\GIT\reference-projects\` paths in the notes are from another one): work
+  from the notes' description of their behaviour.

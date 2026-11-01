@@ -3,7 +3,7 @@
 From an empty repo to the first release, in stages. This file holds the decisions and the roadmap; each stage gets
 its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts, removed when it is finalized
 (decisions move into the architecture/feature notes, see AGENTS.md). Reference: SFE
-(`C:\workspace\GIT\SimpleFileExplorer`), whose design is ported where it fits.
+(`C:\workspace\SimpleFileExplorer`), whose design is ported where it fits.
 
 ## Priorities (in this order, when they conflict)
 

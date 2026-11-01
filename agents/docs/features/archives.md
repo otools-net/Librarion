@@ -1,7 +1,9 @@
-# Books inside archives (planned)
+# Books inside archives (in progress, stage 3)
 
-Code (planned): `src/Librarion.Core/Containers/` (`ZipDirectory`, `ArchiveReader`, `BoundedStreams`,
-`ArchiveEntryNames`: ported from SFE `src/Sfe.Core/Files/Compression/`, see its `archive-reading.md`),
+Built: `src/Librarion.Core/Containers/` (`ZipDirectory` with `Fingerprint`, `BoundedStreams`, `ArchiveEntryNames`,
+`ArchiveEntry`, `ArchiveException`; tests `ZipDirectoryTests`), ported from SFE `src/Sfe.Core/Files/Compression/`
+(see its `archive-reading.md`) without the ciphers: an encrypted entry is listed and refused when opened. Every entry
+is CRC-checked at its end. Planned:
 `src/Librarion.Core/Import/ArchiveScanner`, `src/Librarion.Core/Reading/BookStreams`, `ExtractCache`. Reference for
 the library side: MyHomeLib (`C:\workspace\GIT\reference-projects\MyHomeLib`: `unit_MHLArchiveHelpers.pas`,
 `unit_ImportFB2Thread.pas`, `TBookRecord.GetBookStream` in `unit_Globals.pas`).
