@@ -9,6 +9,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// LIBRARION_SCREENS_THEME=light for the light colors (default dark).
+const theme = process.env.LIBRARION_SCREENS_THEME === 'light' ? 'light' : 'dark';
+
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const e2e = path.join(repo, 'tests/e2e');
 const { chromium, devices, request } = createRequire(path.join(e2e, 'package.json'))('@playwright/test');
@@ -73,7 +76,7 @@ try {
         for (const address of pages) {
             const [route, action] = address.split('#');
             const signedOut = route === 'login';
-            const context = await browser.newContext({ ...device, baseURL, colorScheme: 'dark', storageState: signedOut ? undefined : signedIn });
+            const context = await browser.newContext({ ...device, baseURL, colorScheme: theme, storageState: signedOut ? undefined : signedIn });
             const page = await context.newPage();
             await page.goto(`./${route}`);
             await page.getByRole('heading', { level: 1 }).waitFor();
@@ -86,7 +89,7 @@ try {
             else if (action === 'open')
                 await page.locator('button.row-main').first().click();
             await page.waitForLoadState('networkidle');
-            const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}.png`);
+            const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
             await page.screenshot({ path: file, fullPage: true });
             console.log(file);
             await context.close();

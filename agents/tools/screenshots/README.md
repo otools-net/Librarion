@@ -10,6 +10,7 @@ cd tests/e2e && npm ci && cd ../..                    # once: the e2e tests' Pla
 node agents/tools/screenshots/screenshots.mjs         # every page into <tmp>/librarion-screens
 node agents/tools/screenshots/screenshots.mjs <out> account admin/users#new   # some pages
 LIBRARION_E2E_SKIP_BUILD=0 node agents/tools/screenshots/screenshots.mjs      # rebuild the app first
+LIBRARION_SCREENS_THEME=light node agents/tools/screenshots/screenshots.mjs   # light colors (default dark)
 ```
 
 - A page is a client address; `#recover` opens the recovery on the sign-in page, `#new` presses the section's "New …"

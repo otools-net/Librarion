@@ -39,3 +39,20 @@ not); good solutions for intuitive use, accessibility and visual appeal. Palette
 - Groups: shell, books and fields, actions, navigation, administration, status. A new icon: its name in the list, its
   symbol in the sprite, then a look with the contact sheet ([icon-sheet](../../tools/icon-sheet/README.md)).
 
+## Controls
+
+Code: `styles/forms.css` (controls), `styles/admin.css` (panels, rows, tabs).
+
+- Buttons: secondary by default (framed by `--border-strong`, `--surface`, a light shadow), `.primary` the one main
+  action of a view (accent), `.quiet` without a frame (toolbars), `.danger` outlined in the danger colour (destroys;
+  still asks first), `.active` a chosen toggle; hover a step up the surfaces, pressed `--surface-3`; disabled half
+  transparent. An icon inside is 18 px.
+- Fields (every text-like `input`, `select`, `textarea`, wherever they are): `--surface` on a `--border-strong` edge
+  (3:1), hover muted, focus the accent edge with a soft 3 px ring; `aria-invalid="true"` turns the edge red.
+- `.check` checkboxes 18 px in the accent; `.chip` pills (`.active` / `aria-selected` in the accent tint); `.badge`
+  pills with `.accent`, `.success`, `.warning`, `.danger` tints; `.notice` messages; `.card` / `a.card` framed
+  blocks with `.card-title`; `.group-label` small upper-case headings (SFE's).
+- Panels and row lists are cards (`--radius-lg`, light shadow); a clickable row tints on hover unless it is open.
+- Looked at with the screenshots tool in both themes (`LIBRARION_SCREENS_THEME=light`,
+  [screenshots](../../tools/screenshots/README.md)).
+

@@ -20,6 +20,10 @@
     text-decoration: none;
 }
 
+.tab:hover {
+    color: var(--text);
+}
+
 .tab.active {
     border-bottom-color: var(--accent);
     color: var(--text);
@@ -51,15 +55,16 @@
     gap: var(--space-3);
     max-width: 720px;
     margin: 0 0 var(--space-4);
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     background: var(--surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .panel h2 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--text-lg);
 }
 
 .settings-form {
@@ -73,9 +78,11 @@
     margin: 0 0 var(--space-3);
     padding: 0;
     list-style: none;
+    overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     background: var(--surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .row {
@@ -89,6 +96,10 @@
 
 .row + .row {
     border-top: 1px solid var(--border);
+}
+
+.row:has(> button.row-main):not(:has(.row-panel)):hover {
+    background: var(--surface-2);
 }
 
 .row-main {
@@ -118,7 +129,7 @@ button.row-main:hover .row-title {
 
 .row-meta {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--text-sm);
     overflow-wrap: anywhere;
 }
 
