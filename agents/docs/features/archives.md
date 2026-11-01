@@ -1,9 +1,11 @@
-# Books inside archives (planned)
+# Books inside archives
 
-Code (planned): `src/Librarion.Core/Containers/` (`ZipDirectory`, `ArchiveReader`, `BoundedStreams`,
-`ArchiveEntryNames`: ported from SFE `src/Sfe.Core/Files/Compression/`, see its `archive-reading.md`),
-`src/Librarion.Core/Import/ArchiveScanner`, `src/Librarion.Core/Reading/BookStreams`, `ExtractCache`. Reference for
-the library side: MyHomeLib (`C:\workspace\GIT\reference-projects\MyHomeLib`: `unit_MHLArchiveHelpers.pas`,
+Built: `src/Librarion.Core/Containers/` (`ZipDirectory` with `Fingerprint`, `BoundedStreams`, `ArchiveEntryNames`,
+`ArchiveEntry`, `ArchiveException`; tests `ZipDirectoryTests`), ported from SFE `src/Sfe.Core/Files/Compression/`
+(see its `archive-reading.md`) without the ciphers: an encrypted entry is listed and refused when opened. Every entry
+is CRC-checked at its end. Download: `src/Librarion.Core/Reading/BookDownloads.cs`, route in
+`Api/Endpoints/BookEndpoints.cs` (tests `BookDownloadTests`). Planned: `ExtractCache`. Reference for
+the library side: MyHomeLib (`C:\workspace\MyHomeLib`: `unit_MHLArchiveHelpers.pas`,
 `unit_ImportFB2Thread.pas`, `TBookRecord.GetBookStream` in `unit_Globals.pas`).
 
 Libraries are often a few hundred ZIP files each holding **100k+ books** (FB2 mostly, also EPUB, PDF, DJVU, MOBI…).
@@ -45,10 +47,17 @@ They are **indexed and read in place: never unpacked to disk**.
 - **Open = one seek:** the stored locator gives the local header; its name and sizes are checked against the row
   (a mismatch re-lists the archive, the archive's size + mtime are checked first). Data streams through SFE's
   `DeclaredSizeStream` / `WindowStream` (a lying directory or a zip bomb can't overrun).
-- **Download / OPDS acquisition:** the entry is streamed decompressed straight to the response, with
-  `Content-Length` from the directory and `ETag` from the CRC; no temp file. FB2 also offered as `fb2.zip`, zipped on
-  the fly (many readers want it). Range requests: served for stored entries (a seek), for deflated ones only from
-  the extract cache.
+- **Download** (built, `GET api/books/{id}/files/{fileId}`, right `library.download` in the book's library, the book
+  visible to the caller or 404): the entry is streamed decompressed straight to the response, `Content-Length` from
+  the directory (set by hand: the stream can't seek), `ETag` = CRC + size (loose files: size + time),
+  `Content-Disposition` with the file's name; no temp file. Range for loose files and stored entries (`StoredRange`,
+  a slice of the zip); a deflated entry answers a range with the whole file.
+- **Checks at open:** an archive whose size differs from the scan's is rebuilt (stale locators): 409 `file.changed`,
+  the next scan fixes it; same size (touched) is opened, the local header's signature checked, the CRC at the end
+  catches the rest (the response is cut). A loose file of another size: 409 `file.changed`; missing, a link in its
+  place, or a path leaving its root: 410 `file.gone`; a method or damage the reader refuses: 409 `file.unreadable`.
+- **Planned:** OPDS acquisition (same code), FB2 also offered as `fb2.zip` zipped on the fly (many readers want it),
+  Range on deflated entries only from the extract cache.
 - **In-browser reading** needs random access into EPUB / CBZ (their own entries) and PDF (ranges): a deflated book is
   decompressed once into the **extract cache** (disk, sharded, LRU with a size cap, e.g. 2 GB, under the server's data
   folder), then served from there; stored entries are read through a window without it.
@@ -62,6 +71,11 @@ They are **indexed and read in place: never unpacked to disk**.
   elsewhere); `MaxEntries` per archive (10M); encrypted entries listed as unreadable; truncated archives keep what was
   read, marked incomplete.
 - Head reads and in-memory inner books have size and time limits; XML readers with DTDs off and entity expansion off.
+- An archive marked `Incomplete` (broken, cut off) is skipped by later scans until its size or time changes (decided
+  2026-11-01): a broken zip isn't read again on every scan.
+- `ZipDirectory.OpenEntry` disposes the archive's stream with the entry's unless `leaveOpen: true`: whatever reads
+  several entries through one handle (the scanner, `InnerZip`) passes it. Forgetting it cost every entry after the
+  first its metadata ("Cannot access a closed file", found 2026-11-01).
 
 ## Scale budgets (benchmark, [scale](../development/scale.md))
 
@@ -69,6 +83,9 @@ They are **indexed and read in place: never unpacked to disk**.
 - Index 100k FB2 entries from heads: SSD < 3 min; HDD / NAS measured too (the seeks dominate there), reported with
   the benchmark.
 - First byte of a book from a 100k-entry zip: < 50 ms; a deflated EPUB opened in the reader (cold, 5 MB): < 500 ms.
+- Measured (`archive` benchmark, [tool](../../tools/benchmark/README.md), SSD, warm): list 73 ms, index 141 s,
+  unchanged 4.6 ms, first byte p95 0.2 ms; a 5 200 RPM USB hard disk, cold: list 647 ms, index 154 s, first byte
+  p95 24 ms ([scale](../development/scale.md#measured)). Indexing is processor-bound on both; D11 closed.
 
 ## Tests to have
 

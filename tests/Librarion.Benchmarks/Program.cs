@@ -2,6 +2,7 @@
 // and measures the main queries against the budgets (agents/docs/development/scale.md).
 //   generate --provider sqlite|postgres --connection <string> [--books 2000000] [--seed 1] [--work <folder>]
 //   run --provider sqlite|postgres --connection <string> [--iterations 20] [--work <folder>]
+//   archive --provider sqlite|postgres --connection <string> [--entries 100000] [--body-kb 30] [--samples 500] [--evict <file> [--evict-gb 24]] [--work <folder>]
 using System.Globalization;
 using Librarion.Benchmarks.Bench;
 using Librarion.Benchmarks.Data;
@@ -32,8 +33,16 @@ switch (command)
         var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
         return await RunCommand.RunAsync(target, work, int.Parse(Option("iterations", "20"), CultureInfo.InvariantCulture), Console.WriteLine, cancel.Token);
     }
+    case "archive":
+    {
+        var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
+        var result = await ArchiveCommand.RunAsync(target, work, int.Parse(Option("entries", "100000"), CultureInfo.InvariantCulture),
+            int.Parse(Option("body-kb", "30"), CultureInfo.InvariantCulture), int.Parse(Option("samples", "500"), CultureInfo.InvariantCulture), Console.WriteLine, cancel.Token,
+            arguments.GetValueOrDefault("evict"), int.Parse(Option("evict-gb", "24"), CultureInfo.InvariantCulture));
+        return result.WithinBudget ? 0 : 1;
+    }
     default:
-        Console.Error.WriteLine("Commands: generate, run (see agents/tools/benchmark/README.md)");
+        Console.Error.WriteLine("Commands: generate, run, archive (see agents/tools/benchmark/README.md)");
         return 2;
 }
 

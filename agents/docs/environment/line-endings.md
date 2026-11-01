@@ -7,3 +7,5 @@
 - `dotnet ef migrations add` writes CRLF with a BOM: normalise ([database](../development/database.md)).
 - Write files with backslashes or quotes inside `$(…)` through the Write tool, not heredocs (Git Bash mangles them;
   SFE's note).
+- A Python script with apostrophes inside a `python - <<'EOF'` heredoc breaks when the command holds other quoting:
+  write it with the Write tool into the scratchpad and run the file.

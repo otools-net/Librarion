@@ -6,7 +6,8 @@ using Librarion.Core.Tagging;
 namespace Librarion.Benchmarks.Generation;
 
 /// <summary>Ids of the tenant's rows the generated catalog hangs on.</summary>
-public sealed record CatalogTarget(int TenantId, int LibraryId, int FirstTagId, IReadOnlyDictionary<BuiltInTag, int> Fields);
+/// <param name="RootId">The library's one root: every archive and loose file is under it.</param>
+public sealed record CatalogTarget(int TenantId, int LibraryId, int FirstTagId, IReadOnlyDictionary<BuiltInTag, int> Fields, int RootId = 1);
 
 /// <summary>
 /// A real-shaped catalog as rows, deterministic for a seed (agents/tools/benchmark/README.md): each
@@ -145,14 +146,14 @@ public sealed class CatalogGenerator
             yield return Row(id, id, 0);
     }
 
-    public static readonly string[] ArchiveColumns = ["Id", "TenantId", "LibraryId", "Path", "PathKey", "Size", "Modified", "Fingerprint", "EntryCount", "ScanState"];
+    public static readonly string[] ArchiveColumns = ["Id", "TenantId", "LibraryId", "RootId", "Path", "PathKey", "Size", "Modified", "Fingerprint", "EntryCount", "ScanState"];
 
     public IEnumerable<object?[]> Archives()
     {
         for (var i = 0; i < _shape.Archives; i++)
         {
             var path = ArchivePath(i);
-            yield return [i + 1, _target.TenantId, _target.LibraryId, path, PathKeys.Of(path), 4L << 30, Start, (long)i * 7919, _shape.EntriesPerArchive, (int)ArchiveScanState.Done];
+            yield return [i + 1, _target.TenantId, _target.LibraryId, _target.RootId, path, PathKeys.Of(path), 4L << 30, Start, (long)i * 7919, _shape.EntriesPerArchive, (int)ArchiveScanState.Done];
         }
     }
 
@@ -182,7 +183,7 @@ public sealed class CatalogGenerator
     }
 
     public static readonly string[] FileColumns =
-        ["Id", "TenantId", "LibraryId", "BookId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
+        ["Id", "TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
 
     public IEnumerable<object?[]> Files()
     {
@@ -193,7 +194,7 @@ public sealed class CatalogGenerator
             {
                 yield return
                 [
-                    ++fileId, _target.TenantId, _target.LibraryId, id, file.Archive is { } a ? a + 1 : null, file.Path, PathKeys.Of(file.Path),
+                    ++fileId, _target.TenantId, _target.LibraryId, id, file.Archive is null ? _target.RootId : null, file.Archive is { } a ? a + 1 : null, file.Path, PathKeys.Of(file.Path),
                     file.Format, file.Size, file.Crc32, Start, file.Archive is null ? null : (long)id * 1024, file.Archive is null ? null : (short)8,
                     file.Archive is null ? null : file.Size / 3,
                 ];

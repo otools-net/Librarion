@@ -55,3 +55,27 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
 - Report `bench-<provider>-<books>-<time>.json` and every plan in `…-plans.txt` in the work folder. Exit 1 on a full
   scan, or on PostgreSQL past a budget (SQLite's times are recorded, not enforced).
 - Run nothing else heavy at the same time: the timings are the machine's.
+
+## What `archive` measures (stage 3, [archives](../../docs/features/archives.md#scale-budgets-benchmark-scale))
+
+```sh
+dotnet $bench archive --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/archive-sqlite.db" \
+  --work D:/Temp/librarion-bench [--entries 100000] [--body-kb 30] [--samples 500]
+```
+
+- A zip of `--entries` FB2 books (real description heads, a body of `--body-kb` KB, deflated) in
+  `<work>/archive-<entries>-<body>k/`, made once and kept (deterministic: same options, same file).
+- Then, into a fresh database (the target is recreated): the zip's directory listed (`ZipDirectory`), the library
+  scanned by the real `LibraryScanner` with the real metadata readers (index from heads), scanned again unchanged,
+  the first byte of `--samples` random books (`BookDownloads.Open`, from the row as the route has it), and the cover of
+  100 of them (none in the books: looked for, then generated).
+- Budgets: list < 2 s and index < 3 min (only at 100k entries or more), unchanged scan < 50 ms, first byte p95
+  < 50 ms; exit 1 past one. Report `archive-<provider>-<entries>-<time>.json` in the work folder.
+- Without `--evict` the zip was just written or read: the system's file cache is warm. `--evict <file>` (`--evict-gb`,
+  default 24: more than this machine's 16 GB) reads a scratch file before the list and before the first bytes, so the
+  zip leaves the cache without administrator rights. Read it **without** `SequentialScan`: with it Windows recycles
+  the scratch file's own pages and the zip stays cached (first byte 0.1 ms: not cold). Cold looks like list ~0.6 s and
+  first byte ~10 ms on a hard disk. Delete the scratch file after (`D:\Temp\librarion-evict.bin`).
+- Hard disk: `--work F:/claude-test` (the user's USB HDD, 2026-11-01) with the database on the SSD; copy the zip there
+  rather than generating it (the disk writes ~10 MB/s).
+- Small-size test: `ArchiveBenchTests` (500 entries, both providers).

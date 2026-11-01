@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    GroupInfo, GroupInput, LibraryInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingLevel, SettingState, SetupInput,
+    GroupInfo, GroupInput, LibraryInfo, LibraryRootInfo, ScheduleInfo, ScheduleInput, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
@@ -76,6 +76,17 @@ export class Api {
     createLibrary = (name: string) => this.post<LibraryInfo>('api/libraries', { name });
     renameLibrary = (id: number, name: string) => this.put<LibraryInfo>(`api/libraries/${id}`, { name });
     deleteLibrary = (id: number) => this.delete<void>(`api/libraries/${id}`);
+    libraryRoots = (library: number) => this.get<LibraryRootInfo[]>(`api/libraries/${library}/roots`);
+    addLibraryRoot = (library: number, path: string) => this.post<LibraryRootInfo>(`api/libraries/${library}/roots`, { path });
+    removeLibraryRoot = (library: number, root: number) => this.delete<{ runId: number }>(`api/libraries/${library}/roots/${root}`);
+    scanLibrary = (library: number) => this.post<{ runId: number; started: boolean }>(`api/libraries/${library}/scan`);
+    /** Newest first; `before`: the last id of the page before. */
+    libraryTasks = (library: number, before?: number) => this.get<TaskRunInfo[]>(`api/libraries/${library}/tasks`, { before, limit: 10 });
+    task = (run: number) => this.get<TaskRunInfo>(`api/tasks/${run}`);
+    cancelTask = (run: number) => this.post<void>(`api/tasks/${run}/cancel`);
+    schedules = (library: number) => this.get<ScheduleInfo[]>(`api/libraries/${library}/schedules`);
+    addSchedule = (library: number, input: ScheduleInput) => this.post<ScheduleInfo>(`api/libraries/${library}/schedules`, input);
+    deleteSchedule = (library: number, schedule: number) => this.delete<void>(`api/libraries/${library}/schedules/${schedule}`);
 
     /** `admins`: the server administrators instead of the tenant's accounts; `after`: the last name of the page before. */
     users = (query: { admins?: boolean; search?: string; after?: string } = {}) => this.get<UserInfo[]>('api/users', query);

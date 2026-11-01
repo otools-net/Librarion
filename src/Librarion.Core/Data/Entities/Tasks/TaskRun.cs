@@ -1,0 +1,94 @@
+namespace Librarion.Core.Data;
+
+public enum BackgroundTaskKind : byte
+{
+    /// <summary>A library's roots walked, new and changed books read, missing ones removed.</summary>
+    LibraryScan,
+    /// <summary>A root taken out of a library: its files and the books left without one removed in batches.</summary>
+    RemoveRoot,
+}
+
+public enum TaskTrigger : byte
+{
+    Manual,
+    Schedule,
+}
+
+public enum TaskOutcome : byte
+{
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+    /// <summary>The server stopped while it ran.</summary>
+    Interrupted,
+    /// <summary>A schedule came due while the same task was still running.</summary>
+    Skipped,
+}
+
+/// <summary>One run of a background task (as SFE's <c>TaskRuns</c>): written at start, completed at the end.</summary>
+public sealed class TaskRun
+{
+    public const int MaxSummaryLength = 2000;
+
+    public long Id { get; set; }
+    public int TenantId { get; set; }
+    public int? LibraryId { get; set; }
+    public BackgroundTaskKind Task { get; set; }
+    public TaskTrigger Trigger { get; set; }
+
+    /// <summary>The schedule that started it; not a foreign key, the run outlives its schedule.</summary>
+    public int? ScheduleId { get; set; }
+
+    /// <summary>The account that started it by hand.</summary>
+    public int? UserId { get; set; }
+
+    /// <summary>UTC.</summary>
+    public DateTime Started { get; set; }
+
+    /// <summary>UTC; null while it runs.</summary>
+    public DateTime? Finished { get; set; }
+
+    public TaskOutcome Outcome { get; set; }
+
+    /// <summary>What it did, for people ("1 204 books added, 3 archives skipped"); never a path of the server.</summary>
+    public string? Summary { get; set; }
+
+    /// <summary>Counts as JSON (added, changed, removed, failed, skipped…), shown per run.</summary>
+    public string? Counts { get; set; }
+}
+
+public enum ScheduleKind : byte
+{
+    /// <summary>Every <see cref="TaskSchedule.IntervalMinutes"/> from <see cref="TaskSchedule.Start"/>.</summary>
+    Interval,
+    /// <summary>At <see cref="TaskSchedule.Start"/>'s time of day on <see cref="TaskSchedule.Days"/> (every day: all seven).</summary>
+    Weekly,
+}
+
+/// <summary>When a task runs by itself (as SFE's <c>TaskSchedules</c>).</summary>
+public sealed class TaskSchedule
+{
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public int LibraryId { get; set; }
+    public Library? Library { get; set; }
+    public BackgroundTaskKind Task { get; set; }
+    public ScheduleKind Kind { get; set; }
+
+    /// <summary>UTC.</summary>
+    public DateTime Start { get; set; }
+
+    public int IntervalMinutes { get; set; }
+
+    /// <summary>Days of a weekly schedule: bit 0 = Sunday … bit 6 = Saturday.</summary>
+    public int Days { get; set; }
+
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Created or last changed (UTC): occurrences before it are not due (a new schedule doesn't run for the past).</summary>
+    public DateTime Updated { get; set; }
+
+    /// <summary>Last time it came due (whether its task could start or not).</summary>
+    public DateTime? LastRun { get; set; }
+}

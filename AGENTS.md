@@ -13,12 +13,12 @@ MVP (1.0.0), schema and settings may change without migrations (see
 
 Books come as loose files or by the hundred thousand inside ZIP archives, indexed and read **without unpacking**
 ([archives](agents/docs/features/archives.md)); reference for archive-based libraries: MyHomeLib
-(`C:\workspace\GIT\reference-projects\MyHomeLib`).
+(`C:\workspace\MyHomeLib`).
 
 Reference for how books are shown and read (covers, titles, the reader; behaviour only, its GPL-3 code is never
-copied): calibre-web (`C:\workspace\GIT\reference-projects\calibre-web`).
+copied): calibre-web (`C:\workspace\calibre-web`).
 
-Reference project for design, rights and philosophy: SimpleFileExplorer (`C:\workspace\GIT\SimpleFileExplorer`, SFE).
+Reference project for design, rights and philosophy: SimpleFileExplorer (`C:\workspace\SimpleFileExplorer`, SFE).
 When a pattern exists there (tenants, rights catalog, sessions, settings levels, tests), port it and say so in the
 note rather than inventing a new one.
 
@@ -125,11 +125,14 @@ note rather than inventing a new one.
 | [settings](agents/docs/features/settings.md) | settings by level (server, tenant, library, user), locks, catalog of keys | `Core/Settings/`, `app/settings/` |
 | [security-log](agents/docs/features/security-log.md) | security events: what is logged (never secrets), retention, who reads | `Core/Access/SecurityLog.cs`, `app/admin/` |
 | [catalog](agents/docs/features/catalog.md) | books, files, identifiers, tag tables, sort indexes, visibility, keyset pages, tag joins by size, catalog routes, known limits | `Core/Data/Entities/Catalog/`, `Core/Catalog/`, `Api/Endpoints/BookEndpoints.cs` |
+| [tasks](agents/docs/features/tasks.md) | library roots (who adds which folder), scans and root removals as background runs, run history, schedules | `Core/Import/LibraryRoots.cs`, `Core/Tasks/`, `Api/Endpoints/TaskEndpoints.cs` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
 | [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
 | [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
+| [book-formats](agents/docs/features/book-formats.md) | one class per format (key, extensions, media type, metadata, cover), the registry, adding a format | `Core/Formats/` |
+| [metadata-readers](agents/docs/features/metadata-readers.md) | FB2, EPUB, CBZ, MOBI, PDF heads: what each gives, limits, safe XML, the reader-loop gotcha | `Core/Import/Metadata/` |
 | [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: detection, book-page panel, compare and merge, undo and split (planned) | `Core/Merging/` |
 | [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
 | [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |

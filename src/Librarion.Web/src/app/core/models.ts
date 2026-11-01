@@ -95,6 +95,8 @@ export interface LibraryInfo {
     tenantId: number;
     name: string;
     created: string;
+    /** Books in it (kept by scans). */
+    bookCount?: number;
 }
 
 export interface UserInfo {
@@ -181,4 +183,70 @@ export interface SecurityEventInfo {
     userName: string | null;
     address: string | null;
     detail: string | null;
+}
+
+/** A folder a library's books are found under (`api/libraries/{id}/roots`). */
+export interface LibraryRootInfo {
+    id: number;
+    libraryId: number;
+    path: string;
+    created: string;
+    exists: boolean;
+}
+
+export type TaskOutcome = 'running' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted' | 'skipped';
+
+export interface ScanProgress {
+    filesSeen: number;
+    archivesDone: number;
+    added: number;
+    changed: number;
+    removed: number;
+    current: string | null;
+}
+
+export interface ScanCounts {
+    added: number;
+    changed: number;
+    removed: number;
+    unchanged: number;
+    archivesRead: number;
+    archivesSkipped: number;
+    unreadable: number;
+    missingRoots: string[];
+    problems: string[];
+}
+
+/** A run of a background task (`api/libraries/{id}/tasks`, `api/tasks/{run}`). */
+export interface TaskRunInfo {
+    id: number;
+    libraryId: number | null;
+    task: 'libraryScan' | 'removeRoot';
+    trigger: 'manual' | 'schedule';
+    started: string;
+    finished: string | null;
+    outcome: TaskOutcome;
+    summary: string | null;
+    counts: ScanCounts | null;
+    progress: ScanProgress | null;
+    waiting: boolean;
+}
+
+export type ScheduleKind = 'interval' | 'weekly';
+
+export interface ScheduleInput {
+    kind: ScheduleKind;
+    /** UTC; for weekly schedules its time of day (server's zone) is the time. */
+    start: string;
+    intervalMinutes: number;
+    /** Bit 0 = Sunday. */
+    days: number;
+    enabled: boolean;
+}
+
+export interface ScheduleInfo extends ScheduleInput {
+    id: number;
+    libraryId: number;
+    lastRun: string | null;
+    nextRun: string | null;
 }

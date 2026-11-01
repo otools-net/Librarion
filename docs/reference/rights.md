@@ -6,6 +6,8 @@ libraries; the others tenant-wide. "Changes" marks a right that lets its holder 
 | Right | Area | Changes | Built-in group | Lets its holder |
 |---|---|---|---|---|
 | Browse | Libraries | | Administrators, Users | see the library and its books |
+| Download | Libraries | | Administrators, Users | download the books' files |
+| Scan | Libraries | yes | Administrators | scan the library's folders now, cancel a scan, schedule scans |
 | Library settings | Libraries | yes | Administrators | change the library's settings |
 | Manage accounts and groups | Tenant | yes | Administrators | create accounts in the tenant, put them in groups, choose what each group may do |
 | Manage libraries | Tenant | yes | Administrators | add, rename and delete the tenant's libraries |

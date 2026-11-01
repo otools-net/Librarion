@@ -19,7 +19,7 @@ const port = process.env.LIBRARION_E2E_PORT ?? '5192';
 const baseURL = `http://localhost:${port}/`;
 const pages = pageArgs.length ? pageArgs : [
     'login', 'login#recover', '', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
-    'admin/libraries', 'admin/tenants', 'admin/tenants#edit', 'admin/settings', 'admin/security', 'missing',
+    'admin/libraries', 'admin/libraries#open', 'admin/tenants', 'admin/tenants#edit', 'admin/settings', 'admin/security', 'missing',
 ];
 const sizes = {
     phone: { ...devices['Pixel 7'], viewport: { width: 360, height: 740 }, screen: { width: 360, height: 800 } },
@@ -55,6 +55,15 @@ try {
     const setup = await api.post('api/setup', { data: { code: 'e2e-setup-code-1', ...admin, tenantName: 'Home', libraryName: 'Books' } });
     if (!setup.ok())
         throw new Error(`setup: ${setup.status()} ${await setup.text()}`);
+    // A folder of a few books, added to the library and scanned: the library panel has folders, runs and progress.
+    const books = path.join(work, 'books');
+    fs.mkdirSync(books, { recursive: true });
+    for (let i = 1; i <= 3; i++)
+        fs.writeFileSync(path.join(books, `book-${i}.fb2`), `<?xml version="1.0"?><FictionBook><description><title-info><genre>sf_fantasy</genre>`
+            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title></title-info></description><body/></FictionBook>`);
+    const [library] = await (await api.get('api/libraries')).json();
+    await api.post(`api/libraries/${library.id}/roots`, { data: { path: books } });
+    await api.post(`api/libraries/${library.id}/scan`);
     const signedIn = await api.storageState();
     await api.dispose();
 
@@ -74,6 +83,8 @@ try {
                 await page.getByRole('button', { name: /^New / }).click();
             else if (action === 'edit')
                 await page.getByRole('button', { name: 'Edit' }).first().click();
+            else if (action === 'open')
+                await page.locator('button.row-main').first().click();
             await page.waitForLoadState('networkidle');
             const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}.png`);
             await page.screenshot({ path: file, fullPage: true });

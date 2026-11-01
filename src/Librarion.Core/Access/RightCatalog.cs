@@ -9,6 +9,8 @@ namespace Librarion.Core.Access;
 public static class Rights
 {
     public const string Browse = "library.browse";
+    public const string Download = "library.download";
+    public const string Scan = "library.scan";
     public const string LibrarySettings = "library.settings";
     public const string ManageUsers = "tenant.users";
     public const string ManageLibraries = "tenant.libraries";
@@ -58,6 +60,8 @@ public static class RightCatalog
     public static IReadOnlyList<RightDefinition> All { get; } =
     [
         new(Rights.Browse, RightScope.Library, R, Members, "library"),
+        new(Rights.Download, RightScope.Library, R, Members, "library"),
+        new(Rights.Scan, RightScope.Library, W, Administrators, "library"),
         new(Rights.LibrarySettings, RightScope.Library, W, Administrators, "library"),
         new(Rights.ManageUsers, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.ManageLibraries, RightScope.Tenant, W, Administrators, "tenant"),

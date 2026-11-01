@@ -2,7 +2,26 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
-## Unreleased
+## 0.4.0
+
+### Added
+
+- Library folders: books are found in them as loose files or inside ZIP archives (read in place, never unpacked);
+  tenant administrators add folders only under the ones the configuration allows (`Librarion:Libraries:Folders`).
+- Scanning: new books come in with their metadata (title, authors, series, genres, language, publisher, year,
+  description, identifiers) read from FB2, EPUB, CBZ, MOBI / AZW3 and PDF files; changed books are read again,
+  removed ones leave, unchanged archives are skipped. Scans run in the background with progress, can be cancelled,
+  are listed with what they did, and can be scheduled.
+- Rights **Download** and **Scan**.
+- Downloading a book's file (`api/books/{id}/files/{fileId}`): streamed from the folder or straight out of its ZIP
+  archive, never unpacked, with resumable ranges where the file allows them.
+- The same book file found again in an archive (the same bytes) becomes another copy of the book already there, not
+  a second book.
+- Book covers (`api/books/{id}/cover/{s|m|l}`): the cover inside FB2, EPUB, CBZ, MOBI and AZW3 books, extracted the
+  first time it is shown and kept in the cache; every other book gets a generated cover (five designs, eight palettes,
+  titles in Latin, Greek, Cyrillic, Arabic, Hebrew, Chinese, Japanese, Korean, Devanagari, Bengali, Tamil and Thai
+  scripts), the same for a book every time.
+- `Librarion:Cache:Directory` sets where cache files are kept (default `data/cache`).
 
 ## 0.3.0
 

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librarion.Tests.Infrastructure;
 
-/// <summary>A row in every catalog and tag table for one tenant: for the isolation and cascade tests.</summary>
+/// <summary>A row in every catalog, tag and task table for one tenant: for the isolation and cascade tests.</summary>
 public static class CatalogRows
 {
     /// <returns>The book's id.</returns>
@@ -28,7 +28,8 @@ public static class CatalogRows
             new TagClosure { TenantId = tenantId, Ancestor = fiction, Descendant = fiction },
             new TagClosure { TenantId = tenantId, Ancestor = fiction, Descendant = horror, Depth = 1 });
 
-        var archive = new Archive { TenantId = tenantId, LibraryId = library.Id, Path = "books.zip", PathKey = 1, Size = 100, Modified = now };
+        var root = new LibraryRoot { TenantId = tenantId, LibraryId = library.Id, Path = $"/books/{tenantId}", Created = now };
+        var archive = new Archive { TenantId = tenantId, LibraryId = library.Id, Root = root, Path = "books.zip", PathKey = 1, Size = 100, Modified = now };
         var book = new Book
         {
             TenantId = tenantId, LibraryId = library.Id, Title = "It", SortTitle = "it", SortAuthor = "King, Stephen", Added = now, Updated = now,
@@ -39,6 +40,9 @@ public static class CatalogRows
         book.Tags.Add(new BookTag { TenantId = tenantId, Tag = horror });
         db.Books.Add(book);
         db.GroupTagFilters.Add(new GroupTagFilter { GroupId = group.Id, Tag = fiction });
+        db.ImportTagMappings.Add(new ImportTagMapping { TenantId = tenantId, Source = ImportTagSourceKind.Epub, NormalizedName = "horror stories", Tag = horror });
+        db.TaskRuns.Add(new TaskRun { TenantId = tenantId, LibraryId = library.Id, Task = BackgroundTaskKind.LibraryScan, Started = now, Finished = now, Outcome = TaskOutcome.Succeeded });
+        db.TaskSchedules.Add(new TaskSchedule { TenantId = tenantId, LibraryId = library.Id, Kind = ScheduleKind.Weekly, Days = 127, Start = now, Updated = now });
         await db.SaveChangesAsync(cancellationToken);
 
         db.TagCounts.Add(new TagCount { TenantId = tenantId, LibraryId = library.Id, TagId = author.Id, BookCount = 1 });

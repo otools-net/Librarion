@@ -53,6 +53,7 @@ public sealed class TestCatalog : IDisposable
         // The server's own files in the test's folder, never in the Api project's data folder.
         [SetupOptions.SectionName + ":" + nameof(SetupOptions.CodeFile)] = Path.Combine(BasePath, "data", "setup-code.txt"),
         [SecurityOptions.SectionName + ":" + nameof(SecurityOptions.KeysDirectory)] = Path.Combine(BasePath, "data", "keys"),
+        [Librarion.Core.CacheOptions.SectionName + ":" + nameof(Librarion.Core.CacheOptions.Directory)] = Path.Combine(BasePath, "cache"),
         // Many sign-ins from one address in a test run.
         [SecurityOptions.SectionName + ":" + nameof(SecurityOptions.SignInsPerMinute)] = "10000",
     };

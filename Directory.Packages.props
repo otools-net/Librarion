@@ -17,6 +17,16 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.13" />
+    <!-- ZIP methods past stored and deflate, per-book .7z / .rar wrappers (MIT, as SFE). -->
+    <PackageVersion Include="SharpCompress" Version="0.50.7" />
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.12" />
+    <!-- Covers (D17): decode, resize, WebP, generated covers with shaped text (MIT, no telemetry). Linux assets
+         without fontconfig: fonts are bundled. -->
+    <PackageVersion Include="SkiaSharp" Version="4.153.2" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="4.153.2" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.2" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.302" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.302" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
     <PackageVersion Include="MSTest" Version="4.4.1" />
   </ItemGroup>

@@ -165,3 +165,45 @@ button.row-main:hover .row-title {
         max-width: 110px;
     }
 }
+
+/* A library's folders, scans and schedules, opened under its row. */
+.row-panel {
+    flex: 1 1 100%;
+    min-width: 0;
+}
+
+.library-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-1) 0 var(--space-2);
+}
+
+.library-panel .rows,
+.library-panel .toolbar {
+    margin: 0;
+}
+
+.library-panel details {
+    font-size: 12px;
+}
+
+.library-panel .problems {
+    margin: var(--space-1) 0 0;
+    padding-inline-start: var(--space-4);
+    overflow-wrap: anywhere;
+}
+
+.schedule-form label.inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.schedule-form input[type="number"] {
+    width: 5em;
+}
+
+.schedule-form .check.day {
+    min-height: 44px;
+}

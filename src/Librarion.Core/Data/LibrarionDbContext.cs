@@ -57,6 +57,10 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<BookTag> BookTags => Set<BookTag>();
     public DbSet<TagCount> TagCounts => Set<TagCount>();
     public DbSet<GroupTagFilter> GroupTagFilters => Set<GroupTagFilter>();
+    public DbSet<ImportTagMapping> ImportTagMappings => Set<ImportTagMapping>();
+    public DbSet<LibraryRoot> LibraryRoots => Set<LibraryRoot>();
+    public DbSet<TaskRun> TaskRuns => Set<TaskRun>();
+    public DbSet<TaskSchedule> TaskSchedules => Set<TaskSchedule>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

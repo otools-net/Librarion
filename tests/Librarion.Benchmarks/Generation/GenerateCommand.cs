@@ -30,7 +30,10 @@ public static class GenerateCommand
             var library = await db.Libraries.SingleAsync(cancellationToken);
             var fields = await db.Tags.Where(t => t.FieldKey != null).ToDictionaryAsync(t => t.BuiltIn!.Value, t => t.Id, cancellationToken);
             var firstTag = await db.Tags.MaxAsync(t => t.Id, cancellationToken) + 1;
-            catalogTarget = new CatalogTarget(tenant.Id, library.Id, firstTag, fields);
+            var root = new LibraryRoot { TenantId = tenant.Id, LibraryId = library.Id, Path = Path.Combine(workFolder, "books"), Created = DateTime.UtcNow };
+            db.LibraryRoots.Add(root);
+            await db.SaveChangesAsync(cancellationToken);
+            catalogTarget = new CatalogTarget(tenant.Id, library.Id, firstTag, fields, root.Id);
         }
 
         var generator = new CatalogGenerator(shape, catalogTarget);

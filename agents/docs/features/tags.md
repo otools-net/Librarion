@@ -1,7 +1,10 @@
-# Tags (planned)
+# Tags
 
 Tables built (stage 2): `Tags`, `TagAliases`, `TagParents`, `TagClosure`, `BookTags`, `TagCounts`, built-in tags
-([catalog](catalog.md)); the services and UI below are planned.
+([catalog](catalog.md)). Built (stage 3): imported tags at scan time (`Core/Import/ImportTagResolver`,
+`ImportTagMappings`; tests `LibraryScannerTests`): a source's mapping first, then a tag of that name or alias, else a
+new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. The
+tag services, the admin pages and the UI below are planned.
 
 Code (planned): `src/Librarion.Core/Tagging/` (`TagService`, `TagGraph`, `TagClosure`, `ImportedTags`, `ScopeTagger`,
 `BookTagRows`, `BuiltInTags`), entities in `Data/Entities/Tags/`; client `src/app/tags/`. Ported from SFE

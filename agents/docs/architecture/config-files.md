@@ -15,5 +15,9 @@ Later sources win:
 - The watcher of `appsettings.Local.json` is disposed at `ApplicationStopped`: the configuration doesn't dispose a
   provider it didn't create, and on Linux each holds one of the user's 128 inotify instances (tests start many
   servers in one process; SFE's finding).
+- **Cache files** (covers now, the extract cache later) all go under one configurable folder,
+  `Librarion:Cache:Directory` (default `data/cache`, env `LIBRARION__CACHE__DIRECTORY`; `CacheOptions.PathOf(root,
+  name)` gives each cache its subfolder). The user's rule (2026-11-01): no cache path is fixed in code. Tests point it
+  into their temp folder (`TestCatalog.Settings`).
 - Keys so far: `Librarion:Database:Provider` (`sqlite` default | `postgres`), `ConnectionStrings:Librarion` (SQLite
   default `data/librarion.db` next to the app; required for PostgreSQL), `Urls` (default `http://localhost:5090`).

@@ -10,6 +10,20 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="SharpCompress" />
+    <PackageReference Include="System.IO.Hashing" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Noto fonts (SIL OFL 1.1, Covers/Fonts/OFL*.txt) for generated covers, shipped in fonts/ next to the program
+         and memory-mapped from there (the CJK one is 17 MB: never copied into memory). -->
+    <None Include="Covers/Fonts/*.ttf;Covers/Fonts/*.otf;Covers/Fonts/OFL*.txt" Link="fonts/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
