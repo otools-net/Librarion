@@ -1,0 +1,82 @@
+/* Sign-in and setup pages: one card in the middle of the page (SFE's account.css). */
+
+.account-page {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: max(48px, 8vh) var(--space-4) var(--space-5);
+}
+
+.account-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: 100%;
+    max-width: 400px;
+    padding: var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.account-card.wide {
+    max-width: 520px;
+}
+
+.account-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.account-head .brand {
+    padding: 0;
+}
+
+.account-head h1 {
+    margin: 0;
+}
+
+.account-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.account-form p {
+    margin: 0;
+}
+
+.account-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.account-submit {
+    align-self: flex-start;
+}
+
+.account-foot {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .account-page {
+        padding: var(--space-4);
+    }
+
+    .account-card {
+        padding: var(--space-4);
+    }
+}
+
+/* The account page (in the shell): its sign-out row apart from the panels below. */
+.account-actions {
+    margin-bottom: var(--space-4);
+}

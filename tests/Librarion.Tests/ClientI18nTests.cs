@@ -1,5 +1,10 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Librarion.Api.Endpoints;
+using Librarion.Api.Security;
+using Librarion.Core.Access;
+using Librarion.Core.Data;
+using Librarion.Core.Settings;
 using Librarion.Tests.Infrastructure;
 
 namespace Librarion.Tests;
@@ -59,6 +64,46 @@ public sealed partial class ClientI18nTests
         CollectionAssert.Contains(files, Path.Combine("home", "home-page.ts"));
     }
 
+    /// <summary>
+    /// What the server names and the client shows by a key built at run time: rights, right areas, settings and their
+    /// choices, setting levels, built-in groups, security event kinds, and the error codes the access services send.
+    /// </summary>
+    [TestMethod]
+    public void EveryNameTheServerSendsHasItsText()
+    {
+        using var english = JsonDocument.Parse(File.ReadAllText(RepositoryFiles.PathOf("src/Librarion.Web/src/i18n/en.json")));
+        var keys = english.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+        static string Camel(string name) => char.ToLowerInvariant(name[0]) + name[1..];
+
+        var wanted = new List<string>();
+        foreach (var right in RightCatalog.All)
+            wanted.AddRange([$"right.{right.Id}", $"right.{right.Id}.hint", $"rightArea.{right.Area}"]);
+        foreach (var setting in SettingCatalog.All)
+        {
+            wanted.AddRange([$"setting.{setting.Key}", $"settingSection.{setting.Section}"]);
+            wanted.AddRange((setting.Choices ?? []).Select(choice => $"setting.{setting.Key}.{choice}"));
+        }
+        wanted.AddRange(Enum.GetNames<SettingLevel>().Select(level => $"settingLevel.{Camel(level)}"));
+        wanted.AddRange(Enum.GetNames<BuiltInGroup>().Select(group => $"group.{Camel(group)}"));
+        wanted.AddRange(Enum.GetNames<SecurityEventKind>().Select(kind => $"securityEvent.{Camel(kind)}"));
+        wanted.AddRange(new[] { SessionEndpoints.SignInFailedType, SessionEndpoints.LockedOutType, RequestGuard.SetupRequiredType }.Select(type => $"error.{type}"));
+
+        var named = RightCatalog.All.Select(r => r.Id).Concat(SettingCatalog.All.Select(s => s.Key)).ToHashSet(StringComparer.Ordinal);
+        foreach (var source in new[] { "Access/AccessService.cs", "Access/SetupService.cs", "Access/AccountRecovery.cs", "Settings/SettingsService.cs", "Settings/SettingCatalog.cs" })
+        {
+            var text = File.ReadAllText(RepositoryFiles.PathOf("src/Librarion.Core/" + source));
+            wanted.AddRange(ErrorCode().Matches(text).Select(m => m.Groups[1].Value).Where(code => !named.Contains(code)).Select(code => $"error.{code}"));
+        }
+
+        var kinds = File.ReadAllText(Path.Combine(AppFolder, "admin", "security-section.ts"));
+        var missing = wanted.Distinct().Where(key => !keys.Contains(key)).ToList();
+        missing.AddRange(Enum.GetNames<SecurityEventKind>().Select(Camel).Where(kind => !kinds.Contains($"'{kind}'", StringComparison.Ordinal))
+            .Select(kind => $"SECURITY_EVENT_KINDS lacks {kind}"));
+
+        Assert.IsGreaterThan(80, wanted.Count, "The names were found");
+        Assert.IsEmpty(missing, "Missing from src/i18n/en.json:" + Environment.NewLine + string.Join(Environment.NewLine, missing));
+    }
+
     private static IEnumerable<(string File, string Template)> Templates()
     {
         foreach (var path in Directory.EnumerateFiles(AppFolder, "*.html", SearchOption.AllDirectories))
@@ -91,4 +136,8 @@ public sealed partial class ClientI18nTests
     /// <summary>Quoted dotted names in templates (<c>'shell.menu.open'</c>): keys, also inside conditions.</summary>
     [GeneratedRegex(@"'([a-z][a-zA-Z]*(?:\.[a-zA-Z]+)+)'")]
     private static partial Regex KeyLike();
+
+    /// <summary>String literals shaped like <c>"userName.taken"</c> in the access services: the codes they answer with.</summary>
+    [GeneratedRegex(@"""([a-z][a-zA-Z]*\.[a-z][a-zA-Z]*)""")]
+    private static partial Regex ErrorCode();
 }

@@ -1,4 +1,4 @@
-# Librarion
+# <img src="src/Librarion.Web/public/logo.svg" alt="" width="40" height="40"> Librarion
 
 A self-hosted e-book library server for **huge collections**: millions of books, as loose files or by the hundred
 thousand inside ZIP archives, browsed, searched and read from any device, and served to reader apps over OPDS (with a
@@ -23,12 +23,14 @@ Needs the .NET 10 SDK and Node.js 22+.
 dotnet run --project src/Librarion.Api
 ```
 
-Then open http://localhost:5090. It uses SQLite by default; PostgreSQL and other settings:
+Then open http://localhost:5090. The first time, the setup page asks for the setup code the server printed in its
+console (also in `src/Librarion.Api/data/setup-code.txt`) and makes the first administrator:
+[docs/first-start.md](docs/first-start.md). It uses SQLite by default; PostgreSQL and other settings:
 [docs/configuration.md](docs/configuration.md).
 
 ## Documentation
 
-- [docs/](docs/README.md): installation and configuration.
+- [docs/](docs/README.md): installation, first start, configuration, accounts and administration.
 - Contributors and AI agents: [AGENTS.md](AGENTS.md).
 
 ## License

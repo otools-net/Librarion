@@ -26,3 +26,6 @@ Code: `src/Librarion.Core/Data/` (`LibrarionDbContext`, `DatabaseOptions`, `Libr
   `ServerProperties`. Before the MVP nothing gates this ([production-upgrades](production-upgrades.md)).
 - Indexed strings need a max length (PostgreSQL `character varying(n)`, SQLite ignores it but the model agrees).
 - Order every `Take`; keyset paging only ([scale](scale.md)).
+- Before 1.0 the `Initial` migrations (both providers) are regenerated on a model change instead of adding new ones:
+  no installs exist ([production-upgrades](production-upgrades.md)). Delete both, `dotnet ef migrations add Initial`
+  for each, normalise line endings.

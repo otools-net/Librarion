@@ -1,5 +1,8 @@
 /* Global CSS, one partial per area (agents/docs/development/frontend.md): no component styles. */
 @import "./styles/tokens.css";
 @import "./styles/base.css";
+@import "./styles/forms.css";
 @import "./styles/shell.css";
 @import "./styles/pages.css";
+@import "./styles/account.css";
+@import "./styles/admin.css";

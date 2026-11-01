@@ -6,7 +6,7 @@
     commit to the informational version (0.0.0+<sha>), which the app shows next to it (AppVersion.cs).
   -->
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>

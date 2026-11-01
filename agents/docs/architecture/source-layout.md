@@ -13,7 +13,7 @@ src/Librarion.Api/         Program.cs, AppVersion, ClientPage (the client's page
   Security/                SecurityHeaders (CSP...), RequestGuard (X-Librarion-Request), RightMetadata
   wwwroot/                 the built client (generated, git-ignored)
 src/Librarion.Web/         the Angular workspace (angular.json, package.json, proxy.conf.json)
-  public/                  copied as is (favicon.svg)
+  public/                  copied as is (favicon.svg, logo.svg)
   src/theme-boot.ts        classic script run before first paint (theme), compiled alone by `npm run boot`
   src/i18n/en.json         the English texts (every UI text is a key here)
   src/styles.css, styles/  global CSS, one partial per area (tokens, base, shell, pages)

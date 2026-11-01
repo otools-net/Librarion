@@ -1,21 +1,9 @@
-// Accessibility of the main screens on a phone (as SFE): axe-core's WCAG 2.2 A and AA rules. Serious and critical
-// findings fail; moderate and minor ones are listed in the report. Once per run (android): the rules don't depend on
-// the engine, and layouts are checked elsewhere.
-import AxeBuilder from '@axe-core/playwright';
-import type { Page } from '@playwright/test';
+// Accessibility of the main screens on a phone (as SFE): axe-core's WCAG 2.2 A and AA rules (fixtures/axe.ts). Once
+// per run (android): the rules don't depend on the engine, and layouts are checked elsewhere. The setup page is
+// audited by the first start (it shows only once).
+import { audit } from '../fixtures/axe';
 import { expect, test } from '../fixtures/test';
-
-const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-
-async function audit(page: Page, screen: string): Promise<void> {
-    const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
-    const line = (v: (typeof violations)[number]) =>
-        `${v.id} (${v.impact}): ${v.help} — ${v.nodes.slice(0, 4).map(node => node.target.join(' ')).join(' | ')}`;
-    const minor = violations.filter(v => v.impact !== 'serious' && v.impact !== 'critical');
-    if (minor.length)
-        test.info().annotations.push({ type: `a11y ${screen}`, description: minor.map(line).join('\n') });
-    expect(violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(line), `${screen}: serious or critical`).toEqual([]);
-}
+import { signedOut } from '../paths';
 
 test.describe('@a11y', () => {
     test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== 'android', 'once per run, on the android device'));
@@ -40,5 +28,50 @@ test.describe('@a11y', () => {
         await page.goto('./missing');
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await audit(page, 'not found');
+    });
+
+    test('my account', async ({ page }) => {
+        await page.goto('./account');
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText('My account');
+        await expect(page.getByRole('heading', { name: 'Preferences' })).toBeVisible();
+        await audit(page, 'account');
+    });
+
+    test('the administration with its editors open', async ({ page }) => {
+        await page.goto('./admin/users');
+        await page.getByRole('button', { name: 'New account' }).tap();
+        await expect(page.getByRole('heading', { name: 'New account' })).toBeVisible();
+        await audit(page, 'accounts');
+
+        await page.goto('./admin/groups');
+        await page.getByRole('button', { name: 'New group' }).tap();
+        await expect(page.getByRole('heading', { name: 'New group' })).toBeVisible();
+        await audit(page, 'groups');
+
+        await page.goto('./admin/tenants');
+        await page.getByRole('button', { name: 'Edit' }).first().tap();
+        await expect(page.getByRole('heading', { name: 'Tenant', exact: true })).toBeVisible();
+        await audit(page, 'tenants');
+
+        for (const section of ['libraries', 'settings', 'security']) {
+            await page.goto(`./admin/${section}`);
+            await expect(page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link', { name: /./ }).first()).toBeVisible();
+            await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+            await audit(page, section);
+        }
+    });
+
+    test.describe('signed out', () => {
+        test.use({ storageState: signedOut });
+
+        test('the sign-in page and the recovery', async ({ page }) => {
+            await page.goto('./login');
+            await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in');
+            await audit(page, 'sign-in');
+
+            await page.getByRole('link', { name: 'Recover the account' }).tap();
+            await expect(page.getByRole('heading', { level: 1 })).toHaveText('Recover the account');
+            await audit(page, 'recovery');
+        });
     });
 });

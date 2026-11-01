@@ -16,7 +16,8 @@ Windows service, systemd) come before the first release.
    ```
 
    The first start builds the web app, which takes a minute or two.
-3. Open http://localhost:5090 in a browser.
+3. Open http://localhost:5090 in a browser and set up the first administrator with the code the server printed:
+   [first start](first-start.md).
 
 The database is a SQLite file in `src/Librarion.Api/data/`. For large libraries, use PostgreSQL:
 [configuration](configuration.md#database).

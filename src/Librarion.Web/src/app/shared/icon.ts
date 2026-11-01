@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type IconName = 'menu' | 'close' | 'search' | 'sun' | 'moon' | 'home' | 'library' | 'author' | 'series' | 'tag';
+export type IconName = 'menu' | 'close' | 'search' | 'sun' | 'moon' | 'home' | 'library' | 'author' | 'series' | 'tag' | 'settings' | 'user';
 
 /** `<svg libIcon="menu"></svg>`: a symbol of the bundled sprite (`IconSprite`, once in the shell). Decorative. */
 @Component({
@@ -27,6 +27,8 @@ export class Icon {
             <symbol id="icon-library" viewBox="0 0 24 24"><path d="M5 4h3v16H5zM10 4h3v16h-3zM15.5 5.2l2.9-.8 3.6 15-2.9.8z" /></symbol>
             <symbol id="icon-author" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.8 3.6-5.5 7-5.5s6.2 1.7 7 5.5" /></symbol>
             <symbol id="icon-series" viewBox="0 0 24 24"><path d="M4 6h11v14H4zM8 3h12v14" /></symbol>
+            <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" /></symbol>
+            <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="10" r="3" /><path d="M6.5 18.5c1.2-2.3 3.1-3.3 5.5-3.3s4.3 1 5.5 3.3" /></symbol>
             <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M3.5 12.5V4h8.5l8.5 8.5-8.5 8.5z" /><circle cx="8" cy="8.5" r="1.3" /></symbol>
         </svg>
     `,

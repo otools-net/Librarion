@@ -1,3 +1,5 @@
+using Librarion.Api.Security;
+using Librarion.Core.Access;
 using Librarion.Core.Data;
 
 namespace Librarion.Api.Endpoints;
@@ -10,10 +12,10 @@ public static class SystemEndpoints
     {
         var group = api.MapGroup("/system").WithTags("System");
 
-        // Anonymous until stage 1 brings accounts (it then needs a right: it tells about the server).
+        // A right: it tells about the server.
         group.MapGet("/info", (DatabaseOptions database) => TypedResults.Ok(new SystemInfo(AppVersion.Version, AppVersion.Commit, database.Provider)))
             .WithName("GetSystemInfo")
             .WithSummary("The running version and database provider.")
-            .AllowAnonymous();
+            .RequireRight(Rights.SystemInfo);
     }
 }

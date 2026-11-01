@@ -1,3 +1,4 @@
+using Librarion.Core.Access;
 using Librarion.Core.Data;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -49,6 +50,11 @@ public sealed class TestCatalog : IDisposable
     {
         [DatabaseOptions.ProviderKey] = Provider == DatabaseProvider.Sqlite ? "sqlite" : "postgres",
         ["ConnectionStrings:" + DatabaseOptions.ConnectionStringName] = ConnectionString,
+        // The server's own files in the test's folder, never in the Api project's data folder.
+        [SetupOptions.SectionName + ":" + nameof(SetupOptions.CodeFile)] = Path.Combine(BasePath, "data", "setup-code.txt"),
+        [SecurityOptions.SectionName + ":" + nameof(SecurityOptions.KeysDirectory)] = Path.Combine(BasePath, "data", "keys"),
+        // Many sign-ins from one address in a test run.
+        [SecurityOptions.SectionName + ":" + nameof(SecurityOptions.SignInsPerMinute)] = "10000",
     };
 
     public void Dispose()

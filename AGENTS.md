@@ -15,6 +15,9 @@ Books come as loose files or by the hundred thousand inside ZIP archives, indexe
 ([archives](agents/docs/features/archives.md)); reference for archive-based libraries: MyHomeLib
 (`C:\workspace\GIT\reference-projects\MyHomeLib`).
 
+Reference for how books are shown and read (covers, titles, the reader; behaviour only, its GPL-3 code is never
+copied): calibre-web (`C:\workspace\GIT\reference-projects\calibre-web`).
+
 Reference project for design, rights and philosophy: SimpleFileExplorer (`C:\workspace\GIT\SimpleFileExplorer`, SFE).
 When a pattern exists there (tenants, rights catalog, sessions, settings levels, tests), port it and say so in the
 note rather than inventing a new one.
@@ -52,6 +55,8 @@ note rather than inventing a new one.
   ([privacy](agents/docs/development/privacy.md)).
 - **Scale:** millions of books, hundreds of thousands of authors and tags; nothing proportional to the catalog per
   request, every list pages by key ([scale](agents/docs/development/scale.md)).
+  A feature or idea (the user's or an agent's) that would cost at scale is **brought to the user before it is added**:
+  the cost, alternatives, a recommendation, or a recommendation not to add it when no good alternative exists.
 - **UI:** every screen works from a 360 px phone to a desktop, compact by default, touch and mouse
   ([frontend](agents/docs/development/frontend.md)).
 - **Tests** come with every feature and fix; important flows also get end-to-end tests; not done until `dotnet test`
@@ -64,9 +69,10 @@ note rather than inventing a new one.
 - **Database:** both providers (SQLite, PostgreSQL) work; every model change makes a migration for each
   ([database](agents/docs/development/database.md)).
 - **Texts:** every UI text is a translation key in `src/i18n/en.json` ([frontend](agents/docs/development/frontend.md)).
-- **Git:** work is committed on the `edge` branch, merged into `main` when the user says; messages
-  `claude: <short summary>`; a commit after each finished stage or functionality of importance, green tests only
-  (decided 2026-10-31). Pushing, merging and tags only when the user asks.
+- **Git:** work is committed on the `edge` branch; messages `claude: <short summary>`; a commit after each finished
+  stage or functionality of importance, green tests only (decided 2026-10-31). `edge` is pushed after each finished
+  stage and merged into `main` with the version bump when a stage's exit criteria are met, without asking (the
+  user's decision, 2026-11-01); tags only when the user asks.
 - **Agent tools:** put any reusable helper (scripts, generators, drivers) in `agents/tools/<job>/` with a `README.md`,
   never only in the scratchpad; work output goes to a temp folder, not the repo.
 
@@ -86,7 +92,6 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
-| [stage-0-foundation-plan](agents/docs/development/stage-0-foundation-plan.md) | stage 0 work items and exit criteria (repo, build, tests, privacy guards, i18n, shell, CI) | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
@@ -113,7 +118,18 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [rights](agents/docs/features/rights.md) | rights catalog, scopes, evaluation (planned, ported from SFE) | `Core/Access/` |
+| [rights](agents/docs/features/rights.md) | rights catalog, scopes, built-in groups, evaluation and its cache, route rule; planned rights and content filters | `Core/Access/`, `Api/Security/` |
+| [accounts](agents/docs/features/accounts.md) | accounts and groups, passwords, sign-in throttle and lockout, session cookie and stamp, recovery codes | `Core/Access/`, `Api/Security/`, `app/account/`, `app/admin/` |
+| [tenants](agents/docs/features/tenants.md) | tenants and libraries, isolation by query filters (`TenantDb`), server administrators across tenants | `Core/Data/`, `Core/Access/`, `app/admin/` |
+| [setup](agents/docs/features/setup.md) | first start: setup code (configured or generated), 503 until set up, recovery mode | `Core/Access/`, `Api/Security/`, `app/account/` |
+| [settings](agents/docs/features/settings.md) | settings by level (server, tenant, library, user), locks, catalog of keys | `Core/Settings/`, `app/settings/` |
+| [security-log](agents/docs/features/security-log.md) | security events: what is logged (never secrets), retention, who reads | `Core/Access/SecurityLog.cs`, `app/admin/` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
+| [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
+| [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
+| [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
+| [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: detection, book-page panel, compare and merge, undo and split (planned) | `Core/Merging/` |
+| [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
+| [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |

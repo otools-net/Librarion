@@ -24,7 +24,7 @@ public sealed class ApiTests
     {
         using var catalog = new TestCatalog();
         await using var factory = ApiClients.CreateFactory(catalog);
-        using var client = ApiClients.Create(factory);
+        using var client = (await ApiClients.SetUpAsync(factory, TestContext.CancellationToken)).Client;
 
         var info = await client.GetFromJsonAsync<SystemInfo>("/api/system/info", Json, TestContext.CancellationToken);
 
@@ -40,7 +40,7 @@ public sealed class ApiTests
         await using var factory = ApiClients.CreateFactory(catalog);
         using var client = ApiClients.Create(factory);
 
-        foreach (var path in new[] { "/api/system/info", "/api/nothing-here", "/openapi/v1.json" })
+        foreach (var path in new[] { "/api/session", "/api/system/info", "/api/nothing-here", "/openapi/v1.json" })
         {
             using var response = await client.GetAsync(path, TestContext.CancellationToken);
             Assert.AreEqual(SecurityHeaders.AppPolicy, string.Join(";", response.Headers.GetValues("Content-Security-Policy")), path);
@@ -57,8 +57,8 @@ public sealed class ApiTests
         await using var factory = ApiClients.CreateFactory(catalog);
         using var bare = factory.CreateClient();
 
-        using var refused = await bare.PostAsync("/api/system/info", null, TestContext.CancellationToken);
-        using var reading = await bare.GetAsync("/api/system/info", TestContext.CancellationToken);
+        using var refused = await bare.PostAsync("/api/session/logout", null, TestContext.CancellationToken);
+        using var reading = await bare.GetAsync("/api/session", TestContext.CancellationToken);
 
         Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         StringAssert.Contains(await refused.Content.ReadAsStringAsync(TestContext.CancellationToken), RequestGuard.Header);
@@ -70,7 +70,7 @@ public sealed class ApiTests
     {
         using var catalog = new TestCatalog();
         await using var factory = ApiClients.CreateFactory(catalog);
-        using var client = ApiClients.Create(factory);
+        using var client = (await ApiClients.SetUpAsync(factory, TestContext.CancellationToken)).Client;
 
         using var response = await client.GetAsync("/api/no/such/route", TestContext.CancellationToken);
 
@@ -104,7 +104,7 @@ public sealed class ApiTests
     {
         using var catalog = new TestCatalog();
         await using var factory = ApiClients.CreateFactory(catalog);
-        using var client = ApiClients.Create(factory);
+        using var client = (await ApiClients.SetUpAsync(factory, TestContext.CancellationToken)).Client;
 
         using var document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json", TestContext.CancellationToken));
 

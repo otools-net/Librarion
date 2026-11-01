@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Librarion.Api.Endpoints;
 using Librarion.Tests.Infrastructure;
 
 namespace Librarion.Tests;
@@ -21,8 +22,15 @@ public sealed partial class PrivacyTests
         using var catalog = new TestCatalog();
         await using (var factory = ApiClients.CreateFactory(catalog))
         {
-            using var client = ApiClients.Create(factory);
-            foreach (var path in new[] { "/api/system/info", "/openapi/v1.json", "/", "/some/client/route" })
+            // Setup, sign-in and the administration's routes (stage 1).
+            using var client = (await ApiClients.SetUpAsync(factory, TestContext.CancellationToken)).Client;
+            await ApiClients.CreateUserAsync(client, new NewUser("reader", Password: ApiClients.Password), TestContext.CancellationToken);
+            using (await ApiClients.SignInAsync(factory, "reader", ApiClients.Password, TestContext.CancellationToken)) { }
+            foreach (var path in new[]
+                     {
+                         "/api/session", "/api/system/info", "/openapi/v1.json", "/api/tenants", "/api/users", "/api/groups", "/api/rights",
+                         "/api/libraries", "/api/settings?level=server", "/api/me/preferences", "/api/security-events?all=true", "/", "/some/client/route",
+                     })
                 using (await client.GetAsync(path, TestContext.CancellationToken)) { }
         }
 

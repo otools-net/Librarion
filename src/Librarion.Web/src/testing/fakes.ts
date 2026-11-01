@@ -2,7 +2,7 @@ import { EnvironmentProviders, Provider } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { Mock } from 'vitest';
 import { Api } from '../app/core/api.service';
-import { SystemInfo } from '../app/core/models';
+import { GroupInfo, SessionInfo, SettingState, SystemInfo, UserInfo } from '../app/core/models';
 
 /** Every method of `Api` as a mock: unset ones return a promise that never settles (as SFE). */
 export type ApiMock = { [K in keyof Api]: Api[K] extends (...args: infer A) => infer R ? Mock<(...args: A) => R> : Api[K] };
@@ -31,6 +31,37 @@ export function testProviders(api: ApiMock, ...more: (Provider | EnvironmentProv
 
 export function systemInfo(overrides: Partial<SystemInfo> = {}): SystemInfo {
     return { version: '0.0.0', commit: 'abc123', database: 'sqlite', ...overrides };
+}
+
+/** A signed-in session: an account of tenant 1 ("Home") with `rights`. */
+export function sessionInfo(rights: string[] = [], overrides: Partial<SessionInfo> = {}): SessionInfo {
+    return {
+        user: { id: 1, userName: 'ana', displayName: null, isServerAdmin: false, local: true },
+        tenant: { id: 1, slug: 'home', name: 'Home' },
+        tenants: [{ id: 1, slug: 'home', name: 'Home' }],
+        rights,
+        setupRequired: false,
+        preferences: {},
+        ...overrides,
+    };
+}
+
+export function userInfo(overrides: Partial<UserInfo> = {}): UserInfo {
+    return {
+        id: 2, tenantId: 1, userName: 'bea', displayName: null, source: 'local', isServerAdmin: false, disabled: false, lockedOut: false,
+        created: '2026-10-31T10:00:00Z', lastSignIn: null, groups: [], ...overrides,
+    };
+}
+
+export function groupInfo(overrides: Partial<GroupInfo> = {}): GroupInfo {
+    return { id: 10, tenantId: 1, name: 'Users', builtIn: 'users', externalName: null, allLibraries: true, rights: [], libraryIds: [], memberIds: [], ...overrides };
+}
+
+export function settingState(overrides: Partial<SettingState> = {}): SettingState {
+    return {
+        key: 'ui.theme', section: 'interface', kind: 'choice', choices: ['system', 'light', 'dark'], min: 0, max: 0,
+        value: 'system', inherited: 'system', source: null, locked: false, lockedAbove: false, editable: true, ...overrides,
+    };
 }
 
 /** Lets timers, promises and change detection run (zoneless TestBed). Real timers only. */
