@@ -1,0 +1,223 @@
+/*
+ * Dialogs and toasts (agents/docs/features/design.md#dialogs-and-feedback): shared/sheet.ts, shared/confirm.ts,
+ * shared/toasts.ts. Port of SFE's dialogs.css and toasts.css: a card in the middle on wider screens, a sheet rising
+ * from the bottom on phones (≤ 640 px).
+ */
+
+.sheet {
+    width: min(520px, calc(100vw - 24px));
+    max-height: min(86dvh, 820px);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+}
+
+.sheet.wide {
+    width: min(760px, calc(100vw - 24px));
+}
+
+.sheet[open] {
+    display: flex;
+    flex-direction: column;
+    animation: sheet-in var(--duration) var(--ease);
+}
+
+.sheet::backdrop {
+    background: rgb(0 0 0 / .5);
+}
+
+.sheet-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-3) var(--space-2) var(--space-5);
+}
+
+.sheet-title {
+    min-width: 0;
+}
+
+.sheet-head h2 {
+    margin: 0;
+    font-size: var(--text-lg);
+    line-height: 1.3;
+}
+
+.sheet-subtitle {
+    margin: 2px 0 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A long title shrinks, not the Close button. */
+.sheet-head > .icon-button {
+    margin-top: -4px;
+}
+
+.sheet-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-height: 0;
+    padding: var(--space-1) var(--space-5) var(--space-4);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.sheet-body > p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.sheet-foot {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+}
+
+.sheet-foot:empty {
+    display: none;
+}
+
+.sheet-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+/* The page behind a dialog doesn't scroll. */
+html:has(dialog.sheet[open]) {
+    overflow: hidden;
+}
+
+@keyframes sheet-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(.98);
+    }
+}
+
+@media (max-width: 640px) {
+    .sheet,
+    .sheet.wide {
+        width: 100vw;
+        max-width: 100vw;
+        max-height: 92dvh;
+        margin: auto 0 0;
+        border-width: 1px 0 0;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .sheet[open] {
+        animation-name: sheet-up;
+    }
+
+    /* The grab handle: it reads as a sheet. */
+    .sheet-head::before {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 36px;
+        height: 4px;
+        border-radius: var(--radius-pill);
+        background: var(--border-strong);
+        content: "";
+        transform: translateX(-50%);
+    }
+
+    .sheet-head {
+        position: relative;
+        padding-top: var(--space-5);
+    }
+
+    /* Thumbs: the buttons fill the width, the one going ahead last (nearest). */
+    .sheet-actions > .button {
+        flex: 1 1 0;
+    }
+}
+
+@keyframes sheet-up {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+/* Toasts: a manual popover (shared/toasts.ts), so they show above open dialogs too; undo its default box. */
+.toasts {
+    position: fixed;
+    inset: auto max(var(--space-4), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) auto;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: max-content;
+    max-width: min(420px, calc(100vw - 2 * var(--space-4)));
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    color: inherit;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--success);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    animation: toast-in var(--duration) var(--ease);
+}
+
+.toast > .icon {
+    color: var(--success);
+}
+
+.toast.error {
+    border-left-color: var(--danger);
+}
+
+.toast.error > .icon {
+    color: var(--danger);
+}
+
+.toast-text {
+    flex: 1;
+    min-width: 0;
+    padding-block: var(--space-1);
+    white-space: pre-line;
+}
+
+.toast .icon-button .icon {
+    width: 16px;
+    height: 16px;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@media (max-width: 640px) {
+    .toasts {
+        inset-inline: var(--space-2);
+        width: auto;
+        max-width: none;
+    }
+}

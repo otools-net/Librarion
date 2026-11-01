@@ -4,6 +4,9 @@ import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { ImportInput, LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleKind, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
+import { EmptyState } from '../shared/placeholders';
 
 const POLL_MS = 1500;
 
@@ -14,7 +17,7 @@ const POLL_MS = 1500;
  */
 @Component({
     selector: 'lib-library-panel',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, EmptyState],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="library-panel">
@@ -32,7 +35,7 @@ const POLL_MS = 1500;
                                 (click)="removeRoot(root)">{{ 'libraries.removeFolder' | t }}</button>
                     </li>
                 } @empty {
-                    <li class="row muted">{{ 'libraries.noFolders' | t }}</li>
+                    <li class="row" libEmpty="folder">{{ 'libraries.noFolders' | t }}</li>
                 }
             </ul>
             <form class="toolbar" novalidate (submit)="addRoot($event)">
@@ -100,7 +103,7 @@ const POLL_MS = 1500;
                             </span>
                         </li>
                     } @empty {
-                        <li class="row muted">{{ 'tasks.noRuns' | t }}</li>
+                        <li class="row" libEmpty="activity">{{ 'tasks.noRuns' | t }}</li>
                     }
                 </ul>
 
@@ -171,7 +174,7 @@ const POLL_MS = 1500;
                             <button type="button" class="button danger" [title]="'schedules.deleteHint' | t" [disabled]="busy()" (click)="deleteSchedule(schedule)">{{ 'common.delete' | t }}</button>
                         </li>
                     } @empty {
-                        <li class="row muted">{{ 'schedules.none' | t }}</li>
+                        <li class="row" libEmpty="clock">{{ 'schedules.none' | t }}</li>
                     }
                 </ul>
                 <form class="toolbar schedule-form" novalidate (submit)="addSchedule($event)">
@@ -204,6 +207,8 @@ const POLL_MS = 1500;
 export class LibraryPanel implements OnInit, OnDestroy {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly confirm = inject(ConfirmService);
+    private readonly toasts = inject(ToastService);
     private readonly session = inject(SessionService);
 
     readonly library = input.required<LibraryInfo>();
@@ -269,6 +274,7 @@ export class LibraryPanel implements OnInit, OnDestroy {
             input.files = this.importFiles().trim();
         await this.run(async () => {
             await this.api.importIntoLibrary(this.library().id, input);
+            this.toasts.show(this.i18n.t('tasks.importStarted'));
             this.importSource.set('');
             this.importFiles.set('');
             this.roots.set(await this.api.libraryRoots(this.library().id));
@@ -292,7 +298,11 @@ export class LibraryPanel implements OnInit, OnDestroy {
     }
 
     protected async removeRoot(root: LibraryRootInfo): Promise<void> {
-        if (!confirm(this.i18n.t('libraries.removeFolderConfirm', { path: root.path })))
+        const ok = await this.confirm.ask({
+            title: this.i18n.t('libraries.removeFolderTitle'), message: this.i18n.t('libraries.removeFolderConfirm', { path: root.path }),
+            action: this.i18n.t('common.remove'), danger: true,
+        });
+        if (!ok)
             return;
         await this.run(async () => {
             await this.api.removeLibraryRoot(this.library().id, root.id);
@@ -305,6 +315,7 @@ export class LibraryPanel implements OnInit, OnDestroy {
     protected async scan(): Promise<void> {
         await this.run(async () => {
             await this.api.scanLibrary(this.library().id);
+            this.toasts.show(this.i18n.t('tasks.scanStarted'));
             await this.refreshRuns();
         });
     }
@@ -359,17 +370,17 @@ export class LibraryPanel implements OnInit, OnDestroy {
 
     /** Removing one missing book: only after the user accepts. */
     protected async removeMissing(book: MissingBookItem): Promise<void> {
-        if (confirm(this.i18n.t('missing.confirmOne', { name: book.name })))
+        if (await this.askRemoval(this.i18n.t('missing.confirmOne', { name: book.name })))
             await this.startRemoval({ bookIds: [book.id] });
     }
 
     protected async removeReady(page: MissingBookPage): Promise<void> {
-        if (confirm(this.i18n.t('missing.confirmReady', { count: page.ready, days: page.keepDays })))
+        if (await this.askRemoval(this.i18n.t('missing.confirmReady', { count: page.ready, days: page.keepDays })))
             await this.startRemoval({ ready: true });
     }
 
     protected async removeAllMissing(page: MissingBookPage): Promise<void> {
-        if (confirm(this.i18n.t('missing.confirmAll', { count: page.total })))
+        if (await this.askRemoval(this.i18n.t('missing.confirmAll', { count: page.total })))
             await this.startRemoval({ all: true });
     }
 
@@ -384,9 +395,14 @@ export class LibraryPanel implements OnInit, OnDestroy {
         });
     }
 
+    private askRemoval(message: string): Promise<boolean> {
+        return this.confirm.ask({ title: this.i18n.t('missing.confirmTitle'), message, action: this.i18n.t('common.remove'), danger: true });
+    }
+
     private async startRemoval(removal: MissingRemoval): Promise<void> {
         await this.run(async () => {
             await this.api.removeMissingBooks(this.library().id, removal);
+            this.toasts.show(this.i18n.t('missing.removalStarted'));
             await this.refreshRuns();
         });
     }

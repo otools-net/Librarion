@@ -56,3 +56,25 @@ Code: `styles/forms.css` (controls), `styles/admin.css` (panels, rows, tabs).
 - Looked at with the screenshots tool in both themes (`LIBRARION_SCREENS_THEME=light`,
   [screenshots](../../tools/screenshots/README.md)).
 
+## Dialogs and feedback
+
+Code: `app/shared/sheet.ts`, `shared/confirm.ts`, `core/toast.service.ts` + `shared/toasts.ts`, `shared/placeholders.ts`;
+styles `styles/dialogs.css`, `styles/states.css`. Mounted once in `app.ts` (with the icon sprite), for every page.
+
+- `Sheet` (port of SFE's `SheetComponent`): a modal `<dialog>` with title, close button, scrolling body and a footer
+  (`sheetFooter`); Esc and a click that starts and ends on the backdrop close it, focus returns where it was. ≤ 640 px
+  it is a sheet from the bottom (full width, grab handle, buttons filling the width). jsdom lacks `showModal`: the
+  component falls back to the `open` attribute.
+- Never `window.confirm()` / `prompt()`: `ConfirmService.ask({ title, message, action, danger, typeToConfirm })` resolves
+  true only on the action button; `danger` puts the focus on Cancel; `typeToConfirm` keeps the button off until the
+  text is typed (deleting a tenant). Tests: `vi.spyOn(ConfirmService.prototype, 'ask').mockResolvedValue(true)`.
+- `ToastService.show()` / `.error()` (port of SFE's): 5 s, errors 10 s, all held while the pointer or focus is on them
+  (WCAG 2.2.1), each with Close. The box is a manual popover shown again on each new toast, so it is above an open
+  dialog; it stays in the page empty as a `role=status` live region (a region added with its text isn't announced),
+  so e2e tests find a status by its text (`getByRole('status').filter({ hasText })`). Use for the outcome of an action
+  that leaves no other mark (saved, deleted, a run started); form errors stay next to the form.
+- Empty lists: `<li class="row" libEmpty="folder">text</li>` (icon in a disc, then what to do); `class="large"` for a
+  page. Loading: `<lib-skeleton [rows] shape="rows|form" [label]>` (`role=status`, `aria-busy`, hidden label read
+  once, shimmer off under reduced motion).
+- Screenshots tool `#delete` shows a confirmation dialog.
+

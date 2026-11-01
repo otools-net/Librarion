@@ -5,6 +5,7 @@ import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SecurityEventInfo } from '../core/models';
 import { Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
+import { EmptyState } from '../shared/placeholders';
 
 /** Event kinds, as the server names them (texts: `securityEvent.<kind>`). */
 export const SECURITY_EVENT_KINDS = [
@@ -16,7 +17,7 @@ export const SECURITY_EVENT_KINDS = [
 /** The security log, newest first, 100 at a time; filtered by kind and name. Server administrators may see every tenant's. */
 @Component({
     selector: 'lib-security-section',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, EmptyState],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="toolbar">
@@ -50,7 +51,7 @@ export const SECURITY_EVENT_KINDS = [
                     </span>
                 </li>
             } @empty {
-                <li class="row muted">{{ 'security.none' | t }}</li>
+                <li class="row" libEmpty="shield">{{ 'security.none' | t }}</li>
             }
         </ul>
         @if (more()) {

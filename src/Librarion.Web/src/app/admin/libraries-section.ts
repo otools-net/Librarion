@@ -3,12 +3,15 @@ import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryInfo } from '../core/models';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
+import { EmptyState } from '../shared/placeholders';
 import { LibraryPanel } from './library-panel';
 
 /** Libraries of the tenant: added, renamed in place, deleted; each opens its folders, scans and schedules. */
 @Component({
     selector: 'lib-libraries-section',
-    imports: [TranslatePipe, LibraryPanel],
+    imports: [TranslatePipe, LibraryPanel, EmptyState],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <form class="toolbar" novalidate (submit)="create($event)">
@@ -42,7 +45,7 @@ import { LibraryPanel } from './library-panel';
                     }
                 </li>
             } @empty {
-                <li class="row muted">{{ 'libraries.none' | t }}</li>
+                <li class="row" libEmpty="library">{{ 'libraries.none' | t }}</li>
             }
         </ul>
     `,
@@ -50,6 +53,8 @@ import { LibraryPanel } from './library-panel';
 export class LibrariesSection implements OnInit {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly confirm = inject(ConfirmService);
+    private readonly toasts = inject(ToastService);
 
     protected readonly libraries = signal<LibraryInfo[]>([]);
     protected readonly name = signal('');
@@ -89,10 +94,15 @@ export class LibrariesSection implements OnInit {
     }
 
     protected async remove(library: LibraryInfo): Promise<void> {
-        if (!confirm(this.i18n.t('libraries.deleteConfirm', { name: library.name })))
+        const ok = await this.confirm.ask({
+            title: this.i18n.t('libraries.deleteTitle'), message: this.i18n.t('libraries.deleteConfirm', { name: library.name }),
+            action: this.i18n.t('common.delete'), danger: true,
+        });
+        if (!ok)
             return;
         await this.run(async () => {
             await this.api.deleteLibrary(library.id);
+            this.toasts.show(this.i18n.t('libraries.deleted', { name: library.name }));
             this.libraries.set(await this.api.libraries());
         });
     }

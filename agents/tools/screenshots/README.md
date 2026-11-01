@@ -14,6 +14,7 @@ LIBRARION_SCREENS_THEME=light node agents/tools/screenshots/screenshots.mjs   # 
 ```
 
 - A page is a client address; `#recover` opens the recovery on the sign-in page, `#new` presses the section's "New …"
-  button, `#edit` its first "Edit" button, `#open` its first row (a library's folders, runs and schedules). Before
+  button, `#edit` its first "Edit" button, `#open` its first row (a library's folders, runs and schedules), `#delete` its first Delete button (the
+  confirmation dialog; that shot is the viewport, not the full page). Before
   the pages, a folder of three FB2s is added to the library and scanned. Files are named `<phone|desktop>-<page>.png`.
 - It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds.

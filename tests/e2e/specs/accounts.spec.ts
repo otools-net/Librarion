@@ -52,7 +52,7 @@ test.describe('@accounts', () => {
 
         await page.getByLabel('Name', { exact: true }).fill(account.userName);
         await press(page.getByRole('button', { name: 'Show a recovery code on the server' }), isMobile);
-        await expect(page.getByRole('status')).toContainText("server's console");
+        await expect(page.getByRole('status').filter({ hasText: "server's console" })).toBeVisible();
 
         // What the person running the server reads in its console, or in this file beside the setup code.
         const file = path.join(data, 'recovery-code.txt');

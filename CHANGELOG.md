@@ -8,6 +8,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 - New colours, "ink and paper": warm paper with ink-blue in the light theme, deep blue-grey in the dark one, every
   text readable at WCAG AA contrast in both.
+- Restyled buttons, fields, checkboxes, chips and badges, with visible focus rings; panels and lists as cards.
+- Deleting something asks in the page's own dialog (a sheet from the bottom on phones, Cancel focused) instead of the
+  browser's box; deleting a tenant needs its name typed in it. Short messages ("Saved.", "Library deleted.", "Scan
+  started") appear as toasts in the corner, kept while pointed at. Empty lists show an icon and what to do next, and
+  pages that load show grey placeholders instead of "Loading…".
 
 ## 0.5.0
 

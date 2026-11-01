@@ -5,6 +5,8 @@ import { ApiMock, groupInfo, mockApi, sessionInfo, settle, testProviders, userIn
 import { ApiError } from '../core/api.service';
 import { RightInfo, TaskRunInfo } from '../core/models';
 import { SessionService } from '../core/session.service';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
 import { AdminPage } from './admin-page';
 import { GroupsSection } from './groups-section';
 import { LibrariesSection } from './libraries-section';
@@ -141,7 +143,7 @@ describe('LibrariesSection', () => {
         api.createLibrary.mockResolvedValue({ id: 6, tenantId: 1, name: 'Comics', created: '' });
         api.renameLibrary.mockResolvedValue({ id: 5, tenantId: 1, name: 'Novels', created: '' });
         api.deleteLibrary.mockResolvedValue(undefined);
-        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        vi.spyOn(ConfirmService.prototype, 'ask').mockResolvedValue(true);
         const { element, stable } = await render(LibrariesSection, api, ['tenant.libraries']);
 
         type(element, '.toolbar input', 'Comics');
@@ -159,6 +161,7 @@ describe('LibrariesSection', () => {
         click(element, 'Delete');
         await stable();
         expect(api.deleteLibrary).toHaveBeenCalledWith(5);
+        expect(TestBed.inject(ToastService).toasts().map(toast => toast.message)).toEqual(['Library Books deleted.']);
         vi.restoreAllMocks();
     });
 });
@@ -234,12 +237,12 @@ describe('LibraryPanel', () => {
         expect(element.textContent).toContain('2 books whose files are gone');
         expect(element.textContent).toContain('1 missing for more than 30 days');
 
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+        const confirm = vi.spyOn(ConfirmService.prototype, 'ask').mockResolvedValue(false);
         list.querySelector<HTMLButtonElement>('button.danger')!.click();
         await stable();
         expect(api.removeMissingBooks).not.toHaveBeenCalled();
 
-        confirm.mockReturnValue(true);
+        confirm.mockResolvedValue(true);
         list.querySelector<HTMLButtonElement>('button.danger')!.click();
         await stable();
         expect(api.removeMissingBooks).toHaveBeenCalledWith(5, { bookIds: [11] });
@@ -334,7 +337,7 @@ describe('TenantsSection', () => {
         api.rights.mockResolvedValue([]);
         api.switchTenant.mockResolvedValue(sessionInfo([], { tenant: { id: 2, slug: 'club', name: 'Club' } }));
         api.deleteTenant.mockResolvedValue(undefined);
-        const prompt = vi.spyOn(window, 'prompt').mockReturnValue('club');
+        const ask = vi.spyOn(ConfirmService.prototype, 'ask').mockResolvedValue(false);
         const { element, stable } = await render(TenantsSection, api, ['server.tenants']);
 
         expect(element.querySelectorAll('.row')[0].textContent).toContain('Working here');
@@ -345,7 +348,8 @@ describe('TenantsSection', () => {
         [...element.querySelectorAll<HTMLButtonElement>('button.danger')][0].click();
         await stable();
         expect(api.deleteTenant).not.toHaveBeenCalled();
-        prompt.mockReturnValue('Home');
+        expect(ask).toHaveBeenCalledWith(expect.objectContaining({ typeToConfirm: 'Home', danger: true }));
+        ask.mockResolvedValue(true);
         [...element.querySelectorAll<HTMLButtonElement>('button.danger')][0].click();
         await stable();
         expect(api.deleteTenant).toHaveBeenCalledWith(1);

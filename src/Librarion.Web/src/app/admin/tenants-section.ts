@@ -5,6 +5,8 @@ import { I18n, TranslatePipe } from '../core/i18n.service';
 import { RightInfo, TenantInfo } from '../core/models';
 import { rightAreas } from '../core/rights';
 import { SessionService } from '../core/session.service';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
 
 /** What the editor holds for the tenant being changed. */
 interface TenantDraft {
@@ -95,6 +97,8 @@ interface TenantDraft {
 export class TenantsSection implements OnInit {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly confirm = inject(ConfirmService);
+    private readonly toasts = inject(ToastService);
     protected readonly sessions = inject(SessionService);
 
     protected readonly tenants = signal<TenantInfo[]>([]);
@@ -158,10 +162,15 @@ export class TenantsSection implements OnInit {
     }
 
     protected async remove(tenant: TenantInfo): Promise<void> {
-        if (prompt(this.i18n.t('tenants.deleteConfirm', { name: tenant.name }))?.trim() !== tenant.name)
+        const ok = await this.confirm.ask({
+            title: this.i18n.t('tenants.deleteTitle'), message: this.i18n.t('tenants.deleteConfirm', { name: tenant.name }),
+            action: this.i18n.t('common.delete'), danger: true, typeToConfirm: tenant.name,
+        });
+        if (!ok)
             return;
         await this.run(async () => {
             await this.api.deleteTenant(tenant.id);
+            this.toasts.show(this.i18n.t('tenants.deleted', { name: tenant.name }));
             await this.refresh();
         });
     }

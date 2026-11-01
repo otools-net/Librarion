@@ -5,6 +5,9 @@ import { I18n, TranslatePipe } from '../core/i18n.service';
 import { GroupInfo, UserInfo } from '../core/models';
 import { Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
+import { EmptyState } from '../shared/placeholders';
 
 /** What the editor holds: a new account (`id` null) or one being changed. */
 interface UserDraft {
@@ -24,7 +27,7 @@ interface UserDraft {
  */
 @Component({
     selector: 'lib-users-section',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, EmptyState],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="toolbar">
@@ -118,7 +121,7 @@ interface UserDraft {
                     }
                 </li>
             } @empty {
-                <li class="row muted">{{ 'users.none' | t }}</li>
+                <li class="row" libEmpty="users">{{ 'users.none' | t }}</li>
             }
         </ul>
         @if (more()) {
@@ -129,6 +132,8 @@ interface UserDraft {
 export class UsersSection implements OnInit {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly confirm = inject(ConfirmService);
+    private readonly toasts = inject(ToastService);
     protected readonly sessions = inject(SessionService);
     protected readonly rights = Rights;
 
@@ -221,10 +226,17 @@ export class UsersSection implements OnInit {
     }
 
     protected async remove(draft: UserDraft): Promise<void> {
-        if (draft.id === null || !confirm(this.i18n.t('users.deleteConfirm', { name: draft.userName })))
+        if (draft.id === null)
+            return;
+        const ok = await this.confirm.ask({
+            title: this.i18n.t('users.deleteTitle'), message: this.i18n.t('users.deleteConfirm', { name: draft.userName }),
+            action: this.i18n.t('common.delete'), danger: true,
+        });
+        if (!ok)
             return;
         await this.run(async () => {
             await this.api.deleteUser(draft.id!);
+            this.toasts.show(this.i18n.t('users.deleted', { name: draft.userName }));
             this.draftState.set(null);
             await this.reload();
         });

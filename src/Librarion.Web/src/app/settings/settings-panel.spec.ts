@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApiMock, mockApi, settingState, settle, testProviders } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { SettingLevel } from '../core/models';
+import { ToastService } from '../core/toast.service';
 import { SettingsPanel } from './settings-panel';
 
 describe('SettingsPanel', () => {
@@ -51,7 +52,7 @@ describe('SettingsPanel', () => {
         await stable();
 
         expect(api.saveSettings).toHaveBeenCalledWith('server', { values: { 'ui.theme': 'dark' }, lock: ['ui.theme'], unlock: [] }, undefined);
-        expect(element.querySelector('[role="status"]')?.textContent).toContain('Saved');
+        expect(TestBed.inject(ToastService).toasts().map(toast => toast.message)).toEqual(['Saved.']);
     });
 
     it('shows the server\'s refusal next to its setting', async () => {

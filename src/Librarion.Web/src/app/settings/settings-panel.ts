@@ -3,6 +3,8 @@ import { Api } from '../core/api.service';
 import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SettingLevel, SettingState } from '../core/models';
+import { ToastService } from '../core/toast.service';
+import { Skeleton } from '../shared/placeholders';
 
 /**
  * The settings of one level (as SFE's SettingsPanel): each key with its value, where an inherited value comes from,
@@ -11,7 +13,7 @@ import { SettingLevel, SettingState } from '../core/models';
  */
 @Component({
     selector: 'lib-settings-panel',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, Skeleton],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         @if (states(); as states) {
@@ -54,9 +56,6 @@ import { SettingLevel, SettingState } from '../core/models';
                 @if (error(); as error) {
                     <p class="form-error" role="alert">{{ error }}</p>
                 }
-                @if (saved()) {
-                    <p class="form-ok" role="status">{{ 'common.saved' | t }}</p>
-                }
                 <div class="form-actions">
                     <button type="submit" class="button primary" [title]="'settings.saveHint' | t" [disabled]="busy() || !changed()">{{ 'common.save' | t }}</button>
                     <button type="button" class="button" [title]="'settings.discardHint' | t" [disabled]="busy() || !changed()" (click)="discard()">{{ 'common.discard' | t }}</button>
@@ -65,13 +64,14 @@ import { SettingLevel, SettingState } from '../core/models';
         } @else if (error(); as error) {
             <p class="form-error" role="alert">{{ error }}</p>
         } @else {
-            <p class="muted" aria-busy="true">{{ 'common.loading' | t }}</p>
+            <lib-skeleton shape="form" [rows]="6" />
         }
     `,
 })
 export class SettingsPanel {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly toasts = inject(ToastService);
 
     readonly level = input.required<SettingLevel>();
     /** The library (or another tenant) whose settings these are; none = the session's own. */
@@ -83,7 +83,6 @@ export class SettingsPanel {
     protected readonly edits = signal<Record<string, unknown>>({});
     protected readonly locks = signal<Record<string, boolean>>({});
     protected readonly busy = signal(false);
-    protected readonly saved = signal(false);
     protected readonly error = signal<string | null>(null);
     protected readonly errors = signal<Record<string, string>>({});
     protected readonly changed = computed(() => Object.keys(this.edits()).length > 0 || Object.keys(this.locks()).length > 0);
@@ -109,7 +108,6 @@ export class SettingsPanel {
     }
 
     protected edit(state: SettingState, value: unknown): void {
-        this.saved.set(false);
         this.edits.update(edits => {
             const next = { ...edits };
             if (value === state.value)
@@ -121,7 +119,6 @@ export class SettingsPanel {
     }
 
     protected lock(state: SettingState, locked: boolean): void {
-        this.saved.set(false);
         this.locks.update(locks => {
             const next = { ...locks };
             if (locked === state.locked)
@@ -158,7 +155,7 @@ export class SettingsPanel {
             }, this.owner());
             this.states.set(states);
             this.discard();
-            this.saved.set(true);
+            this.toasts.show(this.i18n.t('common.saved'));
             this.savedStates.emit(states);
         } catch (error) {
             const byField = fieldErrors(this.i18n, error);
@@ -174,7 +171,6 @@ export class SettingsPanel {
     private async load(level: SettingLevel, owner: number | undefined): Promise<void> {
         this.states.set(null);
         this.discard();
-        this.saved.set(false);
         try {
             this.states.set(await this.api.settings(level, owner));
         } catch (error) {

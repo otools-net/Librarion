@@ -5,6 +5,7 @@ import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SessionService } from '../core/session.service';
 import { Logo } from '../shared/logo';
+import { Skeleton } from '../shared/placeholders';
 
 /**
  * The sign-in page (`login?return=`), ported from SFE: a name and password; back to `return` once signed in. A
@@ -13,7 +14,7 @@ import { Logo } from '../shared/logo';
  */
 @Component({
     selector: 'lib-sign-in-page',
-    imports: [TranslatePipe, Logo],
+    imports: [TranslatePipe, Logo, Skeleton],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'account-page' },
     template: `
@@ -23,7 +24,7 @@ import { Logo } from '../shared/logo';
                 <h1>{{ (recovering() ? 'signIn.recoverTitle' : 'signIn.title') | t }}</h1>
             </header>
             @if (!ready()) {
-                <p class="muted" aria-busy="true">{{ 'common.loading' | t }}</p>
+                <lib-skeleton shape="form" [rows]="4" />
             } @else if (recovering()) {
                 <form class="account-form" novalidate (submit)="recover($event)">
                     <p class="field-hint">{{ 'signIn.recoverIntro' | t }}</p>

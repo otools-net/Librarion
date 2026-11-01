@@ -88,9 +88,13 @@ try {
                 await page.getByRole('button', { name: 'Edit' }).first().click();
             else if (action === 'open')
                 await page.locator('button.row-main').first().click();
+            else if (action === 'delete')
+                await page.getByRole('button', { name: 'Delete' }).first().click();
             await page.waitForLoadState('networkidle');
+            // Dialogs and sheets rise in; the shot waits until they stand still.
+            await page.waitForTimeout(400);
             const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
-            await page.screenshot({ path: file, fullPage: true });
+            await page.screenshot({ path: file, fullPage: !action?.startsWith('delete') });
             console.log(file);
             await context.close();
         }

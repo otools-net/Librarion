@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Api } from '../core/api.service';
 import { TranslatePipe } from '../core/i18n.service';
 import { SystemInfo } from '../core/models';
+import { Skeleton } from '../shared/placeholders';
 
 /** The start page: what is running. The library's own home comes with the catalog (stage 5). */
 @Component({
     selector: 'lib-home-page',
-    imports: [TranslatePipe],
+    imports: [TranslatePipe, Skeleton],
     template: `
         <h1>{{ 'home.title' | t }}</h1>
         <p class="lead">{{ 'home.intro' | t }}</p>
@@ -20,7 +21,7 @@ import { SystemInfo } from '../core/models';
         } @else if (failed()) {
             <p class="error" role="alert">{{ 'home.unreachable' | t }}</p>
         } @else {
-            <p class="muted" aria-busy="true">{{ 'home.loading' | t }}</p>
+            <lib-skeleton label="home.loading" [rows]="2" />
         }
     `,
     host: { class: 'home-page' },
