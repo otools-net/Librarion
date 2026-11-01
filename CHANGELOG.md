@@ -2,6 +2,27 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## 0.5.0
+
+### Added
+
+- Imports from other programs, from the library's panel: a Calibre library (its `metadata.db`: authors, series,
+  publishers, languages, tags, ratings, descriptions, identifiers, custom columns, covers) or an INPX catalog with its
+  zips (authors, genres, series, languages, keywords, ratings; deleted records left out) is imported into a library and
+  stored in Librarion's database; the source is only read. Importing again brings in what changed and never removes a
+  book; books already scanned are matched by their files, and a later scan keeps the imported metadata. New right
+  **Import** (`library.import`), given to Administrators.
+
+### Changed
+
+- Scans and imports write tag counts with one statement per batch, and imports write new books' rows in bulk: a 2M-book
+  Calibre library imports in 27 minutes on PostgreSQL, a 1M-record INPX catalog in 9.
+
+- A book whose files a scan no longer finds is kept as a missing book (hidden, with its metadata and tags) instead of
+  being deleted; it comes back when the file is put back or found moved. Missing books are removed only when an
+  administrator accepts it in the library's panel; they are offered for removal after a number of days set per
+  library (30 by default).
+
 ## 0.4.0
 
 ### Added

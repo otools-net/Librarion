@@ -95,13 +95,11 @@ They are **indexed and read in place: never unpacked to disk**.
 - Samples: small zips committed (`tests/samples/archives/`); the 100k-entry zips are **generated** by
   `agents/tools/catalog-generator/` for the benchmark, never committed.
 
-## Why not external catalogs (INPX)
+## External catalogs (INPX): a manual import, not the index
 
 Lib.rus.ec-style collections ship an INPX file (a zip of `.inp` text lines with each book's metadata, read by
-MyHomeLib) that would spare opening the books. **Not used:** our own indexing reads the books themselves, so it is
-always in step with the archives, works for every format and every collection, and needs no third-party file with no
-specification. What INPX adds is either in the books too (FB2 genres, series, language) or not needed (the source
-library's id and deleted flags; our identity is entry name + CRC + size).
-
-Reconsider only if the phase 2 benchmark shows head indexing too slow on real collections (HDD / NAS), and then as
-an optional accelerator that fills the same rows, never a second source of truth.
+MyHomeLib). **Folders are still indexed from the books themselves** (always in step with the archives, every format,
+every collection; fast enough even on a slow hard disk: [scale](../development/scale.md#measured)). An INPX is
+**imported by hand as a different source** (the user, 2026-11-01, D11): its records are stored in our database,
+matched to the archive entries they name, and own those books' metadata from then on; a scan doesn't re-read their
+heads ([imports](imports.md#inpx)).

@@ -16,7 +16,8 @@ public sealed record CoverFile(string Path, string ETag);
 /// Every book's cover (agents/docs/features/book-display.md#cover): the one inside the book, extracted on first view
 /// and cached at every size, else the generated one assigned at import, drawn on first view and cached. A book whose
 /// cover can't be read (none, broken, refused) is marked <see cref="CoverState.Failed"/> and gets its generated cover
-/// from then on; a re-import tries again. The same cover asked for twice at once is made once.
+/// from then on; a re-import tries again. A book imported from Calibre with a cover has Calibre's <c>cover.jpg</c>, next
+/// to its files (agents/docs/features/imports.md). The same cover asked for twice at once is made once.
 /// </summary>
 public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptions options, ILogger<CoverService> logger)
 {
@@ -49,6 +50,11 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptio
             if (source is not null && await ExtractedAsync(db, bookId, source, book.CoverState, size, cancellationToken) is { } extracted)
                 return extracted;
         }
+
+        if (book.CoverSource == CoverSource.Calibre && book.CoverState != CoverState.Failed
+            && files.Select(f => f.Target).FirstOrDefault(f => f.ArchivePath is null) is { } loose
+            && await CalibreAsync(db, bookId, loose, book.CoverState, size, cancellationToken) is { } calibre)
+            return calibre;
 
         var authors = await db.BookTags.Where(l => l.BookId == bookId && l.Tag!.Field!.FieldKey == "author")
             .OrderBy(l => l.Ordinal).ThenBy(l => l.Tag!.SortName).Select(l => l.Tag!.Name).Take(3).ToListAsync(cancellationToken);
@@ -108,6 +114,39 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptio
         }, cancellationToken);
 
         // Only the request that looked records what it found; a file that couldn't be opened records nothing.
+        if (found is { } present && state != (present ? CoverState.Present : CoverState.Failed))
+            await db.Books.Where(b => b.Id == bookId).ExecuteUpdateAsync(s => s.SetProperty(b => b.CoverState, present ? CoverState.Present : CoverState.Failed), cancellationToken);
+        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"") : null;
+    }
+
+    /// <summary>Calibre's <c>cover.jpg</c> in the folder of the book's file, at <paramref name="size"/> (every size made at once).</summary>
+    private async Task<CoverFile?> CalibreAsync(LibrarionDbContext db, int bookId, BookFileTarget file, CoverState state, CoverSize size, CancellationToken cancellationToken)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(Path.Combine(file.RootPath, file.Path)));
+        var info = folder is null ? null : new FileInfo(Path.Combine(folder, "cover.jpg"));
+        if (info is null || !info.Exists || info.Attributes.HasFlag(FileAttributes.ReparsePoint) || !Import.LibraryRoots.IsWithin(info.FullName, file.RootPath))
+        {
+            // Not there now: told apart from a broken picture only by looking again later (a re-import resets the state).
+            logger.LogDebug("Cover of book {Book}: no cover.jpg next to its file", bookId);
+            return null;
+        }
+
+        var key = CoverCache.Key($"c:{info.FullName}:{info.Length}:{info.LastWriteTimeUtc.Ticks}");
+        if (cache.Has(key, size))
+            return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+
+        bool? found = null;
+        var made = await OnceAsync(key, () =>
+        {
+            var thumbnails = info.Length <= CoverExtractor.MaxCoverBytes ? CoverImages.Thumbnails(File.ReadAllBytes(info.FullName)) : null;
+            found = thumbnails is not null;
+            if (thumbnails is null)
+                return false;
+            foreach (var (each, picture) in thumbnails)
+                cache.Write(key, each, picture);
+            return true;
+        }, cancellationToken);
+
         if (found is { } present && state != (present ? CoverState.Present : CoverState.Failed))
             await db.Books.Where(b => b.Id == bookId).ExecuteUpdateAsync(s => s.SetProperty(b => b.CoverState, present ? CoverState.Present : CoverState.Failed), cancellationToken);
         return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"") : null;

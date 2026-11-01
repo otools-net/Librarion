@@ -22,8 +22,8 @@ archives full of them, which are read where they are, never unpacked.
 ## Scanning
 
 Scanning reads what changed in the folders: new books come in with their title, authors, series, genres and other
-metadata from the book itself (a book without a title is shown by its file name), changed ones are read again,
-removed ones leave. An unchanged archive is skipped without being read.
+metadata from the book itself (a book without a title is shown by its file name), changed ones are read again. An
+unchanged archive is skipped without being read.
 
 - **Scan now** starts a scan (right **Scan**); its progress shows while it runs, and it can be cancelled (what it
   already read stays).
@@ -31,6 +31,42 @@ removed ones leave. An unchanged archive is skipped without being read.
   first files that couldn't be read.
 - **Schedules** scan by themselves: every few hours (at least every 15 minutes), or on chosen days at a time of day.
   A scan that comes due while another runs is skipped, and missed ones are not made up later.
+
+## Importing from another program
+
+A library can take in the books of a **Calibre library** or of an **INPX catalog** (MyHomeLib, Lib.rus.ec and similar
+collections): in the library's panel, under **Import from another program**, choose the kind of source, type the path
+of its file on the server, and start the import. It runs in the background and shows with the library's runs.
+
+- **Calibre:** the path of the library's `metadata.db`. Titles, authors, series and numbers, publishers, languages,
+  tags, ratings, descriptions, identifiers (ISBN and others) and covers come in; custom columns too (text, series,
+  rating and enumeration columns as values you can browse, the others shown on the book's page). Calibre's library is
+  only read, never changed, and can be open in Calibre meanwhile.
+- **INPX:** the path of the `.inpx` file, with the zips of books next to it. Authors, genres, series, languages,
+  keywords and ratings come in; books marked deleted in the catalog are left out.
+- **Folder of the books' files** (optional): where the source's books are, by default the folder of the file you
+  chose. It becomes one of the library's folders if it isn't in one already, with the same checks as adding a folder.
+- What the source says is **stored in Librarion**; Librarion doesn't keep reading the source. To bring in what you
+  changed in Calibre or a newer catalog, **import again**: only what changed is written.
+- A book the library already had from a scan is matched by its file and takes the source's metadata; a later scan
+  keeps it (the source's metadata wins over what the book file says).
+- An import **never removes a book**, also when the source no longer has it. A book whose file is gone becomes a
+  missing book (see below).
+- A record whose file isn't found is skipped and counted, with the first problems listed under the run.
+
+## Missing books
+
+A book whose files a scan no longer finds is **not deleted**: it becomes a *missing book*. It disappears from the
+lists, but everything about it is kept (its metadata, its tags, your changes), in case the file comes back.
+
+- Put the file back where it was, or move it (rename its folder or its archive): the next scan finds it and the book
+  is back as it was. A moved file is recognised when exactly one new file matches it (same size and contents for books
+  in archives, same size and name for loose files).
+- The library's panel lists its missing books, oldest first. Those missing longer than the library's setting
+  **Days before missing books are offered for removal** (30 by default) are marked *ready to remove*.
+- **Nothing is removed by itself.** Remove one book, all the ready ones or all of them from the panel; each asks you
+  to confirm first, and removal can't be undone.
+- Removing a folder from the library still removes its books right away (you confirm that removal).
 
 ## Downloads
 

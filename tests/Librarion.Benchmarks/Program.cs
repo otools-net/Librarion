@@ -3,6 +3,7 @@
 //   generate --provider sqlite|postgres --connection <string> [--books 2000000] [--seed 1] [--work <folder>]
 //   run --provider sqlite|postgres --connection <string> [--iterations 20] [--work <folder>]
 //   archive --provider sqlite|postgres --connection <string> [--entries 100000] [--body-kb 30] [--samples 500] [--evict <file> [--evict-gb 24]] [--work <folder>]
+//   import --provider sqlite|postgres --connection <string> --source calibre|inpx [--records 2000000] [--work <folder>]
 using System.Globalization;
 using Librarion.Benchmarks.Bench;
 using Librarion.Benchmarks.Data;
@@ -41,8 +42,15 @@ switch (command)
             arguments.GetValueOrDefault("evict"), int.Parse(Option("evict-gb", "24"), CultureInfo.InvariantCulture));
         return result.WithinBudget ? 0 : 1;
     }
+    case "import":
+    {
+        var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
+        var result = await ImportCommand.RunAsync(target, work, Option("source"), int.Parse(Option("records", "2000000"), CultureInfo.InvariantCulture), Console.WriteLine,
+            cancel.Token);
+        return result.WithinBudget ? 0 : 1;
+    }
     default:
-        Console.Error.WriteLine("Commands: generate, run, archive (see agents/tools/benchmark/README.md)");
+        Console.Error.WriteLine("Commands: generate, run, archive, import (see agents/tools/benchmark/README.md)");
         return 2;
 }
 

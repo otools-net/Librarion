@@ -51,12 +51,40 @@ public sealed class Book
     /// <summary>Set when the book was merged into another: it then only redirects there.</summary>
     public int? MergedIntoId { get; set; }
 
+    /// <summary>
+    /// Set when none of its files is where the scans found them any more (agents/docs/features/missing-books.md): the
+    /// book is kept with its metadata and curation, hidden from lists, until a file comes back or a user accepts its
+    /// removal. Never removed on its own.
+    /// </summary>
+    public DateTime? MissingSince { get; set; }
+
+    /// <summary>
+    /// Where the book's metadata comes from (agents/docs/features/imports.md): its file's head, or an import from another
+    /// source. A scan re-reads only <see cref="MetadataSource.Heads"/> books; an imported book changes by importing again.
+    /// </summary>
+    public MetadataSource MetadataSource { get; set; }
+
+    /// <summary>A hash of the record the last import wrote: the same record again is skipped (an unchanged re-import).</summary>
+    public long? ImportHash { get; set; }
+
     /// <summary>Blocking key for "same work" duplicates: a hash of the normalized title (else file stem) and first author.</summary>
     public long? WorkKey { get; set; }
 
     public List<BookFile> Files { get; set; } = [];
     public List<BookTag> Tags { get; set; } = [];
     public List<BookIdentifier> Identifiers { get; set; } = [];
+    public List<BookProperty> Properties { get; set; } = [];
+}
+
+/// <summary>Who owns a book's metadata.</summary>
+public enum MetadataSource : byte
+{
+    /// <summary>Read from the book file's head by the scans.</summary>
+    Heads,
+    /// <summary>Imported from a Calibre library's <c>metadata.db</c>.</summary>
+    Calibre,
+    /// <summary>Imported from an INPX catalog.</summary>
+    Inpx,
 }
 
 public enum CoverSource
@@ -113,6 +141,9 @@ public sealed class BookFile
 
     /// <summary>SHA-256 of the bytes, computed only when size and CRC collide with another file.</summary>
     public byte[]? ContentHash { get; set; }
+
+    /// <summary>Set when a scan didn't find the file where it was: kept to be found again (same place, or moved).</summary>
+    public DateTime? MissingSince { get; set; }
 }
 
 /// <summary>A ZIP container of books in a library, indexed in place (agents/docs/features/archives.md).</summary>
@@ -136,6 +167,9 @@ public sealed class Archive
 
     public int EntryCount { get; set; }
     public ArchiveScanState ScanState { get; set; }
+
+    /// <summary>Set when a scan didn't find the archive: its entries are missing too, kept until they come back or are removed.</summary>
+    public DateTime? MissingSince { get; set; }
 }
 
 public enum ArchiveScanState
@@ -157,6 +191,26 @@ public sealed class BookIdentifier
 
     /// <summary>Lower case: <c>isbn</c>, <c>uuid</c>, <c>fb2-id</c>, <c>calibre</c>…</summary>
     public string Scheme { get; set; } = string.Empty;
+
+    public string Value { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A value of a book that is neither a tag nor a column: an imported custom column of a kind that doesn't make tags
+/// (Calibre's long text, yes/no, numbers, dates), shown on the book's page (agents/docs/features/imports.md). Written by
+/// imports only, replaced with the book's other imported metadata.
+/// </summary>
+public sealed class BookProperty
+{
+    public const int MaxNameLength = 100;
+    public const int MaxValueLength = 4000;
+
+    public int BookId { get; set; }
+    public Book? Book { get; set; }
+    public int TenantId { get; set; }
+
+    /// <summary>The column's name as the source shows it.</summary>
+    public string Name { get; set; } = string.Empty;
 
     public string Value { get; set; } = string.Empty;
 }

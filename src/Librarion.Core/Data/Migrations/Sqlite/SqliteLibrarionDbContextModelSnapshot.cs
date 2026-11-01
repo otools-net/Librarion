@@ -32,6 +32,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<int>("LibraryId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("Modified")
                         .HasColumnType("TEXT");
 
@@ -88,11 +91,20 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<short?>("GeneratedVariant")
                         .HasColumnType("INTEGER");
 
+                    b.Property<long?>("ImportHash")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("LibraryId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("MergedIntoId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<byte>("MetadataSource")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("Rating")
                         .HasColumnType("INTEGER");
@@ -131,6 +143,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId", "WorkKey");
 
                     b.HasIndex("LibraryId", "Added", "Id");
+
+                    b.HasIndex("LibraryId", "MissingSince", "Id")
+                        .HasFilter("\"MissingSince\" IS NOT NULL");
 
                     b.HasIndex("LibraryId", "SortAuthor", "Id");
 
@@ -180,6 +195,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<short?>("Method")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("TEXT");
 
@@ -211,6 +229,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("RootId", "PathKey");
 
+                    b.HasIndex("LibraryId", "Size", "Id")
+                        .HasFilter("\"MissingSince\" IS NOT NULL");
+
                     b.HasIndex("TenantId", "Size", "Crc32");
 
                     b.ToTable("BookFiles");
@@ -237,6 +258,28 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId", "Scheme", "Value");
 
                     b.ToTable("BookIdentifiers");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookProperty", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("BookId", "Name");
+
+                    b.ToTable("BookProperties");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
@@ -976,6 +1019,17 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Book");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.BookProperty", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Properties")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Book", "Book")
@@ -1243,6 +1297,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Files");
 
                     b.Navigation("Identifiers");
+
+                    b.Navigation("Properties");
 
                     b.Navigation("Tags");
                 });

@@ -11,13 +11,20 @@ public sealed record FieldValue(string Field, string Value, int? Ordinal = null,
 /// <summary>What a metadata reader found in a book's head; every part may be missing.</summary>
 /// <param name="Values">Field values (authors, series, categories…) in the book's order.</param>
 /// <param name="Tags">Plain tags (FB2 keywords).</param>
+/// <param name="Rating">0–10, imports only (a head's rating isn't trusted).</param>
+/// <param name="SortTitle">The title as the source sorts it ("Hobbit, The"), imports only.</param>
+/// <param name="Properties">Values that are neither tags nor columns (Calibre's custom columns of long text, numbers,
+/// dates, yes/no), by the name the source shows; imports only.</param>
 public sealed record BookMetadata(
     ImportTagSourceKind Source,
     string? Title = null,
     string? Description = null,
     IReadOnlyList<FieldValue>? Values = null,
     IReadOnlyList<string>? Tags = null,
-    IReadOnlyList<(string Scheme, string Value)>? Identifiers = null)
+    IReadOnlyList<(string Scheme, string Value)>? Identifiers = null,
+    byte? Rating = null,
+    string? SortTitle = null,
+    IReadOnlyList<(string Name, string Value)>? Properties = null)
 {
     public IReadOnlyList<FieldValue> FieldValues => Values ?? [];
     public IReadOnlyList<string> PlainTags => Tags ?? [];

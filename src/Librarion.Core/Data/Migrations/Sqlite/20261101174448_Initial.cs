@@ -274,6 +274,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     GeneratedVariant = table.Column<short>(type: "INTEGER", nullable: true),
                     CoverState = table.Column<int>(type: "INTEGER", nullable: false),
                     MergedIntoId = table.Column<int>(type: "INTEGER", nullable: true),
+                    MissingSince = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    MetadataSource = table.Column<byte>(type: "INTEGER", nullable: false),
+                    ImportHash = table.Column<long>(type: "INTEGER", nullable: true),
                     WorkKey = table.Column<long>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
@@ -572,6 +575,26 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
+                name: "BookProperties",
+                columns: table => new
+                {
+                    BookId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Value = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BookProperties", x => new { x.BookId, x.Name });
+                    table.ForeignKey(
+                        name: "FK_BookProperties_Books_BookId",
+                        column: x => x.BookId,
+                        principalTable: "Books",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BookTags",
                 columns: table => new
                 {
@@ -614,7 +637,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     Modified = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Fingerprint = table.Column<long>(type: "INTEGER", nullable: true),
                     EntryCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    ScanState = table.Column<int>(type: "INTEGER", nullable: false)
+                    ScanState = table.Column<int>(type: "INTEGER", nullable: false),
+                    MissingSince = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -653,7 +677,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     Locator = table.Column<long>(type: "INTEGER", nullable: true),
                     Method = table.Column<short>(type: "INTEGER", nullable: true),
                     PackedSize = table.Column<long>(type: "INTEGER", nullable: true),
-                    ContentHash = table.Column<byte[]>(type: "BLOB", maxLength: 32, nullable: true)
+                    ContentHash = table.Column<byte[]>(type: "BLOB", maxLength: 32, nullable: true),
+                    MissingSince = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -699,6 +724,12 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 column: "BookId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BookFiles_LibraryId_Size_Id",
+                table: "BookFiles",
+                columns: new[] { "LibraryId", "Size", "Id" },
+                filter: "\"MissingSince\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BookFiles_RootId_PathKey",
                 table: "BookFiles",
                 columns: new[] { "RootId", "PathKey" });
@@ -717,6 +748,12 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 name: "IX_Books_LibraryId_Added_Id",
                 table: "Books",
                 columns: new[] { "LibraryId", "Added", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Books_LibraryId_MissingSince_Id",
+                table: "Books",
+                columns: new[] { "LibraryId", "MissingSince", "Id" },
+                filter: "\"MissingSince\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Books_LibraryId_SortAuthor_Id",
@@ -916,6 +953,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
             migrationBuilder.DropTable(
                 name: "BookIdentifiers");
+
+            migrationBuilder.DropTable(
+                name: "BookProperties");
 
             migrationBuilder.DropTable(
                 name: "BookTags");
