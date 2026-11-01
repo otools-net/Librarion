@@ -96,6 +96,11 @@
     flex-direction: column;
 }
 
+/* A badge under the label keeps its own width. */
+.check > span > .badge {
+    align-self: flex-start;
+}
+
 .checks {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));

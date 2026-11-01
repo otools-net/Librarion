@@ -22,7 +22,7 @@ import { SettingsPanel } from '../settings/settings-panel';
                     · {{ tenant.name }}
                 }
             </p>
-            <div class="form-actions">
+            <div class="form-actions account-actions">
                 <button type="button" class="button" [title]="'account.signOutHint' | t" (click)="signOut()">{{ 'account.signOut' | t }}</button>
             </div>
 

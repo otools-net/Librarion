@@ -52,7 +52,7 @@ jobs:
       - name: Quick set (edge)
         if: github.ref == 'refs/heads/edge'
         working-directory: tests/e2e
-        run: npm run e2e -- --project=android --project=iphone --project=desktop --grep "@smoke|@a11y"
+        run: npm run e2e -- --project=android --project=iphone --project=desktop --grep "@smoke|@a11y|@accounts|@admin"
 
       - name: Everything
         if: github.ref != 'refs/heads/edge'

@@ -57,17 +57,17 @@ holding several libraries**. Version stays `0.0.0` on `edge`; the merge into `ma
       `SettingsPanel`, shell: admin link, tenant switcher (server administrators), account button.
 - [x] Styles: `forms.css`, `account.css`, `admin.css` (SFE's, on Librarion's tokens).
 
-### 1.4 Tests and docs — partly done
+### 1.4 Tests and docs — tests done, notes and docs left
 
 - [x] Backend (45 green on SQLite): `AccessTests`, `TenancyTests` (`NoQueryCrossesTenants`), `SettingsTests`,
       `RightCatalogTests`, `ClientI18nTests.EveryNameTheServerSendsHasItsText`; earlier tests moved to signed-in clients.
-- [x] Client specs (43 green): session/guards/errors, sign-in, setup, account, settings panel, admin sections, shell.
-- [ ] **e2e: not updated yet, expect failures.** Every page now needs an account, so `smoke`/`a11y`/`harness` land
-      on `/setup`. To do: `scripts/server.mjs` gives the server a known `Librarion__Setup__Code` (and its own data
-      folder); a fixture sets up through `POST api/setup` (or the page once) and signs in; then specs for setup,
-      sign-in, recovery, admin flows (create account, group with rights, library), signing in as the new account,
-      on every phone project + desktop with layout checks and axe.
-- [ ] Look at the new pages in a browser at 360 px and on desktop (not done: only unit-tested).
+- [x] Client specs (44 green): session/guards/errors, sign-in, setup, account, settings panel, admin sections, shell.
+- [x] e2e (47 green on 5 devices + `first-start`): the first start through the setup page (wrong code, then the
+      right one), sign-in and back where it was, sign-out, recovery with the code from `recovery-code.txt`, an account
+      given one right through a group using it (and seeing only that section), axe on setup, sign-in, recovery,
+      account and every admin section ([testing-e2e](testing-e2e.md)).
+- [x] Looked at every page at 360 px and 1280 px (`agents/tools/screenshots`): fixed the two "Libraries" headings of
+      the group editor, the stretched "Changes things" badges, and the sign-out button touching the panel below.
 - [ ] Feature notes: update `features/rights.md` (no longer planned: catalog, scopes, evaluation as built), new
       `features/accounts.md`, `features/tenants.md`, `features/setup.md`, `features/settings.md`,
       `features/security-log.md` (code comments already point at these names), and the AGENTS.md index lines.

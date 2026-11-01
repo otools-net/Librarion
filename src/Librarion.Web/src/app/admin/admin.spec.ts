@@ -119,7 +119,7 @@ describe('GroupsSection', () => {
         element.querySelector<HTMLButtonElement>('.row-main')!.click();
         await stable();
         const legends = [...element.querySelectorAll('legend')].map(legend => legend.textContent?.trim());
-        expect(legends).toEqual(['Libraries', 'Tenant', 'Libraries', 'Members']);
+        expect(legends).toEqual(['Libraries', 'Tenant', 'Where its library rights apply', 'Members']);
         expect(element.querySelector<HTMLInputElement>('#group-name')!.disabled).toBe(true);
         expect(element.textContent).toContain('Changes things');
 

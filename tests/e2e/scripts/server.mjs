@@ -1,6 +1,7 @@
 // Started by Playwright (`webServer` in playwright.config.ts), stopped by it after the run (as SFE):
-//   build Librarion.Api (unless LIBRARION_E2E_SKIP_BUILD=1 and a build is there) → the app on a fresh SQLite database,
-//   everything under the work folder (LIBRARION_E2E_WORK, default <tmp>/librarion-e2e).
+//   build Librarion.Api (unless LIBRARION_E2E_SKIP_BUILD=1 and a build is there) → the app on a fresh SQLite database
+//   with a known setup code (paths.ts), everything under the work folder (LIBRARION_E2E_WORK, default
+//   <tmp>/librarion-e2e): its data folder too, never the repo's `src/Librarion.Api/data` (the content root).
 // Runs in the foreground until killed; the app's output goes to <work>/app.log.
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -38,6 +39,12 @@ const app = spawn('dotnet', [dll, '--contentRoot', path.join(repo, 'src/Librario
         Urls: `http://localhost:${port}`,
         Librarion__Database__Provider: 'sqlite',
         ConnectionStrings__Librarion: `Data Source=${path.join(data, 'librarion.db')}`,
+        // As paths.ts `setupCode`.
+        Librarion__Setup__Code: 'e2e-setup-code-1',
+        Librarion__Setup__CodeFile: path.join(data, 'setup-code.txt'),
+        Librarion__Security__KeysDirectory: path.join(data, 'keys'),
+        // Every spec signs in from this one address.
+        Librarion__Security__SignInsPerMinute: '10000',
     },
 });
 console.log(`[e2e] app on http://localhost:${port}/ (log ${path.join(work, 'app.log')})`);

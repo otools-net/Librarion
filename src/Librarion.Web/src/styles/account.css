@@ -75,3 +75,8 @@
         padding: var(--space-4);
     }
 }
+
+/* The account page (in the shell): its sign-out row apart from the panels below. */
+.account-actions {
+    margin-bottom: var(--space-4);
+}

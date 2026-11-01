@@ -126,7 +126,7 @@
     "groups.name": "Name",
     "groups.changes": "Changes things",
     "groups.disabledByServer": "Off on this server",
-    "groups.libraries": "Libraries",
+    "groups.libraries": "Where its library rights apply",
     "groups.allLibraries": "Every library",
     "groups.allLibrariesHint": "Its library rights apply in every library of the tenant, those added later too.",
     "groups.members": "Members",
