@@ -84,6 +84,19 @@ order: design foundation (5.0), then the administration with its search (5.1), t
   "task · source · when · next run" with its icon and an enabled switch; adding opens a dialog (a phone sheet) in
   steps rather than a one-line toolbar. Server: `TaskSchedule` gains the import's `Source` and `Files` (validated on
   save as `POST …/import` does); a due import schedule starts the same import run.
+- **D-5.11 Scan progress as SFE's scan panel (the user, 2026-11-02):** while a library is scanned (or imported) the
+  user sees it going and what it found so far, looking like SFE's `ScanPanelComponent`
+  (`Sfe.Web/src/app/library/scan/scan-panel.component.ts`, `styles/scan-panel.css`, `scan.service.ts`): a panel
+  sticky under the top bar (`aria-live="polite"`), a thin indeterminate bar along its foot (moved by `transform`, not
+  `left`; reduced motion honoured), a title ("Scanning Comics…" in accent; finished / cancelled / failed in danger
+  colour), the elapsed time ticking each second (only while running and the page is visible), the counts so far
+  (files seen, archives, added, changed, missing, removed; for an import its records, added, changed, skipped) and the
+  file being read, Cancel while it runs; afterwards the result stays until dismissed (remembered per browser by the
+  run's start time) and a toast says it finished. Seen from the library pages and from browsing the library being
+  scanned, not only the library's admin tab. Data: the run's `progress` the server already sends (`filesSeen`,
+  `archivesDone`, `added`, `changed`, `missing`, `removed`, `returned`, `skipped`, `current`) plus its start and end
+  times; Cancel uses the existing `POST …/runs/{run}/cancel` (`CancelTask`). Polling stays as it is (one run's row, not the
+  catalog). Replaces the one-line `scan-bar` text in `library-panel.ts`.
 
 ## Todo (the order of work; the user's rule, 2026-11-01: one chunk at a time, commit it, then ask before the next)
 
@@ -106,12 +119,14 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        and runs import schedules, list as task · source · when · next, add/edit in a dialog, enable switch.
 10. [x] Settings forms in groups with hints, save bar, unsaved marks, leave guard.
 11. [ ] Administration search (normalize, every word, marks, reveal and flash; every key found).
-12. [ ] Browse: library grid and list, sort and view, keyset scrolling, scroll restored.
-13. [ ] Field and tag pages with counts.
-14. [ ] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
-15. [ ] Search: parser and server query, results page, suggestions.
-16. [ ] Facets with capped counts.
-17. [ ] Docs, CHANGELOG, feature notes; p95 budgets through the UI's calls; e2e on every device; axe AA; close the
+12. [ ] Scan progress panel as SFE's (D-5.11): sticky panel, indeterminate bar, title, elapsed, counts so far,
+        current file, Cancel, result until dismissed, toast when done; shown on library pages and while browsing.
+13. [ ] Browse: library grid and list, sort and view, keyset scrolling, scroll restored.
+14. [ ] Field and tag pages with counts.
+15. [ ] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
+16. [ ] Search: parser and server query, results page, suggestions.
+17. [ ] Facets with capped counts.
+18. [ ] Docs, CHANGELOG, feature notes; p95 budgets through the UI's calls; e2e on every device; axe AA; close the
         stage (merge 0.6.0).
 
 ## Work items
@@ -130,6 +145,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 - [ ] Settings forms in groups with hints, save bar, unsaved marks, leave guard.
 - [ ] Administration search (port of `admin-search.ts`: normalize, every word, marks, reveal and flash); spec: every
       setting key found.
+- [ ] Scan progress panel as SFE's (D-5.11); e2e: a scan started shows the panel with counts, then its result.
 
 ### 5.2 Browse
 - [ ] Library grid / list, sort, view, keyset scrolling, scroll restored; field and tag pages with counts.
