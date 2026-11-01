@@ -36,6 +36,9 @@ public sealed class CatalogQueryTests
         var target = new BenchTarget(TestCatalog.Provider == DatabaseProvider.Postgres ? "postgres" : "sqlite", _catalog.ConnectionString);
         _target = await GenerateCommand.RunAsync(target, new CatalogShape(Books, 11) { EntriesPerArchive = 400 }, _catalog.BasePath, _ => { }, context.CancellationToken);
         _factory = ApiClients.CreateFactory(_catalog);
+        // Started here, once: WebApplicationFactory isn't thread-safe on first use, and the tests run in parallel
+        // (two at once each built a server, one for Services, another for the clients).
+        using (ApiClients.Create(_factory)) { }
     }
 
     [ClassCleanup]
