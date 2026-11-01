@@ -71,7 +71,11 @@ dotnet $bench archive --provider sqlite --connection "Data Source=D:/Temp/librar
   100 of them (none in the books: looked for, then generated).
 - Budgets: list < 2 s and index < 3 min (only at 100k entries or more), unchanged scan < 50 ms, first byte p95
   < 50 ms; exit 1 past one. Report `archive-<provider>-<entries>-<time>.json` in the work folder.
-- The zip was just written or read: the system's file cache is warm. A cold-disk figure needs the cache emptied
-  (reboot, or a file larger than RAM read in between); an HDD / NAS figure needs such a disk (this machine has one NVMe
-  SSD: C: and D: are partitions of it).
+- Without `--evict` the zip was just written or read: the system's file cache is warm. `--evict <file>` (`--evict-gb`,
+  default 24: more than this machine's 16 GB) reads a scratch file before the list and before the first bytes, so the
+  zip leaves the cache without administrator rights. Read it **without** `SequentialScan`: with it Windows recycles
+  the scratch file's own pages and the zip stays cached (first byte 0.1 ms: not cold). Cold looks like list ~0.6 s and
+  first byte ~10 ms on a hard disk. Delete the scratch file after (`D:\Temp\librarion-evict.bin`).
+- Hard disk: `--work F:/claude-test` (the user's USB HDD, 2026-11-01) with the database on the SSD; copy the zip there
+  rather than generating it (the disk writes ~10 MB/s).
 - Small-size test: `ArchiveBenchTests` (500 entries, both providers).

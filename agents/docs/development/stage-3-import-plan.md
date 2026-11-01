@@ -71,8 +71,8 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 - [x] Generated 100k-entry zip: list < 2 s, unchanged skip < 50 ms, index from heads < 3 min, first byte < 50 ms
       (`archive` command; SSD: 73 ms, 4.6 ms, 141 s, 0.2 ms).
-- [ ] HDD / NAS measured for D11: this machine has only an NVMe SSD (C: and D: are partitions); needs a disk from the
-      user.
+- [x] HDD measured for D11 (closed: no INPX): a 5 200 RPM USB disk, cold, list 647 ms, index 154 s, first byte p95
+      24 ms.
 - [x] e2e: add a library with a root, scan, see the run, download from a zip, get a cover (`specs/library.spec.ts`;
       the book page is stage 5, the API stands in; a 2-book scan ends before its progress can be seen).
 - [ ] Feature notes (archives, book-display, tags, metadata-tags, merging), docs (libraries, tasks), CHANGELOG.

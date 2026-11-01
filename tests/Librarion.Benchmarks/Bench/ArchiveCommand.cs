@@ -39,8 +39,13 @@ public static class ArchiveCommand
     public const double SkipBudgetMs = 50;
     public const double FirstByteBudgetMs = 50;
 
+    /// <param name="evict">
+    /// A scratch file larger than the machine's memory (made on first use, <paramref name="evictGb"/> GB), read before
+    /// the cold phases (list and index; first byte) so the zip's pages leave the system's file cache: a cold disk without
+    /// administrator rights. Null: warm, as the zip was just written or read.
+    /// </param>
     public static async Task<ArchiveBenchResult> RunAsync(BenchTarget target, string workFolder, int entries, int bodyKb, int samples,
-        Action<string> report, CancellationToken cancellationToken)
+        Action<string> report, CancellationToken cancellationToken, string? evict = null, int evictGb = 24)
     {
         var folder = Path.Combine(workFolder, $"archive-{entries}-{bodyKb}k");
         var zip = Path.Combine(folder, "fb2-books.zip");
@@ -58,6 +63,8 @@ public static class ArchiveCommand
         var zipBytes = new FileInfo(zip).Length;
         report($"zip: {zipBytes / 1048576.0:N0} MB ({generateSeconds:0.0} s to make; 0 when kept from before)");
 
+        if (evict is not null)
+            Evict(evict, evictGb, report, cancellationToken);
         var list = Stopwatch.StartNew();
         int listed;
         using (var stream = File.OpenRead(zip))
@@ -103,6 +110,9 @@ public static class ArchiveCommand
             files = await BookDownloads.StoredAsync(db.BookFiles.Where(f => chosen.Contains(f.Id)), cancellationToken);
         }
 
+        // The index just read the whole zip back into the cache.
+        if (evict is not null)
+            Evict(evict, evictGb, report, cancellationToken);
         var firstBytes = new List<double>();
         foreach (var file in files)
         {
@@ -153,6 +163,30 @@ public static class ArchiveCommand
         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
         report($"report: {path}");
         return result;
+    }
+
+    /// <summary>Reads <paramref name="path"/> through (made first when smaller than <paramref name="gb"/> GB): the cache fills with it, not the zip.</summary>
+    private static void Evict(string path, int gb, Action<string> report, CancellationToken cancellationToken)
+    {
+        var watch = Stopwatch.StartNew();
+        var buffer = new byte[4 * 1024 * 1024];
+        var size = (long)gb * 1024 * 1024 * 1024;
+        if (!File.Exists(path) || new FileInfo(path).Length < size)
+        {
+            report($"writing the eviction file {path} ({gb} GB)…");
+            Random.Shared.NextBytes(buffer);
+            using var write = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length);
+            for (long written = 0; written < size; written += buffer.Length)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                write.Write(buffer);
+            }
+        }
+
+        using (var read = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, FileOptions.None))
+            while (read.Read(buffer) > 0)
+                cancellationToken.ThrowIfCancellationRequested();
+        report($"cache evicted ({watch.Elapsed.TotalSeconds:0} s)");
     }
 
     private static double Percentile(List<double> values, double share)

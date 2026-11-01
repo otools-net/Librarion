@@ -35,7 +35,7 @@ its own detailed plan (`stage-<n>-<name>-plan.md`) written when the stage starts
 | D8 | `edge` for work, `main` for releases, `claude: …` commits; version starts at **`0.0.0`**, stays `0.x` until the **MVP = `1.0.0`**, declared by the user | SFE workflow; 1.0 means usable, not "stage 11 reached" |
 | D9 | Tags: SFE's TagStudio model, **vocabulary per tenant**, link sources + import mappings ([tags](../features/tags.md)) | Curation survives re-imports; one merge applies to every library |
 | D10 | Books inside **ZIP containers only** (Zip64 included), read in place; 7z/RAR only as per-book wrappers ([archives](../features/archives.md)) | One seek per book; solid 7z / RAR can't seek |
-| D11 | **No INPX**; reconsidered only if the head-indexing benchmark fails on HDD / NAS | Books are the source of truth |
+| D11 | **No INPX**; reconsidered only if the head-indexing benchmark fails on HDD / NAS (**closed 2026-11-01**: 100k FB2 indexed from heads in 154 s on a cold 5 200 RPM USB disk, first byte p95 24 ms; [scale](scale.md#measured)) | Books are the source of truth |
 | D12 | **i18n from the first screen**, English shipped; every UI string through translation keys | Cheap now, costly to retrofit |
 | D13 | Packaging: **Docker** (amd64/arm64, compose with Postgres), **portable zip / AppImage** (SQLite), **Windows service / systemd** scripts | As SFE, plus Postgres in compose |
 | D14 | Sign-in: **local accounts**, behind SFE's `IUserDirectory` so LDAP / OIDC plug in later | v1 scope; no reshaping later |
