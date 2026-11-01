@@ -92,6 +92,7 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
+| [stage-2-catalog-plan](agents/docs/development/stage-2-catalog-plan.md) | **stage 2 in progress**: catalog schema, 2M/10M generator, benchmark with budgets, keyset list APIs | `Core/Data/Entities/Catalog/`, `Tags/`, `Core/Tagging/`, `tests/Librarion.Benchmarks/` |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |

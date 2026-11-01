@@ -8,7 +8,7 @@ namespace Librarion.Core.Data;
 /// migrations; code asks for <see cref="TenantDb"/> (or <see cref="IDbContextFactory{LibrarionDbContext}"/>) and never
 /// knows which one it got (agents/docs/development/database.md).
 /// </summary>
-public abstract class LibrarionDbContext(DbContextOptions options) : DbContext(options)
+public abstract partial class LibrarionDbContext(DbContextOptions options) : DbContext(options)
 {
     public const int MaxNameLength = 100;
 
@@ -29,6 +29,17 @@ public abstract class LibrarionDbContext(DbContextOptions options) : DbContext(o
     public DbSet<TenantDisabledRight> TenantDisabledRights => Set<TenantDisabledRight>();
     public DbSet<Setting> Settings => Set<Setting>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+    public DbSet<Book> Books => Set<Book>();
+    public DbSet<BookFile> BookFiles => Set<BookFile>();
+    public DbSet<Archive> Archives => Set<Archive>();
+    public DbSet<BookIdentifier> BookIdentifiers => Set<BookIdentifier>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<TagAlias> TagAliases => Set<TagAlias>();
+    public DbSet<TagParent> TagParents => Set<TagParent>();
+    public DbSet<TagClosure> TagClosure => Set<TagClosure>();
+    public DbSet<BookTag> BookTags => Set<BookTag>();
+    public DbSet<TagCount> TagCounts => Set<TagCount>();
+    public DbSet<GroupTagFilter> GroupTagFilters => Set<GroupTagFilter>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +148,9 @@ public abstract class LibrarionDbContext(DbContextOptions options) : DbContext(o
             entity.HasIndex(e => e.Time);
             entity.HasQueryFilter(e => TenantScope == null || e.TenantId == TenantScope);
         });
+
+        ConfigureCatalog(modelBuilder);
+        ConfigureTags(modelBuilder);
     }
 }
 

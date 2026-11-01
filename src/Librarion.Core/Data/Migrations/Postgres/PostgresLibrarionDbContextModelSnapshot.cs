@@ -22,6 +22,248 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Librarion.Core.Data.Archive", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EntryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("Fingerprint")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Modified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("PathKey")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ScanState")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "PathKey");
+
+                    b.ToTable("Archives");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Book", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Added")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CoverSource")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CoverState")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<short?>("GeneratedTemplate")
+                        .HasColumnType("smallint");
+
+                    b.Property<short?>("GeneratedVariant")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MergedIntoId")
+                        .HasColumnType("integer");
+
+                    b.Property<byte?>("Rating")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("SeriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("SeriesNumber")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("SortAuthor")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("SortTitle")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("WorkKey")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "WorkKey");
+
+                    b.HasIndex("LibraryId", "Added", "Id");
+
+                    b.HasIndex("LibraryId", "SortAuthor", "Id");
+
+                    b.HasIndex("LibraryId", "SortTitle", "Id");
+
+                    b.HasIndex("SeriesId", "SeriesNumber", "Id");
+
+                    b.HasIndex("TenantId", "SortTitle", "Id");
+
+                    b.ToTable("Books");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookFile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ArchiveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("ContentHash")
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea");
+
+                    b.Property<long?>("Crc32")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("Locator")
+                        .HasColumnType("bigint");
+
+                    b.Property<short?>("Method")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTime?>("Modified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("PackedSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("PathKey")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("ArchiveId", "PathKey");
+
+                    b.HasIndex("LibraryId", "PathKey");
+
+                    b.HasIndex("TenantId", "Size", "Crc32");
+
+                    b.ToTable("BookFiles");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookIdentifier", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Scheme")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Value")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BookId", "Scheme", "Value");
+
+                    b.HasIndex("TenantId", "Scheme", "Value");
+
+                    b.ToTable("BookIdentifiers");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("smallint");
+
+                    b.Property<double?>("Number")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("Ordinal")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BookId", "TagId", "Source");
+
+                    b.HasIndex("TagId", "BookId");
+
+                    b.ToTable("BookTags");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.Property<int>("GroupId")
@@ -66,6 +308,24 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("GroupRights");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.GroupTagFilter", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Deny")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("GroupId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("GroupTagFilters");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.Property<int>("Id")
@@ -73,6 +333,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
@@ -177,6 +440,167 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("TenantId");
 
                     b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BuiltIn")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("DisambiguationParentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("FieldId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FieldKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsCategory")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Shorthand")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SortName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("TenantId", "FieldKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "FieldId", "NormalizedName");
+
+                    b.HasIndex("TenantId", "FieldId", "SortName", "Id");
+
+                    b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagAlias", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "NormalizedName");
+
+                    b.ToTable("TagAliases");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagClosure", b =>
+                {
+                    b.Property<int>("AncestorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DescendantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Depth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("AncestorId", "DescendantId");
+
+                    b.HasIndex("DescendantId", "AncestorId");
+
+                    b.ToTable("TagClosure", (string)null);
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagCount", b =>
+                {
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("LibraryId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("TagCounts");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagParent", b =>
+                {
+                    b.Property<int>("ChildId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ParentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ChildId", "ParentId");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("TagParents");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>
@@ -332,6 +756,82 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("Groups", (string)null);
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.Archive", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Book", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookFile", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Archive", "Archive")
+                        .WithMany()
+                        .HasForeignKey("ArchiveId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Files")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Archive");
+
+                    b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookIdentifier", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Identifiers")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Tags")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.HasOne("Librarion.Core.Data.UserGroup", "Group")
@@ -381,6 +881,25 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.GroupTagFilter", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.UserGroup", "Group")
+                        .WithMany("TagFilters")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tenant", "Tenant")
@@ -390,6 +909,86 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Field")
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Field");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagAlias", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany("Aliases")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagClosure", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Ancestor")
+                        .WithMany()
+                        .HasForeignKey("AncestorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Descendant")
+                        .WithMany()
+                        .HasForeignKey("DescendantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ancestor");
+
+                    b.Navigation("Descendant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagCount", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagParent", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Child")
+                        .WithMany()
+                        .HasForeignKey("ChildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Child");
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.TenantDisabledRight", b =>
@@ -424,6 +1023,20 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.Book", b =>
+                {
+                    b.Navigation("Files");
+
+                    b.Navigation("Identifiers");
+
+                    b.Navigation("Tags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
+                {
+                    b.Navigation("Aliases");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>
                 {
                     b.Navigation("DisabledRights");
@@ -445,6 +1058,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Members");
 
                     b.Navigation("Rights");
+
+                    b.Navigation("TagFilters");
                 });
 #pragma warning restore 612, 618
         }

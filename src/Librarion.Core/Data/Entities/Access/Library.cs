@@ -10,4 +10,7 @@ public sealed class Library
     public string Name { get; set; } = string.Empty;
 
     public DateTime Created { get; set; }
+
+    /// <summary>Books in it (not merged away), kept by imports: never counted per request.</summary>
+    public int BookCount { get; set; }
 }

@@ -17,6 +17,242 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("Librarion.Core.Data.Archive", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EntryCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("Fingerprint")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Modified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PathKey")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ScanState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "PathKey");
+
+                    b.ToTable("Archives");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Book", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Added")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CoverSource")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CoverState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<short?>("GeneratedTemplate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<short?>("GeneratedVariant")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MergedIntoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte?>("Rating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SeriesId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("SeriesNumber")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("SortAuthor")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SortTitle")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("WorkKey")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "WorkKey");
+
+                    b.HasIndex("LibraryId", "Added", "Id");
+
+                    b.HasIndex("LibraryId", "SortAuthor", "Id");
+
+                    b.HasIndex("LibraryId", "SortTitle", "Id");
+
+                    b.HasIndex("SeriesId", "SeriesNumber", "Id");
+
+                    b.HasIndex("TenantId", "SortTitle", "Id");
+
+                    b.ToTable("Books");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookFile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ArchiveId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("ContentHash")
+                        .HasMaxLength(32)
+                        .HasColumnType("BLOB");
+
+                    b.Property<long?>("Crc32")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("Locator")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<short?>("Method")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("Modified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("PackedSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PathKey")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("ArchiveId", "PathKey");
+
+                    b.HasIndex("LibraryId", "PathKey");
+
+                    b.HasIndex("TenantId", "Size", "Crc32");
+
+                    b.ToTable("BookFiles");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookIdentifier", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Scheme")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("BookId", "Scheme", "Value");
+
+                    b.HasIndex("TenantId", "Scheme", "Value");
+
+                    b.ToTable("BookIdentifiers");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Number")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("Ordinal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("BookId", "TagId", "Source");
+
+                    b.HasIndex("TagId", "BookId");
+
+                    b.ToTable("BookTags");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.Property<int>("GroupId")
@@ -61,10 +297,31 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("GroupRights");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.GroupTagFilter", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Deny")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("GroupTagFilters");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("Created")
@@ -168,6 +425,163 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId");
 
                     b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuiltIn")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DisambiguationParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FieldId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FieldKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsCategory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Shorthand")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SortName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("TenantId", "FieldKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "FieldId", "NormalizedName");
+
+                    b.HasIndex("TenantId", "FieldId", "SortName", "Id");
+
+                    b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagAlias", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "NormalizedName");
+
+                    b.ToTable("TagAliases");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagClosure", b =>
+                {
+                    b.Property<int>("AncestorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DescendantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Depth")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AncestorId", "DescendantId");
+
+                    b.HasIndex("DescendantId", "AncestorId");
+
+                    b.ToTable("TagClosure", (string)null);
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagCount", b =>
+                {
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("LibraryId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("TagCounts");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagParent", b =>
+                {
+                    b.Property<int>("ChildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ChildId", "ParentId");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("TagParents");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>
@@ -317,6 +731,82 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("Groups", (string)null);
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.Archive", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Book", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookFile", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Archive", "Archive")
+                        .WithMany()
+                        .HasForeignKey("ArchiveId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Files")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Archive");
+
+                    b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookIdentifier", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Identifiers")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", "Book")
+                        .WithMany("Tags")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.HasOne("Librarion.Core.Data.UserGroup", "Group")
@@ -366,6 +856,25 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.GroupTagFilter", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.UserGroup", "Group")
+                        .WithMany("TagFilters")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Library", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tenant", "Tenant")
@@ -375,6 +884,86 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Field")
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Field");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagAlias", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Tag")
+                        .WithMany("Aliases")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagClosure", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Ancestor")
+                        .WithMany()
+                        .HasForeignKey("AncestorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Descendant")
+                        .WithMany()
+                        .HasForeignKey("DescendantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ancestor");
+
+                    b.Navigation("Descendant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagCount", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagParent", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Child")
+                        .WithMany()
+                        .HasForeignKey("ChildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Child");
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.TenantDisabledRight", b =>
@@ -409,6 +998,20 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.Book", b =>
+                {
+                    b.Navigation("Files");
+
+                    b.Navigation("Identifiers");
+
+                    b.Navigation("Tags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
+                {
+                    b.Navigation("Aliases");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>
                 {
                     b.Navigation("DisabledRights");
@@ -430,6 +1033,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Members");
 
                     b.Navigation("Rights");
+
+                    b.Navigation("TagFilters");
                 });
 #pragma warning restore 612, 618
         }
