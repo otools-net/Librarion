@@ -6,8 +6,11 @@ As found on 2026-10-31 (Windows 11).
 - Node 24.21, npm 12.2.
 - Microsoft Edge installed (the e2e Chromium channel); Playwright's WebKit, Chromium and ffmpeg in
   `%LOCALAPPDATA%\ms-playwright` (shared with SFE, same Playwright version).
-- Docker Desktop 29.3 with a proxy that refuses Docker Hub: `docker pull` fails; no PostgreSQL image locally. The
-  PostgreSQL test run is CI's for now ([testing-backend](../development/testing-backend.md)).
+- Docker Desktop 29.3, not running by default: start it (`Docker Desktop.exe`, wait for `docker info`) only for a
+  PostgreSQL run. Hub pulls worked on 2026-11-01 (`postgres:17` is local now; they failed through a proxy on
+  10-31).
+- **Little memory:** stop what you started right after use: `docker stop librarion-pg`, Docker Desktop's processes,
+  `wsl --shutdown`.
 - Shells: Git Bash (the Bash tool) and Windows PowerShell 5.1. Git's `core.autocrlf=true`: see
   [line-endings](line-endings.md).
 - SFE (the design reference) is in `C:\workspace\GIT\SimpleFileExplorer`, MyHomeLib in

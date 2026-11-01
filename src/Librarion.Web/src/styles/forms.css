@@ -54,6 +54,12 @@
     font-weight: 600;
 }
 
+/* A heading over a group of fields, styled as a label. */
+h3.field-label {
+    margin: 0;
+    font-size: 1rem;
+}
+
 .field-hint {
     color: var(--text-muted);
     font-size: 12px;

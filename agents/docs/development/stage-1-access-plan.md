@@ -73,11 +73,9 @@ holding several libraries**. Version stays `0.0.0` on `edge`; the merge into `ma
 - [x] `docs/`: `first-start.md`, `user-guide/account.md`, `administration/` (one page per section),
       `reference/rights.md`, `reference/settings-levels.md`, configuration keys (setup, security, rights); README
       first-run lines.
-- [ ] Screenshots in `docs/images/` (user-docs rule): no `agents/tools/docs-screenshots` yet; the
-      `agents/tools/screenshots` tool takes them, but images in the repo would change with every UI tweak before 1.0.
-      Ask the user whether to add them now or before 1.0.
-- [ ] Tenants page: switching rights off per tenant (`disabledRights`) is API-only so far.
-- [ ] PostgreSQL run: never run locally (Docker can't pull images on this machine); push `edge` when the user says.
+- [x] Screenshots in `docs/images/`: the user chose to add them before 1.0 (2026-11-01), not now.
+- [x] Tenants page: the editor is a panel (name, disabled, rights switched off in the tenant, reusing `rightAreas`).
+- [x] PostgreSQL run: 45 green locally (2026-11-01, `postgres:17`); CI runs it on every push of `edge`.
 - [ ] When all is green: tick the exit criteria, commit "stage 1 done", ask the user about merging into `main` (0.2.0).
 
 ## Decisions taken while building (keep in the feature notes)

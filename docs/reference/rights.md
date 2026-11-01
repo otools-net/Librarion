@@ -27,8 +27,8 @@ Server administrators have every right, in every tenant, and these server rights
 
 ## Switching rights off
 
-- For one tenant: rights can be switched off for everyone in the tenant (for now through the API,
-  `PUT api/tenants/{id}` with `disabledRights`; the tenants page will offer it).
+- For one tenant: [Administration → Tenants](../administration/tenants.md), **Edit**, rights switched off in this
+  tenant (server administrators working there lose them too; they keep the server rights).
 - For the whole server: `Librarion:Rights:Disabled`, a list of right ids (`library.settings`), prefixes
   (`tenant.*`) or `kind:write` (every right that changes something: a read-only server). Server administrators lose
   them too. See [configuration](../configuration.md#rights).

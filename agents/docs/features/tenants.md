@@ -12,7 +12,8 @@ the tenant switcher in `shell/`. Decision D4 in [foundation-plan](../development
   rights, every library) and a first library (`LibraryName`, default "Library").
 - Slug: lower-case ASCII, digits, dashes, made from the name, fixed once created.
 - A tenant can be disabled (its accounts can't sign in and their sessions end: `SessionUser.Disabled`), or have
-  rights switched off for everyone in it (`TenantDisabledRights`).
+  rights switched off for everyone in it (`TenantDisabledRights`; tenant editor in `admin/tenants-section.ts`;
+  server administrators working there lose them too).
 - Deleting a tenant deletes its libraries, accounts, groups and settings; the client asks to type its name.
 - Managing tenants needs `server.tenants`, which also reaches every tenant's accounts, groups and libraries; a tenant
   administrator manages its own libraries with `tenant.libraries`.

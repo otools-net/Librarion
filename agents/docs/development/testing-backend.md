@@ -5,8 +5,9 @@ Rules and infrastructure: [testing](testing.md). Code: `tests/Librarion.Tests/In
 - **Two runs, one per provider:** `dotnet test` uses SQLite; with `LIBRARION_TEST_POSTGRES` set to a server
   connection string (a user that may create databases) every `TestCatalog` makes its own database there and drops it
   (`WITH (FORCE)`) at the end. Local server: `agents/tools/postgres-dev/` (Docker). CI runs both.
-- On this machine Docker can't pull images (2026-10-31: Docker Desktop's proxy refuses `registry-1.docker.io`), so
-  the PostgreSQL run is CI's until an image is available locally.
+- The run on PostgreSQL is the same 45-odd tests (the variable switches the provider, it doesn't add tests). Locally:
+  start Docker Desktop, `LIBRARION_TEST_POSTGRES="$(agents/tools/postgres-dev/start.sh)" dotnet test`, then stop the
+  container, Docker Desktop and WSL ([dev-machine](../environment/dev-machine.md)).
 - Never `SqliteConnection.ClearAllPools()` in tests: under method-level parallelism it disposes handles other tests are
   opening; `TestCatalog` clears its own pool only (SFE's finding).
 - `OutboundGuard` listens to the runtime's `System.Net.Http` and `System.Net.NameResolution` activity sources: it

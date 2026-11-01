@@ -3,6 +3,7 @@ import { Api } from '../core/api.service';
 import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { GroupInfo, LibraryInfo, RightInfo, UserInfo } from '../core/models';
+import { rightAreas } from '../core/rights';
 
 interface GroupDraft {
     id: number | null;
@@ -136,16 +137,7 @@ export class GroupsSection implements OnInit {
     protected readonly errors = signal<Record<string, string>>({});
 
     /** The grantable rights by area, in the catalog's order (server rights belong to server administrators). */
-    protected readonly areas = computed(() => {
-        const areas: { name: string; rights: RightInfo[] }[] = [];
-        for (const right of this.catalog().filter(r => r.scope !== 'server')) {
-            let area = areas.find(a => a.name === right.area);
-            if (!area)
-                areas.push(area = { name: right.area, rights: [] });
-            area.rights.push(right);
-        }
-        return areas;
-    });
+    protected readonly areas = computed(() => rightAreas(this.catalog()));
 
     protected readonly valueOf = valueOf;
     protected readonly checkedOf = checkedOf;

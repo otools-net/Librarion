@@ -1,5 +1,6 @@
 // The rights' ids, the same as the server's RightCatalog (agents/docs/features/rights.md). Their texts are
 // `right.<id>` and `right.<id>.hint` in en.json (ClientI18nTests checks every right of the catalog has them).
+import type { RightInfo } from './models';
 export const Rights = {
     browse: 'library.browse',
     librarySettings: 'library.settings',
@@ -22,3 +23,15 @@ export const ADMIN_RIGHTS: string[] = [
     Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings,
     Rights.manageTenants, Rights.manageAllUsers, Rights.serverSettings, Rights.serverSecurityLog,
 ];
+
+/** The rights a group can hold or a tenant switch off (not the server's), by area in the catalog's order. */
+export function rightAreas(catalog: RightInfo[]): { name: string; rights: RightInfo[] }[] {
+    const areas: { name: string; rights: RightInfo[] }[] = [];
+    for (const right of catalog.filter(r => r.scope !== 'server')) {
+        let area = areas.find(a => a.name === right.area);
+        if (!area)
+            areas.push(area = { name: right.area, rights: [] });
+        area.rights.push(right);
+    }
+    return areas;
+}

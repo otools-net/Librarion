@@ -1,13 +1,22 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Api } from '../core/api.service';
 import { checkedOf, errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
-import { TenantInfo } from '../core/models';
+import { RightInfo, TenantInfo } from '../core/models';
+import { rightAreas } from '../core/rights';
 import { SessionService } from '../core/session.service';
 
+/** What the editor holds for the tenant being changed. */
+interface TenantDraft {
+    id: number;
+    name: string;
+    disabled: boolean;
+    disabledRights: string[];
+}
+
 /**
- * Tenants (server administrators, as SFE's SpacesPage): created with their first library, renamed, disabled, deleted;
- * "Work here" switches the session to one.
+ * Tenants (server administrators, as SFE's SpacesPage): created with their first library, renamed, disabled, rights
+ * switched off for everyone in it, deleted; "Work here" switches the session to one.
  */
 @Component({
     selector: 'lib-tenants-section',
@@ -19,38 +28,65 @@ import { SessionService } from '../core/session.service';
                    [value]="name()" (input)="name.set(valueOf($event))">
             <button type="submit" class="button primary" [title]="'tenants.addHint' | t" [disabled]="busy() || !name().trim()">{{ 'tenants.add' | t }}</button>
         </form>
+        @if (draft(); as draft) {
+            <form class="panel editor settings-form" novalidate (submit)="save($event)">
+                <h2>{{ 'tenants.editTitle' | t }}</h2>
+                <div class="field">
+                    <label class="field-label" for="tenant-name">{{ 'tenants.name' | t }}</label>
+                    <input id="tenant-name" type="text" autocomplete="off" [value]="draft.name" (input)="patch({ name: valueOf($event) })">
+                </div>
+                <label class="check">
+                    <input type="checkbox" [checked]="draft.disabled" (change)="patch({ disabled: checkedOf($event) })">
+                    <span>{{ 'tenants.disabled' | t }}<span class="field-hint">{{ 'tenants.disabledHint' | t }}</span></span>
+                </label>
+                <div class="field">
+                    <h3 class="field-label">{{ 'tenants.disabledRights' | t }}</h3>
+                    <span class="field-hint">{{ 'tenants.disabledRightsHint' | t }}</span>
+                </div>
+                @for (area of areas(); track area.name) {
+                    <fieldset class="field">
+                        <legend class="field-label">{{ 'rightArea.' + area.name | t }}</legend>
+                        <div class="checks">
+                            @for (right of area.rights; track right.id) {
+                                <label class="check" [title]="'right.' + right.id + '.hint' | t">
+                                    <input type="checkbox" [checked]="draft.disabledRights.includes(right.id) || right.disabledByServer" [disabled]="right.disabledByServer"
+                                           (change)="toggleRight(right.id, checkedOf($event))">
+                                    <span>{{ 'right.' + right.id | t }}
+                                        @if (right.disabledByServer) {
+                                            <span class="badge danger">{{ 'groups.disabledByServer' | t }}</span>
+                                        }
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
+                }
+                <div class="form-actions">
+                    <button type="submit" class="button primary" [title]="'common.saveHint' | t" [disabled]="busy() || !draft.name.trim()">{{ 'common.save' | t }}</button>
+                    <button type="button" class="button" [title]="'common.cancelHint' | t" (click)="draftState.set(null)">{{ 'common.cancel' | t }}</button>
+                </div>
+            </form>
+        }
         @if (error(); as error) {
             <p class="form-error" role="alert">{{ error }}</p>
         }
         <ul class="rows" [attr.aria-label]="'admin.tenants' | t">
             @for (tenant of tenants(); track tenant.id) {
                 <li class="row">
-                    @if (renaming() === tenant.id) {
-                        <form class="row-main row-form" novalidate (submit)="save($event, tenant)">
-                            <input type="text" [attr.aria-label]="'tenants.name' | t" [value]="tenant.name" (input)="newName.set(valueOf($event))">
-                            <label class="check">
-                                <input type="checkbox" [checked]="newDisabled()" (change)="newDisabled.set(checkedOf($event))">
-                                <span>{{ 'tenants.disabled' | t }}</span>
-                            </label>
-                            <button type="submit" class="button primary" [title]="'common.saveHint' | t" [disabled]="busy()">{{ 'common.save' | t }}</button>
-                            <button type="button" class="button" [title]="'common.cancelHint' | t" (click)="renaming.set(null)">{{ 'common.cancel' | t }}</button>
-                        </form>
-                    } @else {
-                        <span class="row-main">
-                            <span class="row-title">{{ tenant.name }}</span>
-                            <span class="row-meta">{{ tenant.slug }}</span>
-                        </span>
-                        @if (tenant.disabled) {
-                            <span class="badge">{{ 'tenants.disabledBadge' | t }}</span>
-                        }
-                        @if (sessions.session()?.tenant?.id === tenant.id) {
-                            <span class="badge">{{ 'tenants.current' | t }}</span>
-                        } @else {
-                            <button type="button" class="button" [title]="'tenants.workHereHint' | t: { name: tenant.name }" (click)="workHere(tenant)">{{ 'tenants.workHere' | t }}</button>
-                        }
-                        <button type="button" class="button" [title]="'tenants.editHint' | t: { name: tenant.name }" (click)="startEdit(tenant)">{{ 'common.edit' | t }}</button>
-                        <button type="button" class="button danger" [title]="'tenants.deleteHint' | t: { name: tenant.name }" [disabled]="busy()" (click)="remove(tenant)">{{ 'common.delete' | t }}</button>
+                    <span class="row-main">
+                        <span class="row-title">{{ tenant.name }}</span>
+                        <span class="row-meta">{{ tenant.slug }}</span>
+                    </span>
+                    @if (tenant.disabled) {
+                        <span class="badge">{{ 'tenants.disabledBadge' | t }}</span>
                     }
+                    @if (sessions.session()?.tenant?.id === tenant.id) {
+                        <span class="badge">{{ 'tenants.current' | t }}</span>
+                    } @else {
+                        <button type="button" class="button" [title]="'tenants.workHereHint' | t: { name: tenant.name }" (click)="workHere(tenant)">{{ 'tenants.workHere' | t }}</button>
+                    }
+                    <button type="button" class="button" [title]="'tenants.editHint' | t: { name: tenant.name }" (click)="startEdit(tenant)">{{ 'common.edit' | t }}</button>
+                    <button type="button" class="button danger" [title]="'tenants.deleteHint' | t: { name: tenant.name }" [disabled]="busy()" (click)="remove(tenant)">{{ 'common.delete' | t }}</button>
                 </li>
             }
         </ul>
@@ -62,10 +98,11 @@ export class TenantsSection implements OnInit {
     protected readonly sessions = inject(SessionService);
 
     protected readonly tenants = signal<TenantInfo[]>([]);
+    protected readonly catalog = signal<RightInfo[]>([]);
+    protected readonly areas = computed(() => rightAreas(this.catalog()));
     protected readonly name = signal('');
-    protected readonly renaming = signal<number | null>(null);
-    protected readonly newName = signal('');
-    protected readonly newDisabled = signal(false);
+    protected readonly draftState = signal<TenantDraft | null>(null);
+    protected readonly draft = this.draftState.asReadonly();
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);
 
@@ -73,7 +110,11 @@ export class TenantsSection implements OnInit {
     protected readonly checkedOf = checkedOf;
 
     async ngOnInit(): Promise<void> {
-        await this.run(async () => this.tenants.set(await this.api.tenants()));
+        await this.run(async () => {
+            const [tenants, catalog] = await Promise.all([this.api.tenants(), this.api.rights()]);
+            this.tenants.set(tenants);
+            this.catalog.set(catalog);
+        });
     }
 
     protected async create(event: Event): Promise<void> {
@@ -86,16 +127,28 @@ export class TenantsSection implements OnInit {
     }
 
     protected startEdit(tenant: TenantInfo): void {
-        this.newName.set(tenant.name);
-        this.newDisabled.set(tenant.disabled);
-        this.renaming.set(tenant.id);
+        this.draftState.set({ id: tenant.id, name: tenant.name, disabled: tenant.disabled, disabledRights: [...tenant.disabledRights] });
     }
 
-    protected async save(event: Event, tenant: TenantInfo): Promise<void> {
+    protected patch(change: Partial<TenantDraft>): void {
+        this.draftState.update(draft => draft && { ...draft, ...change });
+    }
+
+    protected toggleRight(id: string, off: boolean): void {
+        this.draftState.update(draft => draft && {
+            ...draft,
+            disabledRights: off ? [...draft.disabledRights.filter(r => r !== id), id] : draft.disabledRights.filter(r => r !== id),
+        });
+    }
+
+    protected async save(event: Event): Promise<void> {
         event.preventDefault();
+        const draft = this.draft();
+        if (!draft)
+            return;
         await this.run(async () => {
-            await this.api.updateTenant(tenant.id, { name: this.newName().trim(), disabled: this.newDisabled() });
-            this.renaming.set(null);
+            await this.api.updateTenant(draft.id, { name: draft.name.trim(), disabled: draft.disabled, disabledRights: draft.disabledRights });
+            this.draftState.set(null);
             await this.refresh();
         });
     }

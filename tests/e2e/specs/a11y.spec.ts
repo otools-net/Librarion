@@ -48,7 +48,12 @@ test.describe('@a11y', () => {
         await expect(page.getByRole('heading', { name: 'New group' })).toBeVisible();
         await audit(page, 'groups');
 
-        for (const section of ['libraries', 'tenants', 'settings', 'security']) {
+        await page.goto('./admin/tenants');
+        await page.getByRole('button', { name: 'Edit' }).first().tap();
+        await expect(page.getByRole('heading', { name: 'Tenant', exact: true })).toBeVisible();
+        await audit(page, 'tenants');
+
+        for (const section of ['libraries', 'settings', 'security']) {
             await page.goto(`./admin/${section}`);
             await expect(page.getByRole('navigation', { name: 'Sections of the administration' }).getByRole('link', { name: /./ }).first()).toBeVisible();
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);

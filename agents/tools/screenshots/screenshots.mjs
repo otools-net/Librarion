@@ -19,7 +19,7 @@ const port = process.env.LIBRARION_E2E_PORT ?? '5192';
 const baseURL = `http://localhost:${port}/`;
 const pages = pageArgs.length ? pageArgs : [
     'login', 'login#recover', '', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
-    'admin/libraries', 'admin/tenants', 'admin/settings', 'admin/security', 'missing',
+    'admin/libraries', 'admin/tenants', 'admin/tenants#edit', 'admin/settings', 'admin/security', 'missing',
 ];
 const sizes = {
     phone: { ...devices['Pixel 7'], viewport: { width: 360, height: 740 }, screen: { width: 360, height: 800 } },
@@ -72,6 +72,8 @@ try {
                 await page.getByRole('link', { name: 'Recover the account' }).click();
             else if (action === 'new')
                 await page.getByRole('button', { name: /^New / }).click();
+            else if (action === 'edit')
+                await page.getByRole('button', { name: 'Edit' }).first().click();
             await page.waitForLoadState('networkidle');
             const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}.png`);
             await page.screenshot({ path: file, fullPage: true });

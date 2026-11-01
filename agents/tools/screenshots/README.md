@@ -13,5 +13,5 @@ LIBRARION_E2E_SKIP_BUILD=0 node agents/tools/screenshots/screenshots.mjs      # 
 ```
 
 - A page is a client address; `#recover` opens the recovery on the sign-in page, `#new` presses the section's "New …"
-  button. Files are named `<phone|desktop>-<page>.png`.
+  button, `#edit` its first "Edit" button. Files are named `<phone|desktop>-<page>.png`.
 - It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds.

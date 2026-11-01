@@ -169,6 +169,7 @@ describe('TenantsSection', () => {
             { id: 1, slug: 'home', name: 'Home', disabled: false, created: '', disabledRights: [] },
             { id: 2, slug: 'club', name: 'Club', disabled: false, created: '', disabledRights: [] },
         ]);
+        api.rights.mockResolvedValue([]);
         api.switchTenant.mockResolvedValue(sessionInfo([], { tenant: { id: 2, slug: 'club', name: 'Club' } }));
         api.deleteTenant.mockResolvedValue(undefined);
         const prompt = vi.spyOn(window, 'prompt').mockReturnValue('club');
@@ -187,6 +188,32 @@ describe('TenantsSection', () => {
         await stable();
         expect(api.deleteTenant).toHaveBeenCalledWith(1);
         vi.restoreAllMocks();
+    });
+
+    it('switches rights off for a tenant, those the server switches off shown and fixed', async () => {
+        const api = mockApi();
+        api.tenants.mockResolvedValue([{ id: 1, slug: 'home', name: 'Home', disabled: false, created: '', disabledRights: ['tenant.users'] }]);
+        api.rights.mockResolvedValue([
+            right('library.browse', 'library', 'read', 'library'), right('tenant.users', 'tenant', 'write'),
+            { ...right('tenant.libraries', 'tenant', 'write'), disabledByServer: true }, right('server.tenants', 'server', 'write', 'server'),
+        ]);
+        api.updateTenant.mockResolvedValue({ id: 1, slug: 'home', name: 'Home', disabled: false, created: '', disabledRights: [] });
+        const { element, stable } = await render(TenantsSection, api, ['server.tenants']);
+
+        click(element, 'Edit');
+        await stable();
+        const box = (text: string) => [...element.querySelectorAll<HTMLLabelElement>('label.check')].find(label => label.textContent?.includes(text))!.querySelector('input')!;
+        expect(box('Manage accounts').checked).toBe(true);
+        expect(box('Manage libraries').disabled).toBe(true);
+        expect(element.textContent).not.toContain('Manage tenants');
+
+        box('Browse').click();
+        box('Manage accounts').click();
+        await stable();
+        element.querySelector<HTMLFormElement>('form.editor')!.requestSubmit();
+        await stable();
+        expect(api.updateTenant).toHaveBeenCalledWith(1, { name: 'Home', disabled: false, disabledRights: ['library.browse'] });
+        expect(element.querySelector('form.editor')).toBeNull();
     });
 });
 
