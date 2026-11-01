@@ -94,11 +94,15 @@ the book** (decided 2026-10-31).
 - **Generated:** five templates (`classic`, `typographic`, `geometric`, `band`, `minimal`) × eight palettes, indexes
   stored on the book (`GeneratedTemplate`, `GeneratedVariant`), assigned at import from `WorkKey` through SplitMix64
   (spread checked within 20 %) and kept across re-reads. New templates and palettes go at the end of their lists.
-- **Text:** Noto fonts embedded in the assembly (nothing from the system: the same picture on every server); the
-  script of the first Arabic or Hebrew letter picks those families, else the template's face; HarfBuzz shapes each
-  line (joining, right to left); words wrap, a word too wide breaks between characters, the size steps down by 10 %
-  to the style's minimum, then the last line ends with an ellipsis. Characters no bundled font has are dropped: **CJK
-  titles come out without text** until a CJK font is bundled (Noto CJK is about 16 MB a weight: the user's call).
+- **Text:** Noto fonts shipped in `fonts/` next to the program (`Covers/Fonts/`, copied on build and publish) and
+  memory-mapped (`SKTypeface.FromFile`; nothing from the system: the same picture on every server). The first letter
+  of a script with its own font picks it (`CoverFonts.Scripts`: Hebrew, Arabic, Devanagari, Bengali, Tamil, Thai,
+  CJK), else the template's face (Latin, Greek, Cyrillic). CJK is one font, `NotoSansCJKsc-Bold.otf` (17 MB, the
+  user's choice 2026-11-01: multilingual titles matter): Han, kana and Hangul, Simplified Chinese glyph forms.
+  HarfBuzz shapes each line (joining, right to left, Indic clusters); lines break between words; the size steps down
+  by 10 %, and only at the style's minimum is a word broken between characters (text without spaces, CJK, breaks
+  between characters at any size); the last line ends with an ellipsis. Characters no bundled font has are dropped.
+  A new script: its font in `Covers/Fonts/` and its ranges in `CoverFonts.Scripts`.
 - `LIBRARION_COVER_SAMPLES=<folder>` makes `CoverTests` write PNGs of every template for a look by eye.
 
 ## Image library (D17)

@@ -107,8 +107,40 @@ public sealed class CoverTests
         ["ألف ليلة وليلة", "مجهول", null!],
         ["מאה שנים של בדידות", "גבריאל גרסיה מרקס", null!],
         ["三体", "刘慈欣", null!],
+        ["ノルウェイの森", "村上春樹", "長編小説 #5"],
+        ["채식주의자", "한강", null!],
+        ["गोदान", "प्रेमचंद", null!],
+        ["গীতাঞ্জলি", "রবীন্দ্রনাথ ঠাকুর", null!],
+        ["பொன்னியின் செல்வன்", "கல்கி", null!],
+        ["สี่แผ่นดิน", "คึกฤทธิ์ ปราโมช", null!],
+        [string.Concat(Enumerable.Repeat("红楼梦", 40)), "曹雪芹", null!],
         ["", null!, null!],
     ];
+
+    [TestMethod]
+    [DataRow("三体")]
+    [DataRow("ノルウェイの森")]
+    [DataRow("채식주의자")]
+    [DataRow("गोदान")]
+    [DataRow("গীতাঞ্জলি")]
+    [DataRow("பொன்னியின் செல்வன்")]
+    [DataRow("สี่แผ่นดิน")]
+    [DataRow("ألف ليلة وليلة")]
+    [DataRow("מאה שנים של בדידות")]
+    public void ATitleInAnAsianOrRightToLeftScriptIsDrawn(string title)
+    {
+        for (var template = 0; template < GeneratedCovers.Templates.Count; template++)
+        {
+            using var with = SKBitmap.Decode(GeneratedCovers.Render(template, 0, new CoverText(title, null, null), CoverSize.M));
+            using var without = SKBitmap.Decode(GeneratedCovers.Render(template, 0, new CoverText("", null, null), CoverSize.M));
+            var changed = 0;
+            for (var y = 0; y < with.Height; y += 2)
+                for (var x = 0; x < with.Width; x += 2)
+                    if (with.GetPixel(x, y) != without.GetPixel(x, y))
+                        changed++;
+            Assert.IsGreaterThan(100, changed, $"{GeneratedCovers.Templates[template].Name}: the title shows");
+        }
+    }
 
     [TestMethod]
     [DynamicData(nameof(Texts))]

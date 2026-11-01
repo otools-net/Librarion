@@ -20,8 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Noto fonts (SIL OFL 1.1, Covers/Fonts/OFL.txt) for generated covers, inside the assembly. -->
-    <EmbeddedResource Include="Covers/Fonts/*.ttf" LogicalName="Librarion.Fonts.%(Filename)%(Extension)" />
+    <!-- Noto fonts (SIL OFL 1.1, Covers/Fonts/OFL*.txt) for generated covers, shipped in fonts/ next to the program
+         and memory-mapped from there (the CJK one is 17 MB: never copied into memory). -->
+    <None Include="Covers/Fonts/*.ttf;Covers/Fonts/*.otf;Covers/Fonts/OFL*.txt" Link="fonts/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

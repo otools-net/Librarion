@@ -59,7 +59,7 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 ### 3.5 Covers
 
 - [x] Extraction per format, cover cache, thumbnails, generated templates (long titles, other scripts, RTL), route
-      `GET api/books/{id}/cover/{size}` ([book-display](../features/book-display.md); CJK titles have no font yet).
+      `GET api/books/{id}/cover/{size}` ([book-display](../features/book-display.md); CJK and Indic fonts added).
 
 ### 3.6 Duplicates at import, download
 

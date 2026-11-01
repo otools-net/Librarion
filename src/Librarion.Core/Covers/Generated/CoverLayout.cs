@@ -43,12 +43,15 @@ public static class CoverLayout
         using var shaper = new SKShaper(typeface);
         using var font = new SKFont(typeface) { Subpixel = true, Edging = SKFontEdging.Antialias };
 
+        // A word is broken inside only at the smallest size, unless the text has no spaces at all (Chinese, Japanese):
+        // there lines break between characters at any size.
+        var unspaced = !covered.Contains(' ');
         List<string> lines = [];
         for (var size = style.MaxSize; ; size = Math.Max(style.MinSize, size * 0.9f))
         {
             font.Size = size;
-            lines = Wrap(shaper, font, covered, box.Width);
-            var fits = lines.Count <= style.MaxLines && lines.Count * size * style.LineHeight <= box.Height;
+            lines = Wrap(shaper, font, covered, box.Width, out var broken);
+            var fits = lines.Count <= style.MaxLines && lines.Count * size * style.LineHeight <= box.Height && (!broken || unspaced);
             if (fits || size <= style.MinSize)
                 break;
         }
@@ -84,8 +87,10 @@ public static class CoverLayout
 
     public static float Width(SKShaper shaper, SKFont font, string text) => shaper.Shape(text, font).Width;
 
-    private static List<string> Wrap(SKShaper shaper, SKFont font, string text, float width)
+    /// <param name="broken">Whether a word had to be broken between its characters.</param>
+    private static List<string> Wrap(SKShaper shaper, SKFont font, string text, float width, out bool broken)
     {
+        broken = false;
         var lines = new List<string>();
         var line = "";
         foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
@@ -104,6 +109,7 @@ public static class CoverLayout
             while (Width(shaper, font, line) > width && Elements(line) > 1)
             {
                 var head = Fit(shaper, font, line, width, "");
+                broken = true;
                 lines.Add(head);
                 line = line[head.Length..];
             }
