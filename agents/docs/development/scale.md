@@ -51,6 +51,10 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   [catalog](../features/catalog.md#known-limits-accepted-2026-11-01-measure-again-before-the-release).
 - Generation: 2M SQLite 3.2 min, PostgreSQL 7.4 min (the `COPY` of `BookTags` checks its foreign keys); 10M SQLite
   18 min.
+- Archives (stage 3, `archive` command, 2026-11-01, NVMe SSD, warm file cache, SQLite): a 100k-entry FB2 zip
+  (1 GB, 30 KB books) listed in 73 ms (budget 2 s), indexed from heads in 141 s, 709 books a second (budget 3 min:
+  the closest to its limit), the unchanged library scanned in 4.6 ms (50 ms), first byte p95 0.2 ms (50 ms), a
+  generated cover (m) p95 14 ms. No HDD / NAS on this machine (one SSD, C: and D: are partitions): D11 stays open.
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
   author or date, fields found by scanning `BuiltIn`, tag pages joined one way for every size (before: Fiction 2.9 s, a
   0.1 % filter 0.8 s), parallel workers on PostgreSQL, a big series by number walked from its title.

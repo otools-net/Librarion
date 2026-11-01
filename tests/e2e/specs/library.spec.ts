@@ -1,0 +1,59 @@
+// A library from folder to download, on every device: the administrator adds a folder holding a ZIP of books to a new
+// library, scans it from the library panel, sees the run with its counts, then downloads a book straight from the zip
+// and gets its cover (the book page comes with stage 5; the API stands in for it).
+import fs from 'node:fs';
+import path from 'node:path';
+import { uniqueName } from '../fixtures/accounts';
+import { press } from '../fixtures/press';
+import { expect, test } from '../fixtures/test';
+import { fb2, writeZip } from '../fixtures/zip';
+import { work } from '../paths';
+
+test.describe('@library', () => {
+    test('a folder with a zip is scanned and its books download from inside the zip @desktop', async ({ page, isMobile }, testInfo) => {
+        const libraryName = uniqueName('Zipped', testInfo);
+        const folder = path.join(work, 'books', libraryName);
+        fs.rmSync(folder, { recursive: true, force: true });
+        const books = [
+            { name: 'fb2-000001.fb2', data: fb2('The Colour of Magic', 'Terry Pratchett') },
+            { name: 'fb2-000002.fb2', data: fb2('Equal Rites', 'Terry Pratchett') },
+        ];
+        writeZip(path.join(folder, 'lib.rus.ec', 'fb2-000001-000002.zip'), books);
+
+        await page.goto('./admin/libraries');
+        await page.getByLabel('Name of a new library').fill(libraryName);
+        await press(page.getByRole('button', { name: 'Add', exact: true }), isMobile);
+        await press(page.getByRole('button', { name: libraryName }), isMobile);
+
+        await page.getByLabel('Full path of a folder on the server').fill(folder);
+        await press(page.getByRole('button', { name: 'Add folder' }), isMobile);
+        await expect(page.getByRole('list', { name: 'Folders' }).getByText(folder)).toBeVisible();
+
+        await press(page.getByRole('button', { name: 'Scan now' }), isMobile);
+        const run = page.getByRole('list', { name: 'Runs' }).getByRole('listitem').first();
+        await expect(run).toContainText('done', { timeout: 30_000 });
+        await expect(run).toContainText('2 added');
+        await expect(page.getByRole('button', { name: 'Scan now' })).toBeEnabled();
+
+        // The page's own session (its cookies) asks the API, as the book page will.
+        const api = page.request;
+        const headers = { 'X-Librarion-Request': '1' };
+        const libraries = await (await api.get('api/libraries', { headers })).json() as { id: number; name: string }[];
+        const library = libraries.find(each => each.name === libraryName)!;
+        const page1 = await (await api.get(`api/books?library=${library.id}&sort=title`, { headers })).json() as { items: { id: number; title: string }[] };
+        // By sort title: the leading article doesn't count ("Colour of Magic" before "Equal Rites").
+        expect(page1.items.map(book => book.title)).toEqual(['The Colour of Magic', 'Equal Rites']);
+        const book = page1.items.find(each => each.title === 'Equal Rites')!;
+        const detail = await (await api.get(`api/books/${book.id}`, { headers })).json() as { files: { id: number; name: string; inArchive: boolean }[] };
+        expect(detail.files).toHaveLength(1);
+
+        const download = await api.get(`api/books/${book.id}/files/${detail.files[0].id}`, { headers });
+        expect(download.status()).toBe(200);
+        expect(download.headers()['content-disposition']).toContain('fb2-000002.fb2');
+        expect(Buffer.compare(await download.body(), books[1].data)).toBe(0);
+
+        const cover = await api.get(`api/books/${book.id}/cover/m`, { headers });
+        expect(cover.status()).toBe(200);
+        expect(cover.headers()['content-type']).toBe('image/webp');
+    });
+});

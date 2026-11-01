@@ -55,3 +55,23 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
 - Report `bench-<provider>-<books>-<time>.json` and every plan in `…-plans.txt` in the work folder. Exit 1 on a full
   scan, or on PostgreSQL past a budget (SQLite's times are recorded, not enforced).
 - Run nothing else heavy at the same time: the timings are the machine's.
+
+## What `archive` measures (stage 3, [archives](../../docs/features/archives.md#scale-budgets-benchmark-scale))
+
+```sh
+dotnet $bench archive --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/archive-sqlite.db" \
+  --work D:/Temp/librarion-bench [--entries 100000] [--body-kb 30] [--samples 500]
+```
+
+- A zip of `--entries` FB2 books (real description heads, a body of `--body-kb` KB, deflated) in
+  `<work>/archive-<entries>-<body>k/`, made once and kept (deterministic: same options, same file).
+- Then, into a fresh database (the target is recreated): the zip's directory listed (`ZipDirectory`), the library
+  scanned by the real `LibraryScanner` with the real metadata readers (index from heads), scanned again unchanged,
+  the first byte of `--samples` random books (`BookDownloads.Open`, from the row as the route has it), and the cover of
+  100 of them (none in the books: looked for, then generated).
+- Budgets: list < 2 s and index < 3 min (only at 100k entries or more), unchanged scan < 50 ms, first byte p95
+  < 50 ms; exit 1 past one. Report `archive-<provider>-<entries>-<time>.json` in the work folder.
+- The zip was just written or read: the system's file cache is warm. A cold-disk figure needs the cache emptied
+  (reboot, or a file larger than RAM read in between); an HDD / NAS figure needs such a disk (this machine has one NVMe
+  SSD: C: and D: are partitions of it).
+- Small-size test: `ArchiveBenchTests` (500 entries, both providers).

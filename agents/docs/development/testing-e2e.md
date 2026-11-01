@@ -30,5 +30,7 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
 - Its first run found two bugs (2026-10-31): the brand link had no accessible name on phones (its text hidden, the
   logo `alt=""`), and deep client addresses loaded their scripts relative to the address (`ClientPage` now serves the
   page with the app's root as base).
+- Books for a spec are written by the spec: `fixtures/zip.ts` writes a ZIP (deflated, `node:zlib`) and FB2s, so no
+  binary sample is committed; each device uses its own folder under `<work>/books/<unique name>`.
 - Times on this machine: the whole suite (47 tests run, 6 projects) ~1.4 min after the first build.
 - Screenshots to look at by eye: [screenshots tool](../../tools/screenshots/README.md).

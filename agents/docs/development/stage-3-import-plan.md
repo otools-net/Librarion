@@ -69,9 +69,12 @@ books in, at scale, without unpacking**. Version stays on `edge`; the merge into
 
 ### 3.7 Benchmark, e2e, notes
 
-- [ ] Generated 100k-entry zip: list < 2 s, unchanged skip < 50 ms, index from heads < 3 min, first byte < 50 ms;
-      HDD / NAS measured (D: here) for D11.
-- [ ] e2e: add a library with a root, scan with progress, open a book page, download from a zip.
+- [x] Generated 100k-entry zip: list < 2 s, unchanged skip < 50 ms, index from heads < 3 min, first byte < 50 ms
+      (`archive` command; SSD: 73 ms, 4.6 ms, 141 s, 0.2 ms).
+- [ ] HDD / NAS measured for D11: this machine has only an NVMe SSD (C: and D: are partitions); needs a disk from the
+      user.
+- [x] e2e: add a library with a root, scan, see the run, download from a zip, get a cover (`specs/library.spec.ts`;
+      the book page is stage 5, the API stands in; a 2-book scan ends before its progress can be seen).
 - [ ] Feature notes (archives, book-display, tags, metadata-tags, merging), docs (libraries, tasks), CHANGELOG.
 
 ## Exit criteria
@@ -103,7 +106,7 @@ Done since (2026-11-01, second session): items 1 and 2 below (download, identica
 after the first of a zip lost their metadata because `OpenEntry`'s stream closed the archive (now `leaveOpen`).
 Then item 3 (covers), the format registry (`Core/Formats/`, [book-formats](../features/book-formats.md): the user
 wants formats added gradually) and one configurable cache folder (`Librarion:Cache:Directory`, the user's rule).
-Start at item 4.
+Then item 4 (the benchmark on the SSD) and the e2e spec `library.spec.ts`. Start at item 6.
 
 1. ~~**3.6 download**~~ (done) (small, needed by the e2e): `GET api/books/{id}/files/{fileId}`, right `library.download`, the
    book visible to the caller (`BookVisibilities`, else 404). Loose file: from root + path, check it is still inside
@@ -124,7 +127,7 @@ Start at item 4.
    `GeneratedVariant` assigned at import in `CatalogWriter.Apply`, which leaves them null today), a route
    `GET api/books/{id}/cover/{size}` with long cache headers. Hostile images: a size limit before decoding,
    dimension limits.
-4. **3.7 benchmark**: a generator of a 100k-entry FB2 zip (in `tests/Librarion.Benchmarks`, output to `D:\Temp`),
+4. ~~**3.7 benchmark**~~ (done on the SSD; HDD / NAS waits for a disk): a generator of a 100k-entry FB2 zip (in `tests/Librarion.Benchmarks`, output to `D:\Temp`),
    timed list, unchanged skip, index from heads, first byte. Run it on C: (SSD) and D:. **Ask the user** whether D:
    is an HDD/NAS that may stand in for D11, or which disk to use.
 5. **e2e** (`tests/e2e`, see [testing-e2e](testing-e2e.md)): add a folder under the e2e work folder, scan, see the

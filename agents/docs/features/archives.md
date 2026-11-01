@@ -78,6 +78,8 @@ They are **indexed and read in place: never unpacked to disk**.
 - Index 100k FB2 entries from heads: SSD < 3 min; HDD / NAS measured too (the seeks dominate there), reported with
   the benchmark.
 - First byte of a book from a 100k-entry zip: < 50 ms; a deflated EPUB opened in the reader (cold, 5 MB): < 500 ms.
+- Measured (`archive` benchmark, [tool](../../tools/benchmark/README.md), SSD, warm): list 73 ms, index 141 s,
+  unchanged 4.6 ms, first byte p95 0.2 ms ([scale](../development/scale.md#measured)). HDD / NAS not measured yet.
 
 ## Tests to have
 
