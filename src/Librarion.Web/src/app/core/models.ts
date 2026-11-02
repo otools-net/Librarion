@@ -90,6 +90,27 @@ export interface TenantInput {
     disabledRights?: string[] | null;
 }
 
+/** A book in a list (`api/books`): what a card or a row shows; `title` null = shown by its file name. */
+export interface BookListItem {
+    id: number;
+    libraryId: number;
+    title: string | null;
+    fileName: string | null;
+    authors: string[];
+    series: string | null;
+    seriesNumber: number | null;
+    formats: string[];
+    coverSource: 'book' | 'calibre' | 'uploaded' | 'generated';
+}
+
+/** A page of a list by key: `next` is the `after` of the following page, null at the end. */
+export interface KeysetPage<T> {
+    items: T[];
+    next: string | null;
+}
+
+export type BookSort = 'title' | 'author' | 'added';
+
 export interface LibraryInfo {
     id: number;
     tenantId: number;

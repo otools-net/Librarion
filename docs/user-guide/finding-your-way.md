@@ -2,7 +2,7 @@
 
 ## The top bar
 
-- **Librarion** (the logo) goes back to the home page.
+- **Librarion** (the logo) goes back to the home page: the library ([browsing](browsing.md)).
 - **The library** you are browsing comes next. With more than one library, it is a button: pick another library from
   its list. The choice is kept by this browser. With a single library, its name is just shown.
 - **Search** sits in the middle (it starts working with the search stage).
@@ -15,7 +15,7 @@
 
 ## The navigation
 
-On a computer or tablet, the navigation is always shown at the left: what you can browse (Home, then Library,
+On a computer or tablet, the navigation is always shown at the left: what you can browse (Library, then
 Authors, Series and Tags as they arrive, marked **Soon** until then) and, at its foot, **Administration**.
 
 On a phone, the **menu** button at the top left opens it as a panel rising from the bottom, with your libraries first

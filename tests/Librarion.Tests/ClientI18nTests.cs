@@ -61,7 +61,7 @@ public sealed partial class ClientI18nTests
         var files = Templates().Select(t => t.File).ToList();
 
         CollectionAssert.Contains(files, Path.Combine("shell", "shell.html"));
-        CollectionAssert.Contains(files, Path.Combine("home", "home-page.ts"));
+        CollectionAssert.Contains(files, Path.Combine("browse", "browse-page.ts"));
     }
 
     /// <summary>

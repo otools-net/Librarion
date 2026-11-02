@@ -21,7 +21,7 @@ describe('Shell', () => {
         const { element } = await render();
 
         const items = [...element.querySelectorAll('.sidebar .nav-item')];
-        expect(items.map(item => item.querySelector('span')?.textContent?.trim())).toEqual(['Home', 'Library', 'Authors', 'Series', 'Tags']);
+        expect(items.map(item => item.querySelector('span')?.textContent?.trim())).toEqual(['Library', 'Authors', 'Series', 'Tags']);
         expect(items[1].querySelector('.badge')?.textContent).toBe('Soon');
         expect(items[0].tagName).toBe('A');
         expect(items.slice(1).every(item => item.getAttribute('aria-disabled') === 'true')).toBe(true);

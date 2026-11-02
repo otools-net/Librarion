@@ -8,9 +8,10 @@ import { signedOut } from '../paths';
 test.describe('@a11y', () => {
     test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== 'android', 'once per run, on the android device'));
 
-    test('the home page in both themes, the navigation and the account menu open', async ({ page }) => {
+    test('the home page (the library) in both themes, the navigation and the account menu open', async ({ page }) => {
         await page.goto('./');
-        await expect(page.locator('.facts')).toBeVisible();
+        // Its books, or what to do when it has none.
+        await expect(page.locator('lib-browse-page :is(.books, .empty)').first()).toBeVisible();
         await audit(page, 'home (dark)');
 
         await page.locator('.account-button').tap();

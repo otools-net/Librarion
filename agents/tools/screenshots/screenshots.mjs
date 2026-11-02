@@ -98,6 +98,8 @@ try {
                 await page.locator('.switch-button').click();
             else if (action === 'menu' && size === 'phone')
                 await page.locator('.menu-button').click();
+            else if (action === 'list')
+                await page.getByRole('button', { name: 'List' }).click();
             else if (action === 'scan') {
                 await page.getByRole('button', { name: 'Run now' }).first().click();
                 await page.locator('lib-task-panel .task-row').first().waitFor();

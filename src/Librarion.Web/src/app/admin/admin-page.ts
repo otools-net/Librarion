@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, effect, inject, Injector, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink, UrlMatchResult, UrlSegment } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AccountSection } from '../account/account-section';
 import { Api } from '../core/api.service';
 import { valueOf } from '../core/errors';
@@ -24,29 +24,6 @@ import { SystemSection } from './system-section';
 import { TasksSection } from './tasks-section';
 import { TenantsSection } from './tenants-section';
 import { UsersSection } from './users-section';
-
-/**
- * `admin`, `admin/:section`, `admin/:section/:page`, and a library's pages `admin/libraries/:library/:page`: one route,
- * so the page (and its column) stays between sections.
- */
-export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
-    if (segments[0]?.path !== 'admin')
-        return null;
-    const library = segments[1]?.path === 'libraries' && /^\d+$/.test(segments[2]?.path ?? '');
-    if (segments.length > (library ? 4 : 3))
-        return null;
-    const posParams: Record<string, UrlSegment> = {};
-    if (segments[1])
-        posParams['section'] = segments[1];
-    if (library) {
-        posParams['library'] = segments[2];
-        if (segments[3])
-            posParams['page'] = segments[3];
-    } else if (segments[2]) {
-        posParams['page'] = segments[2];
-    }
-    return { consumed: segments, posParams };
-}
 
 /**
  * The administration (port of SFE's AdminPageComponent; agents/docs/features/admin-page.md): its own left column of

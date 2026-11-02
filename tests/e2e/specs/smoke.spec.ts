@@ -4,10 +4,12 @@ import { adminSection } from '../fixtures/admin';
 import { press } from '../fixtures/press';
 
 test.describe('@smoke', () => {
-    test('the home page shows what runs @desktop', async ({ page }) => {
+    test('the home page is the library, and System says what runs @desktop', async ({ page }) => {
         await page.goto('./');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1 })).not.toBeEmpty();
 
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await page.goto('./admin/system');
         await expect(page.locator('.facts .version')).toHaveText(/^\d+\.\d+\.\d+/);
         await expect(page.locator('.facts .database')).toHaveText('SQLite');
     });
@@ -22,8 +24,8 @@ test.describe('@smoke', () => {
         await expect(sidebar).toBeVisible();
         await expect(page.locator('.menu-button')).toHaveAttribute('aria-expanded', 'true');
         // The links are reachable by finger while it is open (the final layout check runs on the closed state).
-        const home = sidebar.getByRole('link', { name: 'Home' });
-        await expect(home).toBeInViewport();
+        const library = sidebar.getByRole('link', { name: 'Library' });
+        await expect(library).toBeInViewport();
         // It rises from the bottom, across the whole width (measured once it stands still).
         const viewport = page.viewportSize()!;
         await expect.poll(async () => { const box = (await sidebar.boundingBox())!; return Math.round(box.y + box.height); }).toBe(viewport.height);
@@ -61,7 +63,7 @@ test.describe('@smoke', () => {
 
         await press(page.getByRole('link', { name: 'Back to the home page' }), isMobile);
 
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
     });
 
     test('the administration is a page of its own, with a way back to the library @desktop', async ({ page, isMobile }) => {
@@ -91,6 +93,6 @@ test.describe('@smoke', () => {
         await expect(page.getByRole('searchbox', { name: 'Find a setting or a page' })).toBeVisible();
 
         await press(page.getByRole('button', { name: 'Back to the library' }), isMobile);
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
     });
 });

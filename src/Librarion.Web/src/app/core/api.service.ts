@@ -3,9 +3,12 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
+    BookListItem, BookSort, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
+
+/** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
+export const coverUrl = (book: number, size: 's' | 'm' | 'l') => `api/books/${book}/cover/${size}`;
 
 /** Header every request changing something carries (the server's RequestGuard refuses it otherwise). */
 export const REQUEST_HEADER = 'X-Librarion-Request';
@@ -109,6 +112,10 @@ export class Api {
     createGroup = (input: GroupInput) => this.post<GroupInfo>('api/groups', input);
     updateGroup = (id: number, input: GroupInput) => this.put<GroupInfo>(`api/groups/${id}`, input);
     deleteGroup = (id: number) => this.delete<void>(`api/groups/${id}`);
+
+    /** The books of a library the session may browse, a page at a time by key (`after`: the `next` of the page before). */
+    books = (query: { library: number; sort: BookSort; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<BookListItem>>('api/books', { library: query.library, sort: query.sort, after: query.after ?? undefined, limit: query.limit });
 
     /** The settings of a level; `owner`: the library (or another tenant); the user level is one's own preferences. */
     settings = (level: SettingLevel, owner?: number) =>

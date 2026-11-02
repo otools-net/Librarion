@@ -42,6 +42,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   of what runs, the last and the next run, Run now; every library's schedules; and the history of every library's
   runs.
 
+- The home page is the library: its books as a grid of covers or a compact list, in order of title, author or
+  newest (both choices kept by the browser), more books coming as you scroll, and the place kept when you come back.
+  Only the books in view are drawn, so libraries of millions stay quick. The version and database moved to
+  Administration › System.
+- The administration is loaded the first time it is opened: the app starts with less to download.
+
 ### Fixed
 
 - Times of runs and other records read from a SQLite database were shown in the wrong time zone (an hour or more

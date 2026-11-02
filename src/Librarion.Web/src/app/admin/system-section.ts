@@ -12,15 +12,15 @@ import { Skeleton } from '../shared/placeholders';
     template: `
         @if (info(); as info) {
             <dl class="facts panel">
-                <dt>{{ 'home.version' | t }}</dt>
+                <dt>{{ 'system.version' | t }}</dt>
                 <dd class="version">{{ info.version }}</dd>
                 <dt>{{ 'system.commit' | t }}</dt>
                 <dd class="commit">{{ info.commit }}</dd>
-                <dt>{{ 'home.database' | t }}</dt>
+                <dt>{{ 'system.database' | t }}</dt>
                 <dd class="database">{{ 'database.' + info.database | t }}</dd>
             </dl>
         } @else if (failed()) {
-            <p class="form-error" role="alert">{{ 'home.unreachable' | t }}</p>
+            <p class="form-error" role="alert">{{ 'system.unreachable' | t }}</p>
         } @else {
             <lib-skeleton [rows]="3" />
         }

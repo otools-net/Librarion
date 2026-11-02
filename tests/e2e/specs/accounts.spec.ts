@@ -35,7 +35,7 @@ test.describe('@accounts', () => {
         const account = await makeAccount('leaver', testInfo);
         await page.goto('./');
         await signIn(page, isMobile, account.userName, account.password);
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
 
         await press(page.getByRole('button', { name: `Account menu (${account.userName})` }), isMobile);
         await press(page.locator('#account-menu').getByRole('button', { name: 'Sign out' }), isMobile);
@@ -67,6 +67,6 @@ test.describe('@accounts', () => {
         await page.getByLabel('New password again').fill('recovered-password-1');
         await press(page.getByRole('button', { name: 'Set the password and sign in' }), isMobile);
 
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
     });
 });

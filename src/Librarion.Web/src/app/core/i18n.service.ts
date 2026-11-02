@@ -45,7 +45,7 @@ export class I18n {
     }
 }
 
-/** `{{ 'home.title' | t }}`, `{{ 'x.count' | t: { count } }}`. Not pure: it follows the language signal. */
+/** `{{ 'browse.empty' | t }}`, `{{ 'x.count' | t: { count } }}`. Not pure: it follows the language signal. */
 @Pipe({ name: 't', pure: false })
 export class TranslatePipe implements PipeTransform {
     private readonly i18n = inject(I18n);

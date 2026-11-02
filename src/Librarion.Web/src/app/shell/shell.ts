@@ -57,8 +57,7 @@ export class Shell {
     protected readonly inLibrary = computed(() => this.phone() && /^\/admin\/libraries\/\d+/.test(this.url()));
 
     protected readonly nav: NavItem[] = [
-        { label: 'shell.nav.home', icon: 'home', link: '/' },
-        { label: 'shell.nav.library', icon: 'library', link: null },
+        { label: 'shell.nav.library', icon: 'library', link: '/' },
         { label: 'shell.nav.authors', icon: 'author', link: null },
         { label: 'shell.nav.series', icon: 'series', link: null },
         { label: 'shell.nav.tags', icon: 'tag', link: null },
