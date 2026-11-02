@@ -35,9 +35,17 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - The administration has a search box (as in SFE): it finds sections, pages and settings by every word typed, in
   their names, descriptions and choices, accents and capitals aside, with the words marked; a setting opens on its
   page scrolled into view, selected and briefly highlighted.
+- A panel under the top bar shows the scans, imports and removals running (as SFE's scan panel): what runs and
+  where, the time it has taken, the books found so far and the file being read, with Cancel; once done, how it went
+  until closed. It replaces the line of progress above a library's tabs.
+- Administration › Background tasks (as SFE's): a card per kind (folder scan, import) with its state, the progress
+  of what runs, the last and the next run, Run now; every library's schedules; and the history of every library's
+  runs.
 
 ### Fixed
 
+- Times of runs and other records read from a SQLite database were shown in the wrong time zone (an hour or more
+  off); they are now read as UTC.
 - Starting on a database made by an older build (before 1.0 the database is not upgraded between builds) stopped
   with "table already exists" halfway; it now stops before touching it and says which file to delete.
 

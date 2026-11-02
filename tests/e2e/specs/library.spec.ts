@@ -39,6 +39,22 @@ test.describe('@library', () => {
         await expect(run).toContainText('2 added');
         await expect(page.getByRole('button', { name: 'Scan now' })).toBeEnabled();
 
+        // The panel under the top bar keeps the result until dismissed (other devices' runs on this server show too).
+        const result = page.locator('lib-task-panel .task-row').filter({ hasText: `Scan · ${libraryName}` });
+        await expect(result).toContainText('2 added');
+        await press(result.getByRole('button', { name: 'Dismiss' }), isMobile);
+        await expect(result).toHaveCount(0);
+
+        // Background tasks: the scan card runs it again for the library chosen, its last run is this one.
+        await page.goto('./admin/tasks');
+        const card = page.getByRole('article', { name: 'Folder scan' });
+        await card.getByRole('combobox', { name: 'Library' }).selectOption({ label: libraryName });
+        await press(card.getByRole('button', { name: 'Run now' }), isMobile);
+        await expect(result.locator('.badge')).toHaveText('done', { timeout: 30_000 });
+        await press(page.getByRole('link', { name: 'History' }).or(page.getByRole('tab', { name: 'History' })).first(), isMobile);
+        // Every library's runs (other devices' too): this library's two scans, linked to its runs.
+        await expect(page.getByRole('list', { name: 'Runs' }).getByRole('link', { name: libraryName })).toHaveCount(2);
+
         // The page's own session (its cookies) asks the API, as the book page will.
         const api = page.request;
         const headers = { 'X-Librarion-Request': '1' };

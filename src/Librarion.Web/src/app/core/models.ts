@@ -260,6 +260,16 @@ export interface TaskRunInfo {
     waiting: boolean;
 }
 
+/** The Background tasks page (`api/tasks/overview`): in the libraries the session may scan. */
+export interface TaskOverview {
+    running: TaskRunInfo[];
+    /** The last finished run of each kind that ran. */
+    last: TaskRunInfo[];
+    schedules: ScheduleInfo[];
+    /** The libraries the session may scan. */
+    libraries: number[];
+}
+
 /** A book whose files are gone, kept until they come back or its removal is accepted (`api/libraries/{id}/missing`). */
 export interface MissingBookItem {
     id: number;

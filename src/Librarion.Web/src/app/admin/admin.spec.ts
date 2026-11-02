@@ -420,8 +420,11 @@ describe('LibraryPanel', () => {
         click(element, 'Scan now');
         await stable();
         expect(api.scanLibrary).toHaveBeenCalledWith(5);
-        expect(element.querySelector('[role="status"]')?.textContent).toContain('120 files seen · 40 added');
-        expect(element.textContent).toContain('Cancel');
+        // The progress is on the panel under the top bar (TaskPanel); here, a word that it runs.
+        expect(api.runningTasks).toHaveBeenCalled();
+        const scanning = [...element.querySelectorAll<HTMLButtonElement>('.scan-bar button')].find(b => b.textContent?.trim() === 'Scanning')!;
+        expect(scanning.disabled).toBe(true);
+        expect(element.querySelector('.scan-bar')?.textContent).toContain('its progress shows at the top of the page');
     });
 
     it('lists missing books and removes them only when the user accepts', async () => {

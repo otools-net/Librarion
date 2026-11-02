@@ -8,7 +8,7 @@ A tenant holds one or more libraries; groups give their library rights in every 
 - **Delete** a library with everything in it, after confirming.
 - **Open** a library (its name) for its own pages, as tabs under its name: **Folders**, **Runs**, **Import**,
   **Missing books** and **Schedules** (the last four with the scan right; Import with the import right too). **Scan
-  now**, and the progress of a scan or import going on, stay above every tab.
+  now** stays above every tab.
 
 ## Folders
 
@@ -28,8 +28,10 @@ Scanning reads what changed in the folders: new books come in with their title, 
 metadata from the book itself (a book without a title is shown by its file name), changed ones are read again. An
 unchanged archive is skipped without being read.
 
-- **Scan now** (above the tabs) starts a scan (right **Scan**); its progress shows while it runs, and it can be cancelled (what it
-  already read stays).
+- **Scan now** (above the tabs) starts a scan (right **Scan**). While it runs, a panel under the top bar shows it on
+  every page: "Scanning …", the time it has taken, the books found so far and the file being read, with **Cancel**
+  (what it already read stays). When it ends the panel shows how it went until you close it. See also
+  [Background tasks](background-tasks.md).
 - The **Runs** tab shows each scan: when, how it ended, how many books were added, changed and removed, and the
   first files that couldn't be read.
 - The **Schedules** tab sets work that runs by itself. **New schedule** asks, in order: **what it runs** (a folder

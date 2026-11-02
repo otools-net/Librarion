@@ -172,6 +172,35 @@ public static class TaskEndpoints
 
         var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan);
 
+        runs.MapGet("/running", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
+                await current.GetAsync() is { TenantId: { } tenantId } state
+                    ? Results.Ok(await tasks.RunningAsync(tenantId, ScannableLibraries(state), context.RequestAborted))
+                    : Results.NotFound())
+            .WithName("ListRunningTasks")
+            .WithSummary("The runs going on (or waiting) in the libraries the caller may scan, with their progress: what the progress panel follows.");
+
+        runs.MapGet("/overview", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks, TaskSchedules schedules) =>
+            {
+                if (await current.GetAsync() is not { TenantId: { } tenantId } state)
+                    return Results.NotFound();
+                var libraries = ScannableLibraries(state);
+                var last = new List<TaskRunInfo>();
+                foreach (var kind in Enum.GetValues<BackgroundTaskKind>())
+                    if (await tasks.LastAsync(tenantId, libraries, kind, context.RequestAborted) is { } run)
+                        last.Add(run);
+                return Results.Ok(new TaskOverview(await tasks.RunningAsync(tenantId, libraries, context.RequestAborted), last,
+                    await schedules.ListAsync(tenantId, libraries, context.RequestAborted), libraries.Order().ToList()));
+            })
+            .WithName("GetTaskOverview")
+            .WithSummary("The Background tasks page: the runs going on, the last finished run of each kind, and the schedules, in the libraries the caller may scan.");
+
+        runs.MapGet("/", async (long? before, int? limit, HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
+                await current.GetAsync() is { TenantId: { } tenantId } state
+                    ? Results.Ok(await tasks.HistoryAsync(tenantId, ScannableLibraries(state), before, limit ?? 20, context.RequestAborted))
+                    : Results.NotFound())
+            .WithName("ListTasks")
+            .WithSummary("The task runs of every library the caller may scan, newest first; `before` = the last id of the page before.");
+
         runs.MapGet("/{run:long}", async (long run, HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await RunOf(run, context, current, tasks) is { } info ? Results.Ok(info) : Results.NotFound())
             .WithName("GetTask")
@@ -229,6 +258,8 @@ public static class TaskEndpoints
         var state = await current.GetAsync();
         return state.TenantId is not null && state.Access.HasIn(right, library) ? state : null;
     }
+
+    private static IReadOnlyCollection<int> ScannableLibraries(AccessState state) => state.Access.LibrariesWith(Rights.Scan).ToHashSet();
 
     private static IResult Invalid(string field, string code) => TypedResults.ValidationProblem(new Dictionary<string, string[]> { [field] = [code] });
 

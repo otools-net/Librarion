@@ -4,7 +4,7 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
 `TaskSchedules`, `TaskScheduleWorker`, `ScheduleCalculator` ported from SFE), `Core/Import/LibraryScanner` (the work:
 [archives](archives.md)), entities `Data/Entities/Tasks/TaskRun.cs`, `LibraryRoot` in `Catalog/Book.cs`;
 `Api/Endpoints/TaskEndpoints.cs`. Tests: `TaskApiTests`, `LibraryScannerTests`. Ported from SFE's
-`background-tasks.md` and `schedules.md`.
+`background-tasks.md` and `schedules.md`. How runs are followed on screen: [task-progress](task-progress.md).
 
 ## Roots
 

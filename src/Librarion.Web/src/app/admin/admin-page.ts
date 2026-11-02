@@ -21,6 +21,7 @@ import { LibraryPage } from './library-page';
 import { SecuritySection } from './security-section';
 import { SettingsSection } from './settings-section';
 import { SystemSection } from './system-section';
+import { TasksSection } from './tasks-section';
 import { TenantsSection } from './tenants-section';
 import { UsersSection } from './users-section';
 
@@ -58,7 +59,7 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 @Component({
     selector: 'lib-admin-page',
     imports: [RouterLink, TranslatePipe, Icon, EmptyState, MarkedText, AccountSection, UsersSection, GroupsSection, LibrariesSection, TenantsSection,
-        SettingsSection, SecuritySection, SystemSection, LibraryPage],
+        SettingsSection, SecuritySection, SystemSection, LibraryPage, TasksSection],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'admin-page' },
     template: `
@@ -216,6 +217,7 @@ export function adminMatcher(segments: UrlSegment[]): UrlMatchResult | null {
                                 @case ('librarySettings') { <lib-settings-section level="library" /> }
                                 @case ('users') { <lib-users-section /> }
                                 @case ('groups') { <lib-groups-section /> }
+                                @case ('tasks') { <lib-tasks-section [page]="subpage()!.id" /> }
                                 @case ('tenants') { <lib-tenants-section /> }
                                 @case ('settings') { <lib-settings-section [level]="subpage()!.id === 'server' ? 'server' : 'tenant'" /> }
                                 @case ('security') { <lib-security-section /> }

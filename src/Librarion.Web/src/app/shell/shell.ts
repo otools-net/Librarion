@@ -9,6 +9,7 @@ import { SessionService } from '../core/session.service';
 import { ThemeService } from '../core/theme.service';
 import { Icon, IconName } from '../shared/icon';
 import { Logo } from '../shared/logo';
+import { TaskPanel } from '../shared/task-panel';
 
 interface NavItem {
     label: MessageKey;
@@ -27,7 +28,7 @@ type Popup = 'nav' | 'account' | 'library';
  */
 @Component({
     selector: 'lib-shell',
-    imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, Icon, Logo],
+    imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, Icon, Logo, TaskPanel],
     templateUrl: './shell.html',
     host: {
         class: 'shell', '[class.admin-frame]': 'inAdmin()',

@@ -34,6 +34,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     { id: 'librarySettings', group: 'libraries', icon: 'sliders', subpages: [settingsPage('settings', 'library', Rights.librarySettings, Rights.manageTenants)] },
     { id: 'users', group: 'people', icon: 'users', subpages: [page('list', Rights.manageUsers, Rights.manageAllUsers)] },
     { id: 'groups', group: 'people', icon: 'key', subpages: [page('list', Rights.manageUsers, Rights.manageTenants)] },
+    { id: 'tasks', group: 'server', icon: 'activity', subpages: [page('tasks', Rights.scan), page('schedules', Rights.scan), page('history', Rights.scan)] },
     { id: 'tenants', group: 'server', icon: 'tenant', subpages: [page('list', Rights.manageTenants)] },
     { id: 'settings', group: 'server', icon: 'settings', subpages: [settingsPage('tenant', 'tenant', Rights.tenantSettings), settingsPage('server', 'server', Rights.serverSettings)] },
     { id: 'security', group: 'server', icon: 'shield', subpages: [page('log', Rights.tenantSecurityLog, Rights.serverSecurityLog)] },

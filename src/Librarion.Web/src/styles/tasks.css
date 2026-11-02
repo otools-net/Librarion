@@ -1,0 +1,376 @@
+/*
+ * Background tasks (agents/docs/features/task-progress.md; SFE's scan-panel.css and tasks.css): the progress panel under
+ * the top bar, and the Background tasks page's cards and history.
+ */
+
+/* ---------- The progress panel (shared/task-panel.ts) ---------- */
+
+/* Sticky under the top bar across the page's width (the page's padding undone; the administration's page has none). */
+.task-panel {
+    position: sticky;
+    top: var(--topbar-height);
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    margin: calc(-1 * var(--space-5)) calc(-1 * max(var(--space-5), env(safe-area-inset-right))) var(--space-5) calc(-1 * var(--space-5));
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.task-panel[hidden] {
+    display: none;
+}
+
+.admin-frame .task-panel {
+    margin: 0;
+}
+
+.task-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--target);
+    padding: var(--space-2) var(--space-4);
+}
+
+.task-row + .task-row {
+    border-top: 1px solid var(--border);
+}
+
+.task-row.running {
+    padding-bottom: calc(var(--space-2) + 3px);
+}
+
+.task-row-icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.task-row.running .task-row-icon,
+.task-row.running .task-title {
+    color: var(--accent);
+}
+
+.task-row.failed .task-title,
+.task-row.failed .task-row-icon {
+    color: var(--danger);
+}
+
+.task-text {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px var(--space-3);
+    min-width: 0;
+}
+
+.task-elapsed {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.task-detail,
+.task-current {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-current {
+    flex-basis: 100%;
+    font-family: var(--font-mono, monospace);
+}
+
+/* Indeterminate: how many files a scan will meet is known only at its end. Moved by transform, not `left` (SFE: `left`
+   laid the page out again on every frame). */
+.task-bar {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.task-bar span {
+    position: absolute;
+    width: 30%;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: task-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes task-indeterminate {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(333.34%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .task-bar span {
+        width: 100%;
+        animation: none;
+        opacity: .6;
+    }
+}
+
+/* The administration's column sticks below the panel. */
+.admin-nav {
+    top: calc(var(--topbar-height) + var(--task-panel-h, 0px));
+    height: calc(100dvh - var(--topbar-height) - var(--task-panel-h, 0px));
+}
+
+@media (max-width: 640px) {
+    .task-panel {
+        margin: calc(-1 * var(--space-3)) calc(-1 * max(var(--space-3), env(safe-area-inset-right))) var(--space-3) calc(-1 * max(var(--space-3), env(safe-area-inset-left)));
+    }
+
+    .task-row {
+        padding-inline: var(--space-3);
+    }
+}
+
+/* ---------- Background tasks › Tasks (admin/tasks-section.ts; SFE's task cards) ---------- */
+
+.task-summary {
+    margin: 0 0 var(--space-4);
+    color: var(--text-muted);
+}
+
+.task-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 880px;
+}
+
+.task-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.task-card[data-state="running"] {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+.task-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.task-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text-muted);
+}
+
+.task-card[data-state="running"] .task-icon {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.task-card-title {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 140px;
+}
+
+.task-card-title h2 {
+    margin: 0;
+    font-size: var(--text-lg, 1.05rem);
+}
+
+.task-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.task-card-actions select {
+    width: auto;
+    max-width: 200px;
+}
+
+.task-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+}
+
+.task-state[data-state="running"] {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--surface-3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: task-spin .8s linear infinite;
+}
+
+@keyframes task-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.task-purpose {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.task-running {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+}
+
+.task-running .task-progress {
+    grid-column: 1 / -1;
+}
+
+.task-running > .button {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+}
+
+.task-card-detail {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.task-running .task-current {
+    margin: 0;
+}
+
+/* The bar of a card: rounded, 6 px, indeterminate (a scan's total is unknown until it ends). */
+.task-progress {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.task-progress span {
+    position: absolute;
+    width: 30%;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    animation: task-indeterminate 1.4s ease-in-out infinite;
+}
+
+.task-times {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+    margin: 0;
+}
+
+.task-times > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.task-times dt {
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.task-times dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px var(--space-2);
+    margin: 0;
+}
+
+.task-times dd a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.task-next.planned time {
+    font-weight: 600;
+}
+
+.task-relative {
+    color: var(--accent);
+    font-size: var(--text-sm);
+}
+
+.task-next .field-hint {
+    flex-basis: 100%;
+}
+
+/* Schedules: a heading per library over its own list. */
+.tasks-library + .tasks-library {
+    margin-top: var(--space-5);
+}
+
+.run-took {
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .task-progress span {
+        width: 100%;
+        animation: none;
+        opacity: .6;
+    }
+
+    .spinner {
+        animation: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .task-card {
+        padding: var(--space-3);
+    }
+
+    .task-card-actions {
+        width: 100%;
+    }
+}

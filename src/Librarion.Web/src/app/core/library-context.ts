@@ -31,6 +31,20 @@ export class LibraryContext {
         }
     }
 
+    /**
+     * Asks again when `ids` name a library the list doesn't have (one added since, by someone else: a run in it shows
+     * on the progress panel), at most every 10 s.
+     */
+    knows(ids: (number | null)[]): void {
+        const known = new Set(this.list().map(library => library.id));
+        if (ids.every(id => id === null || known.has(id)) || Date.now() - this.asked < 10_000)
+            return;
+        this.asked = Date.now();
+        void this.load();
+    }
+
+    private asked = 0;
+
     choose(id: number): void {
         this.chosen.set(id);
         writePreference(CHOSEN, String(id));

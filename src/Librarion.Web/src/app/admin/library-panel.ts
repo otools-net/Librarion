@@ -5,9 +5,11 @@ import { I18n, TranslatePipe } from '../core/i18n.service';
 import { ImportInput, LibraryInfo, LibraryRootInfo, MissingBookItem, MissingBookPage, MissingRemoval, TaskRunInfo } from '../core/models';
 import { Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
+import { TaskWatch } from '../core/task-watch';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
 import { EmptyState } from '../shared/placeholders';
+import { RunList } from './run-list';
 import { SchedulesTab } from './schedules-tab';
 
 const POLL_MS = 1500;
@@ -20,32 +22,22 @@ export type LibraryTab = typeof LIBRARY_TABS[number];
  * One sub-page of a library (`tab`; agents/docs/features/tasks.md): its folders added and removed, the last runs with
  * what they did, an import from another source (agents/docs/features/imports.md), its missing books, its schedules
  * (`SchedulesTab`).
- * Above every tab, the scan bar: a scan started, or the run going on followed with its progress. The data loads once
- * for all tabs (the component stays while the tab changes), and runs are polled while one goes.
+ * Above every tab, the scan bar: Scan now, or a word that a run goes on (its progress is on the panel under the top
+ * bar, `TaskPanel`). The data loads once for all tabs (the component stays while the tab changes), and runs are
+ * polled while one goes.
  */
 @Component({
     selector: 'lib-library-panel',
-    imports: [TranslatePipe, EmptyState, SchedulesTab],
+    imports: [TranslatePipe, EmptyState, SchedulesTab, RunList],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="library-panel">
             @if (canScan()) {
                 <div class="toolbar scan-bar">
-                    @if (running(); as run) {
-                        <button type="button" class="button" [title]="'tasks.cancelHint' | t" (click)="cancel(run)">{{ 'common.cancel' | t }}</button>
-                        <span class="row-meta" role="status">
-                            @if (run.waiting) {
-                                {{ 'tasks.waiting' | t }}
-                            } @else if (run.progress; as progress) {
-                                @if (run.task === 'import') {
-                                    {{ 'tasks.importProgress' | t: { records: progress.filesSeen, added: progress.added, changed: progress.changed, skipped: progress.skipped } }}
-                                } @else {
-                                    {{ 'tasks.progress' | t: { files: progress.filesSeen, added: progress.added, changed: progress.changed, missing: progress.missing, removed: progress.removed } }}
-                                }
-                            } @else {
-                                {{ 'tasks.starting' | t }}
-                            }
-                        </span>
+                    @if (running()) {
+                        <!-- The run's progress, time and Cancel are on the panel under the top bar. -->
+                        <button type="button" class="button primary" disabled [title]="'tasks.runningHint' | t">{{ 'tasks.scanning' | t }}</button>
+                        <span class="row-meta">{{ 'tasks.runningHint' | t }}</span>
                     } @else {
                         <button type="button" class="button primary" [title]="'tasks.scanHint' | t" [disabled]="busy() || roots().length === 0" (click)="scan()">{{ 'tasks.scan' | t }}</button>
                     }
@@ -76,46 +68,7 @@ export type LibraryTab = typeof LIBRARY_TABS[number];
                     </form>
                 }
                 @case ('runs') {
-                    <ul class="rows" [attr.aria-label]="'tasks.runs' | t">
-                        @for (run of runs(); track run.id) {
-                            <li class="row">
-                                <span class="row-main">
-                                    <span class="row-title">{{ when(run.started) }} · {{ ('task.' + run.task) | t }}</span>
-                                    <span class="row-meta">
-                                        <span class="badge" [class.danger]="run.outcome === 'failed' || run.outcome === 'interrupted'">{{ ('outcome.' + run.outcome) | t }}</span>
-                                        @if (run.trigger === 'schedule') {
-                                            {{ 'tasks.bySchedule' | t }}
-                                        }
-                                        @if (run.counts; as counts) {
-                                            @if (run.task === 'import') {
-                                                {{ 'tasks.importCounts' | t: { added: counts.added, changed: counts.changed, unchanged: counts.unchanged, skipped: counts.skipped } }}
-                                            } @else {
-                                                {{ 'tasks.counts' | t: { added: counts.added, changed: counts.changed, missing: counts.missing, returned: counts.returned, removed: counts.removed, unchanged: counts.unchanged } }}
-                                            }
-                                        }
-                                        @if (run.summary) {
-                                            {{ run.summary }}
-                                        }
-                                    </span>
-                                    @if (run.counts?.missingRoots?.length || run.counts?.problems?.length) {
-                                        <details>
-                                            <summary>{{ 'tasks.problems' | t: { count: (run.counts!.missingRoots.length + run.counts!.problems.length) } }}</summary>
-                                            <ul class="problems">
-                                                @for (root of run.counts!.missingRoots; track $index) {
-                                                    <li>{{ 'tasks.missingFolder' | t: { path: root } }}</li>
-                                                }
-                                                @for (problem of run.counts!.problems; track $index) {
-                                                    <li>{{ problem }}</li>
-                                                }
-                                            </ul>
-                                        </details>
-                                    }
-                                </span>
-                            </li>
-                        } @empty {
-                            <li class="row" libEmpty="activity">{{ 'tasks.noRuns' | t }}</li>
-                        }
-                    </ul>
+                    <lib-run-list [runs]="runs()" />
                 }
                 @case ('import') {
                     @if (importKinds().length > 0) {
@@ -191,6 +144,7 @@ export class LibraryPanel implements OnInit, OnDestroy {
     private readonly confirm = inject(ConfirmService);
     private readonly toasts = inject(ToastService);
     private readonly session = inject(SessionService);
+    private readonly watch = inject(TaskWatch);
 
     readonly library = input.required<LibraryInfo>();
     readonly tab = input<LibraryTab>('folders');
@@ -247,8 +201,9 @@ export class LibraryPanel implements OnInit, OnDestroy {
         if (this.importFiles().trim())
             input.files = this.importFiles().trim();
         await this.run(async () => {
-            await this.api.importIntoLibrary(this.library().id, input);
+            const { runId } = await this.api.importIntoLibrary(this.library().id, input);
             this.toasts.show(this.i18n.t('tasks.importStarted'));
+            this.watch.follow(runId);
             this.importSource.set('');
             this.importFiles.set('');
             this.roots.set(await this.api.libraryRoots(this.library().id));
@@ -279,7 +234,8 @@ export class LibraryPanel implements OnInit, OnDestroy {
         if (!ok)
             return;
         await this.run(async () => {
-            await this.api.removeLibraryRoot(this.library().id, root.id);
+            const { runId } = await this.api.removeLibraryRoot(this.library().id, root.id);
+            this.watch.follow(runId);
             this.roots.set(this.roots().filter(r => r.id !== root.id));
             if (this.canScan())
                 await this.refreshRuns();
@@ -288,15 +244,9 @@ export class LibraryPanel implements OnInit, OnDestroy {
 
     protected async scan(): Promise<void> {
         await this.run(async () => {
-            await this.api.scanLibrary(this.library().id);
+            const { runId } = await this.api.scanLibrary(this.library().id);
             this.toasts.show(this.i18n.t('tasks.scanStarted'));
-            await this.refreshRuns();
-        });
-    }
-
-    protected async cancel(run: TaskRunInfo): Promise<void> {
-        await this.run(async () => {
-            await this.api.cancelTask(run.id);
+            this.watch.follow(runId);
             await this.refreshRuns();
         });
     }
@@ -334,8 +284,9 @@ export class LibraryPanel implements OnInit, OnDestroy {
 
     private async startRemoval(removal: MissingRemoval): Promise<void> {
         await this.run(async () => {
-            await this.api.removeMissingBooks(this.library().id, removal);
+            const { runId } = await this.api.removeMissingBooks(this.library().id, removal);
             this.toasts.show(this.i18n.t('missing.removalStarted'));
+            this.watch.follow(runId);
             await this.refreshRuns();
         });
     }

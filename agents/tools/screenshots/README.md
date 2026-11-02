@@ -17,7 +17,8 @@ LIBRARION_SCREENS_THEME=light node agents/tools/screenshots/screenshots.mjs   # 
   button, `#edit` its first "Edit" button, `#open` its first row (a library's pages), `#delete` its first Delete button (the
   confirmation dialog), `#account` the account menu, `#library` the library switcher (desktops), `#menu` the navigation sheet
   (phones), `#search=<words>` types them in the administration's search box (`%20` for spaces), `#found=<words>` also
-  opens the first result (a setting: the shot catches its flash). Shots with an action are the viewport, not the full page. The setup adds a second library, "Comics", so
+  opens the first result (a setting: the shot catches its flash), `#scan` presses the first "Run now" (Background tasks:
+  the progress panel shows the run, or its result). Shots with an action are the viewport, not the full page. The setup adds a second library, "Comics", so
   the switcher shows. Before
   the pages, a folder of three FB2s is added to the library and scanned. Files are named `<phone|desktop>-<page>.png`.
 - It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds.

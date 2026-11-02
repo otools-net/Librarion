@@ -150,6 +150,56 @@ public sealed class TaskApiTests
         Assert.AreEqual(TaskOutcome.Skipped, (await admin.GetAsync<List<TaskRunInfo>>($"/api/libraries/{library.Id}/tasks", Cancel))[0].Outcome);
     }
 
+    /// <summary>
+    /// The Background tasks page and the progress panel: runs across libraries, the last of each kind, the schedules,
+    /// only in the libraries the caller may scan.
+    /// </summary>
+    [TestMethod]
+    public async Task TheOverviewAndHistoryCoverTheLibrariesTheCallerMayScanOnly()
+    {
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        var (admin, _) = await ApiClients.SetUpAsync(factory, Cancel);
+        var books = (await admin.GetAsync<List<LibraryInfo>>("/api/libraries", Cancel)).Single();
+        LibraryInfo comics;
+        using (var created = await admin.PostAsJsonAsync("/api/libraries", new LibraryInput("Comics"), ApiClients.Json, Cancel))
+            comics = (await created.Content.ReadFromJsonAsync<LibraryInfo>(ApiClients.Json, Cancel))!;
+        foreach (var library in new[] { books, comics })
+        {
+            var root = Path.Combine(catalog.BasePath, $"books{library.Id}");
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "a.epub"), "not really an epub");
+            using (await admin.PostAsJsonAsync($"/api/libraries/{library.Id}/roots", new RootInput(root), ApiClients.Json, Cancel)) { }
+            await WaitAsync(admin, (await StartScanAsync(admin, library.Id)).RunId);
+        }
+        using (await admin.PostAsJsonAsync($"/api/libraries/{comics.Id}/schedules", new ScheduleInput(ScheduleKind.Interval, DateTime.UtcNow, 60, 0), ApiClients.Json, Cancel)) { }
+
+        var overview = await admin.GetAsync<TaskOverview>("/api/tasks/overview", Cancel);
+        // Times read back from the database say they are UTC (a browser reads a time without a zone as its own).
+        StringAssert.Matches(await admin.GetStringAsync("/api/tasks", Cancel), new System.Text.RegularExpressions.Regex("\"started\":\"[^\"]+Z\""));
+        var history = await admin.GetAsync<List<TaskRunInfo>>("/api/tasks", Cancel);
+        var older = await admin.GetAsync<List<TaskRunInfo>>($"/api/tasks?before={history[0].Id}", Cancel);
+
+        Assert.IsEmpty(overview.Running);
+        Assert.IsEmpty(await admin.GetAsync<List<TaskRunInfo>>("/api/tasks/running", Cancel));
+        Assert.AreEqual(comics.Id, overview.Last.Single(r => r.Task == BackgroundTaskKind.LibraryScan).LibraryId, "the latest scan, of either library");
+        Assert.AreEqual(comics.Id, overview.Schedules.Single().LibraryId);
+        CollectionAssert.AreEqual(new[] { comics.Id, books.Id }, history.Select(r => r.LibraryId!.Value).ToArray());
+        Assert.AreEqual(books.Id, older.Single().LibraryId);
+
+        // An account scanning the first library only sees its runs and none of the second's schedules.
+        var group = await admin.PostAsJsonAsync("/api/groups", new GroupInput("Scanners", Rights: [Rights.Browse, Rights.Scan], LibraryIds: [books.Id]), ApiClients.Json, Cancel);
+        var groupId = (await group.Content.ReadFromJsonAsync<GroupInfo>(ApiClients.Json, Cancel))!.Id;
+        await ApiClients.CreateUserAsync(admin, new NewUser("scanner", Password: ApiClients.Password, GroupIds: [groupId]), Cancel);
+        using var scanner = await ApiClients.SignInAsync(factory, "scanner", ApiClients.Password, Cancel);
+
+        var theirs = await scanner.GetAsync<TaskOverview>("/api/tasks/overview", Cancel);
+        Assert.AreEqual(books.Id, theirs.Last.Single().LibraryId);
+        Assert.IsEmpty(theirs.Schedules);
+        CollectionAssert.AreEqual(new[] { books.Id }, theirs.Libraries.ToArray());
+        Assert.AreEqual(books.Id, (await scanner.GetAsync<List<TaskRunInfo>>("/api/tasks", Cancel)).Single().LibraryId);
+    }
+
     [TestMethod]
     public void IntervalAndWeeklySchedulesComeDueWhenTheySay()
     {

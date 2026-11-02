@@ -33,6 +33,14 @@ public sealed class TaskSchedules(TenantDb tenantDb, TimeProvider time)
         return rows.Select(Info).ToList();
     }
 
+    /// <summary>The schedules of <paramref name="libraryIds"/> (the Background tasks page: every library the caller may scan).</summary>
+    public async Task<IReadOnlyList<ScheduleInfo>> ListAsync(int tenantId, IReadOnlyCollection<int> libraryIds, CancellationToken cancellationToken)
+    {
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var rows = await db.TaskSchedules.Where(s => libraryIds.Contains(s.LibraryId)).OrderBy(s => s.Id).ToListAsync(cancellationToken);
+        return rows.Select(Info).ToList();
+    }
+
     /// <param name="import">An import schedule's source, checked by <c>ImportRequests</c> (null for a scan).</param>
     /// <returns>Null when the library isn't there; a problem key when the input is wrong.</returns>
     public async Task<(string? Problem, ScheduleInfo? Schedule)> SaveAsync(int tenantId, int libraryId, int? scheduleId, ScheduleInput input, ScheduledImport? import,
