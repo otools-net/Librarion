@@ -87,14 +87,56 @@ public static class BookEndpoints
             .WithSummary("A file of a book, streamed from the library: a loose file or an entry of its ZIP, never unpacked.")
             .WithDescription("Needs `library.download` in the book's library. `ETag` from the CRC (else size and time); Range for loose files and stored entries. 410 `file.gone` when the file is no longer there, 409 `file.changed` when it changed since the last scan, 409 `file.unreadable` when its archive can't give it.");
 
-        api.MapGet("/fields/{key}/values", async (string key, int? library, string? after, int? limit, HttpContext context, CurrentAccess current, TagQueries queries) =>
-                await queries.ValuesAsync((await current.GetAsync()).TenantId!.Value, key, library, after, limit ?? 100, context.RequestAborted) is { } page
+        var tags = api.MapGroup("").WithTags("Books").RequireRight(Rights.Browse);
+
+        tags.MapGet("/fields", async (HttpContext context, CurrentAccess current, TagQueries queries) =>
+                TypedResults.Ok(await queries.FieldsAsync((await current.GetAsync()).TenantId!.Value, context.RequestAborted)))
+            .WithName("ListFields")
+            .WithSummary("The tenant's fields (authors, series, categories…, then custom ones): what has a page of values.");
+
+        tags.MapGet("/fields/{key}/values", async (string key, int? library, string? from, string? after, int? limit, HttpContext context, CurrentAccess current,
+                BookVisibilities visibilities, TagQueries queries) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (library is { } only && !visibility.Libraries.ContainsKey(only))
+                    return Results.NotFound();
+                return await queries.ValuesAsync(tenantId, key, library, after, limit ?? 100, context.RequestAborted, from, visibility) is { } page
                     ? Results.Ok(page)
-                    : Results.NotFound())
-            .RequireRight(Rights.Browse)
-            .WithTags("Books")
+                    : Results.NotFound();
+            })
             .WithName("ListFieldValues")
-            .WithSummary("The values of a field (authors, series, categories…) by sort name, a page at a time by key, with book counts of `library`.");
+            .WithSummary("The values of a field (authors, series, categories…) by sort name, a page at a time by key, with book counts of `library`.")
+            .WithDescription(ValuesDescription);
+
+        tags.MapGet("/tags", async (int? library, string? from, string? after, int? limit, HttpContext context, CurrentAccess current,
+                BookVisibilities visibilities, TagQueries queries) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (library is { } only && !visibility.Libraries.ContainsKey(only))
+                    return Results.NotFound();
+                return Results.Ok(await queries.PlainTagsAsync(tenantId, library, after, limit ?? 100, context.RequestAborted, from, visibility));
+            })
+            .WithName("ListTags")
+            .WithSummary("The plain tags (no field) by sort name, a page at a time by key, with book counts of `library`.")
+            .WithDescription(ValuesDescription);
+
+        tags.MapGet("/tags/{id:int}", async (int id, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities, TagQueries queries) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (library is { } only && !visibility.Libraries.ContainsKey(only))
+                    return Results.NotFound();
+                return await queries.GetAsync(tenantId, id, library, visibility, context.RequestAborted) is { } tag ? Results.Ok(tag) : Results.NotFound();
+            })
+            .WithName("GetTag")
+            .WithSummary("A tag or field value: its field, the tags it is under and those under it, its book count in `library`; its books are `GET api/books?tag=`.");
+    }
+
+    private const string ValuesDescription = "With `library` (one the caller browses) only values with books there, each with its count; a page may then be short (a bounded number of rows read per request) while `next` says more follow. `from` = start at the first value sorted at or after it (a jump). Tags the caller's content filters deny are left out.";
+
+    private static async Task<(int TenantId, BookVisibility Visibility)> VisibilityAsync(HttpContext context, CurrentAccess current, BookVisibilities visibilities)
+    {
+        var state = await current.GetAsync();
+        return (state.TenantId!.Value, await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted));
     }
 
     public const string FileGoneType = "file.gone";

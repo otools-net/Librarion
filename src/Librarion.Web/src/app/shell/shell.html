@@ -141,19 +141,11 @@
                 <ul>
                     @for (item of nav; track item.label) {
                         <li>
-                            @if (item.link) {
-                                <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
-                                   [routerLinkActiveOptions]="{ exact: item.link === '/' }" [title]="item.label | t">
-                                    <svg [libIcon]="item.icon"></svg>
-                                    <span>{{ item.label | t }}</span>
-                                </a>
-                            } @else {
-                                <span class="nav-item" aria-disabled="true" [title]="'shell.nav.soon' | t">
-                                    <svg [libIcon]="item.icon"></svg>
-                                    <span>{{ item.label | t }}</span>
-                                    <span class="badge">{{ 'shell.nav.soonBadge' | t }}</span>
-                                </span>
-                            }
+                            <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
+                               [routerLinkActiveOptions]="exactPath" [title]="item.label | t">
+                                <svg [libIcon]="item.icon"></svg>
+                                <span>{{ item.label | t }}</span>
+                            </a>
                         </li>
                     }
                 </ul>

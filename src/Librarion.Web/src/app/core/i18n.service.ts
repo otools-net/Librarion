@@ -43,6 +43,11 @@ export class I18n {
         const text = this.messages()[key] ?? (en as Messages)[key] ?? key;
         return params ? text.replace(/\{(\w+)\}/g, (part, name: string) => name in params ? String(params[name]) : part) : text;
     }
+
+    /** `value` written the UI language's way (1,234). */
+    number(value: number): string {
+        return new Intl.NumberFormat(this.code()).format(value);
+    }
 }
 
 /** `{{ 'browse.empty' | t }}`, `{{ 'x.count' | t: { count } }}`. Not pure: it follows the language signal. */

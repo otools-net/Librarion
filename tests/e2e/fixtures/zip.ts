@@ -57,11 +57,12 @@ export function writeZip(file: string, entries: ZipEntry[]): void {
     fs.writeFileSync(file, Buffer.concat([...parts, ...directory, end]));
 }
 
-/** An FB2 with a title and an author, and some text. */
-export function fb2(title: string, author: string): Buffer {
+/** An FB2 with a title and an author (and a series with its number), and some text. */
+export function fb2(title: string, author: string, series?: { name: string; number: number }): Buffer {
+    const sequence = series ? `<sequence name="${series.name}" number="${series.number}"/>` : '';
     return Buffer.from(`<?xml version="1.0" encoding="utf-8"?>
 <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0"><description><title-info><genre>sf_fantasy</genre>
 <author><first-name>${author.split(' ')[0]}</first-name><last-name>${author.split(' ').slice(1).join(' ')}</last-name></author>
-<book-title>${title}</book-title><lang>en</lang></title-info></description>
+<book-title>${title}</book-title><lang>en</lang>${sequence}</title-info></description>
 <body><section><p>${'Once upon a time. '.repeat(200)}</p></section></body></FictionBook>`, 'utf8');
 }

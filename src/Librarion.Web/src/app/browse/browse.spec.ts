@@ -34,6 +34,25 @@ describe('bookWindow', () => {
     });
 });
 
+describe('BrowseState', () => {
+    it('keeps the last lists left, the newest first, and a sort per scope', () => {
+        localStorage.clear();
+        const state = new BrowseState();
+        for (let i = 0; i < 8; i++)
+            state.keep({ key: `k${i}`, items: [i], next: null, offset: 0 });
+        expect(state.restore('k7')?.items).toEqual([7]);
+        expect(state.restore('k2')?.items).toEqual([2]);
+        expect(state.restore('k1')).toBeNull();
+
+        expect(state.sort('series', ['number', 'title'])).toBe('number');
+        state.setSort('title', 'series');
+        expect(state.sort('series', ['number', 'title'])).toBe('title');
+        expect(state.sort()).toBe('title');
+        state.setSort('number');
+        expect(state.sort(), 'not one of the library sorts').toBe('title');
+    });
+});
+
 describe('BrowsePage', () => {
     async function render(api: ApiMock, preferences: Record<string, unknown> = {}) {
         TestBed.resetTestingModule();
@@ -59,7 +78,7 @@ describe('BrowsePage', () => {
 
         expect(element.querySelector('h1')?.textContent).toBe('Discworld');
         expect(element.querySelector('.browse-count')?.textContent).toBe('120 books');
-        expect(api.books).toHaveBeenCalledWith({ library: 5, sort: 'title', after: null, limit: 30 });
+        expect(api.books).toHaveBeenCalledWith({ library: 5, sort: 'title', tag: null, after: null, limit: 30 });
         const books = [...element.querySelectorAll('.books.grid .book')];
         expect(books.map(b => b.querySelector('.book-title')?.textContent)).toEqual(['Book 1', 'book-2.fb2']);
         expect(books[0].querySelector('.book-series')?.textContent).toBe('Rincewind #1');
@@ -109,7 +128,7 @@ describe('BrowsePage', () => {
         api.books.mockResolvedValue(page(1, 3, null));
         const first = await render(api);
         first.fixture.destroy();
-        const kept = TestBed.inject(BrowseState).restore('5|title');
+        const kept = TestBed.inject(BrowseState).restore('books|5||title');
         expect(kept?.items).toHaveLength(3);
 
         const fixture = TestBed.createComponent(BrowsePage);

@@ -109,7 +109,45 @@ export interface KeysetPage<T> {
     next: string | null;
 }
 
-export type BookSort = 'title' | 'author' | 'added';
+/** `number`: by the number on the tag's link (a series' order; books without one are left out), only with a tag. */
+export type BookSort = 'title' | 'author' | 'added' | 'number';
+
+/** A field of the tenant (`api/fields`): a built-in one's name is translated from its key. */
+export interface FieldInfo {
+    id: number;
+    key: string;
+    name: string;
+    builtIn: boolean;
+}
+
+/** A field value or plain tag in a list; `bookCount`: books of the library asked about linked to it. */
+export interface FieldValue {
+    id: number;
+    name: string;
+    sortName: string;
+    bookCount: number | null;
+}
+
+/** A tag in another's detail; `field`: its field's key, null for a plain tag. */
+export interface TagRef {
+    id: number;
+    name: string;
+    field: string | null;
+}
+
+/** A tag or field value (`api/tags/{id}`): its field, the tags it is under and those under it, its book count. */
+export interface TagDetail {
+    id: number;
+    name: string;
+    sortName: string;
+    field: string | null;
+    fieldName: string | null;
+    isCategory: boolean;
+    bookCount: number | null;
+    parents: TagRef[];
+    children: TagRef[];
+    moreChildren: boolean;
+}
 
 export interface LibraryInfo {
     id: number;

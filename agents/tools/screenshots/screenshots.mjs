@@ -21,7 +21,7 @@ const out = path.resolve(outArg ?? path.join(os.tmpdir(), 'librarion-screens'));
 const port = process.env.LIBRARION_E2E_PORT ?? '5192';
 const baseURL = `http://localhost:${port}/`;
 const pages = pageArgs.length ? pageArgs : [
-    'login', 'login#recover', '', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
+    'login', 'login#recover', '', 'fields', 'fields/author', 'fields/author#first', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
     'admin/libraries', 'admin/libraries#open', 'admin/tenants', 'admin/tenants#edit', 'admin/settings', 'admin/security', 'missing',
 ];
 const sizes = {
@@ -63,7 +63,7 @@ try {
     fs.mkdirSync(books, { recursive: true });
     for (let i = 1; i <= 3; i++)
         fs.writeFileSync(path.join(books, `book-${i}.fb2`), `<?xml version="1.0"?><FictionBook><description><title-info><genre>sf_fantasy</genre>`
-            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title></title-info></description><body/></FictionBook>`);
+            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title><sequence name="Writer Saga" number="${i}"/></title-info></description><body/></FictionBook>`);
     const [library] = await (await api.get('api/libraries')).json();
     await api.post(`api/libraries/${library.id}/roots`, { data: { path: books } });
     await api.post(`api/libraries/${library.id}/scan`);
@@ -100,6 +100,10 @@ try {
                 await page.locator('.menu-button').click();
             else if (action === 'list')
                 await page.getByRole('button', { name: 'List' }).click();
+            else if (action === 'first') {
+                await page.locator('.value a').first().click();
+                await page.locator('.tag-kind').waitFor();
+            }
             else if (action === 'scan') {
                 await page.getByRole('button', { name: 'Run now' }).first().click();
                 await page.locator('lib-task-panel .task-row').first().waitFor();

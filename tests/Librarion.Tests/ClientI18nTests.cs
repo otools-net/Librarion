@@ -66,7 +66,7 @@ public sealed partial class ClientI18nTests
 
     /// <summary>
     /// What the server names and the client shows by a key built at run time: rights, right areas, settings and their
-    /// choices and hints, setting levels, built-in groups, security event kinds, and the error codes the access services send.
+    /// choices and hints, setting levels, built-in groups, security event kinds, built-in fields, and the error codes the access services send.
     /// </summary>
     [TestMethod]
     public void EveryNameTheServerSendsHasItsText()
@@ -86,6 +86,7 @@ public sealed partial class ClientI18nTests
         wanted.AddRange(Enum.GetNames<SettingLevel>().Select(level => $"settingLevel.{Camel(level)}"));
         wanted.AddRange(Enum.GetNames<BuiltInGroup>().Select(group => $"group.{Camel(group)}"));
         wanted.AddRange(Enum.GetNames<SecurityEventKind>().Select(kind => $"securityEvent.{Camel(kind)}"));
+        wanted.AddRange(Librarion.Core.Tagging.BuiltInTags.Fields.Values.SelectMany(key => new[] { $"fields.name.{key}", $"fields.one.{key}" }));
         wanted.AddRange(new[] { SessionEndpoints.SignInFailedType, SessionEndpoints.LockedOutType, RequestGuard.SetupRequiredType }.Select(type => $"error.{type}"));
 
         var named = RightCatalog.All.Select(r => r.Id).Concat(SettingCatalog.All.Select(s => s.Key)).ToHashSet(StringComparer.Ordinal);

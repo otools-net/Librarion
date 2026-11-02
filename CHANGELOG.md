@@ -47,6 +47,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   Only the books in view are drawn, so libraries of millions stay quick. The version and database moved to
   Administration › System.
 - The administration is loaded the first time it is opened: the app starts with less to download.
+- Authors, Series, Tags and All fields in the navigation: names from A to Z with how many of their books the library
+  holds (those without any left out), a Go to box, and a page for each name with its books (a series in its order),
+  the tags it is under and the narrower ones. Tags hidden from an account by its group's filters are left out.
 
 ### Fixed
 

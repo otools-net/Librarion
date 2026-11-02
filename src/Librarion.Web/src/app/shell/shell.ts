@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { IsActiveMatchOptions, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { MessageKey, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
@@ -14,8 +14,7 @@ import { TaskPanel } from '../shared/task-panel';
 interface NavItem {
     label: MessageKey;
     icon: IconName;
-    /** Null: shown, not reachable yet (a later stage brings it). */
-    link: string | null;
+    link: string;
 }
 
 /** What is open over the page: the navigation (phones), the account menu or the library switcher. */
@@ -58,10 +57,14 @@ export class Shell {
 
     protected readonly nav: NavItem[] = [
         { label: 'shell.nav.library', icon: 'library', link: '/' },
-        { label: 'shell.nav.authors', icon: 'author', link: null },
-        { label: 'shell.nav.series', icon: 'series', link: null },
-        { label: 'shell.nav.tags', icon: 'tag', link: null },
+        { label: 'shell.nav.authors', icon: 'author', link: '/fields/author' },
+        { label: 'shell.nav.series', icon: 'series', link: '/fields/series' },
+        { label: 'shell.nav.tags', icon: 'tag', link: '/tags' },
+        { label: 'shell.nav.fields', icon: 'category', link: '/fields' },
     ];
+
+    /** A navigation item is lit on its own page only (a tag's page is under none; "Go to" keeps Authors lit). */
+    protected readonly exactPath: IsActiveMatchOptions = { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
 
     protected readonly canAdmin = computed(() => {
         this.sessions.session();

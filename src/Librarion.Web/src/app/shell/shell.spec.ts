@@ -17,14 +17,12 @@ describe('Shell', () => {
         return { fixture, element: fixture.nativeElement as HTMLElement };
     }
 
-    it('lists the navigation, the pages not built yet marked as such', async () => {
+    it('lists the navigation: the library, its fields and tags', async () => {
         const { element } = await render();
 
-        const items = [...element.querySelectorAll('.sidebar .nav-item')];
-        expect(items.map(item => item.querySelector('span')?.textContent?.trim())).toEqual(['Library', 'Authors', 'Series', 'Tags']);
-        expect(items[1].querySelector('.badge')?.textContent).toBe('Soon');
-        expect(items[0].tagName).toBe('A');
-        expect(items.slice(1).every(item => item.getAttribute('aria-disabled') === 'true')).toBe(true);
+        const items = [...element.querySelectorAll<HTMLAnchorElement>('.sidebar .nav-item')];
+        expect(items.map(item => item.querySelector('span')?.textContent?.trim())).toEqual(['Library', 'Authors', 'Series', 'Tags', 'All fields']);
+        expect(items.map(item => item.getAttribute('href'))).toEqual(['/', '/fields/author', '/fields/series', '/tags', '/fields']);
     });
 
     it('shows the logo as a decorative mark beside the name, the link named for screen readers', async () => {

@@ -48,12 +48,15 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
   (`BookQueries.NarrowAsync`).
 - A page's authors, series and formats: one query each for the whole page, never per book.
 - Book detail: tags by field, files, identifiers, `mergedIntoId`; a book the caller can't see is not found.
-- Field values (`TagQueries.ValuesAsync`) by sort name with the library's counts.
+- Field values and plain tags (`TagQueries.ValuesAsync`, `PlainTagsAsync`) by sort name with the library's counts, those
+  without books there skipped (at most 2,000 rows read per request); a tag's detail (`GetAsync`); details in
+  [browse](browse.md#fields-and-tags-chunk-14).
 
 ## Routes (all `library.browse`)
 
 - `GET api/books?library&sort&after&tag&limit` (limit up to 200), `GET api/books/{id}`,
-  `GET api/fields/{key}/values?library&after&limit`. Documented by OpenAPI.
+  `GET api/fields`, `GET api/fields/{key}/values?library&from&after&limit`, `GET api/tags?library&from&after&limit`,
+  `GET api/tags/{id}?library`. Documented by OpenAPI.
 
 ## Known limits (accepted 2026-11-01, measure again before the release)
 

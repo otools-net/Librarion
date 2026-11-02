@@ -1,7 +1,7 @@
 /*
- * The library (app/browse, agents/docs/features/browse.md): its heading and tools, the books as a grid of covers or a
- * dense list. Every row of a view has the same height (the window of drawn rows counts on it): titles are clamped,
- * texts have fixed lines.
+ * The library and browsing by value (app/browse, app/tags, agents/docs/features/browse.md): headings and tools, the
+ * books as a grid of covers or a dense list, the A–Z lists of values, a tag's heading, the fields. Every row of a
+ * windowed list has the same height (the window of drawn rows counts on it): titles are clamped, texts have fixed lines.
  */
 
 .browse-head {
@@ -191,7 +191,158 @@
     text-align: center;
 }
 
+/* ---------- Values A–Z (authors, series, tags…) ---------- */
+
+.browse-title h1 .icon {
+    width: 1em;
+    height: 1em;
+    color: var(--text-muted);
+    vertical-align: -0.125em;
+}
+
+.values-jump input {
+    width: 14rem;
+    max-width: 100%;
+}
+
+.values {
+    --value-min: 240px;
+    display: grid;
+    gap: 0 var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.value a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    height: 44px;
+    padding: 0 var(--space-2);
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.value a:hover {
+    background: var(--surface-2);
+}
+
+.value-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.value-count {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- A tag's heading ---------- */
+
+.tag-kind {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 24px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tag-kind:hover {
+    color: var(--accent);
+}
+
+.tag-kind .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.tag-related {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 0;
+}
+
+.tag-related-label,
+.tag-related-more {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.tag-related .chip {
+    text-decoration: none;
+}
+
+/* ---------- The fields ---------- */
+
+.field-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.field-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 56px;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.field-card:hover {
+    border-color: var(--border-strong);
+}
+
+.field-card .icon {
+    flex-shrink: 0;
+    color: var(--accent);
+}
+
+.field-card-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.field-card-key {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: 400;
+}
+
 @media (max-width: 640px) {
+    .values {
+        --value-min: 280px;
+    }
+
+    .values-jump,
+    .values-jump label,
+    .values-jump input {
+        width: 100%;
+    }
+
     .books.grid {
         --card-min: 100px;
         gap: var(--space-4) var(--space-3);

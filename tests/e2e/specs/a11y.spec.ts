@@ -30,6 +30,23 @@ test.describe('@a11y', () => {
         await expect(page.locator('#main-nav')).toBeHidden();
     });
 
+    test('browsing by value: the fields, a list of values and a value\'s page', async ({ page }) => {
+        await page.goto('./fields');
+        await expect(page.locator('.field-card').first()).toBeVisible();
+        await audit(page, 'all fields');
+        await page.goto('./fields/author');
+        await expect(page.locator('lib-values-page :is(.values, .empty)').first()).toBeVisible();
+        await audit(page, 'authors');
+        // A value's page when the library has one (the run's other tests fill it).
+        const first = page.locator('.value a').first();
+        if (await first.count()) {
+            await first.tap();
+            await expect(page.locator('.tag-kind')).toBeVisible();
+            await expect(page.locator('lib-book-list :is(.books, .empty)').first()).toBeVisible();
+            await audit(page, 'an author');
+        }
+    });
+
     test('the page not found', async ({ page }) => {
         await page.goto('./missing');
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

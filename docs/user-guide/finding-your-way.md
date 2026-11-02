@@ -15,8 +15,8 @@
 
 ## The navigation
 
-On a computer or tablet, the navigation is always shown at the left: what you can browse (Library, then
-Authors, Series and Tags as they arrive, marked **Soon** until then) and, at its foot, **Administration**.
+On a computer or tablet, the navigation is always shown at the left: what you can browse (Library, Authors,
+Series, Tags and All fields, see [browsing](browsing.md)) and, at its foot, **Administration**.
 
 On a phone, the **menu** button at the top left opens it as a panel rising from the bottom, with your libraries first
 (slide the row sideways when there are many).

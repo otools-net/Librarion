@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookListItem, BookSort, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
+    BookListItem, BookSort, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
@@ -114,8 +114,21 @@ export class Api {
     deleteGroup = (id: number) => this.delete<void>(`api/groups/${id}`);
 
     /** The books of a library the session may browse, a page at a time by key (`after`: the `next` of the page before). */
-    books = (query: { library: number; sort: BookSort; after?: string | null; limit?: number }) =>
-        this.get<KeysetPage<BookListItem>>('api/books', { library: query.library, sort: query.sort, after: query.after ?? undefined, limit: query.limit });
+    books = (query: { library: number; sort: BookSort; tag?: number | null; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<BookListItem>>('api/books', {
+            library: query.library, sort: query.sort, tag: query.tag ?? undefined, after: query.after ?? undefined, limit: query.limit,
+        });
+
+    fields = () => this.get<FieldInfo[]>('api/fields');
+    /**
+     * A field's values (`field`: its key) or the plain tags (`field` null) by sort name, with the library's counts and
+     * only those with books there; a page may be short while `next` says more follow. `from`: start there (a jump).
+     */
+    tagValues = (field: string | null, query: { library?: number; from?: string | null; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<FieldValue>>(field ? `api/fields/${encodeURIComponent(field)}/values` : 'api/tags', {
+            library: query.library, from: query.from || undefined, after: query.after ?? undefined, limit: query.limit,
+        });
+    tag = (id: number, library?: number) => this.get<TagDetail>(`api/tags/${id}`, { library });
 
     /** The settings of a level; `owner`: the library (or another tenant); the user level is one's own preferences. */
     settings = (level: SettingLevel, owner?: number) =>

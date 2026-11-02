@@ -17,6 +17,11 @@ export const routes: Routes = [
         canActivate: [signedIn],
         children: [
             { path: '', component: BrowsePage, title: 'Librarion' },
+            // Browsing by value (fields, tags) is loaded when first opened.
+            { path: 'fields', loadComponent: () => import('./tags/fields-page').then(m => m.FieldsPage), title: 'Librarion' },
+            { path: 'fields/:key', loadComponent: () => import('./tags/values-page').then(m => m.ValuesPage), title: 'Librarion' },
+            { path: 'tags', loadComponent: () => import('./tags/values-page').then(m => m.ValuesPage), title: 'Librarion' },
+            { path: 'tags/:id', loadComponent: () => import('./tags/tag-page').then(m => m.TagPage), title: 'Librarion' },
             // My account is a section of the administration (as SFE's); the old address still opens it.
             { path: 'account', redirectTo: 'admin/account' },
             // Each section shows only to the rights of its sub-pages (admin-sections.ts); the API checks them again.
