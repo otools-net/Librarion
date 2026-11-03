@@ -3,12 +3,15 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookListItem, BookSort, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
+    BookDetail, BookDuplicate, BookListItem, BookSort, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
 /** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
 export const coverUrl = (book: number, size: 's' | 'm' | 'l') => `api/books/${book}/cover/${size}`;
+
+/** A file of a book to download (`library.download` in its library); streamed from the library, never unpacked. */
+export const fileUrl = (book: number, file: number) => `api/books/${book}/files/${file}`;
 
 /** Header every request changing something carries (the server's RequestGuard refuses it otherwise). */
 export const REQUEST_HEADER = 'X-Librarion-Request';
@@ -118,6 +121,9 @@ export class Api {
         this.get<KeysetPage<BookListItem>>('api/books', {
             library: query.library, sort: query.sort, tag: query.tag ?? undefined, after: query.after ?? undefined, limit: query.limit,
         });
+    book = (id: number) => this.get<BookDetail>(`api/books/${id}`);
+    /** Other books the session sees that may be this one, strongest reason first (at most 20). */
+    bookDuplicates = (id: number) => this.get<BookDuplicate[]>(`api/books/${id}/duplicates`);
 
     fields = () => this.get<FieldInfo[]>('api/fields');
     /**

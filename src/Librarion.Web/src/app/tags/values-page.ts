@@ -168,6 +168,7 @@ export class ValuesPage {
     /** The list from the name typed, the address keeping it (replaced: typing isn't a step back). */
     protected jumpNow(): void {
         clearTimeout(this.jumpTimer);
+        this.jumpTimer = undefined;
         const from = this.pending.trim();
         if (from === this.from())
             return;
@@ -209,7 +210,9 @@ export class ValuesPage {
         this.loading.set(false);
         this.error.set(null);
         this.unknown.set(false);
-        this.pending = this.from();
+        // Typing still waiting to jump stays (the libraries may arrive meanwhile); else the address says where the list starts.
+        if (this.jumpTimer === undefined)
+            this.pending = this.from();
         const kept = this.state.restore<FieldValue>(key);
         if (kept) {
             this.items.set(kept.items);

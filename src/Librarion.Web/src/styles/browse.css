@@ -69,10 +69,25 @@
 }
 
 .books.grid .book {
+    min-width: 0;
+}
+
+.books.grid .book-link {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     min-width: 0;
+}
+
+/* A book opens its page: the whole card or row is the link. */
+.book-link {
+    color: var(--text);
+    text-decoration: none;
+    border-radius: var(--radius);
+}
+
+.book-link:hover .book-title {
+    color: var(--accent);
 }
 
 .book-cover {
@@ -138,12 +153,19 @@
 }
 
 .books.list .book {
+    border-top: 1px solid var(--border);
+}
+
+.books.list .book-link {
     display: flex;
     align-items: center;
     gap: var(--space-3);
     height: 64px;
     padding: var(--space-1) var(--space-3);
-    border-top: 1px solid var(--border);
+}
+
+.books.list .book-link:hover {
+    background: var(--surface-2);
 }
 
 .books.list .book:first-child {

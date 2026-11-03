@@ -63,6 +63,8 @@ test.describe('@browse', () => {
         // The series, by number.
         await page.goto('./fields/series');
         await page.getByRole('searchbox', { name: 'Go to' }).fill(series);
+        // The jump first (300 ms after typing): pressing before it, the jump's own navigation came after and left the page.
+        await expect(page).toHaveURL(/from=/);
         const saga = page.locator('.value a').first();
         await expect(saga.locator('.value-name')).toHaveText(series);
         await press(saga, isMobile);

@@ -1,6 +1,7 @@
 import {
     ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterRenderEffect, computed, effect, inject, input, signal, untracked, viewChild,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Api, coverUrl } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
@@ -23,7 +24,7 @@ const DEFAULT_PAGE = 50;
  */
 @Component({
     selector: 'lib-book-list',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <header class="browse-head">
@@ -57,23 +58,25 @@ const DEFAULT_PAGE = 50;
                 @for (entry of shown(); track entry.book.id) {
                     @let book = entry.book;
                     <li class="book" [attr.aria-posinset]="entry.index + 1" [attr.aria-setsize]="setSize()">
-                        <span class="book-cover">
-                            <img [src]="cover(book)" alt="" loading="lazy" decoding="async" [width]="view() === 'grid' ? 240 : 80" [height]="view() === 'grid' ? 360 : 120">
-                        </span>
-                        <span class="book-text">
-                            <span class="book-title" [title]="title(book)">{{ title(book) }}</span>
-                            <span class="book-authors">{{ book.authors.join(', ') }}</span>
-                            @if (book.series) {
-                                <span class="book-series">{{ series(book) }}</span>
-                            }
-                            @if (view() === 'list' && book.formats.length) {
-                                <span class="book-formats">
-                                    @for (format of book.formats; track format) {
-                                        <span class="badge">{{ format }}</span>
-                                    }
-                                </span>
-                            }
-                        </span>
+                        <a class="book-link" [routerLink]="['/books', book.id]">
+                            <span class="book-cover">
+                                <img [src]="cover(book)" alt="" loading="lazy" decoding="async" [width]="view() === 'grid' ? 240 : 80" [height]="view() === 'grid' ? 360 : 120">
+                            </span>
+                            <span class="book-text">
+                                <span class="book-title" [title]="title(book)">{{ title(book) }}</span>
+                                <span class="book-authors">{{ book.authors.join(', ') }}</span>
+                                @if (book.series) {
+                                    <span class="book-series">{{ series(book) }}</span>
+                                }
+                                @if (view() === 'list' && book.formats.length) {
+                                    <span class="book-formats">
+                                        @for (format of book.formats; track format) {
+                                            <span class="badge">{{ format }}</span>
+                                        }
+                                    </span>
+                                }
+                            </span>
+                        </a>
                     </li>
                 }
             </ul>

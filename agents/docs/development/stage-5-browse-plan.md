@@ -150,7 +150,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         libraries; overview route on the server).
 13. [x] Browse: library grid and list, sort and view, keyset scrolling, scroll restored.
 14. [x] Field and tag pages with counts.
-15. [ ] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
+15. [x] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
 16. [ ] Search: parser and server query, results page, suggestions.
 17. [ ] Facets with capped counts.
 18. [ ] Docs, CHANGELOG, feature notes; p95 budgets through the UI's calls; e2e on every device; axe AA; close the

@@ -103,6 +103,58 @@ export interface BookListItem {
     coverSource: 'book' | 'calibre' | 'uploaded' | 'generated';
 }
 
+/** A link of a book to a tag: `field` the field's key (null for a plain tag); `number` its place in a series. */
+export interface BookTag {
+    id: number;
+    field: string | null;
+    name: string;
+    number: number | null;
+}
+
+/** A copy or format of a book: `name` its own (an archive entry's), `archive` the ZIP holding it; `missing`: not where the last scan found it. */
+export interface BookFile {
+    id: number;
+    format: string;
+    size: number;
+    name: string;
+    inArchive: boolean;
+    archive: string | null;
+    missing: boolean;
+}
+
+export interface KeyValue {
+    key: string;
+    value: string;
+}
+
+/**
+ * A book (`api/books/{id}`): its tags in field order, files, identifiers (`isbn`…), imported properties (Calibre's
+ * custom columns); `rating` 0–10 (half stars); `mergedIntoId`: it now lives in that book (the rest is empty).
+ */
+export interface BookDetail {
+    id: number;
+    libraryId: number;
+    title: string | null;
+    fileName: string | null;
+    description: string | null;
+    rating: number | null;
+    added: string;
+    coverSource: BookListItem['coverSource'];
+    tags: BookTag[];
+    files: BookFile[];
+    identifiers: KeyValue[];
+    mergedIntoId: number | null;
+    properties: KeyValue[] | null;
+    canDownload: boolean;
+}
+
+/** Why another book may be the same: a file of the same size and CRC, a shared identifier (`scheme`), the same title and author. */
+export interface BookDuplicate {
+    book: BookListItem;
+    reason: 'file' | 'identifier' | 'work';
+    scheme: string | null;
+}
+
 /** A page of a list by key: `next` is the `after` of the following page, null at the end. */
 export interface KeysetPage<T> {
     items: T[];

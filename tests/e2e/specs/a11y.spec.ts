@@ -1,8 +1,13 @@
 // Accessibility of the main screens on a phone (as SFE): axe-core's WCAG 2.2 A and AA rules (fixtures/axe.ts). Once
 // per run (android): the rules don't depend on the engine, and layouts are checked elsewhere. The setup page is
 // audited by the first start (it shows only once).
+import fs from 'node:fs';
+import path from 'node:path';
+import { uniqueName } from '../fixtures/accounts';
 import { audit } from '../fixtures/axe';
+import { scannedLibrary } from '../fixtures/library';
 import { expect, test } from '../fixtures/test';
+import { fb2, writeZip } from '../fixtures/zip';
 import { signedOut } from '../paths';
 
 test.describe('@a11y', () => {
@@ -45,6 +50,18 @@ test.describe('@a11y', () => {
             await expect(page.locator('lib-book-list :is(.books, .empty)').first()).toBeVisible();
             await audit(page, 'an author');
         }
+    });
+
+    test('a book\'s page', async ({ page }, testInfo) => {
+        // A book of its own, two files: one loose, one in a ZIP (the same work: a possible duplicate shows too).
+        await scannedLibrary(page, uniqueName('A11y book', testInfo), folder => {
+            fs.writeFileSync(path.join(folder, 'Plain Words.fb2'), fb2('Plain Words', 'Ada Reader'));
+            writeZip(path.join(folder, 'more.zip'), [{ name: 'Plain Words.fb2', data: fb2('Plain Words', 'Ada Reader', { name: 'Clear Saga', number: 1 }) }]);
+        });
+        await page.locator('.book-link').first().tap();
+        await expect(page.locator('.book-files')).toBeVisible();
+        await expect(page.locator('.book-duplicate')).toBeVisible();
+        await audit(page, 'a book');
     });
 
     test('the page not found', async ({ page }) => {

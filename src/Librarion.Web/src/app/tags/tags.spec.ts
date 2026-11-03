@@ -4,6 +4,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { ApiMock, mockApi, sessionInfo, settle, testProviders } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { FieldInfo, FieldValue, TagDetail } from '../core/models';
+import { LibraryContext } from '../core/library-context';
 import { SessionService } from '../core/session.service';
 import { FieldsPage } from './fields-page';
 import { TagPage } from './tag-page';
@@ -88,6 +89,26 @@ describe('Browsing by value', () => {
         await stable();
         expect(router.url).toBe('/fields/author?from=pra');
         expect(api.tagValues).toHaveBeenLastCalledWith('author', expect.objectContaining({ from: 'pra', after: null }));
+    });
+
+    it('keeps what was typed when the list starts again before the jump (the libraries arriving meanwhile)', async () => {
+        const api = mockApi();
+        api.tagValues.mockResolvedValue({ items: [value(1, 'Pratchett')], next: null });
+        const { element, router, stable } = await open('/fields/author', api);
+        const libraries = TestBed.inject(LibraryContext);
+        api.libraries.mockResolvedValue([
+            { id: 5, tenantId: 1, name: 'Discworld', created: '', bookCount: 120 }, { id: 6, tenantId: 1, name: 'Comics', created: '', bookCount: 3 },
+        ]);
+        await libraries.load();
+
+        const box = element.querySelector<HTMLInputElement>('.values-jump input')!;
+        box.value = 'pra';
+        box.dispatchEvent(new Event('input'));
+        libraries.choose(6);
+        await stable();
+        await settle(350);
+        await stable();
+        expect(router.url).toBe('/fields/author?from=pra');
     });
 
     it('names languages by their name and custom fields by theirs; an unknown field says so', async () => {

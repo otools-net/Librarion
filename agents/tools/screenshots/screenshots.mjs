@@ -63,7 +63,8 @@ try {
     fs.mkdirSync(books, { recursive: true });
     for (let i = 1; i <= 3; i++)
         fs.writeFileSync(path.join(books, `book-${i}.fb2`), `<?xml version="1.0"?><FictionBook><description><title-info><genre>sf_fantasy</genre>`
-            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title><sequence name="Writer Saga" number="${i}"/></title-info></description><body/></FictionBook>`);
+            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title><annotation><p>The ${i}. part of the saga: a long road, an old map.</p><p>And a dragon.</p></annotation><lang>en</lang>`
+            + `<sequence name="Writer Saga" number="${i}"/></title-info><publish-info><publisher>Quill Press</publisher><year>2001</year></publish-info></description><body/></FictionBook>`);
     const [library] = await (await api.get('api/libraries')).json();
     await api.post(`api/libraries/${library.id}/roots`, { data: { path: books } });
     await api.post(`api/libraries/${library.id}/scan`);
@@ -100,6 +101,10 @@ try {
                 await page.locator('.menu-button').click();
             else if (action === 'list')
                 await page.getByRole('button', { name: 'List' }).click();
+            else if (action === 'book') {
+                await page.locator('.book-link').first().click();
+                await page.locator('.book-files').waitFor();
+            }
             else if (action === 'first') {
                 await page.locator('.value a').first().click();
                 await page.locator('.tag-kind').waitFor();
@@ -116,7 +121,7 @@ try {
             // Dialogs and sheets rise in; the shot waits until they stand still.
             await page.waitForTimeout(400);
             const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
-            await page.screenshot({ path: file, fullPage: !action });
+            await page.screenshot({ path: file, fullPage: !action || action === 'book' });
             console.log(file);
             await context.close();
         }

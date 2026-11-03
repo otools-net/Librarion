@@ -34,11 +34,22 @@ public static class BookEndpoints
                 var state = await current.GetAsync();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 return await queries.GetAsync(state.TenantId!.Value, visibility, id, context.RequestAborted) is { } book
-                    ? Results.Ok(book)
+                    ? Results.Ok(book with { CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId) })
                     : Results.NotFound();
             })
             .WithName("GetBook")
-            .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book.");
+            .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book; `canDownload` when the caller may download its files.");
+
+        books.MapGet("/{id:int}/duplicates", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                return await queries.DuplicatesAsync(tenantId, visibility, id, context.RequestAborted) is { } duplicates
+                    ? Results.Ok(duplicates)
+                    : Results.NotFound();
+            })
+            .WithName("ListBookDuplicates")
+            .WithSummary("Other books the caller can see that may be this one: a file of the same size and CRC (`file`), a shared identifier (`identifier`, with its `scheme`), the same title and first author (`work`).")
+            .WithDescription($"At most {BookQueries.MaxDuplicates}, strongest reason first; a key shared by more than {BookQueries.MaxGroup} books is noise and ignored.");
 
         books.MapGet("/{id:int}/cover/{size}", async (int id, string size, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
                 CoverService covers) =>

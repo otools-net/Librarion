@@ -47,14 +47,17 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
   walks the sort index and tests each book; descendants are listed first (at most 500), so a test is one seek
   (`BookQueries.NarrowAsync`).
 - A page's authors, series and formats: one query each for the whole page, never per book.
-- Book detail: tags by field, files, identifiers, `mergedIntoId`; a book the caller can't see is not found.
+- Book detail: tags by field, files (with their archive's name and `missing`), identifiers, properties, `mergedIntoId`,
+  `canDownload` (set by the route); a book the caller can't see is not found. Possible duplicates on demand, bounded
+  per book ([book-page](book-page.md)).
+
 - Field values and plain tags (`TagQueries.ValuesAsync`, `PlainTagsAsync`) by sort name with the library's counts, those
   without books there skipped (at most 2,000 rows read per request); a tag's detail (`GetAsync`); details in
   [browse](browse.md#fields-and-tags-chunk-14).
 
 ## Routes (all `library.browse`)
 
-- `GET api/books?library&sort&after&tag&limit` (limit up to 200), `GET api/books/{id}`,
+- `GET api/books?library&sort&after&tag&limit` (limit up to 200), `GET api/books/{id}`, `GET api/books/{id}/duplicates`,
   `GET api/fields`, `GET api/fields/{key}/values?library&from&after&limit`, `GET api/tags?library&from&after&limit`,
   `GET api/tags/{id}?library`. Documented by OpenAPI.
 

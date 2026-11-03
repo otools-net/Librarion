@@ -29,14 +29,32 @@ public sealed record BookListItem(
 /// <param name="Field">The field's key; null for a plain tag.</param>
 public sealed record BookTagItem(int Id, string? Field, string Name, double? Number);
 
-public sealed record BookFileItem(int Id, string Format, long Size, string Name, bool InArchive);
+/// <param name="Name">The file's own name (an archive entry's, not the archive's).</param>
+/// <param name="Archive">The name of the ZIP holding it; null for a loose file.</param>
+/// <param name="Missing">Not where the last scan found it: listed, not downloadable (agents/docs/features/missing-books.md).</param>
+public sealed record BookFileItem(int Id, string Format, long Size, string Name, bool InArchive, string? Archive = null, bool Missing = false);
 
 /// <param name="MergedIntoId">Set when the book was merged into another: the client goes there.</param>
 /// <param name="Properties">Imported values that are neither tags nor columns (Calibre custom columns), by name.</param>
+/// <param name="CanDownload">Whether the caller may download in the book's library (set by the route).</param>
 public sealed record BookDetail(
     int Id, int LibraryId, string? Title, string? FileName, string? Description, byte? Rating, DateTime Added, CoverSource CoverSource,
     IReadOnlyList<BookTagItem> Tags, IReadOnlyList<BookFileItem> Files, IReadOnlyList<KeyValuePair<string, string>> Identifiers, int? MergedIntoId,
-    IReadOnlyList<KeyValuePair<string, string>>? Properties = null);
+    IReadOnlyList<KeyValuePair<string, string>>? Properties = null, bool CanDownload = false);
+
+/// <summary>Why another book may be the same one, strongest first.</summary>
+public enum DuplicateReason
+{
+    /// <summary>A file of the same size and CRC-32: the same bytes, almost surely (another library's: copies within one are merged at import).</summary>
+    File,
+    /// <summary>The same identifier (ISBN, EPUB UUID, FB2 id, Calibre's…).</summary>
+    Identifier,
+    /// <summary>The same title (else file name) and first author, normalized (<see cref="Book.WorkKey"/>).</summary>
+    Work,
+}
+
+/// <param name="Scheme">For <see cref="DuplicateReason.Identifier"/>: which one (<c>isbn</c>, <c>uuid</c>…).</param>
+public sealed record BookDuplicate(BookListItem Book, DuplicateReason Reason, string? Scheme);
 
 /// <summary>
 /// Book lists by key (agents/docs/development/scale.md): the account's visible books (<see cref="BookVisibility"/>) as
@@ -162,8 +180,11 @@ public sealed class BookQueries(TenantDb tenantDb)
             .OrderBy(l => l.Tag!.FieldId).ThenBy(l => l.Ordinal).ThenBy(l => l.Tag!.SortName)
             .Select(l => new BookTagItem(l.TagId, l.Tag!.Field!.FieldKey, l.Tag.Name, l.Number))
             .ToListAsync(cancellationToken);
-        var files = (await db.BookFiles.Where(f => f.BookId == id).OrderBy(f => f.Id).ToListAsync(cancellationToken))
-            .Select(f => new BookFileItem(f.Id, f.Format, f.Size, f.Path[(f.Path.LastIndexOfAny(['/', '\\']) + 1)..], f.ArchiveId != null)).ToList();
+        var files = (await db.BookFiles.Where(f => f.BookId == id).OrderBy(f => f.Id)
+                .Select(f => new { f.Id, f.Format, f.Size, f.Path, f.ArchiveId, Archive = f.Archive!.Path, f.MissingSince })
+                .ToListAsync(cancellationToken))
+            .Select(f => new BookFileItem(f.Id, f.Format, f.Size, LastSegment(f.Path), f.ArchiveId != null,
+                f.ArchiveId != null ? LastSegment(f.Archive) : null, f.MissingSince != null)).ToList();
         var identifiers = await db.BookIdentifiers.Where(i => i.BookId == id).OrderBy(i => i.Scheme).ThenBy(i => i.Value)
             .Select(i => new KeyValuePair<string, string>(i.Scheme, i.Value)).ToListAsync(cancellationToken);
         var properties = await db.BookProperties.Where(p => p.BookId == id).OrderBy(p => p.Name)
@@ -171,6 +192,71 @@ public sealed class BookQueries(TenantDb tenantDb)
         return new BookDetail(
             book.Id, book.LibraryId, book.Title, book.Title is null && files.Count > 0 ? FileTitles.FromPath(files[0].Name) : null, book.Description,
             book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null, properties);
+    }
+
+    private static string LastSegment(string path) => path[(path.LastIndexOfAny(['/', '\\']) + 1)..];
+
+    /// <summary>The most possible duplicates listed for a book.</summary>
+    public const int MaxDuplicates = 20;
+
+    /// <summary>A key shared by more books than this is noise ("Untitled" by "Unknown"), never a suggestion (agents/docs/features/merging.md).</summary>
+    public const int MaxGroup = 50;
+
+    /// <summary>The most files or identifiers of one book looked up.</summary>
+    private const int MaxKeys = 20;
+
+    /// <summary>Identifiers naming a record of one source, not a book: INPX numbers collide between collections.</summary>
+    private static readonly string[] SourceSchemes = ["inpx"];
+
+    /// <summary>
+    /// Other books the caller can see that may be this one (agents/docs/features/merging.md; read only until merging is
+    /// built): a file of the same size and CRC, a shared identifier, the same work key. Each key is one seek on its
+    /// index reading at most <see cref="MaxGroup"/> books (a bigger group is noise, dropped): bounded by the book,
+    /// never by the catalog. Null when the caller can't see the book.
+    /// </summary>
+    public async Task<IReadOnlyList<BookDuplicate>?> DuplicatesAsync(int tenantId, BookVisibility visibility, int id, CancellationToken cancellationToken = default)
+    {
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var visible = await VisibleAsync(db, visibility, null, cancellationToken);
+        var book = await visible.Where(b => b.Id == id).Select(b => new { b.WorkKey }).FirstOrDefaultAsync(cancellationToken);
+        if (book is null)
+            return null;
+
+        var found = new Dictionary<int, (DuplicateReason Reason, string? Scheme)>();
+        void Add(List<int> books, DuplicateReason reason, string? scheme)
+        {
+            foreach (var other in books)
+                found.TryAdd(other, (reason, scheme));
+        }
+
+        var files = await db.BookFiles.Where(f => f.BookId == id && f.Crc32 != null).Select(f => new { f.Size, f.Crc32 })
+            .Distinct().Take(MaxKeys).ToListAsync(cancellationToken);
+        foreach (var file in files)
+            Add(await GroupAsync(db.BookFiles.Where(f => f.Size == file.Size && f.Crc32 == file.Crc32 && f.BookId != id).Select(f => f.BookId), cancellationToken),
+                DuplicateReason.File, null);
+        var identifiers = await db.BookIdentifiers.Where(i => i.BookId == id && !SourceSchemes.Contains(i.Scheme))
+            .OrderBy(i => i.Scheme).ThenBy(i => i.Value).Select(i => new { i.Scheme, i.Value }).Take(MaxKeys).ToListAsync(cancellationToken);
+        foreach (var identifier in identifiers)
+            Add(await GroupAsync(db.BookIdentifiers.Where(i => i.Scheme == identifier.Scheme && i.Value == identifier.Value && i.BookId != id).Select(i => i.BookId), cancellationToken),
+                DuplicateReason.Identifier, identifier.Scheme);
+        if (book.WorkKey is { } work)
+            Add(await GroupAsync(db.Books.Where(b => b.WorkKey == work && b.Id != id).Select(b => b.Id), cancellationToken), DuplicateReason.Work, null);
+        if (found.Count == 0)
+            return [];
+
+        var ids = found.Keys.ToList();
+        var rows = (await visible.Where(b => ids.Contains(b.Id))
+                .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource))
+                .ToListAsync(cancellationToken))
+            .OrderBy(r => found[r.Id].Reason).ThenBy(r => r.SortTitle, StringComparer.Ordinal).ThenBy(r => r.Id).Take(MaxDuplicates).ToList();
+        return (await ItemsAsync(db, rows, cancellationToken)).Select(item => new BookDuplicate(item, found[item.Id].Reason, found[item.Id].Scheme)).ToList();
+    }
+
+    /// <summary>The other books sharing a key, unless more than <see cref="MaxGroup"/> share it (this one counted).</summary>
+    private static async Task<List<int>> GroupAsync(IQueryable<int> others, CancellationToken cancellationToken)
+    {
+        var ids = await others.Distinct().Take(MaxGroup).ToListAsync(cancellationToken);
+        return ids.Count >= MaxGroup ? [] : ids;
     }
 
     /// <summary>The books the account may see, not merged away: one library or all, with the groups' content filters.</summary>

@@ -50,9 +50,14 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - Authors, Series, Tags and All fields in the navigation: names from A to Z with how many of their books the library
   holds (those without any left out), a Go to box, and a page for each name with its books (a series in its order),
   the tags it is under and the narrower ones. Tags hidden from an account by its group's filters are left out.
+- A page for each book, opened from its cover or row: its cover, title, authors and series as links, the other
+  fields as chips, the description, its files (format, size, the ZIP holding it) with Download for those who may
+  download in its library, its identifiers and imported properties, and other books that may be the same one (the
+  same file in another library, the same ISBN or other identifier, the same title and author).
 
 ### Fixed
 
+- Typing in "Go to" while the page was still loading the libraries was forgotten: the list stayed at its start.
 - Times of runs and other records read from a SQLite database were shown in the wrong time zone (an hour or more
   off); they are now read as UTC.
 - Starting on a database made by an older build (before 1.0 the database is not upgraded between builds) stopped

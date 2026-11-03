@@ -25,7 +25,8 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
   last 6 lists (library, value lists, tag pages; keyed by what they list and how); the same list shows them again
   without asking and scrolls back once a row is measured. Kept in memory for the tab (a reload starts at the top).
 - Each book is a `li` with `aria-posinset` and `aria-setsize` (the library's count), as the list is partial.
-- Books are not links yet: the book page comes in chunk 15.
+- Every book is a link to its page ([book-page](book-page.md)): `a.book-link` inside the `li`, which keeps the layout's
+  measures.
 
 ## Fields and tags (chunk 14)
 

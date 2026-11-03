@@ -22,6 +22,7 @@ export const routes: Routes = [
             { path: 'fields/:key', loadComponent: () => import('./tags/values-page').then(m => m.ValuesPage), title: 'Librarion' },
             { path: 'tags', loadComponent: () => import('./tags/values-page').then(m => m.ValuesPage), title: 'Librarion' },
             { path: 'tags/:id', loadComponent: () => import('./tags/tag-page').then(m => m.TagPage), title: 'Librarion' },
+            { path: 'books/:id', loadComponent: () => import('./books/book-page').then(m => m.BookPage), title: 'Librarion' },
             // My account is a section of the administration (as SFE's); the old address still opens it.
             { path: 'account', redirectTo: 'admin/account' },
             // Each section shows only to the rights of its sub-pages (admin-sections.ts); the API checks them again.

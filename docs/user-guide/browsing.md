@@ -20,3 +20,18 @@ The home page is the library you picked in the top bar: its name, how many books
   narrower ones, then its books, as covers or a list like the library's.
 - A series shows its books by their number in the series first; pick another order in **Sort** (books without a
   number appear only in the other orders).
+
+## A book's page
+
+A cover or row opens the book's page; **Back** returns to where you were, scrolled as you left it.
+
+- Its cover, title, authors and series (each opens its page), its rating, then its other fields as chips: categories,
+  publishers, languages, years, plain tags and your libraries' own fields. A title in italics is the file's name: the
+  book's metadata gave none.
+- **Download** gets the book's first file; **Files** lists every copy and format with its size and, for a book inside
+  a ZIP archive, the archive's name, each with its own download button. A file missing since the last scan is shown,
+  not offered. Downloading needs the right to download in that library; without it the page says so.
+- **Details**: when the book was added, its identifiers (ISBN and others) and the values an import brought that are
+  not fields (such as Calibre's custom columns).
+- **Possible duplicates** lists other books you can see that may be the same one, with why: the same file (in
+  another library), the same identifier, or the same title and author. Merging them comes later.
