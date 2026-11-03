@@ -108,6 +108,8 @@ export class BookList {
     readonly library = input.required<number>();
     /** Only books with this tag or one under it; null: every book of the library. */
     readonly tag = input<number | null>(null);
+    /** Only books matching this search (the search language); null or empty: no search. */
+    readonly query = input<string | null>(null);
     readonly sorts = input<readonly BookSort[]>(['title', 'author', 'added']);
     readonly sortScope = input<SortScope>('library');
     /** The list's accessible name. */
@@ -126,7 +128,7 @@ export class BookList {
     protected readonly loading = signal(false);
     protected readonly loaded = signal(false);
     protected readonly error = signal<string | null>(null);
-    private readonly key = computed(() => `books|${this.library()}|${this.tag() ?? ''}|${this.sort()}`);
+    private readonly key = computed(() => `books|${this.library()}|${this.tag() ?? ''}|${this.sort()}|${this.query() ?? ''}`);
 
     protected readonly window = new ListWindow({
         element: () => this.list()?.nativeElement,
@@ -202,7 +204,9 @@ export class BookList {
         this.loading.set(true);
         this.error.set(null);
         try {
-            const page = await this.api.books({ library: this.library(), sort: this.sort(), tag: this.tag(), after: this.next(), limit: this.pageSize() });
+            const page = await this.api.books({
+                library: this.library(), sort: this.sort(), tag: this.tag(), q: this.query(), after: this.next(), limit: this.pageSize(),
+            });
             if (asked !== this.requested)
                 return;
             this.items.update(items => [...items, ...page.items]);

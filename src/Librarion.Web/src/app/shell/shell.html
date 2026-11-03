@@ -59,13 +59,7 @@
             </span>
         }
 
-        <form class="search" role="search" (submit)="$event.preventDefault()">
-            <svg libIcon="search"></svg>
-            <input type="search" name="q" disabled
-                   [attr.aria-label]="'shell.search.label' | t"
-                   [placeholder]="'shell.search.placeholder' | t"
-                   [title]="'shell.nav.soon' | t">
-        </form>
+        <lib-search-box />
     }
 
     <div class="menu-anchor account-menu" data-popup="account">

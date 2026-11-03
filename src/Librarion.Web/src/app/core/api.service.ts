@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookDetail, BookDuplicate, BookListItem, BookSort, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
+    BookDetail, BookDuplicate, BookListItem, BookSort, SuggestionList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
@@ -117,10 +117,12 @@ export class Api {
     deleteGroup = (id: number) => this.delete<void>(`api/groups/${id}`);
 
     /** The books of a library the session may browse, a page at a time by key (`after`: the `next` of the page before). */
-    books = (query: { library: number; sort: BookSort; tag?: number | null; after?: string | null; limit?: number }) =>
+    books = (query: { library: number; sort: BookSort; tag?: number | null; q?: string | null; after?: string | null; limit?: number }) =>
         this.get<KeysetPage<BookListItem>>('api/books', {
-            library: query.library, sort: query.sort, tag: query.tag ?? undefined, after: query.after ?? undefined, limit: query.limit,
+            library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit,
         });
+    /** What to offer for the last term of a search being typed, the most used in `library` first. */
+    suggestions = (q: string, library?: number) => this.get<SuggestionList>('api/search/suggestions', { q, library });
     book = (id: number) => this.get<BookDetail>(`api/books/${id}`);
     /** Other books the session sees that may be this one, strongest reason first (at most 20). */
     bookDuplicates = (id: number) => this.get<BookDuplicate[]>(`api/books/${id}/duplicates`);

@@ -40,3 +40,9 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
   navigation came after and took the page back to the list (2026-11-03).
 - Downloads: `page.waitForEvent('download')` before the press, then `download.path()`: works on every project,
   WebKit included.
+- `getByRole('option')` also finds the sort menu's `<option>`s (hidden): scope it to `#search-suggestions`.
+- The search box's options cancel `mousedown` to keep the focus in the box: cancelling `pointerdown` instead made iOS
+  WebKit drop the tap's `click` (found by `search.spec.ts` on `iphone`).
+- The final layout check measures the page as the test leaves it: a test that ends scrolled (a row further down as the
+  run's other specs add libraries) can put a small link against the sticky top bar's buttons. End such a test scrolled
+  to the top; targets covered at their centre are not measured (`expectTapTargets`).

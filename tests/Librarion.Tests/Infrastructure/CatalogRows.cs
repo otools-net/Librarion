@@ -32,7 +32,7 @@ public static class CatalogRows
         var archive = new Archive { TenantId = tenantId, LibraryId = library.Id, Root = root, Path = "books.zip", PathKey = 1, Size = 100, Modified = now };
         var book = new Book
         {
-            TenantId = tenantId, LibraryId = library.Id, Title = "It", SortTitle = "it", SortAuthor = "King, Stephen", Added = now, Updated = now,
+            TenantId = tenantId, LibraryId = library.Id, Title = "It", SortTitle = "it", SearchText = "it", SortAuthor = "King, Stephen", Added = now, Updated = now,
             Files = [new BookFile { TenantId = tenantId, LibraryId = library.Id, Archive = archive, Path = "it.fb2", PathKey = 2, Format = "fb2", Size = 10, Crc32 = 0xFFFFFFFF }],
             Identifiers = [new BookIdentifier { TenantId = tenantId, Scheme = "isbn", Value = "9780450411434" }],
         };

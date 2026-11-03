@@ -101,6 +101,10 @@ try {
                 await page.locator('.menu-button').click();
             else if (action === 'list')
                 await page.getByRole('button', { name: 'List' }).click();
+            else if (action?.startsWith('suggest=')) {
+                await page.getByRole('combobox', { name: 'Search books' }).fill(decodeURIComponent(action.slice('suggest='.length)));
+                await page.locator('#search-suggestions [role="option"]').first().waitFor();
+            }
             else if (action === 'book') {
                 await page.locator('.book-link').first().click();
                 await page.locator('.book-files').waitFor();
@@ -120,7 +124,7 @@ try {
             await page.waitForLoadState('networkidle');
             // Dialogs and sheets rise in; the shot waits until they stand still.
             await page.waitForTimeout(400);
-            const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
+            const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#?=:"*]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
             await page.screenshot({ path: file, fullPage: !action || action === 'book' });
             console.log(file);
             await context.close();

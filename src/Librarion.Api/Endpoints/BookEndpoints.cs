@@ -3,6 +3,7 @@ using Librarion.Core.Access;
 using Librarion.Core.Catalog;
 using Librarion.Core.Covers;
 using Librarion.Core.Reading;
+using Librarion.Core.Search;
 
 namespace Librarion.Api.Endpoints;
 
@@ -16,18 +17,18 @@ public static class BookEndpoints
     {
         var books = api.MapGroup("/books").WithTags("Books").RequireRight(Rights.Browse);
 
-        books.MapGet("/", async (int? library, string? sort, string? after, int? limit, int? tag, HttpContext context, CurrentAccess current,
+        books.MapGet("/", async (int? library, string? sort, string? after, int? limit, int? tag, string? q, HttpContext context, CurrentAccess current,
                 BookVisibilities visibilities, BookQueries queries) =>
             {
                 var state = await current.GetAsync();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 return TypedResults.Ok(await queries.ListAsync(state.TenantId!.Value, visibility,
-                    new BookPageRequest(library, Enum.TryParse<BookSort>(sort, ignoreCase: true, out var order) ? order : BookSort.Title, after, limit ?? 50, tag),
+                    new BookPageRequest(library, Enum.TryParse<BookSort>(sort, ignoreCase: true, out var order) ? order : BookSort.Title, after, limit ?? 50, tag, q),
                     context.RequestAborted));
             })
             .WithName("ListBooks")
             .WithSummary("Books the caller may browse, a page at a time by key.")
-            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `limit` up to 200.");
+            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `q` = a search (words, \"phrases\", `author:\"Stephen King\"`, `author:`, `tag:`, `format:epub`, `title:`, `-` to leave out, `*` for a prefix; books with a hidden tag left out unless it is named); `limit` up to 200.");
 
         books.MapGet("/{id:int}", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {
@@ -140,6 +141,18 @@ public static class BookEndpoints
             })
             .WithName("GetTag")
             .WithSummary("A tag or field value: its field, the tags it is under and those under it, its book count in `library`; its books are `GET api/books?tag=`.");
+
+        tags.MapGet("/search/suggestions", async (string? q, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
+                SearchSuggestions suggestions) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (library is { } only && !visibility.Libraries.ContainsKey(only))
+                    return Results.NotFound();
+                return Results.Ok(await suggestions.SuggestAsync(tenantId, q, library, visibility, context.RequestAborted));
+            })
+            .WithName("SuggestSearch")
+            .WithSummary("What to offer while a search is typed: for its last term, fields by key, then field values and tags by name (the most used in `library` first).")
+            .WithDescription("`from` = where that term starts in `q`: an item's `insert` replaces the text from there on.");
     }
 
     private const string ValuesDescription = "With `library` (one the caller browses) only values with books there, each with its count; a page may then be short (a bounded number of rows read per request) while `next` says more follow. `from` = start at the first value sorted at or after it (a jump). Tags the caller's content filters deny are left out.";

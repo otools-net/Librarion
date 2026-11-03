@@ -19,7 +19,7 @@ LIBRARION_SCREENS_THEME=light node agents/tools/screenshots/screenshots.mjs   # 
   (phones), `#search=<words>` types them in the administration's search box (`%20` for spaces), `#found=<words>` also
   opens the first result (a setting: the shot catches its flash), `#scan` presses the first "Run now" (Background tasks:
   the progress panel shows the run, or its result), `#list` switches the library to its list view (`""#list`; the
-  address `""` is the library), `#first` opens the first value of a list (`fields/author#first`: an author's page), `#book` the library's first book (`""#book`, a full-page shot). Shots with an action are the viewport, not the full page. The setup adds a second library, "Comics", so
+  address `""` is the library), `#first` opens the first value of a list (`fields/author#first`: an author's page), `#book` the library's first book (`""#book`, a full-page shot). `#suggest=<words>` types them in the top bar's search (its suggestions open); a page may carry a query (`search?q=book`). Shots with an action are the viewport, not the full page. The setup adds a second library, "Comics", so
   the switcher shows. Before
   the pages, a folder of three FB2s is added to the library and scanned. Files are named `<phone|desktop>-<page>.png`.
 - It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds. The client is

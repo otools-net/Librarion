@@ -65,6 +65,29 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   within budget: folders stay indexed from the books (D11); INPX and Calibre come in as manual imports (stage 4).
 - Imports (stage 4, `import` command, 2026-11-01, PostgreSQL): Calibre 2M books 27.1 min, unchanged again 2.6 min;
   INPX 1M records 8.9 min, unchanged 38 s; all within budget ([imports](../features/imports.md#scale)).
+- Search (stage 5, 2026-11-03, 2M, warm, p95 in ms, budget 300; how each plan was found:
+  [search](../features/search.md#plans-that-went-wrong-at-2m-2026-11-03-and-the-rule-each-gave)):
+
+  | Search | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | a word on ~6 % of titles, first and middle page | 75–77 | 103–131 |
+  | two such words | 151 | 188 |
+  | two letters (a prefix of many words) | 86 | 129 |
+  | a file name (one book) | 10 | 28 |
+  | the most prolific author's last name | 32 | 69 |
+  | an author with 5–20 books, by field | 8 | 22 |
+  | an author by word and a title word | 188 | 118 |
+  | category Fiction less PDF, by author | 6 | 27 |
+  | books outside any series, newest | 3 | 17 |
+  | suggestions: two letters / after `author:` | 20 / 24 | 17 / 22 |
+
+- The same day the **1 % filtered group** took 127 ms on PostgreSQL (62 at stage 2), with this stage's code and the
+  previous commit's alike: on the freshly generated catalog PostgreSQL estimates that tag at 744 links (it has 20k)
+  and starts from them, sorting 20k books. To fix with the stage's budgets (chunk 18).
+- Imports with the search index kept row by row (2026-11-03, PostgreSQL): INPX 1M 9.2 min (8.9 before), Calibre 2M
+  28.2 min (27.1; budget 30), unchanged re-imports 37 s and 2.7 min: within budget.
+- Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
+  PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
   author or date, fields found by scanning `BuiltIn`, tag pages joined one way for every size (before: Fiction 2.9 s, a
   0.1 % filter 0.8 s), parallel workers on PostgreSQL, a big series by number walked from its title.

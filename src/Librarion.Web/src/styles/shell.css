@@ -92,14 +92,18 @@
 }
 
 .search {
-    display: flex;
+    position: relative;
     flex: 1;
-    align-items: center;
-    gap: var(--space-2);
     min-width: 0;
     max-width: 560px;
-    height: var(--target);
     margin-inline: auto;
+}
+
+.search form {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--target);
     padding: 0 var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-pill);
@@ -107,7 +111,7 @@
     color: var(--text-muted);
 }
 
-.search:focus-within {
+.search form:focus-within {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
 }
@@ -126,8 +130,66 @@
     box-shadow: none;
 }
 
-.search input:disabled {
-    cursor: not-allowed;
+/* The last term's suggestions, under the box (a panel across the screen on phones). */
+.search-suggestions {
+    position: absolute;
+    inset: calc(100% + var(--space-1)) 0 auto;
+    z-index: 40;
+    max-height: min(60vh, 420px);
+    margin: 0;
+    padding: var(--space-1);
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    list-style: none;
+}
+
+.search-suggestions li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.search-suggestions li:hover,
+.search-suggestions li.active {
+    background: var(--surface-2);
+}
+
+.search-suggestions li.active {
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.search-suggestions .icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+}
+
+.suggestion-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.suggestion-kind,
+.suggestion-count {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.suggestion-count {
+    font-variant-numeric: tabular-nums;
 }
 
 .admin-frame .account-menu {
@@ -422,6 +484,11 @@
 
     .phone-only {
         display: block;
+    }
+
+    .search-suggestions {
+        position: fixed;
+        inset: calc(var(--topbar-height) + var(--space-1)) var(--space-2) auto;
     }
 
     .topbar {

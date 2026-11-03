@@ -54,6 +54,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   fields as chips, the description, its files (format, size, the ZIP holding it) with Download for those who may
   download in its library, its identifiers and imported properties, and other books that may be the same one (the
   same file in another library, the same ISBN or other identifier, the same title and author).
+- Search: the box in the top bar finds the books of the library with every word in their title, file name or the
+  name of an author, series or tag (case and accents aside, words being typed as prefixes); `"phrases"`,
+  `author:"Stephen King"` and every other field (`author:king`, `author:ki*`, `series:` for any), `tag:`, `format:epub`,
+  `title:`, and `-` to leave books out. Books with a hidden tag (Archived) only show when the search names it. While
+  typing, it suggests fields and then authors, series and tags with their number of books. Results are listed like the
+  library, sorted by title, author or newest. See [Searching](docs/user-guide/searching.md).
 
 ### Fixed
 

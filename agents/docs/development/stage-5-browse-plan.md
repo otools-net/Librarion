@@ -151,7 +151,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 13. [x] Browse: library grid and list, sort and view, keyset scrolling, scroll restored.
 14. [x] Field and tag pages with counts.
 15. [x] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
-16. [ ] Search: parser and server query, results page, suggestions.
+16. [x] Search: parser and server query, results page, suggestions.
 17. [ ] Facets with capped counts.
 18. [ ] Docs, CHANGELOG, feature notes; p95 budgets through the UI's calls; e2e on every device; axe AA; close the
         stage (merge 0.6.0).
@@ -190,6 +190,9 @@ A session may end early: this list is the state of the work. Tick a chunk when i
       setting), CHANGELOG, feature notes (`admin-page`, `admin-search`, `design`, `browse`, `search`).
 - [ ] p95 budgets through the UI's API calls on the 2M catalog; e2e on every phone project and desktop with layout
       checks; axe AA on the main screens (library, book page, search, administration overview and a settings page).
+- [ ] The 1 % filtered group's page on PostgreSQL: 127 ms on the catalog generated 2026-11-03 (62 at stage 2), the same with
+      the previous commit's code: PostgreSQL estimates the tag at 744 links (20k) and starts from them. Make the start a
+      decision of ours as search does (a list when narrow, a per-book test otherwise) and measure ([scale](scale.md#measured)).
 
 ## Exit criteria
 

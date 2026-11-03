@@ -308,6 +308,53 @@
     text-decoration: none;
 }
 
+/* ---------- Search: how to ---------- */
+
+.search-help {
+    margin-top: var(--space-6);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+}
+
+.search-help summary {
+    min-height: var(--target);
+    align-content: center;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.search-help dl {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 0;
+}
+
+.search-help dl > div {
+    display: grid;
+    grid-template-columns: minmax(12rem, auto) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-3);
+}
+
+.search-help dd {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.search-help code {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .search-help dl > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+}
+
 /* ---------- The fields ---------- */
 
 .field-cards {

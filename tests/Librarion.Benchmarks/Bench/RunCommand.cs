@@ -26,14 +26,17 @@ public static class RunCommand
 {
     private const double ListBudget = 100;
     private const double DetailBudget = 50;
+    private const double SearchBudget = 300;
 
-    public static async Task<int> RunAsync(BenchTarget target, string workFolder, int iterations, Action<string> report, CancellationToken cancellationToken)
+    /// <param name="only">Only the scenarios whose name contains it (empty: all).</param>
+    public static async Task<int> RunAsync(BenchTarget target, string workFolder, int iterations, Action<string> report, CancellationToken cancellationToken, string only = "")
     {
         using var host = await BenchDatabase.OpenAsync(target, workFolder, cancellationToken, migrate: false);
         var services = host.Services;
         var tenantDb = services.GetRequiredService<TenantDb>();
         var books = services.GetRequiredService<BookQueries>();
         var tags = services.GetRequiredService<TagQueries>();
+        var suggestions = services.GetRequiredService<Librarion.Core.Search.SearchSuggestions>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
         var accounts = services.GetRequiredService<AccessService>();
 
@@ -44,6 +47,7 @@ public static class RunCommand
         int middleTitleId, middleAuthorId;
         DateTime middleAdded;
         int middleAddedId;
+        string prolificName, middleName;
         List<int> sampleIds;
         await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
         {
@@ -55,6 +59,8 @@ public static class RunCommand
             var authorCounts = db.TagCounts.Where(c => db.Tags.Any(t => t.Id == c.TagId && t.FieldId == authorField));
             prolificAuthor = await authorCounts.OrderByDescending(c => c.BookCount).Select(c => c.TagId).FirstAsync(cancellationToken);
             middleAuthor = await authorCounts.Where(c => c.BookCount >= 5 && c.BookCount <= 20).Select(c => c.TagId).FirstAsync(cancellationToken);
+            prolificName = await db.Tags.Where(t => t.Id == prolificAuthor).Select(t => t.Name).SingleAsync(cancellationToken);
+            middleName = await db.Tags.Where(t => t.Id == middleAuthor).Select(t => t.Name).SingleAsync(cancellationToken);
             bigSeries = await db.TagCounts.Where(c => db.Tags.Any(t => t.Id == c.TagId && t.FieldId == seriesField))
                 .OrderByDescending(c => c.BookCount).Select(c => c.TagId).FirstAsync(cancellationToken);
             fiction = await db.Tags.Where(t => t.Name == "Fiction" && t.FieldId != null).Select(t => t.Id).FirstAsync(cancellationToken);
@@ -103,6 +109,20 @@ public static class RunCommand
             ("authors A-Z, first page", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, null, 100, cancellationToken))!.Items.Count),
             ("authors A-Z, middle page", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, middleValueCursor, 100, cancellationToken))!.Items.Count),
             ("book detail", DetailBudget, async i => await books.GetAsync(tenant.Id, open, sampleIds[i], cancellationToken) is null ? 0 : 1),
+            // Search (agents/docs/features/search.md): each title word is on about 2 % of the books (the generator's word list),
+            // a file name (the id) on one; author names reach books through the tag-name index.
+            ("search: a word in many titles", SearchBudget, _ => List(open, new BookPageRequest(Query: "night"))),
+            ("search: a word in many titles, middle page", SearchBudget, _ => List(open, new BookPageRequest(After: titleCursor, Query: "night"))),
+            ("search: two common words", SearchBudget, _ => List(open, new BookPageRequest(Query: "night river"))),
+            ("search: two letters (a prefix of many words)", SearchBudget, _ => List(open, new BookPageRequest(Query: "ri"))),
+            ("search: a file name (one book)", SearchBudget, i => List(open, new BookPageRequest(Query: sampleIds[i].ToString(CultureInfo.InvariantCulture)))),
+            ("search: the prolific author's last name", SearchBudget, _ => List(open, new BookPageRequest(Query: prolificName.Split(' ')[^1]))),
+            ("search: an author with 5-20 books, by field", SearchBudget, _ => List(open, new BookPageRequest(Query: $"author:\"{middleName}\""))),
+            ("search: an author by word and a title word", SearchBudget, _ => List(open, new BookPageRequest(Query: $"author:{middleName.Split(' ')[^1]} night"))),
+            ("search: category Fiction, no PDF, by author", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Author, Query: "category:Fiction -format:pdf"))),
+            ("search: books outside any series, newest", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Added, Query: "-series:"))),
+            ("suggestions: two letters", SearchBudget, async _ => (await suggestions.SuggestAsync(tenant.Id, "ri", libraryId, open, cancellationToken)).Items.Count),
+            ("suggestions: an author's first letters", SearchBudget, async _ => (await suggestions.SuggestAsync(tenant.Id, $"author:{middleName[..3]}", libraryId, open, cancellationToken)).Items.Count),
         };
         foreach (var (name, visibility) in filtered)
         {
@@ -110,6 +130,7 @@ public static class RunCommand
             scenarios.Add(($"{name} ({FilterShare(name)}), by title, middle page", ListBudget, _ => List(visibility, new BookPageRequest(After: titleCursor))));
         }
 
+        scenarios.RemoveAll(s => !s.Name.Contains(only, StringComparison.OrdinalIgnoreCase));
         using var capture = new CommandCapture();
         var results = new List<ScenarioResult>();
         foreach (var (name, budget, run) in scenarios)

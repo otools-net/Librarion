@@ -5,7 +5,7 @@
 - **Librarion** (the logo) goes back to the home page: the library ([browsing](browsing.md)).
 - **The library** you are browsing comes next. With more than one library, it is a button: pick another library from
   its list. The choice is kept by this browser. With a single library, its name is just shown.
-- **Search** sits in the middle (it starts working with the search stage).
+- **Search** sits in the middle: words, authors, `author:"Name"` and more, with suggestions as you type ([Searching](searching.md)).
 - **Your initial** at the right opens the account menu:
   - **My account:** your preferences and password ([your account](account.md)).
   - **Administration**, if your account may administer anything.

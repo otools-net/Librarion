@@ -101,6 +101,50 @@ public sealed class CatalogQueryTests
     }
 
     [TestMethod]
+    [DataRow(BookSort.Title)]
+    [DataRow(BookSort.Author)]
+    [DataRow(BookSort.Added)]
+    public async Task ASearchWalksEveryMatchOnceInOrderWhereverItStarts(BookSort sort)
+    {
+        // A title word on a few hundred books: under √(page × books) for big pages (the matches first, then sorted),
+        // over it for small ones (the sort index walked, each book tested).
+        var visibility = Everything();
+        List<(int Id, string Text)> all;
+        await using (var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel))
+        {
+            var ordered = sort switch
+            {
+                BookSort.Author => db.Books.OrderBy(b => b.SortAuthor).ThenBy(b => b.Id),
+                BookSort.Added => db.Books.OrderByDescending(b => b.Added).ThenByDescending(b => b.Id),
+                _ => db.Books.OrderBy(b => b.SortTitle).ThenBy(b => b.Id),
+            };
+            all = (await ordered.Where(b => b.MergedIntoId == null && b.MissingSince == null).Select(b => new { b.Id, b.SearchText }).ToListAsync(Cancel))
+                .Select(b => (b.Id, b.SearchText)).ToList();
+        }
+
+        var word = all.SelectMany(b => b.Text.Split(' ').Distinct()).Where(w => w.Length > 3).GroupBy(w => w)
+            .Select(g => (Word: g.Key, Count: g.Count())).OrderBy(g => Math.Abs(g.Count - 250)).First();
+        if (word.Count <= Math.Sqrt(5 * Books) || word.Count >= Math.Sqrt(200 * Books))
+            Assert.Inconclusive($"no word between the two plans' sizes (closest: {word})");
+        var expected = all.Where(b => b.Text.Split(' ').Any(w => w.StartsWith(word.Word, StringComparison.Ordinal))).Select(b => b.Id).ToList();
+
+        foreach (var limit in new[] { 5, 200 })
+        {
+            var found = new List<int>();
+            string? after = null;
+            do
+            {
+                var page = await Queries.ListAsync(_target.TenantId, visibility, new BookPageRequest(null, sort, after, limit, Query: $"title:{word.Word}*"), Cancel);
+                found.AddRange(page.Items.Select(b => b.Id));
+                after = page.Next;
+            }
+            while (after is not null);
+
+            CollectionAssert.AreEqual(expected, found, $"pages of {limit}");
+        }
+    }
+
+    [TestMethod]
     public async Task AFilteredGroupSeesOnlyItsBooks()
     {
         var accounts = _factory.Services.GetRequiredService<AccessService>();

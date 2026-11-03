@@ -87,6 +87,9 @@ test.describe('@admin', () => {
         await press(page.getByRole('dialog').getByRole('button', { name: 'Delete' }), isMobile);
         await expect(row).toBeHidden();
         await expect(page.getByRole('status').filter({ hasText: `Library ${libraryName} deleted.` })).toBeVisible();
+        // The layout check measures the page at rest: with the run's other libraries the row was further down, and
+        // scrolled there the breadcrumb sat against the sticky top bar's buttons (2026-11-03).
+        await page.evaluate(() => scrollTo({ top: 0 }));
     });
 
     test('a settings page counts its unsaved changes and asks before they are lost @desktop', async ({ page, isMobile }) => {

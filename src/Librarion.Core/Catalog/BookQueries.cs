@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Librarion.Core.Data;
+using Librarion.Core.Search;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 
@@ -17,7 +18,8 @@ public enum BookSort
 
 /// <param name="LibraryId">One library; null = every library the account browses.</param>
 /// <param name="TagId">Only books with this tag or a descendant (a field value's page: an author, a category).</param>
-public sealed record BookPageRequest(int? LibraryId = null, BookSort Sort = BookSort.Title, string? After = null, int Limit = 50, int? TagId = null);
+/// <param name="Query">A search in the search language (<see cref="Search.SearchQuery"/>); null or blank: no search.</param>
+public sealed record BookPageRequest(int? LibraryId = null, BookSort Sort = BookSort.Title, string? After = null, int Limit = 50, int? TagId = null, string? Query = null);
 
 /// <param name="Title">From the metadata; null when it gave none (<see cref="FileName"/> is shown).</param>
 /// <param name="FileName">The first file's name without its book extensions, for a book without a title.</param>
@@ -71,11 +73,17 @@ public sealed class BookQueries(TenantDb tenantDb)
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var limit = Math.Clamp(request.Limit, 1, MaxLimit);
         var query = await VisibleAsync(db, visibility, request.LibraryId, cancellationToken, limit);
+        var libraries = request.LibraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
+        if (!string.IsNullOrWhiteSpace(request.Query))
+        {
+            var fields = await BookSearch.FieldsAsync(db, cancellationToken);
+            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(request.Query, fields.ContainsKey), fields, libraries, limit, cancellationToken);
+        }
+
         if (request is { Sort: BookSort.Number, TagId: { } numbered })
             return await NumberedAsync(db, query, numbered, request.After, limit, cancellationToken);
         if (request.TagId is { } tagId)
         {
-            var libraries = request.LibraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
             var tags = await DescendantsAsync(db, [tagId], cancellationToken);
             query = query.Where(await NarrowAsync(db, [tagId], libraries, limit, cancellationToken) ? From(db, tags) : Probe(db, tags));
         }
@@ -120,7 +128,7 @@ public sealed class BookQueries(TenantDb tenantDb)
         var files = (await db.BookFiles.Where(f => ids.Contains(f.BookId)).Select(f => new { f.BookId, f.Id, f.Format, f.Path }).ToListAsync(cancellationToken))
             .GroupBy(f => f.BookId).ToDictionary(g => g.Key, g => g.OrderBy(f => f.Id).ToList());
         var seriesIds = rows.Where(r => r.SeriesId != null).Select(r => r.SeriesId!.Value).Distinct().ToList();
-        var series = await db.Tags.Where(t => seriesIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
+        var series = seriesIds.Count == 0 ? [] : await db.Tags.Where(t => seriesIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
 
         var items = rows.Select(r =>
         {
@@ -317,20 +325,20 @@ public sealed class BookQueries(TenantDb tenantDb)
     }
 
     /// <summary>The largest descendant list given to a query as values; a tag with more (a field: every author) is joined through the closure instead.</summary>
-    private const int MaxListedTags = 500;
+    internal const int MaxListedTags = 500;
 
     /// <summary>
     /// The tags and their descendants, resolved once: a book's test is then one seek on the key (BookId, TagId) of
     /// <see cref="BookTag"/>, not a join of each of its tags with the closure (the probe of a 1 % filter at 2M books).
     /// </summary>
-    private static async Task<TagSet> DescendantsAsync(LibrarionDbContext db, IReadOnlyList<int> tagIds, CancellationToken cancellationToken)
+    internal static async Task<TagSet> DescendantsAsync(LibrarionDbContext db, IReadOnlyList<int> tagIds, CancellationToken cancellationToken)
     {
         var listed = await db.TagClosure.Where(c => tagIds.Contains(c.AncestorId)).Select(c => c.DescendantId).Take(MaxListedTags + 1).ToListAsync(cancellationToken);
         return listed.Count > MaxListedTags ? new TagSet(tagIds, null) : new TagSet(tagIds, listed.Distinct().ToList());
     }
 
     /// <param name="Descendants">Every tag of the set with its descendants, when few enough to list; else null (joined through the closure).</param>
-    private sealed record TagSet(IReadOnlyList<int> Ancestors, IReadOnlyList<int>? Descendants);
+    internal sealed record TagSet(IReadOnlyList<int> Ancestors, IReadOnlyList<int>? Descendants);
 
     /// <summary>
     /// Whether books with one of <paramref name="tagIds"/> (or a descendant) are few enough to start from them. Two ways
@@ -351,7 +359,7 @@ public sealed class BookQueries(TenantDb tenantDb)
     }
 
     /// <summary>Books having one of the tags or a descendant, tested book by book (the outer query walks its sort index).</summary>
-    private static Expression<Func<Book, bool>> Probe(LibrarionDbContext db, TagSet tags)
+    internal static Expression<Func<Book, bool>> Probe(LibrarionDbContext db, TagSet tags)
     {
         if (tags.Descendants is { } listed)
             return b => db.BookTags.Any(l => l.BookId == b.Id && listed.Contains(l.TagId));
@@ -360,7 +368,7 @@ public sealed class BookQueries(TenantDb tenantDb)
     }
 
     /// <summary>Books having one of the tags or a descendant, gathered from the tags' links (index (TagId, BookId)).</summary>
-    private static Expression<Func<Book, bool>> From(LibrarionDbContext db, TagSet tags)
+    internal static Expression<Func<Book, bool>> From(LibrarionDbContext db, TagSet tags)
     {
         IQueryable<int> tagged;
         if (tags.Descendants is { } listed)
@@ -399,10 +407,10 @@ public sealed class BookQueries(TenantDb tenantDb)
         }
     }
 
-    private static Expression<Func<Book, bool>> Or(Expression<Func<Book, bool>>? left, Expression<Func<Book, bool>> right) =>
+    internal static Expression<Func<Book, bool>> Or(Expression<Func<Book, bool>>? left, Expression<Func<Book, bool>> right) =>
         left is null ? right : Combine(left, right, Expression.OrElse);
 
-    private static Expression<Func<Book, bool>> And(Expression<Func<Book, bool>> left, Expression<Func<Book, bool>> right) =>
+    internal static Expression<Func<Book, bool>> And(Expression<Func<Book, bool>> left, Expression<Func<Book, bool>> right) =>
         Combine(left, right, Expression.AndAlso);
 
     private static Expression<Func<Book, bool>> Combine(Expression<Func<Book, bool>> left, Expression<Func<Book, bool>> right, Func<Expression, Expression, BinaryExpression> join)

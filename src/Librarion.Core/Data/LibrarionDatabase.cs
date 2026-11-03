@@ -73,6 +73,8 @@ public static class LibrarionDatabase
         if (pending.Count > 0)
             logger.LogInformation("Bringing the database up: {Migrations}", string.Join(", ", pending));
         await db.Database.MigrateAsync(cancellationToken);
+        // The full-text index is not part of the model (FTS5 tables, expression indexes): made and filled here.
+        await Search.SearchIndexes.For(db).EnsureAsync(db, cancellationToken);
 
         var row = await db.ServerProperties.FindAsync([ServerProperties.Version], cancellationToken);
         if (row is null)

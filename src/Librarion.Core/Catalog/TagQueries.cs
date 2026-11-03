@@ -45,7 +45,9 @@ public sealed class TagQueries(TenantDb tenantDb)
     public async Task<IReadOnlyList<FieldInfo>> FieldsAsync(int tenantId, CancellationToken cancellationToken = default)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        // In key order: the index (TenantId, FieldKey) is walked; with "IS NOT NULL" alone SQLite scanned every tag.
         var fields = await db.Tags.Where(t => t.FieldKey != null)
+            .OrderBy(t => t.FieldKey)
             .Select(t => new { t.Id, t.FieldKey, t.Name, t.BuiltIn })
             .ToListAsync(cancellationToken);
         var order = BuiltInTags.Fields.Keys.ToList();
@@ -168,7 +170,7 @@ public sealed class TagQueries(TenantDb tenantDb)
     /// The tags the caller's content filters deny in the library, with their descendants (bounded): left out of the lists
     /// and their pages. A tag is denied when every group admitting the caller there denies it.
     /// </summary>
-    private static async Task<IReadOnlyList<int>> DeniedAsync(LibrarionDbContext db, int? libraryId, BookVisibility? visibility, CancellationToken cancellationToken)
+    internal static async Task<IReadOnlyList<int>> DeniedAsync(LibrarionDbContext db, int? libraryId, BookVisibility? visibility, CancellationToken cancellationToken)
     {
         if (visibility is null)
             return [];

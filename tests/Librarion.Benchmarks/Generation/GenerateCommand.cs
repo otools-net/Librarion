@@ -49,6 +49,7 @@ public static class GenerateCommand
             }
 
             await Load("Tags", CatalogGenerator.TagColumns, generator.Tags());
+            await Load("TagAliases", CatalogGenerator.AliasColumns, generator.TagAliases());
             await Load("TagParents", CatalogGenerator.ParentColumns, generator.TagParents());
             await Load("TagClosure", CatalogGenerator.ClosureColumns, generator.Closure());
             await Load("Archives", CatalogGenerator.ArchiveColumns, generator.Archives());

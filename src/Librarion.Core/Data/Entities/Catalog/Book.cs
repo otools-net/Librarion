@@ -22,6 +22,12 @@ public sealed class Book
     public string SortTitle { get; set; } = string.Empty;
 
     /// <summary>
+    /// The title and file name as searched (<see cref="Search.SearchText.ForBook"/>): folded words, indexed by the
+    /// provider's full-text index (agents/docs/features/search.md). Never null.
+    /// </summary>
+    public string SearchText { get; set; } = string.Empty;
+
+    /// <summary>
     /// The first author's sort name ("King, Stephen"), kept by imports and edits; empty without an author (not null:
     /// the providers sort nulls at opposite ends, and keyset paging needs one order).
     /// </summary>

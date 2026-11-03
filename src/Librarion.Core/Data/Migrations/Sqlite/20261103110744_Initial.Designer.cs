@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Librarion.Core.Data.Migrations.Sqlite
 {
     [DbContext(typeof(SqliteLibrarionDbContext))]
-    [Migration("20261101225029_Initial")]
+    [Migration("20261103110744_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -111,6 +111,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.Property<byte?>("Rating")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SearchText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("SeriesId")
                         .HasColumnType("INTEGER");
@@ -611,6 +615,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("TenantId", "FieldKey")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "IsHidden")
+                        .HasFilter("\"IsHidden\"");
 
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
 

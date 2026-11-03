@@ -148,6 +148,23 @@ export interface BookDetail {
     canDownload: boolean;
 }
 
+/** What the search box offers for the term being typed: a field to type a value of, or a value as a whole term. */
+export interface SearchSuggestion {
+    kind: 'field' | 'value';
+    /** The term put in place of the one being typed (`author:"Stephen King"`, `author:`). */
+    insert: string;
+    /** The value's name, or the field's key. */
+    name: string;
+    field: string | null;
+    bookCount: number | null;
+}
+
+/** Suggestions for the last term of a search; `from`: where that term starts in it. */
+export interface SuggestionList {
+    from: number;
+    items: SearchSuggestion[];
+}
+
 /** Why another book may be the same: a file of the same size and CRC, a shared identifier (`scheme`), the same title and author. */
 export interface BookDuplicate {
     book: BookListItem;

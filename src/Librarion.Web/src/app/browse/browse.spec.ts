@@ -78,7 +78,7 @@ describe('BrowsePage', () => {
 
         expect(element.querySelector('h1')?.textContent).toBe('Discworld');
         expect(element.querySelector('.browse-count')?.textContent).toBe('120 books');
-        expect(api.books).toHaveBeenCalledWith({ library: 5, sort: 'title', tag: null, after: null, limit: 30 });
+        expect(api.books).toHaveBeenCalledWith({ library: 5, sort: 'title', tag: null, q: null, after: null, limit: 30 });
         const books = [...element.querySelectorAll('.books.grid .book')];
         expect(books.map(b => b.querySelector('.book-title')?.textContent)).toEqual(['Book 1', 'book-2.fb2']);
         expect(books[0].querySelector('.book-series')?.textContent).toBe('Rincewind #1');
@@ -128,7 +128,7 @@ describe('BrowsePage', () => {
         api.books.mockResolvedValue(page(1, 3, null));
         const first = await render(api);
         first.fixture.destroy();
-        const kept = TestBed.inject(BrowseState).restore('books|5||title');
+        const kept = TestBed.inject(BrowseState).restore('books|5||title|');
         expect(kept?.items).toHaveLength(3);
 
         const fixture = TestBed.createComponent(BrowsePage);

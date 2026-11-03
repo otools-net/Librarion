@@ -76,8 +76,8 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
 
 ## Where tags show
 
-- Search: `tag:`, `-tag:`, ancestors included, `special:untagged`, hidden rule; `tag:"name (parent)"` for
-  disambiguation.
+- Search ([search](search.md)): `tag:`, `-tag:`, the tags under it included, the hidden rule (built); `special:untagged` and
+  `tag:"name (parent)"` for disambiguation (planned).
 - Content filters ([rights](rights.md)): allowed / denied tags per group, through `TagClosure`, joined at query time
   (D22).
 - OPDS: a Tags navigation feed by category → children, only tags the user can see, counts from `TagCounts`; Atom

@@ -64,6 +64,20 @@ test.describe('@a11y', () => {
         await audit(page, 'a book');
     });
 
+    test('search: the suggestions open, the results and the help', async ({ page }, testInfo) => {
+        await scannedLibrary(page, uniqueName('A11y search', testInfo), folder => {
+            fs.writeFileSync(path.join(folder, 'Clear Words.fb2'), fb2('Clear Words', 'Ada Reader'));
+        });
+        const box = page.getByRole('combobox', { name: 'Search books' });
+        await box.fill('reade');
+        await expect(page.locator('#search-suggestions').getByRole('option').first()).toBeVisible();
+        await audit(page, 'search suggestions');
+        await box.press('Enter');
+        await expect(page.locator('lib-search-page .book')).toHaveCount(1);
+        await page.locator('.search-help summary').tap();
+        await audit(page, 'search results');
+    });
+
     test('the page not found', async ({ page }) => {
         await page.goto('./missing');
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

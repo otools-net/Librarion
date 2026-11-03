@@ -95,6 +95,23 @@ public sealed class CatalogGenerator
         }
     }
 
+    public static readonly string[] AliasColumns = ["TenantId", "TagId", "Name", "NormalizedName"];
+
+    /// <summary>
+    /// Another spelling of every 50th author ("J. Smith" for "John Smith"), as merges leave them: the name lookups of
+    /// search plan over a table with rows (empty, PostgreSQL rightly read it whole and the plan check failed).
+    /// </summary>
+    public IEnumerable<object?[]> TagAliases()
+    {
+        for (var i = 0; i < _shape.Authors; i += 50)
+        {
+            var name = Names.Author(i);
+            var space = name.IndexOf(' ');
+            var alias = space > 0 ? $"{name[0]}. {name[(space + 1)..]}" : $"{name} (pen name)";
+            yield return [_target.TenantId, AuthorTag(i), alias, TagNames.Normalize(alias)];
+        }
+    }
+
     public static readonly string[] ParentColumns = ["TenantId", "ChildId", "ParentId"];
 
     /// <summary>Subcategories under their genre (field values are under their field through <c>FieldId</c>, not here).</summary>
@@ -161,7 +178,7 @@ public sealed class CatalogGenerator
 
     public static readonly string[] BookColumns =
     [
-        "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added",
+        "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SearchText", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added",
         "Updated", "CoverSource", "GeneratedTemplate", "GeneratedVariant", "CoverState", "MergedIntoId", "WorkKey", "MetadataSource",
     ];
 
@@ -173,7 +190,7 @@ public sealed class CatalogGenerator
             var sortAuthor = book.Authors.Length > 0 ? Truncate(TagNames.PersonSortName(Names.Author(book.Authors[0])), Book.MaxSortLength) : "";
             yield return
             [
-                id, _target.TenantId, _target.LibraryId, book.Title, BookTitles.SortKey(book.Title ?? book.FileStem), sortAuthor,
+                id, _target.TenantId, _target.LibraryId, book.Title, BookTitles.SortKey(book.Title ?? book.FileStem), Librarion.Core.Search.SearchText.ForBook(book.Title, book.FileStem), sortAuthor,
                 book.Series is { } s ? SeriesTag(s) : null, book.SeriesNumber, book.Description, book.Rating, book.Added, book.Added,
                 (int)(book.GeneratedCover ? CoverSource.Generated : CoverSource.Book),
                 book.GeneratedCover ? (short)(id % 5) : null, book.GeneratedCover ? (short)(id / 5 % 8) : null,

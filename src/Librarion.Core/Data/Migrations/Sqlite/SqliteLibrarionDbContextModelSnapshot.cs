@@ -109,6 +109,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<byte?>("Rating")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SearchText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("SeriesId")
                         .HasColumnType("INTEGER");
 
@@ -608,6 +612,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("TenantId", "FieldKey")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "IsHidden")
+                        .HasFilter("\"IsHidden\"");
 
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
 

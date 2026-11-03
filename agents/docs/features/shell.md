@@ -5,7 +5,7 @@ e2e `smoke.spec.ts`. User docs: `docs/user-guide/finding-your-way.md`. Plan: [st
 (D-5.9).
 
 - Top bar: menu button (phones) or back arrow (administration), brand, the place (library switcher, or "Administration"),
-  search (disabled until the search chunk), account menu (an initial in a disc). On phones the brand's name and the
+  search (`SearchBox`, with suggestions: [search](search.md)), account menu (an initial in a disc). On phones the brand's name and the
   switcher go away; the libraries are a line of chips at the top of the navigation sheet instead (scrolling sideways,
   the chosen one scrolled into view: a list pushed the navigation out of the sheet once the e2e tests had made ten).
 - `LibraryContext` holds the session's libraries (`GET api/libraries`: browsable ones, all for managers) and the one

@@ -18,6 +18,10 @@ async function downloaded(page: Page, start: () => Promise<void>): Promise<{ nam
 }
 
 test.describe('@browse', () => {
+    // scannedLibrary reloads the page while the progress panel's poll may be on its way: WebKit reports the fetch it
+    // cuts off as an "access control" error.
+    test.use({ allowedErrors: /api\/tasks\/running due to access control checks/ });
+
     test('a book\'s page shows it and downloads its files, loose or inside a ZIP @smoke @desktop', async ({ page, isMobile }, testInfo) => {
         const name = uniqueName('Book page', testInfo);
         const author = `Frank Dunes${name.slice(name.lastIndexOf('-') + 1)}`;
