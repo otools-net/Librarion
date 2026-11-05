@@ -2,6 +2,13 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## 0.6.1
+
+### Fixed
+
+- A book's page no longer gets wider than the screen on a phone held sideways: when there is little room beside the
+  cover, a field's name goes above its values, and a long value wraps.
+
 ## 0.6.0
 
 ### Changed

@@ -37,6 +37,10 @@
 
 .book-main {
     min-width: 0;
+    /* Its fields stack their label above the values when it is narrow (the @container rule after .book-field),
+       whatever the screen: beside the cover on a landscape phone it has ~200 px, and a 9rem label left the values
+       44 px (a chip spilled past the screen in CI's wider Linux font). */
+    container-type: inline-size;
 }
 
 .book-main .tag-kind {
@@ -106,6 +110,13 @@
     gap: var(--space-3);
 }
 
+@container (max-width: 400px) {
+    .book-field {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-1);
+    }
+}
+
 .book-fields dt,
 .book-details dt {
     color: var(--text-muted);
@@ -126,7 +137,11 @@
 }
 
 .book-fields .chip {
+    max-width: 100%;
     text-decoration: none;
+    /* A long value wraps inside its chip: beside the label the values may have 90 px (landscape phones). */
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .book-details {

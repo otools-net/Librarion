@@ -21,6 +21,12 @@ Code: `app/books/book-page.ts` (`BookPage`, route `books/:id`, loaded on first u
   Try again. The duplicates are asked after the book; their failure only leaves the panel out.
 - **Back:** browser back when the page was opened from the app (`Router.navigated` when constructed), else the
   library. The list's place comes back from `BrowseState` ([browse](browse.md)).
+- Narrow head: `.book-main` is a size container; below 400 px of its own width a field's label goes above its values
+  (`@container`, placed after the `.book-field` rule or the base rule wins). Beside the cover on a landscape phone it
+  has ~200 px: the 9rem label left the values 44 px and "Fantasy" spilled past the screen with CI's wider Linux font
+  (DejaVu Sans; Verdana with a little letter spacing reproduces it on Windows). Chips there also wrap inside.
+- e2e downloads: WebKit on Linux saves "Sand Messiah.fb2" as "Sand_Messiah.fb2"; `book.spec.ts` compares the name in the
+  server's `Content-Disposition` and allows the browser's `_`.
 
 ## Possible duplicates (read only until merging, [merging](merging.md))
 
