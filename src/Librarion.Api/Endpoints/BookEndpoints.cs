@@ -4,6 +4,7 @@ using Librarion.Core.Catalog;
 using Librarion.Core.Covers;
 using Librarion.Core.Reading;
 using Librarion.Core.Search;
+using Librarion.Core.Tagging;
 
 namespace Librarion.Api.Endpoints;
 
@@ -141,6 +142,14 @@ public static class BookEndpoints
             })
             .WithName("GetTag")
             .WithSummary("A tag or field value: its field, the tags it is under and those under it, its book count in `library`; its books are `GET api/books?tag=`.");
+
+        tags.MapGet("/tags/pick", async (string? field, string? q, int? limit, HttpContext context, CurrentAccess current, BookVisibilities visibilities, TagPicker picker) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                return await picker.FindAsync(tenantId, field, q, limit ?? 10, visibility, context.RequestAborted) is { } found ? Results.Ok(found) : Results.NotFound();
+            })
+            .WithName("PickTags")
+            .WithSummary("The tag picker's suggestions: tags of `field` (none: plain tags) whose name or other name starts with `q`, whose shorthand is `q`, or whose name has its words; the typed name first, then the most used; `exact` when one is named so.");
 
         tags.MapGet("/tags/{id:int}/moved", async (int id, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities, TagQueries queries) =>
             {

@@ -54,11 +54,33 @@ sort columns per batch), `Core/Merging/TagMerger.cs` (merges, undo: [merging](me
 - Known limit: a closure change while an import writes a batch can leave that batch counted with the old ancestors
   (the version is read per batch). No full recount exists yet: a drift stays until the books are counted again.
 
+## The tag picker (built, stage 6 chunk 5)
+
+Code: `shared/tag-picker.ts` (`TagPicker`, `lib-tag-picker`), styles `styles/tags.css` (with the color dot); server
+`Core/Tagging/TagPicker.cs`, `GET api/tags/pick?field&q&limit` (`library.browse`; the caller's content filters apply);
+tests `shared/tag-picker.spec.ts`, `TagPickerTests` (both providers), e2e `specs/tags.spec.ts` (a tap on phones, the
+arrows and Enter on the desktop). A port of SFE's `tag-picker.component.ts`.
+
+- The same component wherever a tag is chosen: `field` scopes it (a field's key; null: plain tags), `exclude` leaves
+  out those already chosen, `allowCreate` adds "Create “name”" unless the server says a tag has that name (`exact`);
+  `picked` and `create` are the host's to act on (the host makes the tag, with its own right).
+- Matches, each capped at 100 candidates and read by index: the normalized name's prefix (`(TenantId, FieldId,
+  NormalizedName)`), another name's prefix (`TagAliases (TenantId, NormalizedName)`, then kept to the field), the
+  shorthand whole as typed or in either case (`(TenantId, Shorthand)`, filtered on not null), the name's words (the
+  tag-name index, last word a prefix). Ranked: the typed name first, then by books (the totals of 4a, every library),
+  then by name; nothing typed: the first by sort name (an arrow in an empty box lists them).
+- Each option: color dot, name, the disambiguating parent in brackets, "Also called …" when found only by another
+  name, the shorthand, the books. The list is in the flow under the box (not floating: dialogs and phone sheets scroll
+  with it), at most 8 options.
+- Behaviour from SFE: 150 ms after typing, a later answer wins (earlier ones dropped), Escape closes the list and not
+  the dialog (`stopPropagation`), a press elsewhere waits for its release before the list closes (else the tap misses
+  the option that moved), `mousedown` on an option keeps the focus in the box.
+
 ## The tag manager (built, stage 6 chunk 4)
 
 Code: `admin/tags-section.ts` (Administration › Catalog › Tags: pages `tags` and `merges`), `admin/tag-editor.ts`,
-`admin/tag-merge.ts`, `admin/tag-search.ts` (its own small finder, until chunk 5's shared picker), styles at the end of
-`styles/admin.css`; server `Core/Tagging/TagLists.cs`, routes `GET api/tags/manage/fields`, `GET api/tags/manage`;
+`admin/tag-merge.ts` (parents and a merge's target chosen with the shared [picker](#the-tag-picker-built-stage-6-chunk-5)),
+styles at the end of `styles/admin.css`; server `Core/Tagging/TagLists.cs`, routes `GET api/tags/manage/fields`, `GET api/tags/manage`;
 tests `tags.spec.ts` (client), `TagCurationTests.TheManagerListsEveryTagByKeyAndFindsThem`, e2e `specs/tags.spec.ts`
 (every device), axe on the list, the editor (both themes) and the merges.
 
@@ -132,7 +154,7 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
   a task.
 - `TagGraph` (names, aliases, parents) in memory per tenant, reloaded on a version change (50k tags ≈ a few MB); the
   big fields' values (authors, series) stay in the database, looked up by index ([metadata-tags](metadata-tags.md)).
-- Picker suggestions by prefix on name/alias/shorthand with an index, capped.
+- Picker suggestions by prefix on name/alias, whole shorthand and words, each by an index and capped (`TagPicker`).
 - Tag names are not copied into the books' search documents: free text reaches tags through the tag-name index (D20,
   [metadata-tags](metadata-tags.md)), so a rename or merge never re-indexes books.
 - `TagCounts` changes are summed per batch and written once per tag and batch (no hot row for `category:Fiction`

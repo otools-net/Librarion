@@ -31,6 +31,10 @@ Choose a tag in the list:
   the tags under it. A plain tag goes under plain tags, a field's value under values of the same field.
 - **Told apart by:** with two tags of the same name, one of its parents shown after it ("Freddy (FNAF)").
 
+Wherever a tag is chosen, typing lists the tags whose name or other name starts with what you typed, whose shorthand
+it is, or whose name has its words ("king" finds Stephen King), the most used first, each with its color, its books and
+the other name it was found by. Choose one with a tap, or with the arrow keys and Enter; Escape closes the list.
+
 **Save** applies it at once. Built-in tags (Meta Tags, Archived and the built-in fields) can be edited but not deleted;
 the built-in fields keep their names.
 

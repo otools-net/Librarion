@@ -733,6 +733,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId", "IsHidden")
                         .HasFilter("\"IsHidden\"");
 
+                    b.HasIndex("TenantId", "Shorthand")
+                        .HasFilter("\"Shorthand\" IS NOT NULL");
+
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
 
                     b.HasIndex("TenantId", "FieldId", "SortName", "Id");

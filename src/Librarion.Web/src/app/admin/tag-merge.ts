@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
-import { ManagedField, ManagedTag, TagWork } from '../core/models';
+import { ManagedField, ManagedTag, PickedTag, TagWork } from '../core/models';
 import { Sheet } from '../shared/sheet';
-import { TagSearch } from './tag-search';
+import { TagPicker } from '../shared/tag-picker';
 
 /** What is merged: a tag of `field` (null: a plain tag), or the field itself (`tag` null). */
 export interface MergeSource {
@@ -19,7 +19,7 @@ export interface MergeSource {
  */
 @Component({
     selector: 'lib-tag-merge',
-    imports: [TranslatePipe, Sheet, TagSearch],
+    imports: [TranslatePipe, Sheet, TagPicker],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <lib-sheet [heading]="'tagAdmin.mergeTitle' | t: { name: sourceName() }" (closed)="closed.emit()">
@@ -28,7 +28,7 @@ export interface MergeSource {
                     <p class="confirm-message">{{ 'tagAdmin.mergeInto' | t: { source: sourceName(), target: target.name, count: source().tag!.books } }}</p>
                     <button type="button" class="button" (click)="target$.set(null)">{{ 'tagAdmin.mergeOther' | t }}</button>
                 } @else {
-                    <lib-tag-search inputId="merge-target" [label]="'tagAdmin.mergeTarget' | t" [field]="source().field?.key ?? null"
+                    <lib-tag-picker inputId="merge-target" [label]="'tagAdmin.mergeTarget' | t" [field]="source().field?.key ?? null"
                                     [exclude]="[source().tag!.id]" (picked)="target$.set($event)" />
                     <span class="field-hint">{{ 'tagAdmin.mergeTargetHint' | t }}</span>
                 }
@@ -67,7 +67,7 @@ export class TagMerge {
     readonly closed = output<void>();
 
     protected readonly sheet = viewChild(Sheet);
-    protected readonly target$ = signal<ManagedTag | null>(null);
+    protected readonly target$ = signal<PickedTag | null>(null);
     protected readonly target = this.target$.asReadonly();
     protected readonly fieldKey = signal('');
     protected readonly busy = signal(false);

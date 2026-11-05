@@ -127,6 +127,8 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(t => new { t.TenantId, t.FieldId, t.NormalizedName });
             entity.HasIndex(t => new { t.TenantId, t.FieldId, t.SortName, t.Id });
             entity.HasIndex(t => new { t.TenantId, t.FieldKey }).IsUnique();
+            // The tag picker's shorthand match (TagPicker).
+            entity.HasIndex(t => new { t.TenantId, t.Shorthand }).HasFilter("\"Shorthand\" IS NOT NULL");
             // The few hidden tags, found without reading 650k (search leaves their books out: agents/docs/features/search.md).
             entity.HasIndex(t => new { t.TenantId, t.IsHidden }).HasFilter("\"IsHidden\"");
             Filter(entity, t => t.TenantId == CurrentTenantId);

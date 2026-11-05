@@ -143,9 +143,10 @@ describe('TagsSection', () => {
     it('merges a tag into one found by name, saying what moves first', async () => {
         const api = mockApi();
         api.managedFields.mockResolvedValue(FIELDS);
-        api.managedTags.mockResolvedValueOnce({ items: [tag()], next: null, capped: false })
-            .mockResolvedValueOnce({ items: [tag(), tag({ id: 9, name: 'Fantasy (genre)' })], next: null, capped: false })
-            .mockResolvedValue({ items: [], next: null, capped: false });
+        api.managedTags.mockResolvedValue({ items: [tag()], next: null, capped: false });
+        // The shared picker; the tag being merged is left out.
+        const picked = (id: number, name: string) => ({ id, name, color: null, field: null, shorthand: null, alias: null, parent: null, books: 3 });
+        api.pickTags.mockResolvedValue({ items: [picked(7, 'Fantasy'), picked(9, 'Fantasy (genre)')], exact: false });
         api.tagDefinition.mockResolvedValue(definition());
         api.mergeTag.mockResolvedValue({ runId: null, logId: 4, links: 1234 });
         const { element, stable } = await render(api);
@@ -159,6 +160,7 @@ describe('TagsSection', () => {
         find.dispatchEvent(new Event('input'));
         await stable(250);
         const options = [...element.querySelectorAll<HTMLElement>('[role="option"]')];
+        expect(api.pickTags).toHaveBeenLastCalledWith(null, 'fant', 10);
         expect(options.map(o => o.textContent)).toEqual([expect.stringContaining('Fantasy (genre)')]);
         options[0].click();
         await stable();

@@ -220,6 +220,24 @@ export interface FieldValue {
 }
 
 /** A tag in another's detail; `field`: its field's key, null for a plain tag. */
+/** A tag the picker offers (`api/tags/pick`): `alias` the other name it was found by, `parent` the one telling it apart. */
+export interface PickedTag {
+    id: number;
+    name: string;
+    color: string | null;
+    field: string | null;
+    shorthand: string | null;
+    alias: string | null;
+    parent: string | null;
+    books: number;
+}
+
+export interface PickedTags {
+    items: PickedTag[];
+    /** A tag has the typed name itself: no "Create" then. */
+    exact: boolean;
+}
+
 export interface TagRef {
     id: number;
     name: string;

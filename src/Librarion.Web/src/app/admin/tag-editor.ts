@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, i
 import { Api } from '../core/api.service';
 import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
-import { ManagedField, ManagedTag, TagDefinition, TagInput } from '../core/models';
+import { ManagedField, ManagedTag, PickedTag, TagDefinition, TagInput } from '../core/models';
 import { Icon } from '../shared/icon';
 import { Sheet } from '../shared/sheet';
-import { TagSearch } from './tag-search';
+import { TagPicker } from '../shared/tag-picker';
 
 interface TagDraft {
     name: string;
@@ -35,7 +35,7 @@ export interface TagEditorTarget {
  */
 @Component({
     selector: 'lib-tag-editor',
-    imports: [TranslatePipe, Sheet, Icon, TagSearch],
+    imports: [TranslatePipe, Sheet, Icon, TagPicker],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <lib-sheet [heading]="heading()" [subtitle]="subtitle()" (closed)="closed.emit()">
@@ -122,7 +122,7 @@ export interface TagEditorTarget {
                                     }
                                 </ul>
                             }
-                            <lib-tag-search inputId="tag-parent" [label]="'tagAdmin.addParent' | t" [field]="target().field?.key ?? null"
+                            <lib-tag-picker inputId="tag-parent" [label]="'tagAdmin.addParent' | t" [field]="target().field?.key ?? null"
                                             [exclude]="excluded()" (picked)="addParent($event)" />
                             <span class="field-hint">{{ 'tagAdmin.parentsHint' | t }}</span>
                             @if (errors()['parentIds']; as error) {
@@ -233,7 +233,7 @@ export class TagEditor implements OnInit {
         this.draftState.update(draft => draft && { ...draft, ...change });
     }
 
-    protected addParent(tag: ManagedTag): void {
+    protected addParent(tag: PickedTag): void {
         this.draftState.update(draft => draft && { ...draft, parents: [...draft.parents, { id: tag.id, name: tag.name }] });
     }
 

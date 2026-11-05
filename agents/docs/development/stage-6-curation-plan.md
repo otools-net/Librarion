@@ -108,7 +108,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        **Built** with a cached ancestor lookup in the importer's one upsert per batch; measured 2026-11-05 on
        PostgreSQL: INPX 1M 9.0 min (9.2 before), Calibre 2M 28.4 min (28.2; budget 30), unchanged re-imports 38 s
        and 2.7 min: no measurable cost, far under the 20-40 % estimated.
-5. [ ] The tag picker (port of SFE's): prefix on name, alias and shorthand through the index, capped; scoped to a
+5. [x] The tag picker (port of SFE's): prefix on name, alias and shorthand through the index, capped; scoped to a
        field; "Create"; chips with colors; keyboard and touch.
 6. [ ] A book's tags and metadata edited on its page (D-6.3): plain tags (`tags.assign`), fields with the scoped
        picker, author order by drag, series number in place, title, description, rating; suppression when an imported
@@ -161,7 +161,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 ### 6.1 Curation screens
 - [ ] Administration › Catalog: Tags (manager, editor, merge, delete), Imported tags (mappings, bulk actions,
       coverage), Cover styles, Duplicates.
-- [ ] The tag picker, shared by every screen that chooses a tag.
+- [x] The tag picker, shared by every screen that chooses a tag (the tag manager's parents and merges so far).
 
 ### 6.2 Tagging and editing books
 - [ ] A book's tags and metadata on its page; edits kept through re-imports; suppressions.

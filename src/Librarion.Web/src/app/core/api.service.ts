@@ -6,7 +6,7 @@ import {
     BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
-    TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput,
+    PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
 /** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
@@ -145,6 +145,8 @@ export class Api {
     movedTag = (id: number, library?: number) => this.get<TagRef>(`api/tags/${id}/moved`, { library });
 
     /** The tag manager (`tenant.tags`): the fields with their value counts; a field's tags (`field` null: plain tags) by key, or found by `q`. */
+    /** The tag picker's suggestions: tags of `field` (null: plain tags) found by what is typed. */
+    pickTags = (field: string | null, q: string, limit = 10) => this.get<PickedTags>('api/tags/pick', { field, q, limit });
     managedFields = () => this.get<ManagedFields>('api/tags/manage/fields');
     managedTags = (field: string | null, query: { q?: string | null; after?: string | null; limit?: number } = {}) =>
         this.get<ManagedPage>('api/tags/manage', { field: field ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit });

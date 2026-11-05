@@ -6,6 +6,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- Choosing a tag (a parent, the tag a merge goes into) finds it by its other names and its shorthand too, the most
+  used first, with its color, books and the name it was found by; the arrow keys and Enter choose.
 - Readable addresses for authors, series and every tag: `/author/1234/Stephen King`, `/tag/5/To read`. The number
   finds the page and the name is only for reading: an address without it, with an old name or the old `/tags/1234`
   shows the current one, and a merged tag's address opens the tag it went into.

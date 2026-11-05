@@ -135,3 +135,5 @@ provider.
   480–780 ms on SQLite at 2M, 5,000 290–420, budget 300); kept by the user (2026-11-05), with "2,000+ books" past it
   so the user knows there are more. Without a search, fields of more than 2,000 values (authors) have no facet (no
   index by count). Shown as Refine: a button by Sort opening a sheet, on the library page and the search results.
+- Flaky once (2026-11-05, desktop, full e2e run): `search.spec.ts` "the top bar finds books by words and suggests
+  authors" failed a `toHaveText`; it passed 3 times alone and on the other devices. Watch it.

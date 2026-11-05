@@ -1032,6 +1032,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 filter: "\"IsHidden\"");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tags_TenantId_Shorthand",
+                table: "Tags",
+                columns: new[] { "TenantId", "Shorthand" },
+                filter: "\"Shorthand\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TaskRuns_Outcome",
                 table: "TaskRuns",
                 column: "Outcome");

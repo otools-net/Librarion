@@ -1,0 +1,85 @@
+/* Tags wherever they are chosen (stage 6): the color dot, the shared tag picker (shared/tag-picker.ts) and its list
+   under the box, in the flow (a dialog or sheet scrolls with it; nothing floats off a phone's screen). */
+.tag-dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    margin-inline-end: var(--space-2);
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
+    vertical-align: middle;
+}
+
+.tag-picker {
+    display: block;
+}
+
+.tag-picker input {
+    width: 100%;
+}
+
+.tag-picker-list {
+    max-height: 320px;
+    margin: var(--space-1) 0 0;
+    padding: var(--space-1);
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.tag-picker-list [role="option"] {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+.tag-picker-list [role="option"][aria-selected="true"],
+.tag-picker-list [role="option"]:hover {
+    background: var(--surface-2);
+}
+
+.tag-picker-list .create {
+    font-weight: 600;
+}
+
+.tag-picker-list svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.tag-picker-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.tag-picker-parent,
+.tag-picker-detail,
+.tag-picker-books {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.tag-picker-detail {
+    display: block;
+}
+
+.tag-picker-shorthand {
+    padding: 0 var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
+}
+
+.tag-picker-books {
+    margin-inline-start: auto;
+    white-space: nowrap;
+}

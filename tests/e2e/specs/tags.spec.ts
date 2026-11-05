@@ -41,8 +41,18 @@ test.describe('@tags', () => {
         await press(list.getByRole('button', { name: child }), isMobile);
         await press(page.getByRole('dialog', { name: child }).getByRole('button', { name: 'Merge' }), isMobile);
         const merge = page.getByRole('dialog', { name: `Merge ${child}` });
-        await merge.getByRole('combobox', { name: 'Merge into' }).fill(parent);
-        await press(merge.getByRole('option').filter({ hasText: parent }), isMobile);
+        // The shared picker: a tap on a phone, the arrows and Enter with a keyboard.
+        const into = merge.getByRole('combobox', { name: 'Merge into' });
+        await into.fill(parent);
+        const option = merge.getByRole('option').filter({ hasText: parent });
+        if (isMobile) {
+            await press(option, isMobile);
+        } else {
+            await expect(option).toHaveAttribute('aria-selected', 'true');
+            await into.press('ArrowDown');
+            await into.press('ArrowUp');
+            await into.press('Enter');
+        }
         await expect(merge).toContainText(`becomes another name of ${parent}`);
         await press(merge.getByRole('button', { name: 'Merge', exact: true }), isMobile);
         await expect(page.getByRole('status').filter({ hasText: 'Merged.' })).toBeVisible();
