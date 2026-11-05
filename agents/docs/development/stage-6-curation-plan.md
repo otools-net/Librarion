@@ -5,8 +5,7 @@ imported tags and fix what the metadata lacks**: tags and fields managed, books 
 the thousand, covers fixed, duplicate books and tags found and merged, every merge reversible. Version stays on
 `edge`; the merge into `main` makes it `0.7.0`.
 
-Written 2026-11-05, **not started**. The decisions below are proposals: the user confirms or changes them (and answers
-the open questions) before chunk 1.
+Written 2026-11-05. Decisions confirmed by the user's answers (2026-11-05), below.
 
 Feature notes this stage builds (their "planned" parts become built): [tags](../features/tags.md),
 [metadata-tags](../features/metadata-tags.md), [merging](../features/merging.md),
@@ -36,13 +35,14 @@ metadata editing and cover upload behave (behaviour only, its GPL-3 code is neve
   actions; Escape clears.
 - **Duplicates:** groups found by keys, a page of them, compare side by side, keep one.
 
-## Proposed decisions (to confirm)
+## Decisions for this stage (confirmed by the user, 2026-11-05)
 
 - **D-6.1 Rights first:** `tags.assign` (tag books with plain tags), `tags.manage` (create, edit, merge, delete tag
   and field definitions), `tags.importMappings` (the Imported tags page), `tags.defaults` (library and folder default
   tags), `books.edit` (title, fields, description, rating, series number, cover; this is the `metadata.edit` of the
   notes, named as the other book rights), `books.merge` (merge, split, undo, not a duplicate). Library-scoped except
-  `tags.manage` (tenant: the vocabulary is per tenant, D9). Default groups: Administrators all of them; a Curators group: Q1.
+  `tags.manage` (tenant: the vocabulary is per tenant, D9). Default groups: Administrators all of them, and a new **built-in Curators group** (Q1) with all of them but no
+  account, group or tenant rights.
 - **D-6.2 Where curation lives:** a new administration group **Catalog** (Tags, Imported tags, Duplicates, Cover
   styles), sub-pages as stage 5's; editing a book stays on its page (an Edit button for `books.edit`), tagging a
   selection or scope from the library and search lists.
@@ -51,38 +51,35 @@ metadata editing and cover upload behave (behaviour only, its GPL-3 code is neve
   [tags](../features/tags.md#imported-tags)); a removed imported tag writes a suppression. Nothing is written back
   into book files or Calibre.
 - **D-6.4 Big changes are background runs:** a merge, delete, scope tagging or bulk merge touching more than a
-  threshold of links (proposed 10,000) runs as a task in the existing task system (progress panel, cancel, history),
+  threshold of **10,000 links** (Q2) runs as a task in the existing task system (progress panel, cancel, history),
   batches of 1,000 keyed on `Books.Id`; below it, inline. `TagCounts` and `Libraries.BookCount` adjusted per batch,
   never recomputed whole.
 - **D-6.5 Undo through `MergeLog`:** every tag merge, field merge, book merge and split writes what moved; undo while
   no later change conflicts (else it says what blocks it). Logs kept (small rows); listed in the Duplicates and Tags
   sections.
-- **D-6.6 Duplicate groups stored:** `DuplicateGroups` / `DuplicateMembers` built once by a background run over the
+- **D-6.6 Duplicate groups stored (Q3):** `DuplicateGroups` / `DuplicateMembers` built once by a background run over the
   catalog (blocking keys only, groups above 50 dropped as noise), then kept by imports and edits; `NotDuplicates`
   pairs and "unique" marks respected across re-imports. The Similar level (edit distance) stays on demand (D21).
 - **D-6.7 Covers:** upload (JPEG / PNG / WebP, size and pixel caps, decoded and re-encoded, hostile images refused)
-  stored under the work folder per tenant; Change cover style picks a template and palette (kept across re-imports);
+  stored as files under the work folder per tenant, the database keeping the path and hash (Q5); Change cover style picks a template and palette (kept across re-imports);
   templates on / off per tenant with "reassign books of this template" as a background run (D15).
 
-## Open questions for the user (answers go into the decisions above)
+## The user's answers (2026-11-05)
 
-- **Q1 Curators:** a built-in Curators group (tag, edit, merge, imported tags; not tenant settings or accounts), or
-  only the Administrators group, with tenants making their own?
-- **Q2 The threshold of D-6.4** (10,000 links inline): costly at scale either way; a lower threshold means more
-  progress panels, a higher one longer requests (a merge of 10k links ≈ 10 batches).
-- **Q3 Duplicate groups at 2M (D-6.6):** the first build reads every book's keys once (minutes, a background run,
-  measured in chunk 11) and adds two tables of up to a few hundred thousand rows; the alternative, groups on demand
-  per book as today, can't list "all duplicates by size" for the Duplicates page. Recommendation: stored.
-- **Q4 Same-file auto merge at import** is on today with no switch; the tenant setting to turn it off: default on?
-- **Q5 Uploaded covers:** kept in the work folder (backed up with it) or in the database? Recommendation: work folder,
-  the database keeps the path and hash.
+- **Q1 Curators:** a built-in Curators group (tag, edit, merge, imported tags; not accounts, groups or tenant
+  settings), as Administrators: can't be deleted.
+- **Q2 Threshold:** 10,000 links; above it a background run (progress panel, Cancel, history), below it inline.
+- **Q3 Duplicate groups:** stored, built once by a background run, then kept by imports and edits.
+- **Q4 Same-file merge at import:** not asked; today's behaviour kept as the default (on), the tenant setting turns it
+  off. The user may change it.
+- **Q5 Uploaded covers:** files in the work folder per tenant; the database keeps the path and hash.
 
 ## Todo (the order of work; as stage 5: one chunk at a time, commit it, then ask before the next)
 
 A session may end early: this list is the state of the work. Tick a chunk when it is committed. Chunks are commits on
 `edge` only: the version is bumped once, when the stage is complete and merged.
 
-0. [ ] The user confirms D-6.1–D-6.7 and answers Q1–Q5; this plan updated.
+0. [x] The user confirms D-6.1–D-6.7 and answers Q1–Q5; this plan updated.
 1. [ ] Rights (D-6.1): catalog entries, default groups, texts, `core/rights.ts`, the client hiding what needs them;
        `EveryRouteNamesARight` and the rights editor show them.
 2. [ ] Tag service: create and edit (name, shorthand, color, category, hidden, disambiguation parent), aliases,
@@ -109,7 +106,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 10. [ ] Covers (D-6.7): upload with Replace / Remove on the book page, Change cover style (template and palette
         picker with previews), Administration › Catalog › Cover styles (templates on / off, reassign as a run).
 11. [ ] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
-        (resumable), groups kept by imports and edits, the noise cap, `NotDuplicates`; the same-file setting (Q4);
+        (resumable), groups kept by imports and edits, the noise cap, `NotDuplicates`; the same-file setting (Q4: on by default);
         benchmark: the build and the planted duplicates found at 2M within budget.
 12. [ ] Administration › Catalog › Duplicates and Compare and merge: groups by level and size, compare side by side
         (stacked on phones), choices per single value, merge (files, links, identifiers move; the old id redirects in
