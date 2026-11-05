@@ -32,10 +32,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   parents, color, category and hidden; Merge and Delete, each saying first how many books change; and Merges, where a
   merge is undone. See [Tags](docs/administration/tags.md).
 
+## 0.6.1
+
 ### Fixed
 
-- A book's page no longer gets wider than the screen on a phone held sideways when a field has a long value: the value
-  wraps inside its chip.
+- A book's page no longer gets wider than the screen on a phone held sideways: when there is little room beside the
+  cover, a field's name goes above its values, and a long value wraps.
 
 ## 0.6.0
 
