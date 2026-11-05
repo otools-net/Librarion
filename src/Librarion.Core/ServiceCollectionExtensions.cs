@@ -49,6 +49,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<BookVisibilities>();
         services.AddSingleton<BookQueries>();
         services.AddSingleton<TagQueries>();
+        services.AddSingleton<Librarion.Core.Search.SearchSuggestions>();
+        services.AddSingleton<Librarion.Core.Search.SearchFacets>();
         services.AddSingleton<Librarion.Core.Reading.BookDownloads>();
         var cacheOptions = configuration.GetSection(CacheOptions.SectionName).Get<CacheOptions>() ?? new CacheOptions();
         services.AddSingleton(new Librarion.Core.Covers.CoverCache(cacheOptions.PathOf(contentRoot, "covers")));
@@ -65,6 +67,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LibraryRoots>();
         services.AddSingleton<BackgroundTasks>();
         services.AddSingleton<TaskSchedules>();
+        services.AddSingleton<Librarion.Core.Imports.ImportRequests>();
         services.AddHostedService<TaskScheduleWorker>();
         return services;
     }

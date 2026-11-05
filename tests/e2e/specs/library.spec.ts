@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { uniqueName } from '../fixtures/accounts';
+import { libraryTab } from '../fixtures/admin';
 import { press } from '../fixtures/press';
 import { expect, test } from '../fixtures/test';
 import { fb2, writeZip } from '../fixtures/zip';
@@ -23,17 +24,36 @@ test.describe('@library', () => {
         await page.goto('./admin/libraries');
         await page.getByLabel('Name of a new library').fill(libraryName);
         await press(page.getByRole('button', { name: 'Add', exact: true }), isMobile);
-        await press(page.getByRole('button', { name: libraryName }), isMobile);
+        await press(page.getByRole('link', { name: libraryName }), isMobile);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(libraryName);
 
         await page.getByLabel('Full path of a folder on the server').fill(folder);
         await press(page.getByRole('button', { name: 'Add folder' }), isMobile);
         await expect(page.getByRole('list', { name: 'Folders' }).getByText(folder)).toBeVisible();
 
+        // The scan bar is over every tab: started from Folders, followed on Runs.
         await press(page.getByRole('button', { name: 'Scan now' }), isMobile);
+        await press(libraryTab(page, 'Runs'), isMobile);
         const run = page.getByRole('list', { name: 'Runs' }).getByRole('listitem').first();
         await expect(run).toContainText('done', { timeout: 30_000 });
         await expect(run).toContainText('2 added');
         await expect(page.getByRole('button', { name: 'Scan now' })).toBeEnabled();
+
+        // The panel under the top bar keeps the result until dismissed (other devices' runs on this server show too).
+        const result = page.locator('lib-task-panel .task-row').filter({ hasText: `Scan · ${libraryName}` });
+        await expect(result).toContainText('2 added');
+        await press(result.getByRole('button', { name: 'Dismiss' }), isMobile);
+        await expect(result).toHaveCount(0);
+
+        // Background tasks: the scan card runs it again for the library chosen, its last run is this one.
+        await page.goto('./admin/tasks');
+        const card = page.getByRole('article', { name: 'Folder scan' });
+        await card.getByRole('combobox', { name: 'Library' }).selectOption({ label: libraryName });
+        await press(card.getByRole('button', { name: 'Run now' }), isMobile);
+        await expect(result.locator('.badge')).toHaveText('done', { timeout: 30_000 });
+        await press(page.getByRole('link', { name: 'History' }).or(page.getByRole('tab', { name: 'History' })).first(), isMobile);
+        // Every library's runs (other devices' too): this library's two scans, linked to its runs.
+        await expect(page.getByRole('list', { name: 'Runs' }).getByRole('link', { name: libraryName })).toHaveCount(2);
 
         // The page's own session (its cookies) asks the API, as the book page will.
         const api = page.request;
@@ -55,5 +75,32 @@ test.describe('@library', () => {
         const cover = await api.get(`api/books/${book.id}/cover/m`, { headers });
         expect(cover.status()).toBe(200);
         expect(cover.headers()['content-type']).toBe('image/webp');
+    });
+
+    test('a schedule says what it runs: chosen first in its dialog, then when, and turned off by its switch @desktop', async ({ page, isMobile }, testInfo) => {
+        const libraryName = uniqueName('Scheduled', testInfo);
+        await page.goto('./admin/libraries');
+        await page.getByLabel('Name of a new library').fill(libraryName);
+        await press(page.getByRole('button', { name: 'Add', exact: true }), isMobile);
+        await press(page.getByRole('link', { name: libraryName }), isMobile);
+        await press(libraryTab(page, 'Schedules'), isMobile);
+
+        await press(page.getByRole('button', { name: 'New schedule' }), isMobile);
+        const dialog = page.getByRole('dialog', { name: 'New schedule' });
+        await expect(dialog.getByRole('group', { name: 'What it runs' })).toBeVisible();
+        await press(dialog.getByText('Folder scan', { exact: true }), isMobile);
+        await press(dialog.getByRole('radio', { name: 'On days of the week' }), isMobile);
+        await dialog.getByLabel('Time of day').fill('04:30');
+        await press(dialog.getByRole('button', { name: 'Save' }), isMobile);
+        await expect(dialog).toBeHidden();
+
+        const row = page.getByRole('list', { name: 'Schedules' }).getByRole('listitem').first();
+        await expect(row).toContainText('Folder scan');
+        await expect(row).toContainText('next');
+        const toggle = row.getByRole('switch', { name: 'Folder scan on' });
+        await expect(toggle).toBeChecked();
+        await press(toggle, isMobile);
+        await expect(row).toContainText('off');
+        await expect(toggle).not.toBeChecked();
     });
 });

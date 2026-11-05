@@ -8,7 +8,7 @@ describe('I18n', () => {
     }
 
     it('gives the English text of a key', () => {
-        expect(create().t('home.title')).toBe('Welcome to Librarion');
+        expect(create().t('common.save')).toBe('Save');
     });
 
     it('shows the key itself when it has no text, so a missing one is visible', () => {
@@ -18,7 +18,7 @@ describe('I18n', () => {
     it('replaces {name} parts with the parameters and leaves unknown ones', () => {
         const i18n = create();
 
-        expect(i18n.t('home.title', { unused: 1 })).toBe('Welcome to Librarion');
+        expect(i18n.t('common.save', { unused: 1 })).toBe('Save');
         // A text with parts, through a key that doesn't exist: the key is the text.
         expect(i18n.t('{count} books by {author}', { count: 3 })).toBe('3 books by {author}');
     });

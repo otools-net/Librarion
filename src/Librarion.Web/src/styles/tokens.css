@@ -1,53 +1,102 @@
 /*
- * Design tokens: colors per theme (data-theme on <html>, set before first paint by theme-boot.ts), and the compact
- * spacing scale (priority 3: dense by default). System fonts only: nothing is loaded from elsewhere.
+ * Design tokens (agents/docs/features/design.md): the "ink and paper" palette per theme (data-theme on <html>, set
+ * before first paint by theme-boot.ts), layered surfaces, two radii, shadows for what floats, a type scale, motion and
+ * the compact spacing scale (priority 3: dense by default). System fonts only: nothing is loaded from elsewhere.
+ * Every text colour stays at 4.5:1 or more on the surfaces it is used on (ClientDesignTests checks the pairs).
  */
 :root {
-    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+    --font: system-ui, -apple-system, "Segoe UI Variable", "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
     --font-size: 14px;
-    --line-height: 1.4;
+    --line-height: 1.45;
+
+    /* Type scale: small labels, meta text, body, section headings, page titles. */
+    --text-xs: 11.5px;
+    --text-sm: 12.5px;
+    --text-md: 14px;
+    --text-lg: 16px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
 
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
     --space-4: 16px;
     --space-5: 24px;
+    --space-6: 32px;
 
-    --radius: 6px;
-    --topbar-height: 48px;
-    --sidebar-width: 200px;
+    /* Controls (buttons, fields, chips) and cards (panels, dialogs, overview cards). */
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-pill: 999px;
+
+    --topbar-height: 52px;
+    --sidebar-width: 240px;
     /* Buttons and links people tap: 32 px with a mouse, 44 px on touch screens (base.css). */
     --target: 32px;
 
     --phone-max: 640px;
+
+    /* Motion: short, eased; none at all when the device asks for less motion. */
+    --duration-fast: 120ms;
+    --duration: 180ms;
+    --ease: cubic-bezier(.2, .7, .3, 1);
 }
 
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0ms;
+        --duration: 0ms;
+    }
+}
+
+/* Ink and paper, dark: deep blue-grey surfaces, a soft blue accent. */
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #15181c;
-    --surface: #1e2227;
-    --surface-2: #262b31;
-    --border: #343a42;
-    --text: #e6e8eb;
-    --text-muted: #a1a8b1;
-    --accent: #7fb0e0;
-    --accent-text: #0d1b29;
-    --danger: #f08a80;
+    --bg: #12161b;
+    --surface: #191e24;
+    --surface-2: #20262e;
+    --surface-3: #2a313a;
+    --border: #323a44;
+    --border-strong: #6c7783;
+    --text: #e7e9ec;
+    --text-muted: #a3abb5;
+    --accent: #8db8e6;
+    --accent-text: #0c1a28;
+    --accent-soft: rgb(141 184 230 / 14%);
+    --danger: #f2958b;
+    --danger-text: #2a0d0a;
+    --danger-soft: rgb(242 149 139 / 14%);
+    --success: #7fc79a;
+    --warning: #e5b866;
+    --mark-bg: rgb(229 184 102 / 28%);
     --backdrop: rgb(0 0 0 / 55%);
-    --focus: #a8cdf5;
+    --focus: #a9cff7;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow: 0 10px 30px rgb(0 0 0 / 40%);
 }
 
+/* Ink and paper, light: warm paper surfaces, an ink-blue accent. */
 :root[data-theme="light"] {
     color-scheme: light;
-    --bg: #f6f5f2;
-    --surface: #ffffff;
-    --surface-2: #eeece7;
-    --border: #d8d4cc;
-    --text: #1d2024;
-    --text-muted: #5b6168;
-    --accent: #2f5d8a;
+    --bg: #f5f2ec;
+    --surface: #fffdf9;
+    --surface-2: #f0ebe2;
+    --surface-3: #e6dfd3;
+    --border: #ddd5c8;
+    --border-strong: #8a8070;
+    --text: #1f2328;
+    --text-muted: #575c63;
+    --accent: #2b5885;
     --accent-text: #ffffff;
-    --danger: #b3261e;
-    --backdrop: rgb(0 0 0 / 35%);
-    --focus: #2f5d8a;
+    --accent-soft: rgb(43 88 133 / 10%);
+    --danger: #a8281f;
+    --danger-text: #ffffff;
+    --danger-soft: rgb(168 40 31 / 9%);
+    --success: #2e6b3a;
+    --warning: #7d5200;
+    --mark-bg: rgb(229 170 60 / 35%);
+    --backdrop: rgb(30 25 20 / 35%);
+    --focus: #2b5885;
+    --shadow-sm: 0 1px 2px rgb(40 30 20 / 8%);
+    --shadow: 0 10px 30px rgb(40 30 20 / 14%);
 }

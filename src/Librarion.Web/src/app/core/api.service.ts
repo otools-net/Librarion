@@ -3,9 +3,15 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskRunInfo, RightInfo, SecurityEventInfo, SessionInfo, SettingChanges, SettingLevel, SettingState, SetupInput,
+    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, SuggestionList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
+
+/** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
+export const coverUrl = (book: number, size: 's' | 'm' | 'l') => `api/books/${book}/cover/${size}`;
+
+/** A file of a book to download (`library.download` in its library); streamed from the library, never unpacked. */
+export const fileUrl = (book: number, file: number) => `api/books/${book}/files/${file}`;
 
 /** Header every request changing something carries (the server's RequestGuard refuses it otherwise). */
 export const REQUEST_HEADER = 'X-Librarion-Request';
@@ -82,6 +88,11 @@ export class Api {
     scanLibrary = (library: number) => this.post<{ runId: number; started: boolean }>(`api/libraries/${library}/scan`);
     /** Newest first; `before`: the last id of the page before. */
     libraryTasks = (library: number, before?: number) => this.get<TaskRunInfo[]>(`api/libraries/${library}/tasks`, { before, limit: 10 });
+    /** The runs going on in the libraries the session may scan (the progress panel). */
+    runningTasks = () => this.get<TaskRunInfo[]>('api/tasks/running');
+    taskOverview = () => this.get<TaskOverview>('api/tasks/overview');
+    /** Every library's runs, newest first; `before`: the last id of the page before. */
+    taskHistory = (before?: number) => this.get<TaskRunInfo[]>('api/tasks', { before, limit: 20 });
     missingBooks = (library: number, after?: string) => this.get<MissingBookPage>(`api/libraries/${library}/missing`, { after, limit: 20 });
     removeMissingBooks = (library: number, removal: MissingRemoval) => this.post<{ runId: number }>(`api/libraries/${library}/missing/remove`, removal);
     importKinds = (library: number) => this.get<string[]>(`api/libraries/${library}/import/kinds`);
@@ -90,6 +101,7 @@ export class Api {
     cancelTask = (run: number) => this.post<void>(`api/tasks/${run}/cancel`);
     schedules = (library: number) => this.get<ScheduleInfo[]>(`api/libraries/${library}/schedules`);
     addSchedule = (library: number, input: ScheduleInput) => this.post<ScheduleInfo>(`api/libraries/${library}/schedules`, input);
+    updateSchedule = (library: number, schedule: number, input: ScheduleInput) => this.put<ScheduleInfo>(`api/libraries/${library}/schedules/${schedule}`, input);
     deleteSchedule = (library: number, schedule: number) => this.delete<void>(`api/libraries/${library}/schedules/${schedule}`);
 
     /** `admins`: the server administrators instead of the tenant's accounts; `after`: the last name of the page before. */
@@ -104,6 +116,30 @@ export class Api {
     updateGroup = (id: number, input: GroupInput) => this.put<GroupInfo>(`api/groups/${id}`, input);
     deleteGroup = (id: number) => this.delete<void>(`api/groups/${id}`);
 
+    /** The books of a library the session may browse, a page at a time by key (`after`: the `next` of the page before). */
+    books = (query: { library: number; sort: BookSort; tag?: number | null; q?: string | null; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<BookListItem>>('api/books', {
+            library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit,
+        });
+    /** What to offer for the last term of a search being typed, the most used in `library` first. */
+    suggestions = (q: string, library?: number) => this.get<SuggestionList>('api/search/suggestions', { q, library });
+    /** The most frequent values of each field among the books of `library` matching `q` (all of them without), with counts. */
+    facets = (library: number, q?: string | null) => this.get<FacetList>('api/search/facets', { library, q: q || undefined });
+    book = (id: number) => this.get<BookDetail>(`api/books/${id}`);
+    /** Other books the session sees that may be this one, strongest reason first (at most 20). */
+    bookDuplicates = (id: number) => this.get<BookDuplicate[]>(`api/books/${id}/duplicates`);
+
+    fields = () => this.get<FieldInfo[]>('api/fields');
+    /**
+     * A field's values (`field`: its key) or the plain tags (`field` null) by sort name, with the library's counts and
+     * only those with books there; a page may be short while `next` says more follow. `from`: start there (a jump).
+     */
+    tagValues = (field: string | null, query: { library?: number; from?: string | null; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<FieldValue>>(field ? `api/fields/${encodeURIComponent(field)}/values` : 'api/tags', {
+            library: query.library, from: query.from || undefined, after: query.after ?? undefined, limit: query.limit,
+        });
+    tag = (id: number, library?: number) => this.get<TagDetail>(`api/tags/${id}`, { library });
+
     /** The settings of a level; `owner`: the library (or another tenant); the user level is one's own preferences. */
     settings = (level: SettingLevel, owner?: number) =>
         level === 'user' ? this.get<SettingState[]>('api/me/preferences') : this.get<SettingState[]>('api/settings', { level, owner });
@@ -111,6 +147,8 @@ export class Api {
         level === 'user'
             ? this.patch<SettingState[]>('api/me/preferences', changes)
             : this.patch<SettingState[]>(withQuery('api/settings', { level, owner }), changes);
+    /** Every setting key, with the narrowest level that may set it (the administration's search). */
+    settingCatalog = () => this.get<SettingInfo[]>('api/settings/catalog');
 
     /** Newest first; `before`: the last id of the page before; `all`: every tenant's (server administrators). */
     securityEvents = (query: { before?: number; kind?: string; user?: string; all?: boolean } = {}) =>

@@ -26,13 +26,13 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     private const int MaxProperties = 50;
     private static readonly string[] BookColumns =
     [
-        "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added", "Updated", "CoverSource",
+        "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SearchText", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added", "Updated", "CoverSource",
         "GeneratedTemplate", "GeneratedVariant", "CoverState", "WorkKey", "MetadataSource", "ImportHash",
     ];
 
     private static object?[] BookRow(Book b) =>
     [
-        b.Id, b.TenantId, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.SeriesId, b.SeriesNumber, b.Description, b.Rating, b.Added, b.Updated, (int)b.CoverSource,
+        b.Id, b.TenantId, b.LibraryId, b.Title, b.SortTitle, b.SearchText, b.SortAuthor, b.SeriesId, b.SeriesNumber, b.Description, b.Rating, b.Added, b.Updated, (int)b.CoverSource,
         b.GeneratedTemplate, b.GeneratedVariant, (int)b.CoverState, b.WorkKey, (byte)b.MetadataSource, b.ImportHash,
     ];
 
@@ -447,6 +447,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         var title = metadata?.Title?.Trim() is { Length: > 0 } t ? Cut(t, Book.MaxTitleLength) : null;
         book.Title = title;
         book.SortTitle = BookTitles.SortKey(metadata?.SortTitle?.Trim() is { Length: > 0 } sortTitle ? sortTitle : title ?? FileTitles.FromPath(path));
+        book.SearchText = Search.SearchText.ForBook(title, FileTitles.FromPath(path));
         if (metadata?.Source is ImportTagSourceKind.Calibre or ImportTagSourceKind.Inpx)
             book.Rating = metadata.Rating is { } rating ? Math.Min(rating, (byte)10) : null;
         book.Description = metadata?.Description?.Trim() is { Length: > 0 } d ? d : null;

@@ -90,6 +90,156 @@ export interface TenantInput {
     disabledRights?: string[] | null;
 }
 
+/** A book in a list (`api/books`): what a card or a row shows; `title` null = shown by its file name. */
+export interface BookListItem {
+    id: number;
+    libraryId: number;
+    title: string | null;
+    fileName: string | null;
+    authors: string[];
+    series: string | null;
+    seriesNumber: number | null;
+    formats: string[];
+    coverSource: 'book' | 'calibre' | 'uploaded' | 'generated';
+}
+
+/** A link of a book to a tag: `field` the field's key (null for a plain tag); `number` its place in a series. */
+export interface BookTag {
+    id: number;
+    field: string | null;
+    name: string;
+    number: number | null;
+}
+
+/** A copy or format of a book: `name` its own (an archive entry's), `archive` the ZIP holding it; `missing`: not where the last scan found it. */
+export interface BookFile {
+    id: number;
+    format: string;
+    size: number;
+    name: string;
+    inArchive: boolean;
+    archive: string | null;
+    missing: boolean;
+}
+
+export interface KeyValue {
+    key: string;
+    value: string;
+}
+
+/**
+ * A book (`api/books/{id}`): its tags in field order, files, identifiers (`isbn`…), imported properties (Calibre's
+ * custom columns); `rating` 0–10 (half stars); `mergedIntoId`: it now lives in that book (the rest is empty).
+ */
+export interface BookDetail {
+    id: number;
+    libraryId: number;
+    title: string | null;
+    fileName: string | null;
+    description: string | null;
+    rating: number | null;
+    added: string;
+    coverSource: BookListItem['coverSource'];
+    tags: BookTag[];
+    files: BookFile[];
+    identifiers: KeyValue[];
+    mergedIntoId: number | null;
+    properties: KeyValue[] | null;
+    canDownload: boolean;
+}
+
+/** What the search box offers for the term being typed: a field to type a value of, or a value as a whole term. */
+export interface SearchSuggestion {
+    kind: 'field' | 'value';
+    /** The term put in place of the one being typed (`author:"Stephen King"`, `author:`). */
+    insert: string;
+    /** The value's name, or the field's key. */
+    name: string;
+    field: string | null;
+    bookCount: number | null;
+}
+
+/** Suggestions for the last term of a search; `from`: where that term starts in it. */
+export interface SuggestionList {
+    from: number;
+    items: SearchSuggestion[];
+}
+
+/** A value of a facet: its books among those counted, and the search term finding them (`category:"Fantasy"`, `format:epub`). */
+export interface FacetValue {
+    /** The tag; null for a format. */
+    id: number | null;
+    name: string;
+    term: string;
+    count: number;
+}
+
+/** A field's most frequent values among the books (`field`: its key; `tag` plain tags, `format` the files' formats). */
+export interface Facet {
+    field: string;
+    values: FacetValue[];
+}
+
+/** Facets of a library or a search: counted over `counted` books, at most the first matches when `capped`. */
+export interface FacetList {
+    counted: number;
+    capped: boolean;
+    fields: Facet[];
+}
+
+/** Why another book may be the same: a file of the same size and CRC, a shared identifier (`scheme`), the same title and author. */
+export interface BookDuplicate {
+    book: BookListItem;
+    reason: 'file' | 'identifier' | 'work';
+    scheme: string | null;
+}
+
+/** A page of a list by key: `next` is the `after` of the following page, null at the end. */
+export interface KeysetPage<T> {
+    items: T[];
+    next: string | null;
+}
+
+/** `number`: by the number on the tag's link (a series' order; books without one are left out), only with a tag. */
+export type BookSort = 'title' | 'author' | 'added' | 'number';
+
+/** A field of the tenant (`api/fields`): a built-in one's name is translated from its key. */
+export interface FieldInfo {
+    id: number;
+    key: string;
+    name: string;
+    builtIn: boolean;
+}
+
+/** A field value or plain tag in a list; `bookCount`: books of the library asked about linked to it. */
+export interface FieldValue {
+    id: number;
+    name: string;
+    sortName: string;
+    bookCount: number | null;
+}
+
+/** A tag in another's detail; `field`: its field's key, null for a plain tag. */
+export interface TagRef {
+    id: number;
+    name: string;
+    field: string | null;
+}
+
+/** A tag or field value (`api/tags/{id}`): its field, the tags it is under and those under it, its book count. */
+export interface TagDetail {
+    id: number;
+    name: string;
+    sortName: string;
+    field: string | null;
+    fieldName: string | null;
+    isCategory: boolean;
+    bookCount: number | null;
+    parents: TagRef[];
+    children: TagRef[];
+    moreChildren: boolean;
+}
+
 export interface LibraryInfo {
     id: number;
     tenantId: number;
@@ -164,6 +314,18 @@ export interface SettingState {
     locked: boolean;
     lockedAbove: boolean;
     editable: boolean;
+}
+
+/** A key of the settings catalog (`api/settings/catalog`): what the administration's search looks in. */
+export interface SettingInfo {
+    key: string;
+    section: string;
+    kind: 'choice' | 'integer';
+    choices: string[] | null;
+    min: number;
+    max: number;
+    /** The narrowest level that may set it. */
+    lowestLevel: SettingLevel;
 }
 
 export interface SettingChanges {
@@ -248,6 +410,16 @@ export interface TaskRunInfo {
     waiting: boolean;
 }
 
+/** The Background tasks page (`api/tasks/overview`): in the libraries the session may scan. */
+export interface TaskOverview {
+    running: TaskRunInfo[];
+    /** The last finished run of each kind that ran. */
+    last: TaskRunInfo[];
+    schedules: ScheduleInfo[];
+    /** The libraries the session may scan. */
+    libraries: number[];
+}
+
 /** A book whose files are gone, kept until they come back or its removal is accepted (`api/libraries/{id}/missing`). */
 export interface MissingBookItem {
     id: number;
@@ -276,6 +448,11 @@ export interface MissingRemoval {
 export type ScheduleKind = 'interval' | 'weekly';
 
 export interface ScheduleInput {
+    /** What it runs: a scan of the library's folders, or an import (with its kind, source and files folder). */
+    task: 'libraryScan' | 'import';
+    importKind: string | null;
+    source: string | null;
+    files: string | null;
     kind: ScheduleKind;
     /** UTC; for weekly schedules its time of day (server's zone) is the time. */
     start: string;

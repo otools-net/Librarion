@@ -1,0 +1,100 @@
+/*
+ * Empty states and loading placeholders (agents/docs/features/design.md#dialogs-and-feedback): shared/placeholders.ts.
+ */
+
+/* An empty list (a row) or page (.large): an icon in a soft disc, then what to do next. */
+.empty {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-muted);
+}
+
+.row.empty {
+    padding-block: var(--space-3);
+}
+
+.empty > .icon {
+    box-sizing: content-box;
+    padding: var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text-muted);
+}
+
+.empty.large {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-4);
+    text-align: center;
+}
+
+.empty.large > .icon {
+    width: 32px;
+    height: 32px;
+    padding: var(--space-4);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.empty-text {
+    max-width: 48ch;
+}
+
+/* Loading: bars in the shape of what comes, a slow shimmer (none when motion is reduced). */
+.skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 720px;
+    padding: var(--space-3) 0;
+}
+
+.skeleton-line {
+    height: 14px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%) 0 0 / 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line:nth-of-type(3n + 1) {
+    width: 92%;
+}
+
+.skeleton-line:nth-of-type(3n + 2) {
+    width: 76%;
+}
+
+.skeleton-line:nth-of-type(3n) {
+    width: 58%;
+}
+
+/* A form: label bars over field boxes. */
+.skeleton-form .skeleton-line:nth-of-type(odd) {
+    width: 30%;
+    height: 12px;
+}
+
+.skeleton-form .skeleton-line:nth-of-type(even) {
+    width: 100%;
+    max-width: 420px;
+    height: var(--target);
+    border-radius: var(--radius);
+}
+
+@keyframes skeleton-shimmer {
+    from {
+        background-position: 100% 0;
+    }
+
+    to {
+        background-position: -100% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-line {
+        animation: none;
+    }
+}

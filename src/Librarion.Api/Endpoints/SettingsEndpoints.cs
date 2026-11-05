@@ -39,6 +39,14 @@ public static class SettingsEndpoints
             .WithName("ChangeSettings")
             .WithSummary("Changes the keys sent at a level, all or nothing: `values` by key (null = inherit), `lock`, `unlock`.");
 
+        // What the administration's search looks in (the texts are the client's): no values, the same for everyone.
+        api.MapGet("/settings/catalog", () => TypedResults.Ok(SettingCatalog.All.Select(d =>
+                new SettingInfo(d.Key, d.Section, d.Kind, d.Choices, d.Min, d.Max, d.LowestLevel)).ToList()))
+            .WithTags("Settings")
+            .RequireRight(Rights.OwnPreferences, Rights.ServerSettings, Rights.TenantSettings, Rights.LibrarySettings, Rights.ManageTenants)
+            .WithName("GetSettingCatalog")
+            .WithSummary("Every setting key: its section, kind, choices or bounds, and the narrowest level that may set it.");
+
         var preferences = api.MapGroup("/me/preferences").WithTags("Settings").RequireRight(Rights.OwnPreferences);
 
         preferences.MapGet("/", async (HttpContext context, CurrentAccess current, SettingsService service) =>

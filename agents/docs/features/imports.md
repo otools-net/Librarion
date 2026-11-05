@@ -6,7 +6,8 @@ Code: `Core/Imports/` (`ImportSource.cs`: `ImportRecord`, `ImportFile`, `IImport
 `Import` (`BackgroundTasks.StartImportAsync`), route `POST api/libraries/{id}/import` (`Api/Endpoints/TaskEndpoints.cs`),
 Calibre covers in `CoverService.CalibreAsync`. Tests: `ImportTests` (the pipeline, with a test source and a test kind),
 `CalibreImportTests` (sample `metadata.db` files written from SQL), `InpxImportTests` (INPX files and zips written by
-the test); client `admin/library-panel.ts` (the form, import runs' counts), `admin.spec.ts`.
+the test); client `admin/library-panel.ts` (the Import tab's form, import runs' counts on Runs), `admin/schedules-tab.ts` (import
+schedules; checks shared through `Core/Imports/ImportRequests.cs`), `admin.spec.ts`.
 
 **The user's rule (2026-11-01):** a Calibre library or an INPX catalog comes in by a manual import of data from a
 different source. An administrator starts it, the source is read once, and what it says is stored in our database.

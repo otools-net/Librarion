@@ -222,6 +222,57 @@ public sealed class ImportTests
         Assert.AreEqual("A book", (await db.Books.SingleAsync(Cancel)).Title);
     }
 
+    [TestMethod]
+    public async Task AnImportScheduleIsCheckedAsTheRouteAndStartsTheImportWhenDue()
+    {
+        await using var library = await ScannedLibrary.CreateAsync(Cancel, services => services.AddSingleton<ImportFormat, TestFormat>());
+        var (admin, _) = await library.AdminAsync(Cancel);
+        var folder = Path.Combine(Path.GetDirectoryName(library.Root)!, "calibre");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "book.epub"), "bytes");
+        var source = Path.Combine(folder, "catalog.test");
+        File.WriteAllText(source, "u1|A book|book.epub");
+        var start = DateTime.UtcNow.AddMinutes(-90);
+        var url = $"/api/libraries/{library.LibraryId}/schedules";
+
+        ScheduleInput Import(string path) => new(ScheduleKind.Interval, start, 60, 0, Task: BackgroundTaskKind.Import, ImportKind: "test", Source: path);
+        using (var missing = await admin.PostAsJsonAsync(url, Import(Path.Combine(folder, "none.test")), ApiClients.Json, Cancel))
+            StringAssert.Contains(await missing.Content.ReadAsStringAsync(Cancel), "source.missing");
+        using (var noSource = await admin.PostAsJsonAsync(url, Import("") with { Source = null }, ApiClients.Json, Cancel))
+            StringAssert.Contains(await noSource.Content.ReadAsStringAsync(Cancel), "source.notAbsolute");
+
+        ScheduleInfo schedule;
+        using (var saved = await admin.PostAsJsonAsync(url, Import(source), ApiClients.Json, Cancel))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, saved.StatusCode, await saved.Content.ReadAsStringAsync(Cancel));
+            schedule = (await saved.Content.ReadFromJsonAsync<ScheduleInfo>(ApiClients.Json, Cancel))!;
+        }
+        Assert.AreEqual((BackgroundTaskKind.Import, "test", source, folder), (schedule.Task, schedule.ImportKind, schedule.Source, schedule.Files));
+        await using (var db = await library.DbAsync(Cancel))
+            Assert.IsTrue(await db.LibraryRoots.AnyAsync(r => r.Path == folder, Cancel), "saving it added the files' folder as a root, as the route does");
+
+        var worker = library.Service<IEnumerable<Microsoft.Extensions.Hosting.IHostedService>>().OfType<TaskScheduleWorker>().Single();
+        var due = schedule.NextRun!.Value;
+        await worker.RunDueAsync(due.AddSeconds(-30), due.AddSeconds(1), Cancel);
+        var run = (await admin.GetAsync<List<TaskRunInfo>>($"/api/libraries/{library.LibraryId}/tasks", Cancel)).First();
+        Assert.AreEqual((BackgroundTaskKind.Import, TaskTrigger.Schedule), (run.Task, run.Trigger));
+        for (var i = 0; i < 300 && run.Outcome == TaskOutcome.Running; i++)
+        {
+            await Task.Delay(50, Cancel);
+            run = await admin.GetAsync<TaskRunInfo>($"/api/tasks/{run.Id}", Cancel);
+        }
+        Assert.AreEqual(TaskOutcome.Succeeded, run.Outcome, run.Summary);
+        Assert.AreEqual(1, run.Counts!.Added);
+
+        // The source gone, the next time it comes due is a failed run saying why; nothing else is touched.
+        File.Delete(source);
+        var next = due.AddHours(1);
+        await worker.RunDueAsync(next.AddSeconds(-30), next.AddSeconds(1), Cancel);
+        var failed = (await admin.GetAsync<List<TaskRunInfo>>($"/api/libraries/{library.LibraryId}/tasks", Cancel)).First();
+        Assert.AreEqual((BackgroundTaskKind.Import, TaskOutcome.Failed), (failed.Task, failed.Outcome));
+        StringAssert.Contains(failed.Summary, "source not found");
+    }
+
     /// <summary>A source of records given by the test.</summary>
     private sealed class TestSource(IReadOnlyList<ImportRecord> records) : IImportSource
     {

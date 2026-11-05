@@ -101,6 +101,50 @@ public sealed class CatalogQueryTests
     }
 
     [TestMethod]
+    [DataRow(BookSort.Title)]
+    [DataRow(BookSort.Author)]
+    [DataRow(BookSort.Added)]
+    public async Task ASearchWalksEveryMatchOnceInOrderWhereverItStarts(BookSort sort)
+    {
+        // A title word on a few hundred books: under √(page × books) for big pages (the matches first, then sorted),
+        // over it for small ones (the sort index walked, each book tested).
+        var visibility = Everything();
+        List<(int Id, string Text)> all;
+        await using (var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel))
+        {
+            var ordered = sort switch
+            {
+                BookSort.Author => db.Books.OrderBy(b => b.SortAuthor).ThenBy(b => b.Id),
+                BookSort.Added => db.Books.OrderByDescending(b => b.Added).ThenByDescending(b => b.Id),
+                _ => db.Books.OrderBy(b => b.SortTitle).ThenBy(b => b.Id),
+            };
+            all = (await ordered.Where(b => b.MergedIntoId == null && b.MissingSince == null).Select(b => new { b.Id, b.SearchText }).ToListAsync(Cancel))
+                .Select(b => (b.Id, b.SearchText)).ToList();
+        }
+
+        var word = all.SelectMany(b => b.Text.Split(' ').Distinct()).Where(w => w.Length > 3).GroupBy(w => w)
+            .Select(g => (Word: g.Key, Count: g.Count())).OrderBy(g => Math.Abs(g.Count - 250)).First();
+        if (word.Count <= Math.Sqrt(5 * Books) || word.Count >= Math.Sqrt(200 * Books))
+            Assert.Inconclusive($"no word between the two plans' sizes (closest: {word})");
+        var expected = all.Where(b => b.Text.Split(' ').Any(w => w.StartsWith(word.Word, StringComparison.Ordinal))).Select(b => b.Id).ToList();
+
+        foreach (var limit in new[] { 5, 200 })
+        {
+            var found = new List<int>();
+            string? after = null;
+            do
+            {
+                var page = await Queries.ListAsync(_target.TenantId, visibility, new BookPageRequest(null, sort, after, limit, Query: $"title:{word.Word}*"), Cancel);
+                found.AddRange(page.Items.Select(b => b.Id));
+                after = page.Next;
+            }
+            while (after is not null);
+
+            CollectionAssert.AreEqual(expected, found, $"pages of {limit}");
+        }
+    }
+
+    [TestMethod]
     public async Task AFilteredGroupSeesOnlyItsBooks()
     {
         var accounts = _factory.Services.GetRequiredService<AccessService>();
@@ -134,7 +178,8 @@ public sealed class CatalogQueryTests
 
         await using var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel);
         var authorField = _target.Fields[BuiltInTag.Author];
-        var expected = await db.Tags.Where(t => t.FieldId == authorField).OrderBy(t => t.SortName).ThenBy(t => t.Id).Select(t => t.Id).ToListAsync(Cancel);
+        var expected = await db.Tags.Where(t => t.FieldId == authorField && db.TagCounts.Any(c => c.TagId == t.Id && c.LibraryId == _target.LibraryId && c.BookCount > 0))
+            .OrderBy(t => t.SortName).ThenBy(t => t.Id).Select(t => t.Id).ToListAsync(Cancel);
         CollectionAssert.AreEqual(expected, values.Select(v => v.Id).ToList());
 
         var busiest = values.MaxBy(v => v.BookCount)!;
@@ -142,6 +187,83 @@ public sealed class CatalogQueryTests
         Assert.HasCount(busiest.BookCount!.Value, books);
         Assert.IsTrue(books.All(b => b.Authors.Contains(busiest.Name)));
         Assert.IsNull(await queries.ValuesAsync(_target.TenantId, "no-such-field", null, null, 10, Cancel));
+    }
+
+    [TestMethod]
+    public async Task PlainTagsWithoutBooksInTheLibraryAreSkippedInShortPagesThatStillWalkToTheEnd()
+    {
+        var queries = _factory.Services.GetRequiredService<TagQueries>();
+        await using var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel);
+        // More tags without a book than one request reads, side by side in the order.
+        db.Tags.AddRange(Enumerable.Range(0, TagQueries.MaxScanned + 100).Select(i => new Tag
+        {
+            TenantId = _target.TenantId, Name = $"Zzzz unused {i:0000}", NormalizedName = $"zzzz unused {i:0000}", SortName = $"Zzzz unused {i:0000}",
+        }));
+        await db.SaveChangesAsync(Cancel);
+
+        var walked = new List<FieldValue>();
+        var shortPage = false;
+        string? after = null;
+        do
+        {
+            var page = await queries.PlainTagsAsync(_target.TenantId, _target.LibraryId, after, 50, Cancel);
+            shortPage |= page.Next is not null && page.Items.Count < 50;
+            walked.AddRange(page.Items);
+            after = page.Next;
+        }
+        while (after is not null);
+
+        var expected = await db.Tags.Where(t => t.FieldId == null && t.FieldKey == null)
+            .Join(db.TagCounts.Where(c => c.LibraryId == _target.LibraryId && c.BookCount > 0), t => t.Id, c => c.TagId, (t, c) => new { t.Id, t.SortName, c.BookCount })
+            .OrderBy(t => t.SortName).ThenBy(t => t.Id).ToListAsync(Cancel);
+        CollectionAssert.AreEqual(expected.Select(t => t.Id).ToList(), walked.Select(v => v.Id).ToList());
+        CollectionAssert.AreEqual(expected.Select(t => (int?)t.BookCount).ToList(), walked.Select(v => v.BookCount).ToList());
+        Assert.IsTrue(shortPage, "The unused tags were read over more than one request");
+
+        var everything = await queries.PlainTagsAsync(_target.TenantId, null, null, 10, Cancel, from: "zzzz unused 0050");
+        Assert.AreEqual("Zzzz unused 0050", everything.Items[0].Name, "Without a library every tag is listed; a jump starts at its first letter upper case");
+        Assert.IsNull(everything.Items[0].BookCount);
+    }
+
+    [TestMethod]
+    public async Task ATagShowsItsFieldParentsChildrenAndCountAndADeniedOneIsLeftOut()
+    {
+        var queries = _factory.Services.GetRequiredService<TagQueries>();
+        await using var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel);
+        var link = await db.TagParents.OrderBy(p => p.ParentId).ThenBy(p => p.ChildId).FirstAsync(Cancel);
+        var children = await db.TagParents.Where(p => p.ParentId == link.ParentId).Select(p => p.ChildId).ToListAsync(Cancel);
+        var count = await db.TagCounts.Where(c => c.TagId == link.ParentId && c.LibraryId == _target.LibraryId).Select(c => c.BookCount).FirstOrDefaultAsync(Cancel);
+
+        var parent = (await queries.GetAsync(_target.TenantId, link.ParentId, _target.LibraryId, Everything(), Cancel))!;
+        Assert.AreEqual("category", parent.Field);
+        Assert.AreEqual(count, parent.BookCount);
+        CollectionAssert.AreEquivalent(children.Take(TagQueries.MaxChildren).ToList(), parent.Children.Select(c => c.Id).ToList());
+        var child = (await queries.GetAsync(_target.TenantId, link.ChildId, null, null, Cancel))!;
+        Assert.IsNull(child.BookCount);
+        CollectionAssert.Contains(child.Parents.Select(p => p.Id).ToList(), link.ParentId);
+        Assert.IsNull(await queries.GetAsync(_target.TenantId, _target.Fields[BuiltInTag.Category], null, null, Cancel), "A field is a list, not a tag page");
+
+        // Denied by the only group admitting the library: the tag and those under it are gone from its pages.
+        var denying = new BookVisibility(new Dictionary<int, IReadOnlyList<FilterProfile>> { [_target.LibraryId] = [new FilterProfile([], [link.ParentId])] });
+        Assert.IsNull(await queries.GetAsync(_target.TenantId, link.ParentId, _target.LibraryId, denying, Cancel));
+        Assert.IsNull(await queries.GetAsync(_target.TenantId, link.ChildId, _target.LibraryId, denying, Cancel));
+        var listed = new List<int>();
+        string? after = null;
+        do
+        {
+            var page = (await queries.ValuesAsync(_target.TenantId, "category", _target.LibraryId, after, 200, Cancel, visibility: denying))!;
+            listed.AddRange(page.Items.Select(v => v.Id));
+            after = page.Next;
+        }
+        while (after is not null);
+        Assert.IsNotEmpty(listed);
+        Assert.IsFalse(listed.Intersect([link.ParentId, .. children]).Any());
+        // A second group that doesn't deny it admits it again.
+        var both = new BookVisibility(new Dictionary<int, IReadOnlyList<FilterProfile>>
+        {
+            [_target.LibraryId] = [new FilterProfile([], [link.ParentId]), new FilterProfile([link.ChildId], [])],
+        });
+        Assert.IsNotNull(await queries.GetAsync(_target.TenantId, link.ParentId, _target.LibraryId, both, Cancel));
     }
 
     [TestMethod]
@@ -175,6 +297,20 @@ public sealed class CatalogQueryTests
         Assert.IsNotEmpty(book.Files);
         var authors = await admin.GetAsync<Page<FieldValue>>($"/api/fields/author/values?library={_target.LibraryId}&limit=5", Cancel);
         Assert.HasCount(5, authors.Items);
+        Assert.IsTrue(authors.Items.All(a => a.BookCount > 0));
+        var fields = await admin.GetAsync<List<FieldInfo>>("/api/fields", Cancel);
+        Assert.AreEqual("author", fields[0].Key);
+        Assert.IsTrue(fields.Take(9).All(f => f.BuiltIn));
+        var tags = await admin.GetAsync<Page<FieldValue>>($"/api/tags?library={_target.LibraryId}&limit=5", Cancel);
+        Assert.IsNotEmpty(tags.Items);
+        var tag = await admin.GetAsync<TagDetail>($"/api/tags/{authors.Items[0].Id}?library={_target.LibraryId}", Cancel);
+        Assert.AreEqual(authors.Items[0].BookCount, tag.BookCount);
+        Assert.AreEqual("author", tag.Field);
+        foreach (var address in new[] { "/api/tags?library=999999", "/api/fields/author/values?library=999999", $"/api/tags/{tag.Id}?library=999999", "/api/tags/999999999" })
+        {
+            using var missing = await admin.GetAsync(address, Cancel);
+            Assert.AreEqual(System.Net.HttpStatusCode.NotFound, missing.StatusCode, address);
+        }
 
         var filtered = await ApiClients.SignInAsync(_factory, "filter-0", GenerateCommand.Password, Cancel);
         var narrow = await filtered.GetAsync<Page<BookListItem>>("/api/books?limit=200", Cancel);

@@ -118,6 +118,13 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
+| [browse](agents/docs/features/browse.md) | the library page: grid of covers or list, sort and view, windowed rows, pages by key, the place kept on the way back; fields, A–Z value lists with counts, tag pages | `app/browse/`, `app/tags/` |
+| [book-page](agents/docs/features/book-page.md) | a book's page: metadata, fields as links, files with Download, details, possible duplicates (same file, identifier, work; on demand, capped) | `app/books/`, `BookQueries.DuplicatesAsync` |
+| [search](agents/docs/features/search.md) | the search language, the full-text index per provider (FTS5, GIN), terms as keyset conditions by size, hidden tags, suggestions, facets with capped counts (Refine), the search box and results page | `Core/Search/`, `shell/search-box.ts`, `app/search/` |
+| [admin-page](agents/docs/features/admin-page.md) | the administration: groups, sections and sub-pages (`admin-sections.ts`), its own column, overview, breadcrumbs, moved addresses | `app/admin/`, `styles/admin.css` |
+| [admin-search](agents/docs/features/admin-search.md) | the administration's search: sections, sub-pages and settings by every word, marks, a setting opened scrolled to and flashed, the catalog route | `app/admin/admin-search.ts`, `settings/setting-reveal.ts` |
+| [shell](agents/docs/features/shell.md) | the frame: top bar, library switcher (`LibraryContext`), account menu, sidebar, phone sheets, the administration's own frame | `app/shell/`, `core/library-context.ts`, `styles/shell.css` |
+| [design](agents/docs/features/design.md) | the look: tokens, ink and paper palette, layered surfaces, type scale, motion, tested contrast (SFE's approach) | `src/styles/tokens.css`, `ClientDesignTests` |
 | [rights](agents/docs/features/rights.md) | rights catalog, scopes, built-in groups, evaluation and its cache, route rule; planned rights and content filters | `Core/Access/`, `Api/Security/` |
 | [accounts](agents/docs/features/accounts.md) | accounts and groups, passwords, sign-in throttle and lockout, session cookie and stamp, recovery codes | `Core/Access/`, `Api/Security/`, `app/account/`, `app/admin/` |
 | [tenants](agents/docs/features/tenants.md) | tenants and libraries, isolation by query filters (`TenantDb`), server administrators across tenants | `Core/Data/`, `Core/Access/`, `app/admin/` |
@@ -126,6 +133,7 @@ note rather than inventing a new one.
 | [security-log](agents/docs/features/security-log.md) | security events: what is logged (never secrets), retention, who reads | `Core/Access/SecurityLog.cs`, `app/admin/` |
 | [catalog](agents/docs/features/catalog.md) | books, files, identifiers, tag tables, sort indexes, visibility, keyset pages, tag joins by size, catalog routes, known limits | `Core/Data/Entities/Catalog/`, `Core/Catalog/`, `Api/Endpoints/BookEndpoints.cs` |
 | [tasks](agents/docs/features/tasks.md) | library roots (who adds which folder), scans and root removals as background runs, run history, schedules | `Core/Import/LibraryRoots.cs`, `Core/Tasks/`, `Api/Endpoints/TaskEndpoints.cs` |
+| [task-progress](agents/docs/features/task-progress.md) | the progress panel under the top bar and Administration › Background tasks (cards, schedules, history across libraries) | `core/task-watch.ts`, `shared/task-panel.ts`, `admin/tasks-section.ts` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
 | [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |

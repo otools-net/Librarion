@@ -34,3 +34,15 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
   binary sample is committed; each device uses its own folder under `<work>/books/<unique name>`.
 - Times on this machine: the whole suite (47 tests run, 6 projects) ~1.4 min after the first build.
 - Screenshots to look at by eye: [screenshots tool](../../tools/screenshots/README.md).
+- A test's own library: `fixtures/library.ts` `scannedLibrary(page, name, write)` writes the folder, adds and scans it
+  through the API and chooses it. `a11y.spec` makes its own book (it runs first: other tests' books aren't there yet).
+- After typing in "Go to", wait for `?from=` in the address before pressing a row: pressed earlier, the jump's own
+  navigation came after and took the page back to the list (2026-11-03).
+- Downloads: `page.waitForEvent('download')` before the press, then `download.path()`: works on every project,
+  WebKit included.
+- `getByRole('option')` also finds the sort menu's `<option>`s (hidden): scope it to `#search-suggestions`.
+- The search box's options cancel `mousedown` to keep the focus in the box: cancelling `pointerdown` instead made iOS
+  WebKit drop the tap's `click` (found by `search.spec.ts` on `iphone`).
+- The final layout check measures the page as the test leaves it: a test that ends scrolled (a row further down as the
+  run's other specs add libraries) can put a small link against the sticky top bar's buttons. End such a test scrolled
+  to the top; targets covered at their centre are not measured (`expectTapTargets`).

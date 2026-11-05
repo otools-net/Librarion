@@ -1,75 +1,166 @@
-<lib-icon-sprite />
 <a class="skip-link" href="#main">{{ 'app.skipToContent' | t }}</a>
 
 <header class="topbar">
-    <button type="button" class="icon-button menu-button" (click)="toggleDrawer()"
-            [attr.aria-expanded]="drawerOpen()" aria-controls="main-nav"
-            [title]="(drawerOpen() ? 'shell.menu.close' : 'shell.menu.open') | t"
-            [attr.aria-label]="(drawerOpen() ? 'shell.menu.close' : 'shell.menu.open') | t">
-        <svg [libIcon]="drawerOpen() ? 'close' : 'menu'"></svg>
-    </button>
+    @if (popup() === 'account' || popup() === 'library') {
+        <div class="shell-backdrop" (pointerdown)="close()"></div>
+    }
+    @if (inAdmin()) {
+        <button type="button" class="icon-button back-button" (click)="back()"
+                [title]="(inLibrary() ? 'shell.backToLibraries' : backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t"
+                [attr.aria-label]="(inLibrary() ? 'shell.backToLibraries' : backToSections() ? 'shell.backToSections' : 'shell.backToLibrary') | t">
+            <svg libIcon="back"></svg>
+        </button>
+    } @else {
+        <button type="button" class="icon-button menu-button" (click)="toggle('nav')"
+                [attr.aria-expanded]="popup() === 'nav'" aria-controls="main-nav"
+                [title]="(popup() === 'nav' ? 'shell.menu.close' : 'shell.menu.open') | t"
+                [attr.aria-label]="(popup() === 'nav' ? 'shell.menu.close' : 'shell.menu.open') | t">
+            <svg [libIcon]="popup() === 'nav' ? 'close' : 'menu'"></svg>
+        </button>
+    }
 
-    <a class="brand" routerLink="/" [attr.aria-label]="'app.name' | t">
+    <a class="brand" routerLink="/" [attr.aria-label]="'app.name' | t" [title]="'shell.home' | t">
         <svg libLogo></svg>
         <span>{{ 'app.name' | t }}</span>
     </a>
 
-    <form class="search" role="search" (submit)="$event.preventDefault()">
-        <svg libIcon="search"></svg>
-        <input type="search" name="q" disabled
-               [attr.aria-label]="'shell.search.label' | t"
-               [placeholder]="'shell.search.placeholder' | t"
-               [title]="'shell.nav.soon' | t">
-    </form>
+    @if (inAdmin()) {
+        <span class="topbar-title">{{ 'admin.title' | t }}</span>
+    } @else {
+        @if (libraries.libraries().length > 1) {
+            <div class="menu-anchor library-switch" data-popup="library">
+                <button type="button" class="switch-button" (click)="toggle('library')"
+                        [attr.aria-expanded]="popup() === 'library'" aria-controls="library-menu"
+                        [title]="'shell.library.choose' | t: { name: libraries.current()?.name ?? '' }">
+                    <svg libIcon="library"></svg>
+                    <span class="switch-name">{{ libraries.current()?.name }}</span>
+                    <svg libIcon="chevron-down"></svg>
+                </button>
+                @if (popup() === 'library') {
+                    <div id="library-menu" class="menu-panel" role="group" [attr.aria-label]="'shell.library.label' | t">
+                        <p class="group-label">{{ 'shell.library.label' | t }}</p>
+                        @for (library of libraries.libraries(); track library.id) {
+                            <button type="button" class="menu-item" [attr.aria-pressed]="library.id === libraries.current()?.id"
+                                    [title]="'shell.library.open' | t: { name: library.name }" (click)="chooseLibrary(library.id)">
+                                <svg libIcon="library"></svg>
+                                <span class="menu-text">{{ library.name }}</span>
+                                @if (library.id === libraries.current()?.id) {
+                                    <svg libIcon="check" class="menu-check"></svg>
+                                }
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        } @else if (libraries.current(); as library) {
+            <span class="library-name" [title]="'shell.library.only' | t: { name: library.name }">
+                <svg libIcon="library"></svg>
+                <span class="switch-name">{{ library.name }}</span>
+            </span>
+        }
 
-    @if (tenants().length) {
-        <select class="tenant-switch" [attr.aria-label]="'shell.tenant' | t" [title]="'shell.tenant' | t" (change)="switchTenant(+valueOf($event))">
-            @for (tenant of tenants(); track tenant.id) {
-                <option [value]="tenant.id" [selected]="sessions.session()?.tenant?.id === tenant.id">{{ tenant.name }}</option>
-            }
-        </select>
+        <lib-search-box />
     }
 
-    <button type="button" class="icon-button theme-button" (click)="theme.toggle()"
-            [title]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t"
-            [attr.aria-label]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t">
-        <svg [libIcon]="theme.current() === 'dark' ? 'sun' : 'moon'"></svg>
-    </button>
-
-    <a class="icon-button account-button" routerLink="/account"
-       [title]="'shell.account' | t: { name: sessions.user()?.displayName || sessions.user()?.userName || '' }"
-       [attr.aria-label]="'shell.account' | t: { name: sessions.user()?.displayName || sessions.user()?.userName || '' }">
-        <svg libIcon="user"></svg>
-    </a>
+    <div class="menu-anchor account-menu" data-popup="account">
+        <button type="button" class="account-button" (click)="toggle('account')"
+                [attr.aria-expanded]="popup() === 'account'" aria-controls="account-menu"
+                [title]="'shell.account' | t: { name: userName() }" [attr.aria-label]="'shell.account' | t: { name: userName() }">
+            <span class="avatar" aria-hidden="true">{{ initial() }}</span>
+        </button>
+        @if (popup() === 'account') {
+            <div id="account-menu" class="menu-panel" role="group" [attr.aria-label]="'shell.account' | t: { name: userName() }">
+                <div class="menu-head">
+                    <span class="avatar large" aria-hidden="true">{{ initial() }}</span>
+                    <span class="menu-head-text">
+                        <strong>{{ userName() }}</strong>
+                        <span class="muted">{{ sessions.session()?.tenant?.name }}</span>
+                    </span>
+                </div>
+                <a class="menu-item" routerLink="/admin/account" [title]="'shell.myAccountHint' | t">
+                    <svg libIcon="user"></svg><span class="menu-text">{{ 'shell.myAccount' | t }}</span>
+                </a>
+                @if (canAdmin()) {
+                    <a class="menu-item" routerLink="/admin" [title]="'shell.nav.adminHint' | t">
+                        <svg libIcon="settings"></svg><span class="menu-text">{{ 'shell.nav.admin' | t }}</span>
+                    </a>
+                }
+                <button type="button" class="menu-item theme-button" (click)="theme.toggle()"
+                        [title]="(theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t">
+                    <svg [libIcon]="theme.current() === 'dark' ? 'sun' : 'moon'"></svg>
+                    <span class="menu-text">{{ (theme.current() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | t }}</span>
+                </button>
+                @if (tenants().length) {
+                    <hr class="menu-separator">
+                    <p class="group-label">{{ 'shell.tenant' | t }}</p>
+                    @for (tenant of tenants(); track tenant.id) {
+                        <button type="button" class="menu-item tenant-item" [attr.aria-pressed]="sessions.session()?.tenant?.id === tenant.id"
+                                [title]="'shell.tenantHint' | t: { name: tenant.name }" (click)="switchTenant(tenant.id)">
+                            <svg libIcon="tenant"></svg>
+                            <span class="menu-text">{{ tenant.name }}</span>
+                            @if (sessions.session()?.tenant?.id === tenant.id) {
+                                <svg libIcon="check" class="menu-check"></svg>
+                            }
+                        </button>
+                    }
+                }
+                <hr class="menu-separator">
+                <button type="button" class="menu-item" [title]="'account.signOutHint' | t" (click)="signOut()">
+                    <svg libIcon="logout"></svg><span class="menu-text">{{ 'account.signOut' | t }}</span>
+                </button>
+            </div>
+        }
+    </div>
 </header>
 
 <div class="layout">
-    <nav id="main-nav" class="sidebar" [class.open]="drawerOpen()" [attr.aria-label]="'shell.nav.label' | t">
-        <ul>
-            @for (item of nav(); track item.label) {
-                <li>
-                    @if (item.link) {
-                        <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
-                           [routerLinkActiveOptions]="{ exact: item.link === '/' }" [title]="item.label | t">
-                            <svg [libIcon]="item.icon"></svg>
-                            <span>{{ item.label | t }}</span>
-                        </a>
-                    } @else {
-                        <span class="nav-item" aria-disabled="true" [title]="'shell.nav.soon' | t">
-                            <svg [libIcon]="item.icon"></svg>
-                            <span>{{ item.label | t }}</span>
-                        </span>
-                    }
-                </li>
+    @if (!inAdmin()) {
+        <nav id="main-nav" class="sidebar" [class.open]="popup() === 'nav'" [attr.aria-label]="'shell.nav.label' | t">
+            @if (libraries.libraries().length > 1) {
+                <div class="nav-group phone-only">
+                    <p class="group-label">{{ 'shell.library.label' | t }}</p>
+                    <div class="library-chips">
+                        @for (library of libraries.libraries(); track library.id) {
+                            <button type="button" class="chip" [attr.aria-pressed]="library.id === libraries.current()?.id"
+                                    [class.active]="library.id === libraries.current()?.id"
+                                    [title]="'shell.library.open' | t: { name: library.name }" (click)="chooseLibrary(library.id)">
+                                <svg libIcon="library"></svg>{{ library.name }}
+                            </button>
+                        }
+                    </div>
+                </div>
             }
-        </ul>
-    </nav>
+            <div class="nav-group">
+                <p class="group-label">{{ 'shell.nav.browse' | t }}</p>
+                <ul>
+                    @for (item of nav; track item.label) {
+                        <li>
+                            <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
+                               [routerLinkActiveOptions]="exactPath" [title]="item.label | t">
+                                <svg [libIcon]="item.icon"></svg>
+                                <span>{{ item.label | t }}</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+            @if (canAdmin()) {
+                <div class="nav-foot">
+                    <a class="nav-item" routerLink="/admin" [title]="'shell.nav.adminHint' | t">
+                        <svg libIcon="settings"></svg>
+                        <span>{{ 'shell.nav.admin' | t }}</span>
+                    </a>
+                </div>
+            }
+        </nav>
+    }
 
-    @if (drawerOpen()) {
-        <div class="drawer-backdrop" (pointerdown)="closeDrawer()"></div>
+    @if (popup() === 'nav') {
+        <div class="shell-backdrop" (pointerdown)="close()"></div>
     }
 
     <main id="main" class="page" tabindex="-1">
+        <lib-task-panel />
         <router-outlet />
     </main>
 </div>

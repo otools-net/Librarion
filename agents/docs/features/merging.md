@@ -23,6 +23,10 @@ client `app/curation/duplicates/`, the duplicates panel of `app/books/book-page`
 [metadata-tags](metadata-tags.md) (fields) and [archives](archives.md) (file identity). Decision D19 in
 [foundation-plan](../development/foundation-plan.md) (decided 2026-10-31).
 
+Built (stage 5): the book page's **read-only** panel of possible duplicates, computed per book on demand (same file
+by size + CRC, same identifier, same work key; capped, no tables yet): [book-page](book-page.md). Compare, merge, Not a
+duplicate and the duplicate groups below are still planned.
+
 Big collections are full of the same book twice: the same file in two archives, an FB2 and an EPUB of one work, two
 scans with different titles or file names. Tags repeat too: `author:"Steven King"` and `author:"Stephen King"`,
 `genre:Horror` and `category:Horror`. The app **finds them, shows them, and merges them in a click**; every merge can

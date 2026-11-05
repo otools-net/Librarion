@@ -77,8 +77,18 @@ public sealed class TaskSchedule
     public int TenantId { get; set; }
     public int LibraryId { get; set; }
     public Library? Library { get; set; }
+    /// <summary>What it runs: a scan of the library, or an import (with <see cref="ImportKind"/>, <see cref="Source"/>, <see cref="Files"/>).</summary>
     public BackgroundTaskKind Task { get; set; }
     public ScheduleKind Kind { get; set; }
+
+    /// <summary>An import's format key (<c>calibre</c>, <c>inpx</c>).</summary>
+    public string? ImportKind { get; set; }
+
+    /// <summary>An import's source, a full path on the server (checked when saved, again when it runs).</summary>
+    public string? Source { get; set; }
+
+    /// <summary>The folder of an import's files, inside a root of the library.</summary>
+    public string? Files { get; set; }
 
     /// <summary>UTC.</summary>
     public DateTime Start { get; set; }

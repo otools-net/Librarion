@@ -3,6 +3,8 @@
 import type { RightInfo } from './models';
 export const Rights = {
     browse: 'library.browse',
+    scan: 'library.scan',
+    import: 'library.import',
     librarySettings: 'library.settings',
     manageUsers: 'tenant.users',
     manageLibraries: 'tenant.libraries',

@@ -1,21 +1,12 @@
 import { Routes } from '@angular/router';
-import { AccountPage } from './account/account-page';
 import { SetupPage } from './account/setup-page';
 import { SignInPage } from './account/sign-in-page';
-import { ADMIN_SECTIONS, AdminPage } from './admin/admin-page';
-import { GroupsSection } from './admin/groups-section';
-import { LibrariesSection } from './admin/libraries-section';
-import { SecuritySection } from './admin/security-section';
-import { SettingsSection } from './admin/settings-section';
-import { TenantsSection } from './admin/tenants-section';
-import { UsersSection } from './admin/users-section';
-import { HomePage } from './home/home-page';
+import { adminMatcher } from './admin/admin-route';
+import { BrowsePage } from './browse/browse-page';
 import { NotFoundPage } from './home/not-found-page';
-import { ADMIN_RIGHTS } from './core/rights';
-import { needsRight, signedIn } from './core/session.service';
+import { signedIn } from './core/session.service';
+import { leaveWithUnsaved } from './core/unsaved-changes';
 import { Shell } from './shell/shell';
-
-const sectionRights = (path: string) => needsRight(...ADMIN_SECTIONS.find(section => section.path === path)!.rights);
 
 export const routes: Routes = [
     { path: 'setup', component: SetupPage, title: 'Librarion' },
@@ -25,21 +16,21 @@ export const routes: Routes = [
         component: Shell,
         canActivate: [signedIn],
         children: [
-            { path: '', component: HomePage, title: 'Librarion' },
-            { path: 'account', component: AccountPage, title: 'Librarion' },
+            { path: '', component: BrowsePage, title: 'Librarion' },
+            // Browsing by value (fields, tags) is loaded when first opened.
+            { path: 'fields', loadComponent: () => import('./tags/fields-page').then(m => m.FieldsPage), title: 'Librarion' },
+            { path: 'fields/:key', loadComponent: () => import('./tags/values-page').then(m => m.ValuesPage), title: 'Librarion' },
+            { path: 'tags', loadComponent: () => import('./tags/values-page').then(m => m.ValuesPage), title: 'Librarion' },
+            { path: 'tags/:id', loadComponent: () => import('./tags/tag-page').then(m => m.TagPage), title: 'Librarion' },
+            { path: 'books/:id', loadComponent: () => import('./books/book-page').then(m => m.BookPage), title: 'Librarion' },
+            { path: 'search', loadComponent: () => import('./search/search-page').then(m => m.SearchPage), title: 'Librarion' },
+            // My account is a section of the administration (as SFE's); the old address still opens it.
+            { path: 'account', redirectTo: 'admin/account' },
+            // Each section shows only to the rights of its sub-pages (admin-sections.ts); the API checks them again.
+            // Loaded when first opened: readers never need it (it is the biggest part of the client).
             {
-                path: 'admin',
-                component: AdminPage,
-                canActivate: [needsRight(...ADMIN_RIGHTS)],
-                title: 'Librarion',
-                children: [
-                    { path: 'users', component: UsersSection, canActivate: [sectionRights('users')] },
-                    { path: 'groups', component: GroupsSection, canActivate: [sectionRights('groups')] },
-                    { path: 'libraries', component: LibrariesSection, canActivate: [sectionRights('libraries')] },
-                    { path: 'tenants', component: TenantsSection, canActivate: [sectionRights('tenants')] },
-                    { path: 'settings', component: SettingsSection, canActivate: [sectionRights('settings')] },
-                    { path: 'security', component: SecuritySection, canActivate: [sectionRights('security')] },
-                ],
+                matcher: adminMatcher, loadComponent: () => import('./admin/admin-page').then(m => m.AdminPage),
+                canDeactivate: [leaveWithUnsaved], title: 'Librarion',
             },
             { path: '**', component: NotFoundPage, title: 'Librarion' },
         ],

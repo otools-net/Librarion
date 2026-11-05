@@ -41,13 +41,20 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
 ## What `run` measures
 
 ```sh
-dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/sqlite-2m.db" [--iterations 20]
+dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/sqlite-2m.db" [--iterations 20] [--only "search:"]
 ```
 
-- 20 queries through Core's own services (`BookQueries`, `TagQueries`, `BookVisibilities`): first and middle pages
-  by title, author and newest first (all libraries and one), the books of the most prolific author, of an author
-  with 5–20 books, of the biggest series, of category Fiction with its subcategories, authors A–Z (first and
-  middle), book detail on random ids, and the pages of the three filtered groups (0.1 %, 1 %, 10 %).
+- 49 queries through Core's own services, the ones the UI's routes call (`BookQueries`, `TagQueries`,
+  `BookVisibilities`, `SearchSuggestions`, `SearchFacets`): first and middle pages by title, author and newest first
+  (all libraries and one), the books of the most prolific author, of an author with 5–20 books, of the biggest
+  series, of category Fiction with its subcategories, authors A–Z (first and middle, and from a letter as Go to), the
+  field list, plain tags A–Z, a tag's page, book detail and possible duplicates on random ids, and the pages of the
+  three filtered groups (0.1 %, 1 %, 10 %). Searches (stage 5, budget 300 ms): a word on about 2 % of the titles
+  (first and middle page), two such words, a two-letter prefix, a file name (one book), an author's last name, an
+  author by field and by word with a title word, a category less a format, books outside any series; suggestions for
+  two letters and after `author:`; facets (Refine) of the library, of those searches and of each filtered group's
+  library.
+- `--only <text>`: only the scenarios whose name contains it (a slow one measured with its plans, alone).
 - Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms).
 - Every SQL command a query runs is captured (EF's diagnostic events) and explained with its parameters:
   PostgreSQL `EXPLAIN` (a `Seq Scan` on a big table fails), SQLite `EXPLAIN QUERY PLAN` (a bare `SCAN` of a big table

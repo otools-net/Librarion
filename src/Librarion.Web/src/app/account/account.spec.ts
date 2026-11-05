@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { ApiMock, mockApi, sessionInfo, settingState, settle, testProviders } from '../../testing/fakes';
 import { ApiError } from '../core/api.service';
 import { SessionService } from '../core/session.service';
-import { AccountPage } from './account-page';
+import { AccountSection } from './account-section';
 import { SetupPage } from './setup-page';
 import { SignInPage } from './sign-in-page';
 
@@ -165,13 +165,12 @@ describe('SetupPage', () => {
     });
 });
 
-describe('AccountPage', () => {
+describe('AccountSection', () => {
     it('changes the password of a local account and says the other devices are signed out', async () => {
         const api = mockApi();
         api.changePassword.mockResolvedValue(undefined);
-        api.settings.mockResolvedValue([settingState()]);
         TestBed.resetTestingModule();
-        const { element, stable } = await renderAccount(api, ['account.password', 'account.preferences']);
+        const { element, stable } = await renderAccount(api, ['account.password', 'account.preferences'], 'password');
 
         type(element, '#current-password', 'old');
         type(element, '#new-password', 'a new one');
@@ -181,29 +180,37 @@ describe('AccountPage', () => {
 
         expect(api.changePassword).toHaveBeenCalledWith('old', 'a new one');
         expect(element.querySelector('[role="status"]')?.textContent).toContain('other devices are signed out');
-        expect(element.querySelector('lib-settings-panel')).not.toBeNull();
+        expect(element.querySelector('lib-settings-panel')).toBeNull();
     });
 
-    it('shows no password form without the right, and signs out', async () => {
+    it('shows the preferences on their sub-page, and no password form without the right', async () => {
         const api = mockApi();
-        api.signOut.mockResolvedValue(sessionInfo([], { user: null }));
-        const { element, navigateTo, stable } = await renderAccount(api, []);
+        api.settings.mockResolvedValue([settingState()]);
+        const preferences = await renderAccount(api, ['account.preferences'], 'preferences');
+        expect(preferences.element.querySelector('lib-settings-panel')).not.toBeNull();
 
-        expect(element.querySelector('#current-password')).toBeNull();
-        element.querySelector<HTMLButtonElement>('.form-actions .button')!.click();
-        await stable();
-
-        expect(api.signOut).toHaveBeenCalled();
-        expect(navigateTo).toHaveBeenCalledWith(['/login']);
+        const password = await renderAccount(mockApi(), [], 'password');
+        expect(password.element.querySelector('#current-password')).toBeNull();
     });
 
-    async function renderAccount(api: ApiMock, rights: string[]) {
+    it('says where an account signing in through another service changes its password', async () => {
+        const { element } = await renderAccount(mockApi(), ['account.password'], 'password',
+            { id: 1, userName: 'ana', displayName: null, isServerAdmin: false, local: false });
+
+        expect(element.querySelector('.notice')?.textContent).toContain('another service');
+        expect(element.querySelector('#current-password')).toBeNull();
+    });
+
+    async function renderAccount(api: ApiMock, rights: string[], page: string, user?: NonNullable<ReturnType<typeof sessionInfo>['user']>) {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({ providers: testProviders(api) });
-        TestBed.inject(SessionService).set(sessionInfo(rights));
+        TestBed.inject(SessionService).set(sessionInfo(rights, user ? { user } : {}));
         const router = TestBed.inject(Router);
         const navigateTo = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-        const fixture = TestBed.createComponent(AccountPage);
+        const fixture = TestBed.createComponent(AccountSection);
+        fixture.componentRef.setInput('page', page);
+        await fixture.whenStable();
+        await settle();
         await fixture.whenStable();
         const element = fixture.nativeElement as HTMLElement;
         return { element, navigateTo, stable: async () => { await settle(); await fixture.whenStable(); } };

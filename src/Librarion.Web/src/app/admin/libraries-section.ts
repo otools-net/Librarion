@@ -2,13 +2,17 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
+import { LibraryContext } from '../core/library-context';
 import { LibraryInfo } from '../core/models';
-import { LibraryPanel } from './library-panel';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
+import { EmptyState } from '../shared/placeholders';
+import { RouterLink } from '@angular/router';
 
-/** Libraries of the tenant: added, renamed in place, deleted; each opens its folders, scans and schedules. */
+/** Libraries of the tenant: added, renamed in place, deleted; each opens its own pages (`LibraryPage`). */
 @Component({
     selector: 'lib-libraries-section',
-    imports: [TranslatePipe, LibraryPanel],
+    imports: [RouterLink, TranslatePipe, EmptyState],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <form class="toolbar" novalidate (submit)="create($event)">
@@ -29,20 +33,16 @@ import { LibraryPanel } from './library-panel';
                             <button type="button" class="button" [title]="'common.cancelHint' | t" (click)="renaming.set(null)">{{ 'common.cancel' | t }}</button>
                         </form>
                     } @else {
-                        <button type="button" class="row-main" [attr.aria-expanded]="open() === library.id" [title]="'libraries.openHint' | t: { name: library.name }"
-                                (click)="open.set(open() === library.id ? null : library.id)">
+                        <a class="row-main" [routerLink]="['/admin/libraries', library.id]" [title]="'libraries.openHint' | t: { name: library.name }">
                             <span class="row-title">{{ library.name }}</span>
                             <span class="row-meta">{{ 'libraries.books' | t: { count: library.bookCount ?? 0 } }}</span>
-                        </button>
+                        </a>
                         <button type="button" class="button" [title]="'libraries.renameHint' | t: { name: library.name }" (click)="startRename(library)">{{ 'libraries.rename' | t }}</button>
                         <button type="button" class="button danger" [title]="'libraries.deleteHint' | t: { name: library.name }" [disabled]="busy()" (click)="remove(library)">{{ 'common.delete' | t }}</button>
                     }
-                    @if (open() === library.id) {
-                        <lib-library-panel class="row-panel" [library]="library" />
-                    }
                 </li>
             } @empty {
-                <li class="row muted">{{ 'libraries.none' | t }}</li>
+                <li class="row" libEmpty="library">{{ 'libraries.none' | t }}</li>
             }
         </ul>
     `,
@@ -50,11 +50,13 @@ import { LibraryPanel } from './library-panel';
 export class LibrariesSection implements OnInit {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly confirm = inject(ConfirmService);
+    private readonly toasts = inject(ToastService);
+    private readonly context = inject(LibraryContext);
 
     protected readonly libraries = signal<LibraryInfo[]>([]);
     protected readonly name = signal('');
     protected readonly renaming = signal<number | null>(null);
-    protected readonly open = signal<number | null>(null);
     protected readonly newName = signal('');
     protected readonly busy = signal(false);
     protected readonly error = signal<string | null>(null);
@@ -70,7 +72,7 @@ export class LibrariesSection implements OnInit {
         await this.run(async () => {
             await this.api.createLibrary(this.name().trim());
             this.name.set('');
-            this.libraries.set(await this.api.libraries());
+            await this.reload();
         });
     }
 
@@ -84,17 +86,28 @@ export class LibrariesSection implements OnInit {
         await this.run(async () => {
             await this.api.renameLibrary(library.id, this.newName().trim());
             this.renaming.set(null);
-            this.libraries.set(await this.api.libraries());
+            await this.reload();
         });
     }
 
     protected async remove(library: LibraryInfo): Promise<void> {
-        if (!confirm(this.i18n.t('libraries.deleteConfirm', { name: library.name })))
+        const ok = await this.confirm.ask({
+            title: this.i18n.t('libraries.deleteTitle'), message: this.i18n.t('libraries.deleteConfirm', { name: library.name }),
+            action: this.i18n.t('common.delete'), danger: true,
+        });
+        if (!ok)
             return;
         await this.run(async () => {
             await this.api.deleteLibrary(library.id);
-            this.libraries.set(await this.api.libraries());
+            this.toasts.show(this.i18n.t('libraries.deleted', { name: library.name }));
+            await this.reload();
         });
+    }
+
+    /** The list here, and the top bar's library switcher. */
+    private async reload(): Promise<void> {
+        this.libraries.set(await this.api.libraries());
+        void this.context.load();
     }
 
     private async run(work: () => Promise<void>): Promise<void> {

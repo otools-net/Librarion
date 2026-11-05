@@ -1,5 +1,9 @@
-/* Buttons, fields and form messages (from SFE's base.css and dialogs.css, on Librarion's tokens). */
+/*
+ * Controls (agents/docs/features/design.md#controls): buttons, fields, checkboxes, chips, badges, cards and form
+ * messages, on the ink and paper tokens (SFE's approach: layered surfaces, one accent, soft focus rings).
+ */
 
+/* Buttons: secondary by default; .primary (the one main action), .quiet (no frame), .danger (destroys). */
 .button {
     display: inline-flex;
     align-items: center;
@@ -7,21 +11,38 @@
     gap: var(--space-2);
     min-height: var(--target);
     padding: 0 var(--space-3);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius);
-    background: var(--surface-2);
+    background: var(--surface);
+    color: var(--text);
     font-weight: 600;
     white-space: nowrap;
+    text-decoration: none;
     cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: background-color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease),
+        color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
 }
 
-.button:hover {
-    border-color: var(--text-muted);
+.button:hover:not(:disabled) {
+    background: var(--surface-2);
+}
+
+.button:active:not(:disabled) {
+    background: var(--surface-3);
+    box-shadow: none;
 }
 
 .button:disabled {
-    opacity: .55;
+    opacity: .5;
     cursor: not-allowed;
+    box-shadow: none;
+}
+
+.button .icon {
+    width: 18px;
+    height: 18px;
+    margin-inline-start: -2px;
 }
 
 .button.primary {
@@ -30,15 +51,38 @@
     color: var(--accent-text);
 }
 
+.button.primary:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--accent) 85%, var(--text));
+    background: color-mix(in srgb, var(--accent) 85%, var(--text));
+}
+
+.button.quiet {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.button.quiet:hover:not(:disabled) {
+    background: var(--surface-2);
+}
+
 .button.danger {
+    border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
     color: var(--danger);
 }
 
+.button.danger:hover:not(:disabled) {
+    background: var(--danger-soft);
+}
+
+/* A button showing the current choice (a toggle, a segment). */
 .button.active {
     border-color: var(--accent);
+    background: var(--accent-soft);
     color: var(--accent);
 }
 
+/* Fields */
 .field {
     display: flex;
     flex-direction: column;
@@ -57,13 +101,60 @@
 /* A heading over a group of fields, styled as a label. */
 h3.field-label {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--text-md);
 }
 
 .field-hint {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 400;
+}
+
+input:is([type="text"], [type="number"], [type="password"], [type="search"], [type="email"], [type="url"], [type="time"], [type="date"]),
+select,
+textarea {
+    min-width: 0;
+    min-height: var(--target);
+    padding: 4px var(--space-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+
+textarea {
+    padding-block: var(--space-2);
+}
+
+::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+:is(input, select, textarea):hover:not(:disabled, :focus) {
+    border-color: var(--text-muted);
+}
+
+/* The focus of a field: its edge in the accent and a soft ring (the global outline is for buttons and links). */
+:is(input, select, textarea):focus-visible {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+:is(input, select, textarea):disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+:is(input, select, textarea)[aria-invalid="true"] {
+    border-color: var(--danger);
+}
+
+:is(.account-form, .settings-form) :is(input[type="text"], input[type="number"], input[type="password"], select) {
+    width: 100%;
 }
 
 .field-error,
@@ -77,9 +168,32 @@ h3.field-label {
 }
 
 .form-ok {
-    color: var(--accent);
+    color: var(--success);
 }
 
+/* A message across a form or page: info, success, warning, error, with its icon first. */
+.notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+.notice.danger {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    background: var(--danger-soft);
+}
+
+.notice.accent {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    background: var(--accent-soft);
+}
+
+/* Checkboxes and radio buttons with their label (and a hint under it). */
 .check {
     display: inline-flex;
     align-items: flex-start;
@@ -91,10 +205,11 @@ h3.field-label {
 
 .check input {
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    margin: 2px 0 0;
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
     accent-color: var(--accent);
+    cursor: pointer;
 }
 
 .check > span {
@@ -113,44 +228,123 @@ h3.field-label {
     gap: 0 var(--space-3);
 }
 
-:is(.account-form, .settings-form, .toolbar, .row-form) :is(input[type="text"], input[type="number"], input[type="password"], input[type="search"], select),
-.tenant-switch {
-    min-width: 0;
-    min-height: var(--target);
-    padding: 4px var(--space-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg);
-    outline: none;
-}
-
-:is(.account-form, .settings-form) :is(input[type="text"], input[type="number"], input[type="password"], select) {
-    width: 100%;
-}
-
-:is(input, select):focus-visible {
-    border-color: var(--accent);
-}
-
 .form-actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
 }
 
-.badge {
-    display: inline-block;
-    padding: 0 6px;
+/* Chips: a choice among a few (sub-pages on phones, filters, a book's fields); .active is the chosen one. */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 28px;
+    padding: 0 var(--space-3);
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+
+.chip:hover {
+    border-color: var(--border-strong);
+}
+
+.chip.active,
+.chip[aria-selected="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.chip .icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Badges: a small status beside a title. */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: var(--text-xs);
     font-weight: 600;
     line-height: 18px;
     white-space: nowrap;
 }
 
+.badge.accent {
+    border-color: transparent;
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.badge.success {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    color: var(--success);
+}
+
+.badge.warning {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--warning) 16%, transparent);
+    color: var(--warning);
+}
+
 .badge.danger {
-    border-color: var(--danger);
+    border-color: transparent;
+    background: var(--danger-soft);
     color: var(--danger);
+}
+
+/* Cards: a framed block of content (a panel, an overview entry, a book's details). */
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+a.card {
+    color: inherit;
+    text-decoration: none;
+    transition: border-color var(--duration-fast) var(--ease);
+}
+
+a.card:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 600;
+}
+
+/* Small upper-case labels over groups (SFE's sidebar and overview headings). */
+.group-label {
+    margin: 0 0 var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
 }

@@ -43,9 +43,30 @@ export class I18n {
         const text = this.messages()[key] ?? (en as Messages)[key] ?? key;
         return params ? text.replace(/\{(\w+)\}/g, (part, name: string) => name in params ? String(params[name]) : part) : text;
     }
+
+    /** `value` written the UI language's way (1,234). */
+    number(value: number): string {
+        return new Intl.NumberFormat(this.code()).format(value);
+    }
+
+    /** A file's size in bytes, kB, MB or GB (1,000 each), at most one decimal: "2.4 MB". */
+    size(bytes: number): string {
+        const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
+        let unit = 0;
+        while (bytes >= 1000 && unit < units.length - 1) {
+            bytes /= 1000;
+            unit++;
+        }
+        return new Intl.NumberFormat(this.code(), { style: 'unit', unit: units[unit], unitDisplay: 'short', maximumFractionDigits: unit ? 1 : 0 }).format(bytes);
+    }
+
+    /** A day, the UI language's way: "3 Nov 2026". */
+    date(utc: string): string {
+        return new Intl.DateTimeFormat(this.code(), { dateStyle: 'medium' }).format(new Date(utc));
+    }
 }
 
-/** `{{ 'home.title' | t }}`, `{{ 'x.count' | t: { count } }}`. Not pure: it follows the language signal. */
+/** `{{ 'browse.empty' | t }}`, `{{ 'x.count' | t: { count } }}`. Not pure: it follows the language signal. */
 @Pipe({ name: 't', pure: false })
 export class TranslatePipe implements PipeTransform {
     private readonly i18n = inject(I18n);

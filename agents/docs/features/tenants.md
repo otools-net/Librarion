@@ -32,7 +32,7 @@ the tenant switcher in `shell/`. Decision D4 in [foundation-plan](../development
 
 ## Server administrators and tenants
 
-- They belong to no tenant and work in the one their session picked (the first one by default); the top bar shows a
-  tenant switcher when there are several.
+- They belong to no tenant and work in the one their session picked (the first one by default); the account menu lists
+  the tenants when there are several.
 - Tenant routes take `?tenant=` for them: own tenant needs the tenant right, another tenant the server right;
   refused = 404.

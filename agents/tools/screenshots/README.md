@@ -10,9 +10,18 @@ cd tests/e2e && npm ci && cd ../..                    # once: the e2e tests' Pla
 node agents/tools/screenshots/screenshots.mjs         # every page into <tmp>/librarion-screens
 node agents/tools/screenshots/screenshots.mjs <out> account admin/users#new   # some pages
 LIBRARION_E2E_SKIP_BUILD=0 node agents/tools/screenshots/screenshots.mjs      # rebuild the app first
+LIBRARION_SCREENS_THEME=light node agents/tools/screenshots/screenshots.mjs   # light colors (default dark)
 ```
 
 - A page is a client address; `#recover` opens the recovery on the sign-in page, `#new` presses the section's "New …"
-  button, `#edit` its first "Edit" button, `#open` its first row (a library's folders, runs and schedules). Before
+  button, `#edit` its first "Edit" button, `#open` its first row (a library's pages), `#delete` its first Delete button (the
+  confirmation dialog), `#account` the account menu, `#library` the library switcher (desktops), `#menu` the navigation sheet
+  (phones), `#search=<words>` types them in the administration's search box (`%20` for spaces), `#found=<words>` also
+  opens the first result (a setting: the shot catches its flash), `#scan` presses the first "Run now" (Background tasks:
+  the progress panel shows the run, or its result), `#list` switches the library to its list view (`""#list`; the
+  address `""` is the library), `#first` opens the first value of a list (`fields/author#first`: an author's page), `#book` the library's first book (`""#book`, a full-page shot), `#refine` presses Refine (its sheet opens). `#suggest=<words>` types them in the top bar's search (its suggestions open); a page may carry a query (`search?q=book`). Shots with an action are the viewport, not the full page. The setup adds a second library, "Comics", so
+  the switcher shows. Before
   the pages, a folder of three FB2s is added to the library and scanned. Files are named `<phone|desktop>-<page>.png`.
-- It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds.
+- It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds. The client is
+  served from the source tree's `wwwroot` but the server from that build: after a server change, shoot with
+  `LIBRARION_E2E_SKIP_BUILD=0` (a stale server once hid the book page's Download, `canDownload` missing).

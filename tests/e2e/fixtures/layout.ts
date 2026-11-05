@@ -23,7 +23,17 @@ export async function expectTapTargets(page: Page, scope = 'body', min = 24): Pr
             const style = getComputedStyle(element);
             return box.width > 0 && box.height > 0 && style.visibility !== 'hidden' && Number(style.opacity) > 0
                 && box.bottom > 0 && box.top < height && box.right > 0 && box.left < width
-                && !element.closest('[inert], [aria-hidden=true]');
+                && !element.closest('[inert], [aria-hidden=true]') && !covered(element, box);
+        };
+        /**
+         * Under something else at its centre (scrolled beneath the sticky top bar): not tappable there, so not measured
+         * (a breadcrumb half under the bar met the bar's buttons in its square and failed, 2026-11-03).
+         */
+        const covered = (element: Element, box: DOMRect) => {
+            const x = Math.min(Math.max(box.left + box.width / 2, 0), width - 1);
+            const y = Math.min(Math.max(box.top + box.height / 2, 0), height - 1);
+            const hit = document.elementFromPoint(x, y);
+            return hit !== null && !element.contains(hit) && !hit.contains(element);
         };
         /** A link or button within a run of text: its parent holds text of its own around it. */
         const inline = (element: Element) => getComputedStyle(element).display === 'inline'

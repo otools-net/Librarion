@@ -1,0 +1,301 @@
+/*
+ * A book's page (app/books, agents/docs/features/book-page.md): the cover beside the title, authors, series and fields
+ * (above them on phones), then the description, the files with Download, the details and possible duplicates.
+ */
+
+.book-page {
+    display: block;
+    max-width: 1080px;
+}
+
+.book-back {
+    margin: 0 0 var(--space-3) calc(-1 * var(--space-2));
+}
+
+.book-head {
+    display: grid;
+    grid-template-columns: minmax(160px, 280px) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-6);
+}
+
+.book-page-cover {
+    display: block;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--surface-2);
+    box-shadow: var(--shadow);
+}
+
+.book-page-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.book-main {
+    min-width: 0;
+}
+
+.book-main .tag-kind {
+    margin: 0 0 var(--space-1);
+}
+
+.book-main h1 {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* No title in the metadata: the file name stands in, marked for curators. */
+.book-main h1.file-title {
+    font-style: italic;
+}
+
+.book-by,
+.book-in-series,
+.book-rating {
+    margin: var(--space-2) 0 0;
+    color: var(--text-muted);
+}
+
+.book-by a,
+.book-in-series a {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.book-in-series,
+.book-rating {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.book-in-series .icon,
+.book-rating .icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.book-rating .icon {
+    color: var(--warning);
+}
+
+.book-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+}
+
+.book-fields,
+.book-details {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+}
+
+.book-field,
+.book-details > div {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-3);
+}
+
+.book-fields dt,
+.book-details dt {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+}
+
+.book-fields dd,
+.book-details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.book-fields dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.book-fields .chip {
+    text-decoration: none;
+}
+
+.book-details {
+    margin: 0;
+}
+
+.book-identifier {
+    font-variant-numeric: tabular-nums;
+}
+
+.book-section {
+    margin-top: var(--space-6);
+}
+
+.book-section h2 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-lg);
+}
+
+.book-description {
+    max-width: 72ch;
+    margin: 0;
+    white-space: pre-line;
+}
+
+.book-note {
+    margin: var(--space-2) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+/* ---------- Files ---------- */
+
+.book-files,
+.book-duplicates {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.book-files {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+}
+
+.book-file {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 56px;
+    padding: var(--space-2) var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
+.book-file:first-child {
+    border-top: 0;
+}
+
+.book-file .badge {
+    flex-shrink: 0;
+}
+
+.book-file-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.3;
+}
+
+.book-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.book-file-where {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+}
+
+.book-file.missing .book-file-name {
+    color: var(--text-muted);
+}
+
+.book-file-missing {
+    color: var(--danger);
+}
+
+/* ---------- Possible duplicates ---------- */
+
+.book-duplicates {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.book-duplicate {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 64px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.book-duplicate:hover {
+    border-color: var(--border-strong);
+}
+
+.book-duplicate:hover .book-title {
+    color: var(--accent);
+}
+
+.book-duplicate .book-cover {
+    flex-shrink: 0;
+    width: 36px;
+    height: 54px;
+    border-radius: 4px;
+}
+
+.book-duplicate .book-text {
+    flex: 1;
+}
+
+.book-duplicate .book-title {
+    -webkit-line-clamp: 1;
+}
+
+.book-reason {
+    color: var(--accent);
+    font-size: var(--text-xs);
+}
+
+.book-duplicate .book-formats {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-1);
+}
+
+@media (max-width: 640px) {
+    .book-head {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-4);
+    }
+
+    .book-page-cover {
+        justify-self: center;
+        width: min(56vw, 220px);
+    }
+
+    .book-field,
+    .book-details > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-1);
+    }
+
+    .book-actions .button {
+        flex: 1;
+    }
+
+    .book-duplicate .book-formats {
+        display: none;
+    }
+}

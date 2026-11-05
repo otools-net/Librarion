@@ -6,6 +6,7 @@ import { I18n, TranslatePipe } from '../core/i18n.service';
 import { SetupState } from '../core/models';
 import { SessionService } from '../core/session.service';
 import { Logo } from '../shared/logo';
+import { Skeleton } from '../shared/placeholders';
 
 /**
  * The first start (as SFE's setup page): the setup code the server printed (and wrote to its data folder), the first
@@ -14,7 +15,7 @@ import { Logo } from '../shared/logo';
  */
 @Component({
     selector: 'lib-setup-page',
-    imports: [TranslatePipe, Logo],
+    imports: [TranslatePipe, Logo, Skeleton],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'account-page' },
     template: `
@@ -27,7 +28,7 @@ import { Logo } from '../shared/logo';
                 @if (error(); as error) {
                     <p class="form-error" role="alert">{{ error }}</p>
                 } @else {
-                    <p class="muted" aria-busy="true">{{ 'common.loading' | t }}</p>
+                    <lib-skeleton shape="form" [rows]="4" />
                 }
             } @else if (!state()!.available) {
                 <p>{{ 'setup.done' | t }}</p>

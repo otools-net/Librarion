@@ -109,6 +109,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<byte?>("Rating")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SearchText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("SeriesId")
                         .HasColumnType("INTEGER");
 
@@ -609,6 +613,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId", "FieldKey")
                         .IsUnique();
 
+                    b.HasIndex("TenantId", "IsHidden")
+                        .HasFilter("\"IsHidden\"");
+
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
 
                     b.HasIndex("TenantId", "FieldId", "SortName", "Id");
@@ -769,6 +776,14 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Files")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImportKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("IntervalMinutes")
                         .HasColumnType("INTEGER");
 
@@ -780,6 +795,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.Property<int>("LibraryId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("Start")
                         .HasColumnType("TEXT");

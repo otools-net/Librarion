@@ -184,7 +184,22 @@ public sealed class ScopeModelCacheKeyFactory : Microsoft.EntityFrameworkCore.In
 }
 
 /// <summary>The SQLite flavour of <see cref="LibrarionDbContext"/>: its migrations are in <c>Data/Migrations/Sqlite</c>.</summary>
-public sealed class SqliteLibrarionDbContext(DbContextOptions<SqliteLibrarionDbContext> options) : LibrarionDbContext(options);
+public sealed class SqliteLibrarionDbContext(DbContextOptions<SqliteLibrarionDbContext> options) : LibrarionDbContext(options)
+{
+    /// <summary>
+    /// Every time is stored in UTC, but SQLite keeps no zone: read back, a time is said to be UTC (else it went out as
+    /// JSON without its "Z" and browsers read it as their own local time). PostgreSQL's <c>timestamptz</c> does this itself.
+    /// </summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
+
+    private sealed class UtcDateTimeConverter() : Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+        value => value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value,
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+}
 
 /// <summary>The PostgreSQL flavour of <see cref="LibrarionDbContext"/>: its migrations are in <c>Data/Migrations/Postgres</c>.</summary>
 public sealed class PostgresLibrarionDbContext(DbContextOptions<PostgresLibrarionDbContext> options) : LibrarionDbContext(options);

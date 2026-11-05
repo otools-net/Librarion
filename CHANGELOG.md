@@ -2,6 +2,79 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## 0.6.0
+
+### Changed
+
+- New colours, "ink and paper": warm paper with ink-blue in the light theme, deep blue-grey in the dark one, every
+  text readable at WCAG AA contrast in both.
+- Restyled buttons, fields, checkboxes, chips and badges, with visible focus rings; panels and lists as cards.
+- Deleting something asks in the page's own dialog (a sheet from the bottom on phones, Cancel focused) instead of the
+  browser's box; deleting a tenant needs its name typed in it. Short messages ("Saved.", "Library deleted.", "Scan
+  started") appear as toasts in the corner, kept while pointed at. Empty lists show an icon and what to do next, and
+  pages that load show grey placeholders instead of "Loading…".
+- A new frame: the top bar shows the library being browsed (a switcher when there are several, remembered by the
+  browser) and an account menu (My account, Administration, light or dark colors, the tenant for server
+  administrators, Sign out) in place of the theme button and the tenant box. The navigation is grouped, with
+  Administration at its foot; on phones it and the menus rise from the bottom. The administration is a page of its
+  own, with an arrow back to the library.
+- The administration is grouped as in SFE: a left column of sections in groups (Account, Libraries, People and
+  access, Tenant and server), an overview of cards, a path back above each page and an address per page
+  (`/admin/settings/server`). My account is its first section (`/account` still opens it), settings are split by
+  level (library settings under Libraries; this tenant and the whole server under Settings), and System shows the
+  version and database.
+- On phones the administration opens on the list of sections (each with its description); a section opens on its
+  own with its pages as tabs, and the back arrow returns to the list.
+- Each library has its own pages instead of one long panel: Folders, Runs, Import, Missing books and Schedules as
+  tabs under its name (`/admin/libraries/1/runs`), with Scan now and the progress of a running scan above every tab.
+- Schedules say what they run: a folder scan, or an import from Calibre or INPX (new: imports can run on a
+  schedule, checked as an import started by hand). They are set in a dialog that asks what, then where from, then
+  when, and listed with what they run, when, their next time and an on/off switch.
+- Settings come in groups, each setting with a line on what it does; changed ones are marked, a bar at the bottom
+  counts the changes with Save and Discard, and leaving a page with unsaved changes asks first.
+- The administration has a search box (as in SFE): it finds sections, pages and settings by every word typed, in
+  their names, descriptions and choices, accents and capitals aside, with the words marked; a setting opens on its
+  page scrolled into view, selected and briefly highlighted.
+- A panel under the top bar shows the scans, imports and removals running (as SFE's scan panel): what runs and
+  where, the time it has taken, the books found so far and the file being read, with Cancel; once done, how it went
+  until closed. It replaces the line of progress above a library's tabs.
+- Administration › Background tasks (as SFE's): a card per kind (folder scan, import) with its state, the progress
+  of what runs, the last and the next run, Run now; every library's schedules; and the history of every library's
+  runs.
+
+- The home page is the library: its books as a grid of covers or a compact list, in order of title, author or
+  newest (both choices kept by the browser), more books coming as you scroll, and the place kept when you come back.
+  Only the books in view are drawn, so libraries of millions stay quick. The version and database moved to
+  Administration › System.
+- The administration is loaded the first time it is opened: the app starts with less to download.
+- Authors, Series, Tags and All fields in the navigation: names from A to Z with how many of their books the library
+  holds (those without any left out), a Go to box, and a page for each name with its books (a series in its order),
+  the tags it is under and the narrower ones. Tags hidden from an account by its group's filters are left out.
+- A page for each book, opened from its cover or row: its cover, title, authors and series as links, the other
+  fields as chips, the description, its files (format, size, the ZIP holding it) with Download for those who may
+  download in its library, its identifiers and imported properties, and other books that may be the same one (the
+  same file in another library, the same ISBN or other identifier, the same title and author).
+- Search: the box in the top bar finds the books of the library with every word in their title, file name or the
+  name of an author, series or tag (case and accents aside, words being typed as prefixes); `"phrases"`,
+  `author:"Stephen King"` and every other field (`author:king`, `author:ki*`, `series:` for any), `tag:`, `format:epub`,
+  `title:`, and `-` to leave books out. Books with a hidden tag (Archived) only show when the search names it. While
+  typing, it suggests fields and then authors, series and tags with their number of books. Results are listed like the
+  library, sorted by title, author or newest. See [Searching](docs/user-guide/searching.md).
+- Refine, on the library and on search results: each field's most frequent values among the books (categories,
+  authors, series, languages, formats, publishers, years, tags) with their counts; one narrows the search to its
+  books, its minus leaves them out, one already chosen is marked and takes it out again. The results say how many
+  books match; past 2,000 matches the counts are over the first 2,000 ("2,000+ books").
+- Accounts whose groups see only part of a library (content filters) get its pages and Refine faster on big
+  libraries.
+
+### Fixed
+
+- Typing in "Go to" while the page was still loading the libraries was forgotten: the list stayed at its start.
+- Times of runs and other records read from a SQLite database were shown in the wrong time zone (an hour or more
+  off); they are now read as UTC.
+- Starting on a database made by an older build (before 1.0 the database is not upgraded between builds) stopped
+  with "table already exists" halfway; it now stops before touching it and says which file to delete.
+
 ## 0.5.0
 
 ### Added

@@ -4,6 +4,8 @@ import { checkedOf, errorText, fieldErrors, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { GroupInfo, LibraryInfo, RightInfo, UserInfo } from '../core/models';
 import { rightAreas } from '../core/rights';
+import { ToastService } from '../core/toast.service';
+import { ConfirmService } from '../shared/confirm';
 
 interface GroupDraft {
     id: number | null;
@@ -124,6 +126,8 @@ interface GroupDraft {
 export class GroupsSection implements OnInit {
     private readonly api = inject(Api);
     private readonly i18n = inject(I18n);
+    private readonly confirm = inject(ConfirmService);
+    private readonly toasts = inject(ToastService);
 
     protected readonly groups = signal<GroupInfo[]>([]);
     protected readonly catalog = signal<RightInfo[]>([]);
@@ -199,10 +203,17 @@ export class GroupsSection implements OnInit {
     }
 
     protected async remove(draft: GroupDraft): Promise<void> {
-        if (draft.id === null || !confirm(this.i18n.t('groups.deleteConfirm', { name: draft.name })))
+        if (draft.id === null)
+            return;
+        const ok = await this.confirm.ask({
+            title: this.i18n.t('groups.deleteTitle'), message: this.i18n.t('groups.deleteConfirm', { name: draft.name }),
+            action: this.i18n.t('common.delete'), danger: true,
+        });
+        if (!ok)
             return;
         await this.run(async () => {
             await this.api.deleteGroup(draft.id!);
+            this.toasts.show(this.i18n.t('groups.deleted', { name: draft.name }));
             this.draftState.set(null);
             this.groups.set(await this.api.groups());
         });

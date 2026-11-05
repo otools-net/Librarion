@@ -75,8 +75,17 @@ api.MapFallback(() => TypedResults.NotFound()).AllowAnonymous();
 // Addresses the client routes itself: its page, with the app's root as its base (ClientPage).
 app.MapFallback((HttpContext context, ClientPage page) => page.Serve(context));
 
-await LibrarionDatabase.InitializeAsync(
-    app.Services.GetRequiredService<IDbContextFactory<LibrarionDbContext>>(), AppVersion.Version, app.Logger);
+try
+{
+    await LibrarionDatabase.InitializeAsync(
+        app.Services.GetRequiredService<IDbContextFactory<LibrarionDbContext>>(), AppVersion.Version, app.Logger);
+}
+catch (DatabaseFromAnotherBuildException e)
+{
+    app.Logger.LogCritical("{Message}", e.Message);
+    Environment.ExitCode = 1;
+    return;
+}
 await SetupCodeNotice.ShowIfNeededAsync(app);
 
 await app.RunAsync();

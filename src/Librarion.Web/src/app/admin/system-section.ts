@@ -2,31 +2,31 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Api } from '../core/api.service';
 import { TranslatePipe } from '../core/i18n.service';
 import { SystemInfo } from '../core/models';
+import { Skeleton } from '../shared/placeholders';
 
-/** The start page: what is running. The library's own home comes with the catalog (stage 5). */
+/** System › About: the server's version, build and database. */
 @Component({
-    selector: 'lib-home-page',
-    imports: [TranslatePipe],
+    selector: 'lib-system-section',
+    imports: [TranslatePipe, Skeleton],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-        <h1>{{ 'home.title' | t }}</h1>
-        <p class="lead">{{ 'home.intro' | t }}</p>
         @if (info(); as info) {
-            <dl class="facts">
-                <dt>{{ 'home.version' | t }}</dt>
+            <dl class="facts panel">
+                <dt>{{ 'system.version' | t }}</dt>
                 <dd class="version">{{ info.version }}</dd>
-                <dt>{{ 'home.database' | t }}</dt>
+                <dt>{{ 'system.commit' | t }}</dt>
+                <dd class="commit">{{ info.commit }}</dd>
+                <dt>{{ 'system.database' | t }}</dt>
                 <dd class="database">{{ 'database.' + info.database | t }}</dd>
             </dl>
         } @else if (failed()) {
-            <p class="error" role="alert">{{ 'home.unreachable' | t }}</p>
+            <p class="form-error" role="alert">{{ 'system.unreachable' | t }}</p>
         } @else {
-            <p class="muted" aria-busy="true">{{ 'home.loading' | t }}</p>
+            <lib-skeleton [rows]="3" />
         }
     `,
-    host: { class: 'home-page' },
-    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomePage {
+export class SystemSection {
     protected readonly info = signal<SystemInfo | null>(null);
     protected readonly failed = signal(false);
 

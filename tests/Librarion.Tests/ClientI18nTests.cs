@@ -61,12 +61,12 @@ public sealed partial class ClientI18nTests
         var files = Templates().Select(t => t.File).ToList();
 
         CollectionAssert.Contains(files, Path.Combine("shell", "shell.html"));
-        CollectionAssert.Contains(files, Path.Combine("home", "home-page.ts"));
+        CollectionAssert.Contains(files, Path.Combine("browse", "browse-page.ts"));
     }
 
     /// <summary>
     /// What the server names and the client shows by a key built at run time: rights, right areas, settings and their
-    /// choices, setting levels, built-in groups, security event kinds, and the error codes the access services send.
+    /// choices and hints, setting levels, built-in groups, security event kinds, built-in fields, and the error codes the access services send.
     /// </summary>
     [TestMethod]
     public void EveryNameTheServerSendsHasItsText()
@@ -80,12 +80,13 @@ public sealed partial class ClientI18nTests
             wanted.AddRange([$"right.{right.Id}", $"right.{right.Id}.hint", $"rightArea.{right.Area}"]);
         foreach (var setting in SettingCatalog.All)
         {
-            wanted.AddRange([$"setting.{setting.Key}", $"settingSection.{setting.Section}"]);
+            wanted.AddRange([$"setting.{setting.Key}", $"setting.{setting.Key}.hint", $"settingSection.{setting.Section}"]);
             wanted.AddRange((setting.Choices ?? []).Select(choice => $"setting.{setting.Key}.{choice}"));
         }
         wanted.AddRange(Enum.GetNames<SettingLevel>().Select(level => $"settingLevel.{Camel(level)}"));
         wanted.AddRange(Enum.GetNames<BuiltInGroup>().Select(group => $"group.{Camel(group)}"));
         wanted.AddRange(Enum.GetNames<SecurityEventKind>().Select(kind => $"securityEvent.{Camel(kind)}"));
+        wanted.AddRange(Librarion.Core.Tagging.BuiltInTags.Fields.Values.SelectMany(key => new[] { $"fields.name.{key}", $"fields.one.{key}" }));
         wanted.AddRange(new[] { SessionEndpoints.SignInFailedType, SessionEndpoints.LockedOutType, RequestGuard.SetupRequiredType }.Select(type => $"error.{type}"));
 
         var named = RightCatalog.All.Select(r => r.Id).Concat(SettingCatalog.All.Select(s => s.Key)).ToHashSet(StringComparer.Ordinal);
@@ -125,8 +126,8 @@ public sealed partial class ClientI18nTests
     [GeneratedRegex(@"\{\{.*?\}\}", RegexOptions.Singleline)]
     private static partial Regex Interpolation();
 
-    /// <summary><c>@if (…) {</c>, <c>} @else {</c>, <c>@for (…) {</c>, closing braces.</summary>
-    [GeneratedRegex(@"@\w+[^{]*\{|\}")]
+    /// <summary><c>@let x = …;</c>, <c>@if (…) {</c>, <c>} @else {</c>, <c>@for (…) {</c>, closing braces.</summary>
+    [GeneratedRegex(@"@let\s[^;]*;|@\w+[^{]*\{|\}")]
     private static partial Regex ControlFlow();
 
     [GeneratedRegex(@"\p{L}")]

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
 import { uniqueName } from '../fixtures/accounts';
+import { libraryTab } from '../fixtures/admin';
 import { press } from '../fixtures/press';
 import { expect, test } from '../fixtures/test';
 import { fb2, writeZip } from '../fixtures/zip';
@@ -46,9 +47,11 @@ function inpxCollection(folder: string, book: Buffer): string {
 }
 
 async function importFrom(page: Page, isMobile: boolean, kind: string, source: string): Promise<void> {
+    await press(libraryTab(page, 'Import'), isMobile);
     await page.getByLabel('Kind of source').selectOption({ label: kind });
     await page.getByLabel('Path of the source on the server').fill(source);
     await press(page.getByRole('button', { name: 'Import', exact: true }), isMobile);
+    await press(libraryTab(page, 'Runs'), isMobile);
     const run = page.getByRole('list', { name: 'Runs' }).getByRole('listitem').first();
     await expect(run).toContainText('Import from another source');
     await expect(run).toContainText('done', { timeout: 30_000 });
@@ -66,10 +69,12 @@ test.describe('@library', () => {
         await page.goto('./admin/libraries');
         await page.getByLabel('Name of a new library').fill(libraryName);
         await press(page.getByRole('button', { name: 'Add', exact: true }), isMobile);
-        await press(page.getByRole('button', { name: libraryName }), isMobile);
+        await press(page.getByRole('link', { name: libraryName }), isMobile);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(libraryName);
 
         await importFrom(page, isMobile, 'Calibre library', calibre);
         await expect(page.getByRole('list', { name: 'Runs' }).getByRole('listitem').first()).toContainText('1 added');
+        await press(libraryTab(page, 'Folders'), isMobile);
         await expect(page.getByRole('list', { name: 'Folders' }).getByText(path.dirname(calibre))).toBeVisible();
 
         await importFrom(page, isMobile, 'INPX catalog', inpx);

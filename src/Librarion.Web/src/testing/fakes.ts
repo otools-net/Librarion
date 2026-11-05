@@ -2,7 +2,7 @@ import { EnvironmentProviders, Provider } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { Mock } from 'vitest';
 import { Api } from '../app/core/api.service';
-import { GroupInfo, SessionInfo, SettingState, SystemInfo, UserInfo } from '../app/core/models';
+import { GroupInfo, SessionInfo, SettingInfo, SettingState, SystemInfo, UserInfo } from '../app/core/models';
 
 /** Every method of `Api` as a mock: unset ones return a promise that never settles (as SFE). */
 export type ApiMock = { [K in keyof Api]: Api[K] extends (...args: infer A) => infer R ? Mock<(...args: A) => R> : Api[K] };
@@ -72,4 +72,15 @@ export async function settle(ms = 0): Promise<void> {
 /** Sets a media query's match (see setup.ts) and tells its listeners. */
 export function setMediaQuery(query: string, matches: boolean): void {
     (globalThis as unknown as { setMediaQuery(query: string, matches: boolean): void }).setMediaQuery(query, matches);
+}
+
+/** The server's settings catalog (`SettingCatalog.All`) as `api/settings/catalog` sends it; add a key here with one there. */
+export function settingCatalog(): SettingInfo[] {
+    return [
+        { key: 'ui.theme', section: 'interface', kind: 'choice', choices: ['system', 'light', 'dark'], min: 0, max: 0, lowestLevel: 'user' },
+        { key: 'ui.density', section: 'interface', kind: 'choice', choices: ['compact', 'comfortable'], min: 0, max: 0, lowestLevel: 'user' },
+        { key: 'ui.language', section: 'interface', kind: 'choice', choices: ['browser', 'en'], min: 0, max: 0, lowestLevel: 'user' },
+        { key: 'ui.pageSize', section: 'interface', kind: 'integer', choices: null, min: 20, max: 200, lowestLevel: 'user' },
+        { key: 'library.keepMissingDays', section: 'libraries', kind: 'integer', choices: null, min: 0, max: 3650, lowestLevel: 'library' },
+    ];
 }

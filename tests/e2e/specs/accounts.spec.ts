@@ -15,7 +15,7 @@ test.describe('@accounts', () => {
     test('a visitor signs in and comes back where it was @desktop', async ({ page, isMobile }, testInfo) => {
         const account = await makeAccount('reader', testInfo);
         await page.goto('./account');
-        await expect(page).toHaveURL(/\/login\?return=%2Faccount$/);
+        await expect(page).toHaveURL(/\/login\?return=%2Fadmin%2Faccount$/);
 
         await signIn(page, isMobile, account.userName, 'not-the-password');
         await expect(page.getByRole('alert')).toHaveText('Wrong name or password.');
@@ -23,8 +23,10 @@ test.describe('@accounts', () => {
         await page.getByLabel('Password', { exact: true }).fill(account.password);
         await press(page.getByRole('button', { name: 'Sign in' }), isMobile);
 
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('My account');
-        await expect(page.getByText(`Signed in as ${account.userName}`)).toBeVisible();
+        // The old address of My account opens its section of the administration.
+        await expect(page).toHaveURL(/\/admin\/account$/);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preferences');
+        await expect(page.getByRole('button', { name: `Account menu (${account.userName})` })).toBeVisible();
         // A plain account: no administration.
         await expect(page.locator('#main-nav').getByRole('link', { name: 'Administration' })).toHaveCount(0);
     });
@@ -33,10 +35,10 @@ test.describe('@accounts', () => {
         const account = await makeAccount('leaver', testInfo);
         await page.goto('./');
         await signIn(page, isMobile, account.userName, account.password);
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
 
-        await press(page.getByRole('link', { name: `My account (${account.userName})` }), isMobile);
-        await press(page.getByRole('button', { name: 'Sign out' }), isMobile);
+        await press(page.getByRole('button', { name: `Account menu (${account.userName})` }), isMobile);
+        await press(page.locator('#account-menu').getByRole('button', { name: 'Sign out' }), isMobile);
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in');
 
         await page.goto('./');
@@ -52,7 +54,7 @@ test.describe('@accounts', () => {
 
         await page.getByLabel('Name', { exact: true }).fill(account.userName);
         await press(page.getByRole('button', { name: 'Show a recovery code on the server' }), isMobile);
-        await expect(page.getByRole('status')).toContainText("server's console");
+        await expect(page.getByRole('status').filter({ hasText: "server's console" })).toBeVisible();
 
         // What the person running the server reads in its console, or in this file beside the setup code.
         const file = path.join(data, 'recovery-code.txt');
@@ -65,6 +67,6 @@ test.describe('@accounts', () => {
         await page.getByLabel('New password again').fill('recovered-password-1');
         await press(page.getByRole('button', { name: 'Set the password and sign in' }), isMobile);
 
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+        await expect(page.locator('lib-browse-page')).toBeVisible();
     });
 });

@@ -1,7 +1,7 @@
 // Librarion's scale benchmark (agents/tools/benchmark/README.md): generates real-shaped catalogs of millions of books
 // and measures the main queries against the budgets (agents/docs/development/scale.md).
 //   generate --provider sqlite|postgres --connection <string> [--books 2000000] [--seed 1] [--work <folder>]
-//   run --provider sqlite|postgres --connection <string> [--iterations 20] [--work <folder>]
+//   run --provider sqlite|postgres --connection <string> [--iterations 20] [--only <text>] [--work <folder>]
 //   archive --provider sqlite|postgres --connection <string> [--entries 100000] [--body-kb 30] [--samples 500] [--evict <file> [--evict-gb 24]] [--work <folder>]
 //   import --provider sqlite|postgres --connection <string> --source calibre|inpx [--records 2000000] [--work <folder>]
 using System.Globalization;
@@ -32,7 +32,7 @@ switch (command)
     case "run":
     {
         var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
-        return await RunCommand.RunAsync(target, work, int.Parse(Option("iterations", "20"), CultureInfo.InvariantCulture), Console.WriteLine, cancel.Token);
+        return await RunCommand.RunAsync(target, work, int.Parse(Option("iterations", "20"), CultureInfo.InvariantCulture), Console.WriteLine, cancel.Token, Option("only", ""));
     }
     case "archive":
     {

@@ -1,7 +1,8 @@
 # Settings by level
 
 Code: `src/Librarion.Core/Settings/` (`SettingCatalog`, `SettingsService`), `Api/Endpoints/SettingsEndpoints.cs`
-(`api/settings`, `api/me/preferences`); client `settings/settings-panel.ts`, `admin/settings-section.ts`, the
+(`api/settings`, `api/me/preferences`, `api/settings/catalog`: the keys without values, for the
+[administration's search](admin-search.md)); client `settings/settings-panel.ts`, `admin/settings-section.ts`, the
 preferences on `account/account-page.ts`, `core/session.service.ts` (applies theme, density). Ported from SFE
 (`settings-levels.md` there), all levels in the database. Tests `SettingsTests`.
 
@@ -20,5 +21,18 @@ preferences on `account/account-page.ts`, `core/session.service.ts` (applies the
 - Keys so far: `ui.theme` (system/light/dark), `ui.density` (compact/comfortable), `ui.language` (browser/en),
   `ui.pageSize` (20–200, 50); `library.keepMissingDays` (library level and above, 0–3650, 30:
   [missing-books](missing-books.md)).
-- The theme button in the top bar changes only this browser (localStorage), not the account's preference.
+- The theme toggle in the account menu changes only this browser (localStorage), not the account's preference.
 - A new setting: one line in the catalog, its texts, and where the client uses it; no migration (rows hold JSON).
+
+## The forms (client)
+
+- `SettingsPanel` groups the states by `section` (`settings-group` cards, in the server's order); each setting has
+  its hint (`setting.<key>.hint`: `ClientI18nTests` wants one for every key of `SettingCatalog`), its control
+  (`id="setting-<key>"`, described by the hint and the "where it comes from" line), its lock above the user level.
+- Changes are marked (a dot on the label, a visually hidden "Changed, not saved yet"); the save bar (sticky at the
+  bottom, only while there are changes) counts them and holds Discard and Save.
+- `UnsavedChanges` (`core/unsaved-changes.ts`) holds the forms with changes: the administration marks its open
+  section and sub-page, its route's `leaveWithUnsaved` guard asks before leaving (the route is reused between sections:
+  guards run on parameter changes), Library settings asks before showing another library, and `beforeunload` asks
+  before the tab closes. A panel destroyed with changes drops them.
+

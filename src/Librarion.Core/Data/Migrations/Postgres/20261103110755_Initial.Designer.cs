@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261101174457_Initial")]
+    [Migration("20261103110755_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -120,6 +120,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.Property<byte?>("Rating")
                         .HasColumnType("smallint");
+
+                    b.Property<string>("SearchText")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int?>("SeriesId")
                         .HasColumnType("integer");
@@ -633,6 +637,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("TenantId", "FieldKey")
                         .IsUnique();
 
+                    b.HasIndex("TenantId", "IsHidden")
+                        .HasFilter("\"IsHidden\"");
+
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
 
                     b.HasIndex("TenantId", "FieldId", "SortName", "Id");
@@ -799,6 +806,14 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Files")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ImportKind")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<int>("IntervalMinutes")
                         .HasColumnType("integer");
 
@@ -810,6 +825,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.Property<int>("LibraryId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("Start")
                         .HasColumnType("timestamp with time zone");

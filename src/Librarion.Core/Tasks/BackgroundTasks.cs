@@ -14,6 +14,13 @@ public sealed record TaskRunInfo(
     long Id, int? LibraryId, BackgroundTaskKind Task, TaskTrigger Trigger, DateTime Started, DateTime? Finished, TaskOutcome Outcome,
     string? Summary, ScanCounts? Counts, ScanProgress? Progress, bool Waiting);
 
+/// <summary>
+/// The Background tasks page (as SFE's): the runs going on, the last finished run of each kind and the schedules, in
+/// the libraries the caller may scan.
+/// </summary>
+/// <param name="Libraries">The libraries the caller may scan (ids), which the page lists schedules for.</param>
+public sealed record TaskOverview(IReadOnlyList<TaskRunInfo> Running, IReadOnlyList<TaskRunInfo> Last, IReadOnlyList<ScheduleInfo> Schedules, IReadOnlyList<int> Libraries);
+
 /// <summary>What a finished run did, kept with it.</summary>
 /// <param name="Missing">Books that went missing (kept until a file comes back or a user accepts their removal).</param>
 /// <param name="Returned">Missing books that have a file again (found where it was, or moved).</param>
@@ -63,11 +70,14 @@ public sealed class BackgroundTasks : IDisposable
         public CancellationTokenSource Cancel => cancel;
         public volatile ScanProgress? Progress;
         public volatile bool Waiting = true;
+        /// <summary>Its work is over and its outcome being written: a new scan of the library may start.</summary>
+        public volatile bool Ending;
         public Task Work = Task.CompletedTask;
     }
 
     /// <summary>The running (or waiting) run of a library.</summary>
-    public long? RunningIn(int tenantId, int libraryId) => active.Values.FirstOrDefault(a => a.TenantId == tenantId && a.LibraryId == libraryId)?.Id;
+    public long? RunningIn(int tenantId, int libraryId) =>
+        active.Values.FirstOrDefault(a => a.TenantId == tenantId && a.LibraryId == libraryId && !a.Ending)?.Id;
 
     /// <summary>Starts a scan of the library, or answers the run already going there (<c>Started</c> false).</summary>
     public Task<(long RunId, bool Started)> StartScanAsync(int tenantId, int libraryId, TaskTrigger trigger, int? userId, int? scheduleId, CancellationToken cancellationToken) =>
@@ -88,19 +98,23 @@ public sealed class BackgroundTasks : IDisposable
     /// Starts an import from another source into the library (waits for a scan of the library to end first), its files
     /// under <paramref name="rootId"/> (agents/docs/features/imports.md).
     /// </summary>
-    public Task<(long RunId, bool Started)> StartImportAsync(int tenantId, int libraryId, int rootId, Func<IImportSource> open, int? userId, CancellationToken cancellationToken) =>
-        StartAsync(tenantId, libraryId, BackgroundTaskKind.Import, TaskTrigger.Manual, userId, null,
+    public Task<(long RunId, bool Started)> StartImportAsync(int tenantId, int libraryId, int rootId, Func<IImportSource> open, TaskTrigger trigger, int? userId,
+        int? scheduleId, CancellationToken cancellationToken) =>
+        StartAsync(tenantId, libraryId, BackgroundTaskKind.Import, trigger, userId, scheduleId,
             (progress, cancel) => importer.ImportAsync(tenantId, libraryId, rootId, open, progress, cancel), cancellationToken);
 
-    /// <summary>A schedule came due while the library's run was still going: recorded, not started.</summary>
-    public async Task RecordSkippedAsync(int tenantId, int libraryId, int scheduleId, CancellationToken cancellationToken)
+    /// <summary>
+    /// A schedule came due and its task didn't start: skipped (the library's run was still going) or failed (an import's
+    /// source or folder is gone, <paramref name="summary"/> says which). Recorded as a run that started and ended now.
+    /// </summary>
+    public async Task RecordUnstartedAsync(TaskSchedule schedule, TaskOutcome outcome, string? summary, CancellationToken cancellationToken)
     {
-        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        await using var db = await tenantDb.ForTenantAsync(schedule.TenantId, cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
         db.TaskRuns.Add(new TaskRun
         {
-            TenantId = tenantId, LibraryId = libraryId, Task = BackgroundTaskKind.LibraryScan, Trigger = TaskTrigger.Schedule, ScheduleId = scheduleId,
-            Started = now, Finished = now, Outcome = TaskOutcome.Skipped,
+            TenantId = schedule.TenantId, LibraryId = schedule.LibraryId, Task = schedule.Task, Trigger = TaskTrigger.Schedule, ScheduleId = schedule.Id,
+            Started = now, Finished = now, Outcome = outcome, Summary = summary,
         });
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -168,13 +182,18 @@ public sealed class BackgroundTasks : IDisposable
             logger.LogError(ex, "Task {Run} ({Task}) of library {Library} failed", entry.Id, kind, entry.LibraryId);
             summary = "The task stopped on an error; the server's log has the details.";
         }
+        // The outcome is written before the run leaves the running ones: a run no longer running reads as ended
+        // (the progress panel asks for it as soon as it is gone from `api/tasks/running`).
+        entry.Ending = true;
+        try
+        {
+            await CompleteAsync(entry.TenantId, entry.Id, outcome, summary, result);
+        }
         finally
         {
             active.TryRemove(entry.Id, out _);
             entry.Cancel.Dispose();
         }
-
-        await CompleteAsync(entry.TenantId, entry.Id, outcome, summary, result);
     }
 
     private async Task CompleteAsync(int tenantId, long runId, TaskOutcome outcome, string? summary, ScanResult? result)
@@ -221,6 +240,42 @@ public sealed class BackgroundTasks : IDisposable
         return rows.Select(Info).ToList();
     }
 
+    /// <summary>
+    /// The runs going on (or waiting) in <paramref name="libraryIds"/>, oldest first: what the progress panel follows.
+    /// Asks the database only when something runs in the tenant.
+    /// </summary>
+    public async Task<IReadOnlyList<TaskRunInfo>> RunningAsync(int tenantId, IReadOnlyCollection<int> libraryIds, CancellationToken cancellationToken)
+    {
+        var ids = active.Values.Where(a => a.TenantId == tenantId && libraryIds.Contains(a.LibraryId)).Select(a => a.Id).ToList();
+        if (ids.Count == 0)
+            return [];
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        // A run whose outcome is written is over, though still leaving `active`.
+        var rows = await db.TaskRuns.Where(r => ids.Contains(r.Id) && r.Outcome == TaskOutcome.Running).OrderBy(r => r.Id).ToListAsync(cancellationToken);
+        return rows.Select(Info).ToList();
+    }
+
+    /// <summary>The last finished run of <paramref name="kind"/> in <paramref name="libraryIds"/>.</summary>
+    public async Task<TaskRunInfo?> LastAsync(int tenantId, IReadOnlyCollection<int> libraryIds, BackgroundTaskKind kind, CancellationToken cancellationToken)
+    {
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var row = await db.TaskRuns
+            .Where(r => r.Task == kind && r.Outcome != TaskOutcome.Running && r.LibraryId != null && libraryIds.Contains(r.LibraryId.Value))
+            .OrderByDescending(r => r.Id).FirstOrDefaultAsync(cancellationToken);
+        return row is null ? null : Info(row);
+    }
+
+    /// <summary>The runs of <paramref name="libraryIds"/>, newest first, a page at a time by key (<paramref name="before"/>: the last id seen).</summary>
+    public async Task<IReadOnlyList<TaskRunInfo>> HistoryAsync(int tenantId, IReadOnlyCollection<int> libraryIds, long? before, int limit, CancellationToken cancellationToken)
+    {
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var query = db.TaskRuns.Where(r => r.LibraryId != null && libraryIds.Contains(r.LibraryId.Value));
+        if (before is { } id)
+            query = query.Where(r => r.Id < id);
+        var rows = await query.OrderByDescending(r => r.Id).Take(Math.Clamp(limit, 1, 100)).ToListAsync(cancellationToken);
+        return rows.Select(Info).ToList();
+    }
+
     public async Task<TaskRunInfo?> GetAsync(int tenantId, long runId, CancellationToken cancellationToken)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
@@ -248,12 +303,26 @@ public sealed class BackgroundTasks : IDisposable
     /// <summary>Every run asked to stop, and waited for a little (the server is stopping).</summary>
     public async Task StopAsync(TimeSpan wait)
     {
-        stopping.Cancel();
+        // The host may dispose the service first (seen in tests stopping their server): then it stopped already.
+        if (Volatile.Read(ref disposed) != 0)
+            return;
+        try
+        {
+            stopping.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
         await Task.WhenAny(Task.WhenAll(active.Values.Select(a => a.Work)), Task.Delay(wait));
     }
 
+    private int disposed;
+
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
+            return;
         stopping.Cancel();
         stopping.Dispose();
         slots.Dispose();

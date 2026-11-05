@@ -11,10 +11,6 @@ public sealed record RootInput(string? Path);
 
 public sealed record TaskStarted(long RunId, bool Started);
 
-/// <summary>An import from another source: its kind, the source's path on the server, and the folder of its books' files
-/// (default: the source's folder).</summary>
-public sealed record ImportInput(string? Kind, string? Source, string? Files = null);
-
 /// <summary>Which missing books to remove: chosen ones, those past the retention, or all of them (one of the three).</summary>
 public sealed record MissingRemovalInput(IReadOnlyList<int>? BookIds = null, bool Ready = false, bool All = false);
 
@@ -128,38 +124,18 @@ public static class TaskEndpoints
             .WithName("ListImportKinds")
             .WithSummary("The kinds of source a library can import from (`calibre`, `inpx`).");
 
-        import.MapPost("/", async (int library, ImportInput input, HttpContext context, CurrentAccess current, ImportFormats formats, LibraryRoots roots,
-                BackgroundTasks tasks, SecurityLog log, ILogger<ImportInput> logger) =>
+        import.MapPost("/", async (int library, ImportInput input, HttpContext context, CurrentAccess current, ImportRequests imports, SecurityLog log) =>
             {
                 if (await RightTenant(current, library, Rights.Import) is not { } state)
                     return Results.NotFound();
                 var tenantId = state.TenantId!.Value;
-                var anywhere = state.Access.IsServerAdmin;
-                if (formats.Find(input.Kind) is not { } format)
-                    return Invalid("kind", "kind.unknown");
-                if (string.IsNullOrWhiteSpace(input.Source) || !Path.IsPathFullyQualified(input.Source.Trim()))
-                    return Invalid("source", "source.notAbsolute");
-                var source = LibraryRoots.Normalize(input.Source.Trim());
-                if (!roots.MayUse(source, anywhere))
-                    return Invalid("source", "source.notAllowed");
-                if (!File.Exists(source))
-                    return Invalid("source", "source.missing");
-                if (format.Check(source) is { } why)
-                {
-                    logger.LogInformation("Import source {Source} refused: {Why}", source, why);
-                    return Invalid("source", "source.invalid");
-                }
-
-                var files = string.IsNullOrWhiteSpace(input.Files) ? Path.GetDirectoryName(source) : input.Files;
-                var (problem, root, added) = await roots.RootForAsync(tenantId, library, files, anywhere, context.RequestAborted);
-                if (problem == RootProblem.LibraryMissing)
-                    return Results.NotFound();
-                if (problem != RootProblem.None)
-                    return Invalid("files", Code(problem).Replace("path.", "files."));
-                if (added)
-                    await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"root added: {root!.Path}");
-                var (runId, _) = await tasks.StartImportAsync(tenantId, library, root!.Id, () => format.Open(source, LibraryRoots.Normalize(files!)), state.User?.Id, context.RequestAborted);
-                await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"import from {format.Key}: {source}");
+                var (request, field, code) = await imports.CheckAsync(tenantId, library, input, state.Access.IsServerAdmin, context.RequestAborted);
+                if (request is null)
+                    return field == "library" ? Results.NotFound() : Invalid(field!, code!);
+                if (request.RootAdded)
+                    await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"root added: {request.Root.Path}");
+                var (runId, _) = await imports.StartAsync(tenantId, library, request, state.User?.Id, context.RequestAborted);
+                await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"import from {request.Format.Key}: {request.Source}");
                 return Results.Accepted(value: new TaskStarted(runId, true));
             })
             .WithName("ImportIntoLibrary")
@@ -172,15 +148,18 @@ public static class TaskEndpoints
                     ? Results.Ok(list)
                     : Results.NotFound())
             .WithName("ListLibrarySchedules")
-            .WithSummary("When the library is scanned by itself.");
+            .WithSummary("What the library does by itself (scans, imports), and when.");
 
-        library.MapPost("/schedules", (int library, ScheduleInput input, HttpContext context, CurrentAccess current, TaskSchedules schedules) =>
-                SaveAsync(library, null, input, context, current, schedules))
+        library.MapPost("/schedules", (int library, ScheduleInput input, HttpContext context, CurrentAccess current, TaskSchedules schedules, ImportRequests imports,
+                SecurityLog log) =>
+                SaveAsync(library, null, input, context, current, schedules, imports, log))
             .WithName("AddLibrarySchedule")
-            .WithSummary("Adds a schedule: every `intervalMinutes` (at least 15) from `start`, or weekly on `days` (bit 0 = Sunday) at `start`'s time of day.");
+            .WithSummary("Adds a schedule: `task` `libraryScan` (default) or `import` (with `importKind`, `source` and `files`, checked as `POST …/import`, the "
+                + "right Import needed), every `intervalMinutes` (at least 15) from `start`, or weekly on `days` (bit 0 = Sunday) at `start`'s time of day.");
 
-        library.MapPut("/schedules/{schedule:int}", (int library, int schedule, ScheduleInput input, HttpContext context, CurrentAccess current, TaskSchedules schedules) =>
-                SaveAsync(library, schedule, input, context, current, schedules))
+        library.MapPut("/schedules/{schedule:int}", (int library, int schedule, ScheduleInput input, HttpContext context, CurrentAccess current, TaskSchedules schedules,
+                ImportRequests imports, SecurityLog log) =>
+                SaveAsync(library, schedule, input, context, current, schedules, imports, log))
             .WithName("ChangeLibrarySchedule")
             .WithSummary("Changes a schedule (its past occurrences don't run).");
 
@@ -192,6 +171,35 @@ public static class TaskEndpoints
             .WithSummary("Deletes a schedule.");
 
         var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan);
+
+        runs.MapGet("/running", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
+                await current.GetAsync() is { TenantId: { } tenantId } state
+                    ? Results.Ok(await tasks.RunningAsync(tenantId, ScannableLibraries(state), context.RequestAborted))
+                    : Results.NotFound())
+            .WithName("ListRunningTasks")
+            .WithSummary("The runs going on (or waiting) in the libraries the caller may scan, with their progress: what the progress panel follows.");
+
+        runs.MapGet("/overview", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks, TaskSchedules schedules) =>
+            {
+                if (await current.GetAsync() is not { TenantId: { } tenantId } state)
+                    return Results.NotFound();
+                var libraries = ScannableLibraries(state);
+                var last = new List<TaskRunInfo>();
+                foreach (var kind in Enum.GetValues<BackgroundTaskKind>())
+                    if (await tasks.LastAsync(tenantId, libraries, kind, context.RequestAborted) is { } run)
+                        last.Add(run);
+                return Results.Ok(new TaskOverview(await tasks.RunningAsync(tenantId, libraries, context.RequestAborted), last,
+                    await schedules.ListAsync(tenantId, libraries, context.RequestAborted), libraries.Order().ToList()));
+            })
+            .WithName("GetTaskOverview")
+            .WithSummary("The Background tasks page: the runs going on, the last finished run of each kind, and the schedules, in the libraries the caller may scan.");
+
+        runs.MapGet("/", async (long? before, int? limit, HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
+                await current.GetAsync() is { TenantId: { } tenantId } state
+                    ? Results.Ok(await tasks.HistoryAsync(tenantId, ScannableLibraries(state), before, limit ?? 20, context.RequestAborted))
+                    : Results.NotFound())
+            .WithName("ListTasks")
+            .WithSummary("The task runs of every library the caller may scan, newest first; `before` = the last id of the page before.");
 
         runs.MapGet("/{run:long}", async (long run, HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await RunOf(run, context, current, tasks) is { } info ? Results.Ok(info) : Results.NotFound())
@@ -206,11 +214,27 @@ public static class TaskEndpoints
             .WithSummary("Asks a running task to stop; it ends as cancelled, keeping what it wrote.");
     }
 
-    private static async Task<IResult> SaveAsync(int library, int? schedule, ScheduleInput input, HttpContext context, CurrentAccess current, TaskSchedules schedules)
+    private static async Task<IResult> SaveAsync(int library, int? schedule, ScheduleInput input, HttpContext context, CurrentAccess current, TaskSchedules schedules,
+        ImportRequests imports, SecurityLog log)
     {
         if (await ScanTenant(current, library) is not { } state)
             return Results.NotFound();
-        var (problem, saved) = await schedules.SaveAsync(state.TenantId!.Value, library, schedule, input, context.RequestAborted);
+        var tenantId = state.TenantId!.Value;
+        ScheduledImport? import = null;
+        if (input.Task == BackgroundTaskKind.Import)
+        {
+            if (!state.Access.HasIn(Rights.Import, library))
+                return Results.NotFound();
+            var (request, field, code) = await imports.CheckAsync(tenantId, library, new ImportInput(input.ImportKind, input.Source, input.Files),
+                state.Access.IsServerAdmin, context.RequestAborted);
+            if (request is null)
+                return field == "library" ? Results.NotFound() : Invalid(field!, code!);
+            if (request.RootAdded)
+                await log.LogAsync(context, state, SecurityEventKind.LibraryChanged, tenantId, $"root added: {request.Root.Path}");
+            import = new ScheduledImport(request.Format.Key, request.Source, request.Files);
+        }
+
+        var (problem, saved) = await schedules.SaveAsync(tenantId, library, schedule, input, import, context.RequestAborted);
         return problem switch
         {
             null => Results.Ok(saved),
@@ -219,6 +243,7 @@ public static class TaskEndpoints
             {
                 "intervalMinutes" => "intervalMinutes.invalid",
                 "days" => "days.invalid",
+                "task" => "task.invalid",
                 _ => "kind.invalid",
             }] }),
         };
@@ -233,6 +258,8 @@ public static class TaskEndpoints
         var state = await current.GetAsync();
         return state.TenantId is not null && state.Access.HasIn(right, library) ? state : null;
     }
+
+    private static IReadOnlyCollection<int> ScannableLibraries(AccessState state) => state.Access.LibrariesWith(Rights.Scan).ToHashSet();
 
     private static IResult Invalid(string field, string code) => TypedResults.ValidationProblem(new Dictionary<string, string[]> { [field] = [code] });
 

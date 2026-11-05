@@ -9,6 +9,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// LIBRARION_SCREENS_THEME=light for the light colors (default dark).
+const theme = process.env.LIBRARION_SCREENS_THEME === 'light' ? 'light' : 'dark';
+
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const e2e = path.join(repo, 'tests/e2e');
 const { chromium, devices, request } = createRequire(path.join(e2e, 'package.json'))('@playwright/test');
@@ -18,7 +21,7 @@ const out = path.resolve(outArg ?? path.join(os.tmpdir(), 'librarion-screens'));
 const port = process.env.LIBRARION_E2E_PORT ?? '5192';
 const baseURL = `http://localhost:${port}/`;
 const pages = pageArgs.length ? pageArgs : [
-    'login', 'login#recover', '', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
+    'login', 'login#recover', '', 'fields', 'fields/author', 'fields/author#first', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
     'admin/libraries', 'admin/libraries#open', 'admin/tenants', 'admin/tenants#edit', 'admin/settings', 'admin/security', 'missing',
 ];
 const sizes = {
@@ -60,10 +63,13 @@ try {
     fs.mkdirSync(books, { recursive: true });
     for (let i = 1; i <= 3; i++)
         fs.writeFileSync(path.join(books, `book-${i}.fb2`), `<?xml version="1.0"?><FictionBook><description><title-info><genre>sf_fantasy</genre>`
-            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title></title-info></description><body/></FictionBook>`);
+            + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title><annotation><p>The ${i}. part of the saga: a long road, an old map.</p><p>And a dragon.</p></annotation><lang>en</lang>`
+            + `<sequence name="Writer Saga" number="${i}"/></title-info><publish-info><publisher>Quill Press</publisher><year>2001</year></publish-info></description><body/></FictionBook>`);
     const [library] = await (await api.get('api/libraries')).json();
     await api.post(`api/libraries/${library.id}/roots`, { data: { path: books } });
     await api.post(`api/libraries/${library.id}/scan`);
+    // A second library: the top bar shows its switcher.
+    await api.post('api/libraries', { data: { name: 'Comics' } });
     const signedIn = await api.storageState();
     await api.dispose();
 
@@ -73,7 +79,7 @@ try {
         for (const address of pages) {
             const [route, action] = address.split('#');
             const signedOut = route === 'login';
-            const context = await browser.newContext({ ...device, baseURL, colorScheme: 'dark', storageState: signedOut ? undefined : signedIn });
+            const context = await browser.newContext({ ...device, baseURL, colorScheme: theme, storageState: signedOut ? undefined : signedIn });
             const page = await context.newPage();
             await page.goto(`./${route}`);
             await page.getByRole('heading', { level: 1 }).waitFor();
@@ -84,10 +90,46 @@ try {
             else if (action === 'edit')
                 await page.getByRole('button', { name: 'Edit' }).first().click();
             else if (action === 'open')
-                await page.locator('button.row-main').first().click();
+                await page.locator('.row-main').first().click();
+            else if (action === 'delete')
+                await page.getByRole('button', { name: 'Delete' }).first().click();
+            else if (action === 'account')
+                await page.locator('.account-button').click();
+            else if (action === 'library' && size === 'desktop')
+                await page.locator('.switch-button').click();
+            else if (action === 'menu' && size === 'phone')
+                await page.locator('.menu-button').click();
+            else if (action === 'list')
+                await page.getByRole('button', { name: 'List' }).click();
+            else if (action?.startsWith('suggest=')) {
+                await page.getByRole('combobox', { name: 'Search books' }).fill(decodeURIComponent(action.slice('suggest='.length)));
+                await page.locator('#search-suggestions [role="option"]').first().waitFor();
+            }
+            else if (action === 'book') {
+                await page.locator('.book-link').first().click();
+                await page.locator('.book-files').waitFor();
+            }
+            else if (action === 'refine') {
+                await page.locator('.facets-button:not([disabled])').click();
+                await page.locator('.facet-value').first().waitFor();
+            }
+            else if (action === 'first') {
+                await page.locator('.value a').first().click();
+                await page.locator('.tag-kind').waitFor();
+            }
+            else if (action === 'scan') {
+                await page.getByRole('button', { name: 'Run now' }).first().click();
+                await page.locator('lib-task-panel .task-row').first().waitFor();
+            } else if (action?.startsWith('search=') || action?.startsWith('found=')) {
+                await page.locator('.admin-search input').fill(decodeURIComponent(action.slice(action.indexOf('=') + 1)));
+                if (action.startsWith('found='))
+                    await page.locator('.admin-search-results a').first().click();
+            }
             await page.waitForLoadState('networkidle');
-            const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#]/g, '-')}.png`);
-            await page.screenshot({ path: file, fullPage: true });
+            // Dialogs and sheets rise in; the shot waits until they stand still.
+            await page.waitForTimeout(400);
+            const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#?=:"*]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
+            await page.screenshot({ path: file, fullPage: !action || action === 'book' });
             console.log(file);
             await context.close();
         }

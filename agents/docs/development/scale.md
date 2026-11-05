@@ -65,6 +65,58 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   within budget: folders stay indexed from the books (D11); INPX and Calibre come in as manual imports (stage 4).
 - Imports (stage 4, `import` command, 2026-11-01, PostgreSQL): Calibre 2M books 27.1 min, unchanged again 2.6 min;
   INPX 1M records 8.9 min, unchanged 38 s; all within budget ([imports](../features/imports.md#scale)).
+- Search (stage 5, 2026-11-03, 2M, warm, p95 in ms, budget 300; how each plan was found:
+  [search](../features/search.md#plans-that-went-wrong-at-2m-2026-11-03-and-the-rule-each-gave)):
+
+  | Search | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | a word on ~6 % of titles, first and middle page | 75–77 | 103–131 |
+  | two such words | 151 | 188 |
+  | two letters (a prefix of many words) | 86 | 129 |
+  | a file name (one book) | 10 | 28 |
+  | the most prolific author's last name | 32 | 69 |
+  | an author with 5–20 books, by field | 8 | 22 |
+  | an author by word and a title word | 188 | 118 |
+  | category Fiction less PDF, by author | 6 | 27 |
+  | books outside any series, newest | 3 | 17 |
+  | suggestions: two letters / after `author:` | 20 / 24 | 17 / 22 |
+
+- Facets (stage 5, 2026-11-05, 2M, warm, p95 in ms, budget 300; counted over at most 2,000 matches, see
+  [search](../features/search.md#facets-searchfacets-refine-d-58)):
+
+  | Facets of | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | the library seen whole (stored counts) | 104 | 41 |
+  | a word on ~2 % of titles / two such words | 148 / 145 | 158 / 272 |
+  | the prolific author's last name | 184 | 247 |
+  | an author with 5–20 books, by field | 12 | 31 |
+  | category Fiction less PDF | 103 | 82 |
+  | books outside any series | 188 | 138 |
+  | the library for the 0.1 % / 1 % / 10 % groups | 188 / 228 / 223 | 128 / 108 / 131 |
+
+  At 10,000 matches (D-5.8's first figure) SQLite took 480–780 ms for the broad ones, 5,000 290–420 ms. The 1 %
+  group's library first took 305 ms on SQLite (its 20k books sorted by title to take 2,000): a filter read from its
+  own tags is now sampled unordered (`BookQueries.StartsFromTagsAsync`).
+- Stage 5 close (2026-11-05, 2M, warm, p95 in ms): every call of the UI's screens, 49 scenarios, within budget on
+  both providers, no full scan. Besides the tables above:
+
+  | Query | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | filtered group 0.1 % / 1 % / 10 %, first and middle page | 38–39 / 40–54 / 10–17 | 25–29 / 31–39 / 13–18 |
+  | the field list (All fields) | 0.2 | 2 |
+  | plain tags A–Z, first page | 6 | 70 |
+  | authors from a letter (Go to) | 4 | 16 |
+  | a tag's page (an author, a category) | 1 | 6–7 |
+  | possible duplicates | 3.5 | 12 |
+
+- The **1 % filtered group** took 100–127 ms on PostgreSQL at the start of the stage close (62 at stage 2): on the
+  freshly generated catalog PostgreSQL estimates its tag at 744 links (it has 20k) and turned the probe's `EXISTS`
+  into a join started from the tag, sorting 20k books. The probe is now a count on PostgreSQL (a scalar subquery is
+  not turned into a join), so `NarrowAsync`'s choice holds: 31–39 ms.
+- Imports with the search index kept row by row (2026-11-03, PostgreSQL): INPX 1M 9.2 min (8.9 before), Calibre 2M
+  28.2 min (27.1; budget 30), unchanged re-imports 37 s and 2.7 min: within budget.
+- Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
+  PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
   author or date, fields found by scanning `BuiltIn`, tag pages joined one way for every size (before: Fiction 2.9 s, a
   0.1 % filter 0.8 s), parallel workers on PostgreSQL, a big series by number walked from its title.

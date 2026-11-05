@@ -32,7 +32,7 @@ test('a new server sets up its administrator from the setup page', async ({ page
     await code.fill(setupCode);
     await submit.tap();
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Librarion');
+    await expect(page.locator('lib-browse-page')).toBeVisible();
     fs.mkdirSync(path.dirname(adminState), { recursive: true });
     await page.context().storageState({ path: adminState });
 });

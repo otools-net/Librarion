@@ -81,4 +81,36 @@ public sealed class SettingsTests
         StringAssert.Contains(body, "setting.unknown");
         Assert.AreEqual("compact", states.Single(s => s.Key == SettingCatalog.Density).Value.GetString(), "All or nothing");
     }
+
+    /// <summary>The administration's search finds every key where it can be set: the catalog says how low each goes.</summary>
+    [TestMethod]
+    public async Task TheCatalogListsEveryKeyWithItsSectionAndNarrowestLevel()
+    {
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        using var admin = (await ApiClients.SetUpAsync(factory, Cancel)).Client;
+
+        var keys = await admin.GetAsync<List<SettingInfo>>("/api/settings/catalog", Cancel);
+        var raw = await admin.GetStringAsync("/api/settings/catalog", Cancel);
+
+        CollectionAssert.AreEqual(SettingCatalog.All.Select(s => s.Key).ToList(), keys.Select(k => k.Key).ToList());
+        var missing = keys.Single(k => k.Key == SettingCatalog.KeepMissingDays);
+        Assert.AreEqual(SettingLevel.Library, missing.LowestLevel);
+        Assert.AreEqual("libraries", missing.Section);
+        StringAssert.Contains(raw, "\"lowestLevel\":\"library\"");
+        CollectionAssert.AreEqual(new[] { "system", "light", "dark" }, keys.Single(k => k.Key == SettingCatalog.Theme).Choices!.ToArray());
+    }
+
+    /// <summary>The client's specs search the catalog of their fakes (`settingCatalog()`): it is the server's.</summary>
+    [TestMethod]
+    public void TheClientsFakeCatalogIsTheServers()
+    {
+        var fakes = File.ReadAllText(RepositoryFiles.PathOf("src/Librarion.Web/src/testing/fakes.ts"));
+        var client = System.Text.RegularExpressions.Regex.Matches(fakes, @"\{ key: '([^']+)', section: '([^']+)'.*lowestLevel: '(\w+)' \}")
+            .Select(m => $"{m.Groups[1].Value} {m.Groups[2].Value} {m.Groups[3].Value}")
+            .ToList();
+        var server = SettingCatalog.All.Select(s => $"{s.Key} {s.Section} {s.LowestLevel.ToString().ToLowerInvariant()}").ToList();
+
+        CollectionAssert.AreEqual(server, client, "src/Librarion.Web/src/testing/fakes.ts settingCatalog() differs from SettingCatalog.All");
+    }
 }

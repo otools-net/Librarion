@@ -1,67 +1,70 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { Api } from '../core/api.service';
-import { valueOf } from '../core/errors';
-import { TranslatePipe } from '../core/i18n.service';
+import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryInfo, SettingLevel } from '../core/models';
-import { Rights } from '../core/rights';
-import { SessionService } from '../core/session.service';
+import { UnsavedChanges } from '../core/unsaved-changes';
+import { ConfirmService } from '../shared/confirm';
 import { SettingsPanel } from '../settings/settings-panel';
 
-/** Settings by level: the levels the session may edit (server, tenant, a library), one at a time. */
+/**
+ * The settings of one level, a sub-page of the administration: the server's, the tenant's, or a library's (chosen
+ * above the form).
+ */
 @Component({
     selector: 'lib-settings-section',
     imports: [TranslatePipe, SettingsPanel],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-        <div class="toolbar">
-            <div class="segmented" role="radiogroup" [attr.aria-label]="'settings.level' | t">
-                @for (option of levels(); track option) {
-                    <button type="button" role="radio" class="button" [class.active]="level() === option" [attr.aria-checked]="level() === option"
-                            [title]="'settingLevel.' + option + '.hint' | t" (click)="level.set(option)">{{ 'settingLevel.' + option | t }}</button>
-                }
+        @if (level() === 'library') {
+            <div class="toolbar">
+                <label class="field inline-field">
+                    <span class="field-label">{{ 'settings.library' | t }}</span>
+                    <select (change)="chooseLibrary($event)">
+                        @for (item of libraries(); track item.id) {
+                            <option [value]="item.id" [selected]="library() === item.id">{{ item.name }}</option>
+                        }
+                    </select>
+                </label>
             </div>
-            @if (level() === 'library') {
-                <select [attr.aria-label]="'settings.library' | t" (change)="library.set(+valueOf($event))">
-                    @for (item of libraries(); track item.id) {
-                        <option [value]="item.id" [selected]="library() === item.id">{{ item.name }}</option>
-                    }
-                </select>
+            @if (library(); as owner) {
+                <lib-settings-panel level="library" [owner]="owner" />
             }
-        </div>
-        @if (level() !== 'library') {
+        } @else {
             <lib-settings-panel [level]="level()" />
-        } @else if (library(); as owner) {
-            <lib-settings-panel level="library" [owner]="owner" />
         }
     `,
 })
-export class SettingsSection implements OnInit {
+export class SettingsSection {
     private readonly api = inject(Api);
-    private readonly sessions = inject(SessionService);
+    private readonly unsaved = inject(UnsavedChanges);
+    private readonly confirm = inject(ConfirmService);
+    private readonly i18n = inject(I18n);
 
-    protected readonly levels = computed<SettingLevel[]>(() => {
-        this.sessions.session();
-        const levels: SettingLevel[] = [];
-        if (this.sessions.can(Rights.serverSettings))
-            levels.push('server');
-        if (this.sessions.can(Rights.tenantSettings))
-            levels.push('tenant');
-        if (this.sessions.canAny(Rights.librarySettings, Rights.manageTenants))
-            levels.push('library');
-        return levels;
-    });
-    protected readonly level = signal<SettingLevel>('tenant');
+    readonly level = input.required<SettingLevel>();
     protected readonly libraries = signal<LibraryInfo[]>([]);
     protected readonly library = signal<number | null>(null);
 
-    protected readonly valueOf = valueOf;
 
-    async ngOnInit(): Promise<void> {
-        this.level.set(this.levels()[0] ?? 'tenant');
-        if (this.levels().includes('library')) {
-            const libraries = await this.api.libraries().catch(() => []);
-            this.libraries.set(libraries);
-            this.library.set(libraries[0]?.id ?? null);
-        }
+    constructor() {
+        effect(() => {
+            if (this.level() === 'library')
+                untracked(() => void this.loadLibraries());
+        });
+    }
+
+    /** Another library's settings: the changes made here are lost, so the user is asked first. */
+    protected async chooseLibrary(event: Event): Promise<void> {
+        const select = event.target as HTMLSelectElement;
+        const id = +select.value;
+        if (await this.unsaved.confirmLeave(this.confirm, this.i18n))
+            this.library.set(id);
+        else
+            select.value = String(this.library());
+    }
+
+    private async loadLibraries(): Promise<void> {
+        const libraries = await this.api.libraries().catch(() => []);
+        this.libraries.set(libraries);
+        this.library.set(libraries[0]?.id ?? null);
     }
 }
