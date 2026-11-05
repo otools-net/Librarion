@@ -60,8 +60,12 @@ public sealed class SearchFacets(TenantDb tenantDb)
         bool capped;
         if (search.IsEmpty)
         {
-            // Content filters narrow the library: the first books by title (the sort index walked, no scan).
-            books = await visible.OrderBy(b => b.SortTitle).ThenBy(b => b.Id).Select(b => b.Id).Take(cap + 1).ToListAsync(cancellationToken);
+            // Content filters narrow the library: read from the filters' tags unordered when they are the start (sorting
+            // the 1 % group's 20k books by title took SQLite 300 ms), else the first books by title (the sort index walked).
+            var ids = visible.Select(b => b.Id);
+            if (!await BookQueries.StartsFromTagsAsync(db, visibility, libraryId, cap, cancellationToken))
+                ids = visible.OrderBy(b => b.SortTitle).ThenBy(b => b.Id).Select(b => b.Id);
+            books = await ids.Take(cap + 1).ToListAsync(cancellationToken);
             capped = books.Count > cap;
             if (capped)
                 books.RemoveAt(cap);

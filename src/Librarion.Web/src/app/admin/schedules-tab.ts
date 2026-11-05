@@ -31,7 +31,7 @@ interface TaskChoice {
 }
 
 /**
- * A library's schedules (D-5.10 of the stage 5 plan; agents/docs/features/tasks.md): each says what it runs first (a
+ * A library's schedules (D-5.10 in agents/docs/features/tasks.md): each says what it runs first (a
  * folder scan, or an import with its source), then when, and whether it is on. Added and changed in a dialog in
  * numbered steps: what it runs, its source (imports), when.
  */

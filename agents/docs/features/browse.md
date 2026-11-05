@@ -7,7 +7,7 @@ paging, way back), `browse/list-window.ts` (`ListWindow`: the drawn rows), `brow
 `tag` in `core/api.service.ts`; styles `styles/browse.css`. Server: `GET api/books` ([catalog](catalog.md), keyset
 pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/values`, `api/tags`, `api/tags/{id}`
 (`TagQueries`). Tests `browse.spec.ts`, `tags/tags.spec.ts` (client), `CatalogQueryTests` (both providers), e2e
-`browse.spec.ts`, `fields.spec.ts`, `a11y.spec.ts`. D-5.5 in the [stage 5 plan](../development/stage-5-browse-plan.md).
+`browse.spec.ts`, `fields.spec.ts`, `a11y.spec.ts`. D-5.5 under [Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 - The home page is the library chosen in the switcher (`LibraryContext.current`): its name, its book count, the books
   as a grid of covers (`m`, 240 px) or a dense list (`s` covers, formats as badges). View and sort are kept per browser
@@ -31,7 +31,7 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - Every book is a link to its page ([book-page](book-page.md)): `a.book-link` inside the `li`, which keeps the layout's
   measures.
 
-## Fields and tags (chunk 14)
+## Fields and tags
 
 - The sidebar: Library, Authors (`fields/author`), Series (`fields/series`), Tags (`tags`), All fields (`fields`: every
   field of the tenant, built-in ones first, custom ones by name, then Tags). Items are lit on their own path only
@@ -63,3 +63,9 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - e2e gotchas: `toBeInViewport` reported a drawn, painted card as out of view under mobile emulation after the space
   above it changed: the test checks the bounding box instead. Mobile WebKit has no `mouse.wheel`: scroll by script.
   WebKit reports a poll cut off by `page.reload()` as an "access control" error.
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- **D-5.5 Browse:** the home page is the library: a virtual grid of covers (or a dense list), sort and view remembered
+  per browser, keyset pages loaded while scrolling, the scroll restored on the way back. Field pages (authors, series,
+  categories, languages, publishers, custom fields) and tags, each value with its count.

@@ -5,7 +5,7 @@ Built (stage 2): the field columns on `Tags`, `Ordinal` / `Number` on `BookTags`
 metadata readers ([metadata-readers](metadata-readers.md)) hand `(field, value, ordinal, number, sort name)` to
 `ImportTagResolver`, which finds or makes the value under its field (people's sort names kept), and `CatalogWriter`
 links it (`Source = Imported`, the first author and series copied to the book's sort columns). Built (stage 5): the
-browse pages per field and the tag pages ([browse](browse.md#fields-and-tags-chunk-14)). Search is built
+browse pages per field and the tag pages ([browse](browse.md#fields-and-tags)). Search is built
 ([search](search.md)); the field editing UI is planned.
 
 Code (planned): `src/Librarion.Core/Tagging/` (`TagFields`, `FieldTagResolver`, `BuiltInFields`), the metadata

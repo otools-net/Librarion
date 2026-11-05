@@ -110,6 +110,13 @@ public static class RunCommand
             ("authors A-Z, first page", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, null, 100, cancellationToken))!.Items.Count),
             ("authors A-Z, middle page", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, middleValueCursor, 100, cancellationToken))!.Items.Count),
             ("book detail", DetailBudget, async i => await books.GetAsync(tenant.Id, open, sampleIds[i], cancellationToken) is null ? 0 : 1),
+            // The other calls of the library's screens (stage 5): All fields, Tags, Go to, a tag's page, possible duplicates.
+            ("fields", ListBudget, async _ => (await tags.FieldsAsync(tenant.Id, cancellationToken)).Count),
+            ("plain tags A-Z, first page", ListBudget, async _ => (await tags.PlainTagsAsync(tenant.Id, libraryId, null, 100, cancellationToken, visibility: open)).Items.Count),
+            ("authors from a letter (Go to)", ListBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, null, 100, cancellationToken, "M", open))!.Items.Count),
+            ("a tag's page: the most prolific author", DetailBudget, async _ => await tags.GetAsync(tenant.Id, prolificAuthor, libraryId, open, cancellationToken) is null ? 0 : 1),
+            ("a tag's page: category Fiction", DetailBudget, async _ => await tags.GetAsync(tenant.Id, fiction, libraryId, open, cancellationToken) is null ? 0 : 1),
+            ("possible duplicates", ListBudget, async i => (await books.DuplicatesAsync(tenant.Id, open, sampleIds[i], cancellationToken))?.Count ?? 0),
             // Search (agents/docs/features/search.md): each title word is on about 2 % of the books (the generator's word list),
             // a file name (the id) on one; author names reach books through the tag-name index.
             ("search: a word in many titles", SearchBudget, _ => List(open, new BookPageRequest(Query: "night"))),

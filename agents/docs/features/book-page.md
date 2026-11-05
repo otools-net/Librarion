@@ -5,7 +5,7 @@ Code: `app/books/book-page.ts` (`BookPage`, route `books/:id`, loaded on first u
 (`BookQueries.GetAsync`, `canDownload` set by the route), `GET api/books/{id}/duplicates`
 (`BookQueries.DuplicatesAsync`), downloads `GET api/books/{id}/files/{fileId}` ([archives](archives.md)). Tests
 `book-page.spec.ts` (client), `BookPageTests` (both providers), e2e `book.spec.ts` (every device, `@smoke`),
-`a11y.spec.ts` (axe). D-5.6 in the [stage 5 plan](../development/stage-5-browse-plan.md).
+`a11y.spec.ts` (axe). D-5.6 under [Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 - Every card and row of `BookList` is a link (`a.book-link` inside `li.book`: the window measures the `li`).
 - Shows: cover `l`; the library's name only when the session sees several; the title (italic with a hint when it is
@@ -33,3 +33,9 @@ Code: `app/books/book-page.ts` (`BookPage`, route `books/:id`, loaded on first u
   a key shared by 50 books or more (this one counted) is noise ("Notes" by nobody) and ignored. Then the candidates
   go through the caller's visibility (libraries, content filters): bounded by the book, never by the catalog.
 - Loose files have no CRC at import, so two identical loose files are only found by identifier or work.
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- **D-5.6 Book page:** cover, title, authors, series and number, fields as chips linking to their pages, description,
+  properties (imported custom columns), copies and formats with **Download** (Read comes with the reader stage),
+  possible duplicates (from the merge work, read only here).

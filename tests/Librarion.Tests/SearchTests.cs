@@ -178,6 +178,17 @@ public sealed class SearchTests
         Assert.AreEqual(2, Value(library, "series", "Middle-earth").Count);
         Assert.IsFalse(library.Fields.Any(f => f.Field == "format"));
 
+        // Behind a content filter: only Fantasy (read from its tag, unordered) or all but it (the title order walked).
+        var facets = shelf.Factory.Services.GetRequiredService<SearchFacets>();
+        var fantasy = Value(tolkien, "category", "Fantasy").Id!.Value;
+        BookVisibility Filter(FilterProfile profile) => new(new Dictionary<int, IReadOnlyList<FilterProfile>> { [shelf.LibraryId] = [profile] });
+        var allowed = await facets.ListAsync(shelf.TenantId, Filter(new FilterProfile([fantasy], [])), shelf.LibraryId, null, Cancel);
+        Assert.AreEqual(3, allowed.Counted);
+        Assert.AreEqual(2, Value(allowed, "author", "John Tolkien").Count);
+        var denied = await facets.ListAsync(shelf.TenantId, Filter(new FilterProfile([], [fantasy])), shelf.LibraryId, null, Cancel);
+        Assert.AreEqual(2, denied.Counted);
+        Assert.IsFalse(denied.Fields.Any(f => f.Values.Any(v => v.Name == "John Tolkien")));
+
         // Past the cap: the first matches counted, marked.
         shelf.Factory.Services.GetRequiredService<SearchFacets>().Cap = 1;
         var capped = await Facets("tolkien");

@@ -3,8 +3,8 @@
 Code: `app/admin/admin-sections.ts` (the catalog), `admin-page.ts` (`AdminPage`, `adminMatcher`), the sections'
 components (`*-section.ts`, `account/account-section.ts`); styles `styles/admin.css`; tests `admin-sections.spec.ts`,
 `admin.spec.ts` (`AdminPage` through `RouterTestingHarness`), e2e `admin.spec.ts`, `smoke.spec.ts`. User docs:
-`docs/administration/README.md`. Port of SFE's admin page (`admin-page.md` there); the user's rules and D-5.3 / D-5.9 in
-the [stage 5 plan](../development/stage-5-browse-plan.md).
+`docs/administration/README.md`. Port of SFE's admin page (`admin-page.md` there); the user's rules, D-5.3 and D-5.9 under
+[Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 - `ADMIN_SECTIONS`: groups (`account`, `libraries`, `people`, `server`) › sections (icon) › sub-pages (rights). A
   sub-page shows with one of its rights, a section with one of its sub-pages (`visibleSections`). Texts:
@@ -40,3 +40,22 @@ the [stage 5 plan](../development/stage-5-browse-plan.md).
 - Gotcha: a Python edit script turned the CSS escape `\203A` into an octal escape (U+0083 + "A"): write CSS escapes
   with the Edit tool or a raw string.
 - `ClientI18nTests` skips `@let x = …;` declarations (they looked like literal text).
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- The user's rules: the administration will grow, so it is grouped **as SFE's**, on desktops and on phones; it has a
+  search that finds settings ([admin-search](admin-search.md)); good solutions for intuitive use, accessibility and
+  visual appeal.
+- **D-5.3 Administration as SFE:** `admin-sections.ts` with groups, sections (icon, title, description) and sub-pages
+  (each with its rights; a section without a visible sub-page isn't listed); routes `admin/:section/:page`; an
+  overview of cards by group, the sidebar with the open section's sub-pages, breadcrumbs (Administration › group ›
+  section › sub-page); on phones (≤ 760 px) the list of sections, then a section with its sub-pages as chips. Groups:
+  Account, Libraries, People and access, Server. A library's long panel became sub-pages (Folders, Runs, Import,
+  Missing books, Schedules). Old addresses of moved sub-pages keep working (the moved-addresses table, never
+  emptied).
+- **D-5.9 A page of its own (the user):** `/admin` replaces the library's sidebar with its own left column (search
+  box, groups, sections, the open section's sub-pages), as SFE's `AdminPageComponent`; the top bar keeps only a back
+  arrow to the library (history back when it came from there) and the account menu. The library's sidebar shows one
+  link to it, no administration entries.
+- Settings forms: settings in titled groups with a hint each; unsaved changes mark their section in the nav, a save
+  bar holds Save / Discard, leaving with unsaved changes asks first.

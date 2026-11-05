@@ -7,8 +7,8 @@ Code: `Core/Search/` (`SearchQuery` the language, `SearchText` folding, `ISearch
 `search/facets.ts` (`Facets`, Refine), `BookList` (`query`, `[listTools]`). Tests `SearchTests`,
 `CatalogQueryTests.ASearchWalksEveryMatchOnceInOrderWhereverItStarts` (both providers), `search/search.spec.ts`, e2e
 `search.spec.ts`, `a11y.spec.ts`; benchmark scenarios `search: …`, `suggestions: …`, `facets: …`.
-Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), D-5.7 and D-5.8 in the
-[stage 5 plan](../development/stage-5-browse-plan.md). User guide: `docs/user-guide/searching.md`.
+Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), D-5.7 and D-5.8 under
+[Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01). User guide: `docs/user-guide/searching.md`.
 
 ## The language (`SearchQuery.Parse`)
 
@@ -113,5 +113,22 @@ provider.
   of 10,000 parameters each time (330 ms). `EF.Parameter(list)` sends it as one JSON parameter (`json_each`).
 - Npgsql translates `Regex.Replace` as `regexp_replace(…, 'p')` (the first match only): not used.
 - The redundant `BookId <= b.Id` does **not** help the content filters' probe (`BookQueries.Probe`): PostgreSQL then
-  scanned `Books` for the 1 % group. Tried and reverted.
+  scanned `Books` for the 1 % group. Tried and reverted. What works there (2026-11-05): on PostgreSQL the probe is
+  `(SELECT count(*) …) > 0`, a scalar subquery the planner never turns into a join; with `EXISTS` a low estimate of
+  the tag (744 links for 20k) made it start from the tag and sort its books (100–127 ms, now 31–39).
+- The facets of a filtered library sorted the filter's books by title to take 2,000 (SQLite 305 ms for the 1 %
+  group): when the filter is read from its own tags (`BookQueries.StartsFromTagsAsync`) the sample is unordered; an
+  unordered read with a per-book test would scan `Books` (the 0.1 % group by id walked all 2M rows), so the title
+  order stays there.
 - Measured after: [scale](../development/scale.md#measured).
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- **D-5.7 Search language:** `field:value` for every field, `tag:` with descendants, `format:`, `-` negation, quoted
+  phrases, hidden tags honoured; parsed on the server into the same keyset queries; suggestions as you type (fields,
+  then values by prefix through the `(TenantId, FieldId, NormalizedName)` index).
+- **D-5.8 Facets with capped counts:** counts from `TagCounts` when nothing narrows the list; otherwise counted over
+  at most the first matches, never a count over the catalog per request. The cap is **2,000** (proposed 10,000:
+  480–780 ms on SQLite at 2M, 5,000 290–420, budget 300); kept by the user (2026-11-05), with "2,000+ books" past it
+  so the user knows there are more. Without a search, fields of more than 2,000 values (authors) have no facet (no
+  index by count). Shown as Refine: a button by Sort opening a sheet, on the library page and the search results.

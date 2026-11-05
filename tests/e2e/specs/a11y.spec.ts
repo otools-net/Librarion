@@ -81,6 +81,38 @@ test.describe('@a11y', () => {
         await audit(page, 'search refine');
     });
 
+    test.describe('light colors', () => {
+        test.use({ colorScheme: 'light' });
+
+        test('the main screens: the library, a book, search with Refine, the administration and a settings page', async ({ page }, testInfo) => {
+            await scannedLibrary(page, uniqueName('A11y light', testInfo), folder => {
+                fs.writeFileSync(path.join(folder, 'Light Words.fb2'), fb2('Light Words', 'Ada Reader'));
+            });
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+            await expect(page.locator('lib-browse-page .book')).toHaveCount(1);
+            await audit(page, 'home (light)');
+            await page.locator('.book-link').first().tap();
+            await expect(page.locator('.book-files')).toBeVisible();
+            await audit(page, 'a book (light)');
+
+            const box = page.getByRole('combobox', { name: 'Search books' });
+            await box.fill('light');
+            await box.press('Enter');
+            await expect(page.locator('lib-search-page .book')).toHaveCount(1);
+            await audit(page, 'search results (light)');
+            await page.getByRole('button', { name: 'Refine', exact: true }).tap();
+            await expect(page.getByRole('dialog', { name: 'Refine' }).locator('.facet-value').first()).toBeVisible();
+            await audit(page, 'search refine (light)');
+
+            await page.goto('./admin');
+            await expect(page.locator('.admin-nav a').first()).toBeVisible();
+            await audit(page, 'administration (light)');
+            await page.goto('./admin/settings/server');
+            await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+            await audit(page, 'settings (light)');
+        });
+    });
+
     test('the page not found', async ({ page }) => {
         await page.goto('./missing');
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

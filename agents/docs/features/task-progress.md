@@ -6,8 +6,8 @@ Code: `core/task-watch.ts` (`TaskWatch`), `core/task-text.ts` (titles, counts, e
 `styles/tasks.css`. Server: `GET api/tasks/running`, `api/tasks/overview` (`TaskOverview`), `api/tasks` (history) in
 `Api/Endpoints/TaskEndpoints.cs`; `BackgroundTasks.RunningAsync`, `LastAsync`, `HistoryAsync`, `TaskSchedules.ListAsync`
 (libraries). Tests `tasks.spec.ts`, `TaskApiTests.TheOverviewAndHistoryCoverTheLibrariesTheCallerMayScanOnly`, e2e
-`library.spec.ts`. Port of SFE's scan panel and Background tasks section (D-5.11 in the
-[stage 5 plan](../development/stage-5-browse-plan.md)); the runs themselves: [tasks](tasks.md).
+`library.spec.ts`. Port of SFE's scan panel and Background tasks section (D-5.11 under
+[Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01)); the runs themselves: [tasks](tasks.md).
 
 - Everything covers the libraries the caller may scan (`Access.LibrariesWith(Rights.Scan)`); the overview also lists
   their ids (`libraries`), as the client has no per-library rights.
@@ -42,3 +42,17 @@ Code: `core/task-watch.ts` (`TaskWatch`), `core/task-text.ts` (titles, counts, e
   still.
 - Times: on SQLite every `DateTime` is read back as UTC (`SqliteLibrarionDbContext.ConfigureConventions`), so JSON
   carries its `Z`; before, browsers read run times as local and the elapsed clock was off by the zone.
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- **D-5.11 Scan progress as SFE's scan panel (the user, 2026-11-02):** while a library is scanned or imported the
+  user sees it going and what it found so far, as SFE's `ScanPanelComponent`: a panel sticky under the top bar
+  (`aria-live="polite"`), a thin indeterminate bar (moved by `transform`; reduced motion honoured), a title, the
+  elapsed time (ticking only while running and the page is visible), the counts so far and the file being read,
+  Cancel while it runs; afterwards the result stays until dismissed (remembered per browser by the run's start) and a
+  toast says it finished. Seen from the library pages and while browsing, not only the library's admin tab.
+- **Also SFE's Background tasks (the user, 2026-11-02):** a section under Server with Tasks, Schedules and History
+  (chips with badges); a summary line; a card per task kind (folder scan, Calibre import, INPX import) with its state,
+  Cancel / Run now / Schedule, progress and last and next runs; schedules of every library; the history newest first
+  across libraries; refreshed every 2 s while shown and visible. Server: one overview route bounded by the libraries,
+  not the catalog, and the history as a keyset page; only libraries where the account may scan (or import).

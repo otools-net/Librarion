@@ -4,8 +4,8 @@ Code: `app/admin/admin-search.ts` (`searchAdmin`, `markWords`, `settableAt`), `a
 results in `admin/admin-page.ts`, `settings/setting-reveal.ts` and its use in `settings/settings-panel.ts`;
 `GET api/settings/catalog` in `Api/Endpoints/SettingsEndpoints.cs` (`SettingInfo`). Styles at the end of
 `styles/admin.css`. Tests `admin-search.spec.ts`, `admin.spec.ts`, `SettingsTests` (catalog route, the fakes' catalog
-is the server's), e2e `admin.spec.ts`. Port of SFE's `admin-search.ts`; D-5.4 in the
-[stage 5 plan](../development/stage-5-browse-plan.md).
+is the server's), e2e `admin.spec.ts`. Port of SFE's `admin-search.ts`; D-5.4 under
+[Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 - Looks in the sections the session sees (`visibleSections`), their sub-pages and, on each sub-page with a
   `settings` level (`settingsPage(...)` in `admin-sections.ts`: account/preferences = user, librarySettings = library,
@@ -29,3 +29,10 @@ is the server's), e2e `admin.spec.ts`. Port of SFE's `admin-search.ts`; D-5.4 in
   otherwise): a new key goes in both.
 - Phones: the result links override the section rows' grid (`.admin-nav .admin-search-results a`: a column).
 - `<mark>` uses `--mark-bg`; each word is marked on its own ("Books", "per", "page").
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- **D-5.4 Settings search:** in the client, over `admin-sections.ts` × the settings catalog the server sends (with
+  their texts from `en.json`), no request per search; every word must match (accents and case ignored), title matches
+  first, the words marked; a result opens its sub-page scrolled to the setting, focused and flashed once. A test
+  checks every setting key is found.

@@ -92,13 +92,27 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   | an author with 5–20 books, by field | 12 | 31 |
   | category Fiction less PDF | 103 | 82 |
   | books outside any series | 188 | 138 |
-  | the library for the 0.1 % / 1 % / 10 % groups | 142 / **305** / 226 | 96 / 189 / 117 |
+  | the library for the 0.1 % / 1 % / 10 % groups | 188 / 228 / 223 | 128 / 108 / 131 |
 
   At 10,000 matches (D-5.8's first figure) SQLite took 480–780 ms for the broad ones, 5,000 290–420 ms. The 1 %
-  group's library on SQLite starts from the filter's 20k books and sorts them by title before taking 2,000.
-- The same day the **1 % filtered group** took 127 ms on PostgreSQL (62 at stage 2), with this stage's code and the
-  previous commit's alike: on the freshly generated catalog PostgreSQL estimates that tag at 744 links (it has 20k)
-  and starts from them, sorting 20k books. To fix with the stage's budgets (chunk 18).
+  group's library first took 305 ms on SQLite (its 20k books sorted by title to take 2,000): a filter read from its
+  own tags is now sampled unordered (`BookQueries.StartsFromTagsAsync`).
+- Stage 5 close (2026-11-05, 2M, warm, p95 in ms): every call of the UI's screens, 49 scenarios, within budget on
+  both providers, no full scan. Besides the tables above:
+
+  | Query | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | filtered group 0.1 % / 1 % / 10 %, first and middle page | 38–39 / 40–54 / 10–17 | 25–29 / 31–39 / 13–18 |
+  | the field list (All fields) | 0.2 | 2 |
+  | plain tags A–Z, first page | 6 | 70 |
+  | authors from a letter (Go to) | 4 | 16 |
+  | a tag's page (an author, a category) | 1 | 6–7 |
+  | possible duplicates | 3.5 | 12 |
+
+- The **1 % filtered group** took 100–127 ms on PostgreSQL at the start of the stage close (62 at stage 2): on the
+  freshly generated catalog PostgreSQL estimates its tag at 744 links (it has 20k) and turned the probe's `EXISTS`
+  into a join started from the tag, sorting 20k books. The probe is now a count on PostgreSQL (a scalar subquery is
+  not turned into a join), so `NarrowAsync`'s choice holds: 31–39 ms.
 - Imports with the search index kept row by row (2026-11-03, PostgreSQL): INPX 1M 9.2 min (8.9 before), Calibre 2M
   28.2 min (27.1; budget 30), unchanged re-imports 37 s and 2.7 min: within budget.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),

@@ -1,7 +1,7 @@
 # Design: tokens, palette, the look of every screen
 
 Code: `src/Librarion.Web/src/styles/tokens.css` (tokens per theme), the other partials of `src/styles/`; test
-`ClientDesignTests` (contrast). Plan: [stage 5](../development/stage-5-browse-plan.md).
+`ClientDesignTests` (contrast). Decisions D-5.1 and D-5.2 [below](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 **The user's rules (2026-11-01):** the interface must not look bare: SFE's approach is the reference (its palette is
 not); good solutions for intuitive use, accessibility and visual appeal. Palette chosen: **ink and paper**.
@@ -78,3 +78,11 @@ styles `styles/dialogs.css`, `styles/states.css`. Mounted once in `app.ts` (with
   once, shimmer off under reduced motion).
 - Screenshots tool `#delete` shows a confirmation dialog.
 
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- **D-5.1 Design foundation first:** tokens in `styles/tokens.css` (layered surfaces, two radii, shadow, type scale,
+  motion with `prefers-reduced-motion` honoured), an icon sprite of inline SVGs shipped with the client (no icon font,
+  nothing fetched), shared components restyled. Every pair of text and background colours ≥ 4.5:1 (AA) in both
+  themes, checked by a test over the tokens; focus rings visible in both.
+- **D-5.2 Palette:** Librarion's own, not SFE's amber: ink-blue accent on warm paper in light, deep blue-grey with a
+  soft blue accent in dark (confirmed explicitly by the user).

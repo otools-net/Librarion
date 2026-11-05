@@ -304,6 +304,24 @@ public sealed class BookQueries(TenantDb tenantDb)
         return books.Where(any!);
     }
 
+    /// <summary>
+    /// Whether <see cref="VisibleAsync"/> for this library starts from the content filters' own tags (every group's
+    /// allow-list narrow): its books are then few, and a read that needs no order is cheapest left unordered; otherwise
+    /// an unordered read would scan the books, and the sort index must be walked.
+    /// </summary>
+    public static async Task<bool> StartsFromTagsAsync(LibrarionDbContext db, BookVisibility visibility, int libraryId, int limit, CancellationToken cancellationToken)
+    {
+        if (!visibility.Libraries.TryGetValue(libraryId, out var profiles) || profiles.Any(p => p.IsOpen || p.Allowed.Count == 0))
+            return false;
+        foreach (var profile in profiles)
+        {
+            if (!await NarrowAsync(db, profile.Allowed, [libraryId], limit, cancellationToken))
+                return false;
+        }
+
+        return true;
+    }
+
     private static async Task<Expression<Func<Book, bool>>> AdmitsAsync(LibrarionDbContext db, FilterProfile profile, bool narrow, CancellationToken cancellationToken)
     {
         Expression<Func<Book, bool>>? result = null;
@@ -358,11 +376,18 @@ public sealed class BookQueries(TenantDb tenantDb)
         return tagged < Math.Sqrt((double)limit * Math.Max(books, 1));
     }
 
-    /// <summary>Books having one of the tags or a descendant, tested book by book (the outer query walks its sort index).</summary>
+    /// <summary>
+    /// Books having one of the tags or a descendant, tested book by book (the outer query walks its sort index). On
+    /// PostgreSQL a count, not <c>EXISTS</c>: an <c>EXISTS</c> may become a join started from the tags' links, which a
+    /// low estimate of a tag picks (the 1 % filter at 2M: 744 links estimated, 20k there, 100 ms sorting them); a
+    /// scalar subquery stays a test of each book, as <see cref="NarrowAsync"/> decided.
+    /// </summary>
     internal static Expression<Func<Book, bool>> Probe(LibrarionDbContext db, TagSet tags)
     {
         if (tags.Descendants is { } listed)
-            return b => db.BookTags.Any(l => l.BookId == b.Id && listed.Contains(l.TagId));
+            return db.Database.IsSqlite()
+                ? b => db.BookTags.Any(l => l.BookId == b.Id && listed.Contains(l.TagId))
+                : b => db.BookTags.Count(l => l.BookId == b.Id && listed.Contains(l.TagId)) > 0;
         var ancestors = tags.Ancestors;
         return b => db.BookTags.Any(l => l.BookId == b.Id && db.TagClosure.Any(c => c.DescendantId == l.TagId && ancestors.Contains(c.AncestorId)));
     }

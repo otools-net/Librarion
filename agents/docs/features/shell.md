@@ -1,8 +1,8 @@
 # The shell: top bar, navigation, menus
 
 Code: `app/shell/shell.ts` + `shell.html`, `app/core/library-context.ts`, `styles/shell.css`; tests `shell.spec.ts`,
-e2e `smoke.spec.ts`. User docs: `docs/user-guide/finding-your-way.md`. Plan: [stage 5](../development/stage-5-browse-plan.md)
-(D-5.9).
+e2e `smoke.spec.ts`. User docs: `docs/user-guide/finding-your-way.md`. The administration's own frame:
+D-5.9 in [admin-page](admin-page.md#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 - Top bar: menu button (phones) or back arrow (administration), brand, the place (library switcher, or "Administration"),
   search (`SearchBox`, with suggestions: [search](search.md)), account menu (an initial in a disc). On phones the brand's name and the
@@ -25,3 +25,11 @@ e2e `smoke.spec.ts`. User docs: `docs/user-guide/finding-your-way.md`. Plan: [st
 - Administration (`/admin…`, `.admin-frame`): no sidebar, switcher, search or menu button; the back arrow returns to
   the last library page seen (else `/`). Its own left column is the [admin page](admin-page.md)'s.
 - Screenshots tool: `#account`, `#library`, `#menu` open them.
+
+## Decisions (stage 5, confirmed by the user 2026-11-01)
+
+- The library's sidebar on desktops, a bottom-sheet menu on phones; the top bar has the library switcher, the search
+  box and the account menu ([design](design.md) came first).
+- Rules taken from SFE's frontend note for every screen: phone sheets for popups opening low, overflow rows instead
+  of wrapping buttons, tap targets, `title` hints on every button, `document:pointerdown` to close popups,
+  battery-friendly polling ([frontend](../development/frontend.md)).

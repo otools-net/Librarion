@@ -53,7 +53,7 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
 
 - Field values and plain tags (`TagQueries.ValuesAsync`, `PlainTagsAsync`) by sort name with the library's counts, those
   without books there skipped (at most 2,000 rows read per request); a tag's detail (`GetAsync`); details in
-  [browse](browse.md#fields-and-tags-chunk-14).
+  [browse](browse.md#fields-and-tags).
 
 ## Routes (all `library.browse`)
 

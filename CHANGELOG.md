@@ -64,6 +64,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   authors, series, languages, formats, publishers, years, tags) with their counts; one narrows the search to its
   books, its minus leaves them out, one already chosen is marked and takes it out again. The results say how many
   books match; past 2,000 matches the counts are over the first 2,000 ("2,000+ books").
+- Accounts whose groups see only part of a library (content filters) get its pages and Refine faster on big
+  libraries.
 
 ### Fixed
 
