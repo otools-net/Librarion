@@ -125,9 +125,7 @@ public sealed class SearchSuggestions(TenantDb tenantDb)
     private static SearchSuggestion Suggestion(Candidate value, IReadOnlyDictionary<int, string> keys, string sign)
     {
         var field = value.FieldId is { } id ? keys.GetValueOrDefault(id) : null;
-        // A name with quotes can't be quoted: its quotes become spaces (the words still match).
-        var name = value.Name.Replace('"', ' ');
-        return new SearchSuggestion(SuggestionKind.Value, $"{sign}{field ?? "tag"}:\"{name}\"", value.Name, field, value.BookCount);
+        return new SearchSuggestion(SuggestionKind.Value, sign + SearchFacets.Term(field ?? "tag", value.Name), value.Name, field, value.BookCount);
     }
 
     /// <summary>Where the last term starts: after the last space outside quotes.</summary>

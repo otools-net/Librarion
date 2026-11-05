@@ -81,6 +81,21 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   | books outside any series, newest | 3 | 17 |
   | suggestions: two letters / after `author:` | 20 / 24 | 17 / 22 |
 
+- Facets (stage 5, 2026-11-05, 2M, warm, p95 in ms, budget 300; counted over at most 2,000 matches, see
+  [search](../features/search.md#facets-searchfacets-refine-d-58)):
+
+  | Facets of | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | the library seen whole (stored counts) | 104 | 41 |
+  | a word on ~2 % of titles / two such words | 148 / 145 | 158 / 272 |
+  | the prolific author's last name | 184 | 247 |
+  | an author with 5–20 books, by field | 12 | 31 |
+  | category Fiction less PDF | 103 | 82 |
+  | books outside any series | 188 | 138 |
+  | the library for the 0.1 % / 1 % / 10 % groups | 142 / **305** / 226 | 96 / 189 / 117 |
+
+  At 10,000 matches (D-5.8's first figure) SQLite took 480–780 ms for the broad ones, 5,000 290–420 ms. The 1 %
+  group's library on SQLite starts from the filter's 20k books and sorts them by title before taking 2,000.
 - The same day the **1 % filtered group** took 127 ms on PostgreSQL (62 at stage 2), with this stage's code and the
   previous commit's alike: on the freshly generated catalog PostgreSQL estimates that tag at 744 links (it has 20k)
   and starts from them, sorting 20k books. To fix with the stage's budgets (chunk 18).

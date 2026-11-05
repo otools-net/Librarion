@@ -60,6 +60,10 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   `title:`, and `-` to leave books out. Books with a hidden tag (Archived) only show when the search names it. While
   typing, it suggests fields and then authors, series and tags with their number of books. Results are listed like the
   library, sorted by title, author or newest. See [Searching](docs/user-guide/searching.md).
+- Refine, on the library and on search results: each field's most frequent values among the books (categories,
+  authors, series, languages, formats, publishers, years, tags) with their counts; one narrows the search to its
+  books, its minus leaves them out, one already chosen is marked and takes it out again. The results say how many
+  books match; past 2,000 matches the counts are over the first 2,000 ("2,000+ books").
 
 ### Fixed
 

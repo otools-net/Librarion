@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TranslatePipe } from '../core/i18n.service';
+import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
 import { BookList } from '../browse/book-list';
 import { EmptyState, Skeleton } from '../shared/placeholders';
+import { Facets } from './facets';
 
 /** The language by example: each opens its search (the texts say what it finds). */
 const EXAMPLES: readonly { query: string; text: string }[] = [
@@ -20,11 +21,12 @@ const EXAMPLES: readonly { query: string; text: string }[] = [
 
 /**
  * The results of the top bar's search (`search?q=`; agents/docs/features/search.md): the books of the library being
- * browsed that match, as the library's list (grid or list, sort, pages by key, the way back kept), and how to search.
+ * browsed that match, as the library's list (grid or list, sort, pages by key, the way back kept), how many (from the
+ * facets' count: "2,000+" past their cap), Refine (`Facets`), and how to search.
  */
 @Component({
     selector: 'lib-search-page',
-    imports: [TranslatePipe, RouterLink, BookList, EmptyState, Skeleton],
+    imports: [TranslatePipe, RouterLink, BookList, EmptyState, Skeleton, Facets],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'search-page' },
     template: `
@@ -32,7 +34,8 @@ const EXAMPLES: readonly { query: string; text: string }[] = [
             @if (query()) {
                 <lib-book-list [library]="library.id" [query]="query()" [label]="'search.books' | t: { query: query() }" emptyText="search.empty">
                     <h1>{{ 'search.title' | t }}</h1>
-                    <p class="browse-count">{{ 'search.in' | t: { query: query(), library: library.name } }}</p>
+                    <p class="browse-count">{{ 'search.in' | t: { query: query(), library: library.name } }}@if (count(); as count) {<span class="search-count"> · {{ count }}</span>}</p>
+                    <lib-facets listTools [library]="library.id" [query]="query()" />
                 </lib-book-list>
             } @else {
                 <h1>{{ 'search.title' | t }}</h1>
@@ -65,6 +68,15 @@ export class SearchPage {
     protected readonly query = computed(() => this.params()?.get('q')?.trim() ?? '');
     protected readonly library = this.libraries.current;
     protected readonly librariesLoaded = signal(false);
+    private readonly i18n = inject(I18n);
+    private readonly facets = viewChild(Facets);
+    protected readonly count = computed(() => {
+        const list = this.facets()?.list();
+        if (!list)
+            return null;
+        const count = this.i18n.number(list.counted);
+        return this.i18n.t(list.capped ? 'search.countCapped' : 'search.count', { count });
+    });
 
     constructor() {
         void this.libraries.load().finally(() => this.librariesLoaded.set(true));

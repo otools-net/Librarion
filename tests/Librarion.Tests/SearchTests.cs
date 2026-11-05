@@ -1,9 +1,11 @@
 using System.IO.Compression;
+using System.Net;
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
 using Librarion.Core.Search;
 using Librarion.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Librarion.Tests;
 
@@ -108,6 +110,82 @@ public sealed class SearchTests
             series = await db.Tags.Where(t => t.Name == "Middle-earth").Select(t => t.Id).SingleAsync(Cancel);
         var numbered = await shelf.Admin.GetAsync<Page<BookListItem>>($"/api/books?library={shelf.LibraryId}&tag={series}&sort=number&q=rings", Cancel);
         CollectionAssert.AreEqual(new[] { "The Lord of the Rings" }, numbered.Items.Select(b => b.Title).ToList());
+    }
+
+    [TestMethod]
+    public async Task FacetsCountTheMatchesAsTheirTermsFindThem()
+    {
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        shelf.Write("hobbit.fb2", Fb2("The Hobbit", "John Tolkien", "Middle-earth", 1));
+        shelf.Write("rings.fb2", Fb2("The Lord of the Rings", "John Tolkien", "Middle-earth", 2));
+        shelf.Write("dune.fb2", Fb2("Dune", "Frank Herbert", genre: "sf"));
+        shelf.Write("cafe.fb2", Fb2("Café Society", "José Saramago", genre: "prose_classic"));
+        // Two categories under one parent: counted once under it.
+        shelf.Write("both.fb2", Fb2("Tolkien and Saramago", "Anne Editor", genre: "sf_fantasy</genre><genre>prose_classic"));
+        await shelf.ScanAsync(Cancel);
+
+        await using (var db = await shelf.DbAsync(Cancel))
+        {
+            var category = await db.Tags.SingleAsync(t => t.FieldKey == "category", Cancel);
+            var children = await db.Tags.Where(t => t.FieldId == category.Id && (t.Name == "Fantasy" || t.Name == "Classic prose")).ToListAsync(Cancel);
+            var parent = new Tag { TenantId = shelf.TenantId, Name = "Fiction", NormalizedName = "fiction", SortName = "Fiction", FieldId = category.Id };
+            db.Tags.Add(parent);
+            await db.SaveChangesAsync(Cancel);
+            db.TagClosure.AddRange(
+                new TagClosure { TenantId = shelf.TenantId, AncestorId = parent.Id, DescendantId = parent.Id, Depth = 0 },
+                new TagClosure { TenantId = shelf.TenantId, AncestorId = category.Id, DescendantId = parent.Id, Depth = 1 });
+            foreach (var child in children)
+            {
+                db.TagParents.Add(new TagParent { TenantId = shelf.TenantId, ChildId = child.Id, ParentId = parent.Id });
+                db.TagClosure.Add(new TagClosure { TenantId = shelf.TenantId, AncestorId = parent.Id, DescendantId = child.Id, Depth = 1 });
+            }
+
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        async Task<FacetList> Facets(string? q) =>
+            await shelf.Admin.GetAsync<FacetList>($"/api/search/facets?library={shelf.LibraryId}&q={Uri.EscapeDataString(q ?? "")}", Cancel);
+        async Task<int> Count(string q) =>
+            (await shelf.Admin.GetAsync<Page<BookListItem>>($"/api/books?library={shelf.LibraryId}&limit=200&q={Uri.EscapeDataString(q)}", Cancel)).Items.Count;
+        static FacetValue Value(FacetList list, string field, string name) => list.Fields.Single(f => f.Field == field).Values.Single(v => v.Name == name);
+
+        var tolkien = await Facets("tolkien");
+        Assert.AreEqual(3, tolkien.Counted, "two by him, one with his name in the title");
+        Assert.IsFalse(tolkien.Capped);
+        Assert.AreEqual(2, Value(tolkien, "author", "John Tolkien").Count);
+        Assert.AreEqual("author:\"John Tolkien\"", Value(tolkien, "author", "John Tolkien").Term);
+        Assert.AreEqual(3, Value(tolkien, "format", "fb2").Count);
+        Assert.AreEqual(3, Value(tolkien, "category", "Fantasy").Count);
+        Assert.AreEqual("category", tolkien.Fields[0].Field, "categories first");
+        foreach (var value in tolkien.Fields.SelectMany(f => f.Values))
+            Assert.AreEqual(value.Count, await Count($"tolkien {value.Term}"), value.Term);
+
+        var fiction = await Facets("category:Fiction");
+        Assert.AreEqual(4, fiction.Counted);
+        Assert.AreEqual(4, Value(fiction, "category", "Fiction").Count, "the book in both counted once");
+        foreach (var value in fiction.Fields.SelectMany(f => f.Values))
+            Assert.AreEqual(value.Count, await Count($"category:Fiction {value.Term}"), value.Term);
+
+        Assert.AreEqual(0, (await Facets("nothing-like-this")).Counted);
+        var others = await Facets("-tolkien");
+        Assert.AreEqual(2, others.Counted, "only terms leaving books out");
+        Assert.AreEqual(1, Value(others, "author", "Frank Herbert").Count);
+
+        // The library seen whole: the stored counts (no formats there).
+        var library = await Facets(null);
+        Assert.AreEqual(5, library.Counted);
+        Assert.AreEqual(2, Value(library, "author", "John Tolkien").Count);
+        Assert.AreEqual(2, Value(library, "series", "Middle-earth").Count);
+        Assert.IsFalse(library.Fields.Any(f => f.Field == "format"));
+
+        // Past the cap: the first matches counted, marked.
+        shelf.Factory.Services.GetRequiredService<SearchFacets>().Cap = 1;
+        var capped = await Facets("tolkien");
+        Assert.AreEqual(1, capped.Counted);
+        Assert.IsTrue(capped.Capped);
+        Assert.IsFalse((await Facets("dune")).Capped, "one match: all of them");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, (await shelf.Admin.GetAsync($"/api/search/facets?library={shelf.LibraryId + 100}", Cancel)).StatusCode);
     }
 
     [TestMethod]

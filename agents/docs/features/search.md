@@ -1,12 +1,13 @@
 # Search
 
 Code: `Core/Search/` (`SearchQuery` the language, `SearchText` folding, `ISearchIndex` with `SqliteSearchIndex` and
-`PostgresSearchIndex`, `BookSearch` terms as conditions, `SearchSuggestions`), `BookQueries.ListAsync` (`q`),
-`Books.SearchText`; routes `GET api/books?q=`, `GET api/search/suggestions` (`BookEndpoints.cs`); client
-`shell/search-box.ts` (`SearchBox`), `search/search-page.ts` (`search?q=`), `BookList` (`query`). Tests
-`SearchTests`, `CatalogQueryTests.ASearchWalksEveryMatchOnceInOrderWhereverItStarts` (both providers),
-`search/search.spec.ts`, e2e `search.spec.ts`, `a11y.spec.ts`; benchmark scenarios `search: …`, `suggestions: …`.
-Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), D-5.7 in the
+`PostgresSearchIndex`, `BookSearch` terms as conditions, `SearchSuggestions`, `SearchFacets`), `BookQueries.ListAsync`
+(`q`), `Books.SearchText`; routes `GET api/books?q=`, `GET api/search/suggestions`, `GET api/search/facets`
+(`BookEndpoints.cs`); client `shell/search-box.ts` (`SearchBox`), `search/search-page.ts` (`search?q=`),
+`search/facets.ts` (`Facets`, Refine), `BookList` (`query`, `[listTools]`). Tests `SearchTests`,
+`CatalogQueryTests.ASearchWalksEveryMatchOnceInOrderWhereverItStarts` (both providers), `search/search.spec.ts`, e2e
+`search.spec.ts`, `a11y.spec.ts`; benchmark scenarios `search: …`, `suggestions: …`, `facets: …`.
+Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), D-5.7 and D-5.8 in the
 [stage 5 plan](../development/stage-5-browse-plan.md). User guide: `docs/user-guide/searching.md`.
 
 ## The language (`SearchQuery.Parse`)
@@ -62,6 +63,31 @@ Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), 
 - The client asks 150 ms after typing stops; a field chosen asks again for its values; a value ends the term with a
   space. Arrows, Enter, Escape; `role="combobox"` with `aria-activedescendant`. The options cancel `mousedown`, not
   `pointerdown`: on iOS WebKit a cancelled `pointerdown` lost the tap's `click`.
+
+## Facets (`SearchFacets`, Refine; D-5.8)
+
+- `GET api/search/facets?library=&q=`: per field the 8 values with the most books, then formats; each value carries
+  the `term` that finds its books (`category:"Fantasy"`, the quoting of suggestions: `SearchFacets.Term`). Order:
+  category, author, series, language, format, publisher, year, other fields by key, plain tags. Hidden and built-in
+  tags never listed.
+- **Nothing narrows** (no `q`, the library open to the caller): `TagCounts`, nothing counted. A field with more than
+  2,000 values (authors, series, publishers at 2M) is left out: its most frequent values can't be found without
+  reading every count (no index by count; a `FieldId` on `TagCounts` with one would allow it). No formats there.
+- **A search, or a library behind content filters:** counted over at most **2,000 matches** (`MaxCounted`), `capped`
+  past it (the client says "2,000+ books"). `BookSearch.SampleAsync` reads them **unordered from the narrowest term's
+  own source** (`Condition.Source`: the title index, the links of its tags, a format's files; a start list already
+  read when under the threshold), then tests each against every term; only negations: the first matches by title (the
+  sort index walked: unordered it was a bare `SCAN`).
+- Counting: the sample's links read once (about 15k rows for 2,000 books) and counted in memory, each book once under
+  a tag and every tag above it (the parents' edges, `TagParents`, read whole up to 10,000 and walked in memory), then
+  the counted tags' fields looked up by key. Tried first and slower at 10,000 books on SQLite: grouping in the database
+  through the closure with `COUNT(DISTINCT)` 540 ms; grouping by tag joined to `Tags` 210 ms.
+- The cap is the cost: at 2M on SQLite a broad word took 130 ms with 2,000, 290 with 5,000, 480 with 10,000 (D-5.8
+  said 10,000; brought to the user with this chunk).
+- Plain tags are `FieldId IS NULL` minus the fields' own rows **by id**: with `FieldKey IS NULL` SQLite walked that
+  index over nearly all 660k tags (111 ms).
+- The client asks again whenever the library or the search changes; the button stays disabled without values.
+  Choosing a value already in the search (its term, exactly) takes it out; the minus adds `-term`.
 
 ## Plans that went wrong at 2M (2026-11-03), and the rule each gave
 

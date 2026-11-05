@@ -109,6 +109,10 @@ try {
                 await page.locator('.book-link').first().click();
                 await page.locator('.book-files').waitFor();
             }
+            else if (action === 'refine') {
+                await page.locator('.facets-button:not([disabled])').click();
+                await page.locator('.facet-value').first().waitFor();
+            }
             else if (action === 'first') {
                 await page.locator('.value a').first().click();
                 await page.locator('.tag-kind').waitFor();

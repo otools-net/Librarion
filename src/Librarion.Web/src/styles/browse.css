@@ -1,7 +1,7 @@
 /*
- * The library and browsing by value (app/browse, app/tags, agents/docs/features/browse.md): headings and tools, the
- * books as a grid of covers or a dense list, the A–Z lists of values, a tag's heading, the fields. Every row of a
- * windowed list has the same height (the window of drawn rows counts on it): titles are clamped, texts have fixed lines.
+ * The library and browsing by value (app/browse, app/tags, app/search, agents/docs/features/browse.md): headings and
+ * tools, the books as a grid of covers or a dense list, the A–Z lists of values, a tag's heading, the fields, Refine.
+ * Every row of a windowed list has the same height (the window of drawn rows counts on it): titles are clamped, texts have fixed lines.
  */
 
 .browse-head {
@@ -423,5 +423,92 @@
 
     .books.list .book-formats {
         display: none;
+    }
+}
+
+/* ---------- Refine (facets): fields side by side in a wide sheet, one column on phones ---------- */
+
+.facets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-4) var(--space-5);
+}
+
+.facet-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.facet-values {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.facet-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.facet-value {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: var(--target);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.facet-value:hover {
+    background: var(--surface-2);
+}
+
+.facet-value.chosen {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.facet-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.facet-count {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+}
+
+.facet-exclude {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.search-count {
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .facets {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .facet-value {
+        min-height: 44px;
     }
 }

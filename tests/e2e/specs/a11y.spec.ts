@@ -64,7 +64,7 @@ test.describe('@a11y', () => {
         await audit(page, 'a book');
     });
 
-    test('search: the suggestions open, the results and the help', async ({ page }, testInfo) => {
+    test('search: the suggestions open, the results and the help, Refine open', async ({ page }, testInfo) => {
         await scannedLibrary(page, uniqueName('A11y search', testInfo), folder => {
             fs.writeFileSync(path.join(folder, 'Clear Words.fb2'), fb2('Clear Words', 'Ada Reader'));
         });
@@ -76,6 +76,9 @@ test.describe('@a11y', () => {
         await expect(page.locator('lib-search-page .book')).toHaveCount(1);
         await page.locator('.search-help summary').tap();
         await audit(page, 'search results');
+        await page.getByRole('button', { name: 'Refine', exact: true }).tap();
+        await expect(page.getByRole('dialog', { name: 'Refine' }).locator('.facet-value').first()).toBeVisible();
+        await audit(page, 'search refine');
     });
 
     test('the page not found', async ({ page }) => {

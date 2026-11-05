@@ -165,6 +165,28 @@ export interface SuggestionList {
     items: SearchSuggestion[];
 }
 
+/** A value of a facet: its books among those counted, and the search term finding them (`category:"Fantasy"`, `format:epub`). */
+export interface FacetValue {
+    /** The tag; null for a format. */
+    id: number | null;
+    name: string;
+    term: string;
+    count: number;
+}
+
+/** A field's most frequent values among the books (`field`: its key; `tag` plain tags, `format` the files' formats). */
+export interface Facet {
+    field: string;
+    values: FacetValue[];
+}
+
+/** Facets of a library or a search: counted over `counted` books, at most the first matches when `capped`. */
+export interface FacetList {
+    counted: number;
+    capped: boolean;
+    fields: Facet[];
+}
+
 /** Why another book may be the same: a file of the same size and CRC, a shared identifier (`scheme`), the same title and author. */
 export interface BookDuplicate {
     book: BookListItem;

@@ -20,7 +20,25 @@ internal static class BookSearch
 
     /// <param name="Size">About how many books match; null when not known cheaply (then never where the database starts).</param>
     /// <param name="Named">Tags the term names, with those under them: hidden ones among them stay in.</param>
-    private sealed record Condition(SearchTerm Term, long? Size, Expression<Func<Book, bool>> From, Expression<Func<Book, bool>> Probe, IReadOnlyList<int> Named);
+    /// <param name="Source">Up to about n ids of books it may match (unordered; repeats and books not seen possible): where a sample starts.</param>
+    /// <param name="Start">Every book it may match, read into a list when under the threshold; null otherwise.</param>
+    private sealed record Condition(SearchTerm Term, long? Size, Expression<Func<Book, bool>> From, Expression<Func<Book, bool>> Probe, IReadOnlyList<int> Named,
+        Source Source, IReadOnlyList<int>? Start = null);
+
+    private delegate Task<List<int>> Source(int n, CancellationToken cancellationToken);
+
+    private static Source Reading(IQueryable<int> books) => (n, cancellationToken) => books.Take(n).ToListAsync(cancellationToken);
+
+    private static Source Listed(IReadOnlyList<int> books) => (n, _) => Task.FromResult(books.Take(n).ToList());
+
+    /// <summary>Titles read first (as many as were), then books through the links.</summary>
+    private static Source Either(IReadOnlyList<int> titled, IQueryable<int> linked) => async (n, cancellationToken) =>
+    {
+        var books = titled.Take(n).ToList();
+        if (books.Count < n)
+            books.AddRange(await linked.Take(n - books.Count).ToListAsync(cancellationToken));
+        return books;
+    };
 
     /// <summary>The tenant's fields by key: what <c>key:</c> the search language knows.</summary>
     public static async Task<Dictionary<string, int>> FieldsAsync(LibrarionDbContext db, CancellationToken cancellationToken) =>
@@ -35,11 +53,50 @@ internal static class BookSearch
             return books;
         var total = await db.Libraries.Where(l => libraries.Contains(l.Id)).SumAsync(l => (long)l.BookCount, cancellationToken);
         var threshold = (long)Math.Sqrt((double)limit * Math.Max(total, 1));
+        var conditions = await ResolveAsync(db, query, fields, libraries, threshold, cancellationToken);
+        var start = conditions.Where(c => !c.Term.Negated && c.Size < threshold).MinBy(c => c.Size);
+        return await FilterAsync(db, books, conditions, start, cancellationToken);
+    }
+
+    /// <summary>
+    /// Some of the books matching, at most <paramref name="cap"/>, for counts over them (facets,
+    /// agents/docs/features/search.md): the narrowest term's books read unordered from its own index, then tested
+    /// against every term. <c>Capped</c>: more may match than were read.
+    /// </summary>
+    public static async Task<(List<int> Books, bool Capped)> SampleAsync(LibrarionDbContext db, IQueryable<Book> books, SearchQuery query,
+        IReadOnlyDictionary<string, int> fields, IReadOnlyCollection<int> libraries, int cap, CancellationToken cancellationToken)
+    {
+        var conditions = await ResolveAsync(db, query, fields, libraries, cap, cancellationToken);
+        var matching = await FilterAsync(db, books, conditions, null, cancellationToken);
+        var start = conditions.Where(c => !c.Term.Negated).MinBy(c => c.Size ?? long.MaxValue);
+        if (start is null)
+        {
+            // Only terms leaving books out: the first matches by title (the sort index walked, no scan).
+            var walked = await matching.OrderBy(b => b.SortTitle).ThenBy(b => b.Id).Select(b => b.Id).Take(cap + 1).ToListAsync(cancellationToken);
+            return (walked.Take(cap).ToList(), walked.Count > cap);
+        }
+
+        var read = start.Start?.ToList() ?? await start.Source(cap + 1, cancellationToken);
+        var candidates = read.Distinct().Take(cap).ToList();
+        if (candidates.Count == 0)
+            return ([], false);
+        var matched = await matching.Where(b => EF.Parameter(candidates).Contains(b.Id)).Select(b => b.Id).ToListAsync(cancellationToken);
+        return (matched, read.Count > cap);
+    }
+
+    private static async Task<List<Condition>> ResolveAsync(LibrarionDbContext db, SearchQuery query, IReadOnlyDictionary<string, int> fields,
+        IReadOnlyCollection<int> libraries, long threshold, CancellationToken cancellationToken)
+    {
         var conditions = new List<Condition>();
         foreach (var term in query.Terms)
             conditions.Add(await ResolveAsync(db, term, fields, libraries, threshold, cancellationToken));
+        return conditions;
+    }
 
-        var start = conditions.Where(c => !c.Term.Negated && c.Size < threshold).MinBy(c => c.Size);
+    /// <summary>Every term as a condition on the books (<paramref name="start"/> as where the database starts); hidden tags' books left out.</summary>
+    private static async Task<IQueryable<Book>> FilterAsync(LibrarionDbContext db, IQueryable<Book> books, IReadOnlyList<Condition> conditions, Condition? start,
+        CancellationToken cancellationToken)
+    {
         foreach (var condition in conditions)
             books = books.Where(condition.Term.Negated ? Not(condition.Probe) : condition == start ? condition.From : condition.Probe);
 
@@ -61,7 +118,7 @@ internal static class BookSearch
             case SearchTermKind.Format:
                 var format = term.Value.Trim().TrimStart('.').ToLowerInvariant();
                 Expression<Func<Book, bool>> hasFormat = b => db.BookFiles.Any(f => f.BookId == b.Id && f.Format == format);
-                return new Condition(term, null, hasFormat, hasFormat, []);
+                return new Condition(term, null, hasFormat, hasFormat, [], Reading(db.BookFiles.Where(f => f.Format == format).Select(f => f.BookId)));
             case SearchTermKind.Field:
                 return await TagsAsync(db, term, fields[term.Key!], term.Value, libraries, threshold, cancellationToken);
             case SearchTermKind.Tag:
@@ -87,27 +144,30 @@ internal static class BookSearch
         var titled = await index.Books(db, match).Take(cap).ToListAsync(cancellationToken);
         long size = titled.Count;
         var title = index.TitleTest(db, match);
+        var titles = size <= threshold ? titled : null;
         if (term.Kind == SearchTermKind.Title)
-            return new Condition(term, size, b => EF.Parameter(titled).Contains(b.Id), title, []);
+            return new Condition(term, size, b => EF.Parameter(titled).Contains(b.Id), title, [], Listed(titled), titles);
 
         var tags = await MatchedTagsAsync(index.Tags(db, match), db.Tags.Where(t => t.FieldKey == null), cancellationToken);
         if (tags is null)
         {
             // A word in very many names ("the"): each book's links tested against the index's tags (read once).
-            var named = BookQueries.Or(title, Linked(db, index.Tags(db, match)));
-            return new Condition(term, null, named, named, []);
+            var matched = index.Tags(db, match);
+            var named = BookQueries.Or(title, Linked(db, matched));
+            return new Condition(term, null, named, named, [], Either(titled, db.BookTags.Where(l => matched.Contains(l.TagId)).Select(l => l.BookId)));
         }
 
         var either = BookQueries.Or(title, Linked(db, tags));
         if (tags.Count == 0)
-            return new Condition(term, size, b => EF.Parameter(titled).Contains(b.Id), title, []);
+            return new Condition(term, size, b => EF.Parameter(titled).Contains(b.Id), title, [], Listed(titled), titles);
         size += await CountAsync(db, tags, libraries, cancellationToken);
+        var links = db.BookTags.Where(l => tags.Contains(l.TagId)).Select(l => l.BookId);
         if (size >= threshold)
-            return new Condition(term, size, either, either, tags);
+            return new Condition(term, size, either, either, tags, Either(titled, links));
         // Plain, made distinct below: as for a field's values (DISTINCT read PostgreSQL's whole key of BookTags).
-        var linked = await db.BookTags.Where(l => tags.Contains(l.TagId)).Select(l => l.BookId).Take(cap).ToListAsync(cancellationToken);
+        var linked = await links.Take(cap).ToListAsync(cancellationToken);
         var start = titled.Concat(linked).Distinct().ToList();
-        return new Condition(term, size, b => EF.Parameter(start).Contains(b.Id), either, tags);
+        return new Condition(term, size, b => EF.Parameter(start).Contains(b.Id), either, tags, Listed(start), start);
     }
 
     /// <summary>
@@ -121,7 +181,8 @@ internal static class BookSearch
         if (value.Length == 0 && fieldId is { } any)
         {
             var values = new BookQueries.TagSet([any], null);
-            return new Condition(term, null, BookQueries.From(db, values), BookQueries.Probe(db, values), []);
+            return new Condition(term, null, BookQueries.From(db, values), BookQueries.Probe(db, values), [],
+                Reading(db.BookTags.Where(l => db.TagClosure.Where(c => c.AncestorId == any).Select(c => c.DescendantId).Contains(l.TagId)).Select(l => l.BookId)));
         }
 
         var normalized = TagNames.Normalize(value);
@@ -159,27 +220,27 @@ internal static class BookSearch
         if (query is not null)
         {
             var linked = Linked(db, query);
-            return new Condition(term, null, linked, linked, []);
+            return new Condition(term, null, linked, linked, [], Reading(db.BookTags.Where(l => query.Contains(l.TagId)).Select(l => l.BookId)));
         }
 
         if (tags.Count == 0)
-            return new Condition(term, 0, b => false, b => false, []);
+            return new Condition(term, 0, b => false, b => false, [], Listed([]), []);
         var set = await BookQueries.DescendantsAsync(db, tags, cancellationToken);
         var listed = set.Descendants;
         var size = await CountAsync(db, listed ?? tags, libraries, cancellationToken);
         // Few books: read into a list the database starts from (from the links' query, PostgreSQL walked the sort index
         // and sought every listed tag for each book). Many: each book's links tested (descendants past 500 through the closure).
         var probe = listed is null ? BookQueries.Probe(db, set) : Linked(db, listed);
-        if (size >= threshold)
-            return new Condition(term, size, probe, probe, listed ?? tags);
         var ancestors = set.Ancestors;
         var books = listed is null
             ? db.BookTags.Where(l => db.TagClosure.Where(c => ancestors.Contains(c.AncestorId)).Select(c => c.DescendantId).Contains(l.TagId)).Select(l => l.BookId)
             : db.BookTags.Where(l => listed.Contains(l.TagId)).Select(l => l.BookId);
+        if (size >= threshold)
+            return new Condition(term, size, probe, probe, listed ?? tags, Reading(books));
         // Fewer links than the threshold (their count says so): read plain, made distinct here (DISTINCT in the query read
         // PostgreSQL's whole key of BookTags for ids in order, 1.6 s).
         var start = (await books.Take((int)Math.Min(threshold + 1, int.MaxValue)).ToListAsync(cancellationToken)).Distinct().ToList();
-        return new Condition(term, size, b => EF.Parameter(start).Contains(b.Id), probe, listed ?? tags);
+        return new Condition(term, size, b => EF.Parameter(start).Contains(b.Id), probe, listed ?? tags, Listed(start), start);
     }
 
     /// <summary>Most tag ids read from the name index for one term: past it the term is joined as a query.</summary>

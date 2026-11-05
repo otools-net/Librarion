@@ -5,15 +5,16 @@ import { LibraryContext } from '../core/library-context';
 import { Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
 import { EmptyState, Skeleton } from '../shared/placeholders';
+import { Facets } from '../search/facets';
 import { BookList } from './book-list';
 
 /**
  * The library (the home page; agents/docs/features/browse.md, D-5.5): the library chosen in the switcher, its name and
- * count over its books (`BookList`).
+ * count over its books (`BookList`), Refine with the library's most frequent values (`Facets`).
  */
 @Component({
     selector: 'lib-browse-page',
-    imports: [TranslatePipe, EmptyState, Skeleton, RouterLink, BookList],
+    imports: [TranslatePipe, EmptyState, Skeleton, RouterLink, BookList, Facets],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'browse-page' },
     template: `
@@ -23,6 +24,7 @@ import { BookList } from './book-list';
                 @if (library.bookCount != null) {
                     <p class="browse-count">{{ 'browse.count' | t: { count: i18n.number(library.bookCount) } }}</p>
                 }
+                <lib-facets listTools [library]="library.id" />
                 @if (canManage()) {
                     <a emptyExtra routerLink="/admin/libraries">{{ 'browse.emptyAdmin' | t }}</a>
                 }

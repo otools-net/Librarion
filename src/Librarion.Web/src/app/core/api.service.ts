@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookDetail, BookDuplicate, BookListItem, BookSort, SuggestionList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
+    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, SuggestionList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
     SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
@@ -123,6 +123,8 @@ export class Api {
         });
     /** What to offer for the last term of a search being typed, the most used in `library` first. */
     suggestions = (q: string, library?: number) => this.get<SuggestionList>('api/search/suggestions', { q, library });
+    /** The most frequent values of each field among the books of `library` matching `q` (all of them without), with counts. */
+    facets = (library: number, q?: string | null) => this.get<FacetList>('api/search/facets', { library, q: q || undefined });
     book = (id: number) => this.get<BookDetail>(`api/books/${id}`);
     /** Other books the session sees that may be this one, strongest reason first (at most 20). */
     bookDuplicates = (id: number) => this.get<BookDuplicate[]>(`api/books/${id}/duplicates`);

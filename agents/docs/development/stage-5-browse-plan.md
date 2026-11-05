@@ -74,6 +74,9 @@ order: design foundation (5.0), then the administration with its search (5.1), t
   then values by prefix through the `(TenantId, FieldId, NormalizedName)` index).
 - **D-5.8 Facets with capped counts:** counts from `TagCounts` when nothing narrows the list; within a search, counted
   over at most the first 10,000 matches and shown "1000+" past the cap (never a count over the catalog per request).
+  Built (chunk 17) with **2,000**: 10,000 took 480–780 ms on SQLite at 2M, 5,000 290–420 (budget 300); put to the
+  user with the chunk. Without a search, fields of more than 2,000 values (authors) have no facet (no index by count).
+  As Refine: a button by Sort opening a sheet, on the library page and the search results.
 - **D-5.9 The administration is a page of its own (the user, 2026-11-01):** `/admin` replaces the shell's library
   sidebar with its own left column (search box, groups, sections, the open section's sub-pages), as SFE's
   `AdminPageComponent`; the top bar keeps only a back arrow to the library (history back when it came from there) and
@@ -152,7 +155,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 14. [x] Field and tag pages with counts.
 15. [x] Book page: cover, metadata, fields as links, properties, files with Download, possible duplicates.
 16. [x] Search: parser and server query, results page, suggestions.
-17. [ ] Facets with capped counts.
+17. [x] Facets with capped counts.
 18. [ ] Docs, CHANGELOG, feature notes; p95 budgets through the UI's calls; e2e on every device; axe AA; close the
         stage (merge 0.6.0).
 

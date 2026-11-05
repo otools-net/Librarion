@@ -7,7 +7,7 @@ export const ICON_NAMES = [
     // Books and their fields
     'library', 'book', 'author', 'series', 'tag', 'category', 'language', 'publisher', 'calendar', 'star', 'folder',
     // Actions
-    'plus', 'check', 'edit', 'trash', 'download', 'import', 'refresh', 'copy', 'external', 'more', 'filter', 'sort',
+    'plus', 'minus', 'check', 'edit', 'trash', 'download', 'import', 'refresh', 'copy', 'external', 'more', 'filter', 'sort',
     'grid', 'list', 'hidden',
     // Navigation
     'back', 'chevron-left', 'chevron-right', 'chevron-down',
@@ -60,6 +60,7 @@ export class Icon {
             <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M3.5 6.5h6l2 2h9v10.5h-17z" /></symbol>
 
             <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+            <symbol id="icon-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
             <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" /></symbol>
             <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></symbol>
             <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6" /></symbol>

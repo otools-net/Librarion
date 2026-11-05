@@ -19,8 +19,8 @@ const DEFAULT_PAGE = 50;
  * Books of a library, all or those with a tag (agents/docs/features/browse.md, D-5.5): a grid of covers or a dense
  * list, the sort and view chosen in its tools and remembered per browser. Pages come by key as the end nears; only the
  * rows in view are drawn (`ListWindow`), so millions stay light. Leaving and coming back shows the list as it was,
- * scrolled where it was (`BrowseState`). The page's heading is projected beside the tools; `[emptyExtra]` after the
- * empty text.
+ * scrolled where it was (`BrowseState`). The page's heading is projected beside the tools, `[listTools]` before them;
+ * `[emptyExtra]` after the empty text.
  */
 @Component({
     selector: 'lib-book-list',
@@ -30,6 +30,7 @@ const DEFAULT_PAGE = 50;
         <header class="browse-head">
             <div class="browse-title"><ng-content /></div>
             <div class="browse-tools">
+                <ng-content select="[listTools]" />
                 <label class="browse-sort">
                     <span class="visually-hidden">{{ 'browse.sort' | t }}</span>
                     <select [title]="'browse.sortHint' | t" (change)="chooseSort($event)">

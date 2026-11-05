@@ -24,6 +24,9 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - **Coming back:** on leaving, `BrowseState.keep` holds the rows, the next key and how far down the list was, for the
   last 6 lists (library, value lists, tag pages; keyed by what they list and how); the same list shows them again
   without asking and scrolls back once a row is measured. Kept in memory for the tab (a reload starts at the top).
+- **Refine** (`search/facets.ts`, projected into the tools as `[listTools]`): the library's most frequent values from
+  `TagCounts`, each opening its search ([search](search.md#facets-searchfacets-refine-d-58)); fields of more than
+  2,000 values have none there.
 - Each book is a `li` with `aria-posinset` and `aria-setsize` (the library's count), as the list is partial.
 - Every book is a link to its page ([book-page](book-page.md)): `a.book-link` inside the `li`, which keeps the layout's
   measures.

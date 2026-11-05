@@ -32,6 +32,18 @@ like the library's (covers or list, sorted by title, author or newest), and **Ba
 - Books with a hidden tag (such as *Archived*) are left out of searches unless the search names that tag
   (`tag:Archived`).
 
+## Refine
+
+The results say how many books match. **Refine** (next to **Sort**) lists the values found most often among them, for
+each field (categories, authors, series, languages, formats, publishers, years, tags), with how many of the books
+have each:
+
+- Pick a value to keep only its books: its term is added to the search (`category:"Fantasy"`).
+- The minus beside it leaves its books out instead (`-format:pdf`).
+- A value already in the search is marked; picking it again takes it out.
+
+With more than 2,000 matches the counts are over the first 2,000 found, and the results say "2,000+ books".
+
 ## Suggestions
 
 While you type, the box suggests what the last word may be: a field (`author:`), then authors, series, tags and other

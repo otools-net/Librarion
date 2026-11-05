@@ -153,6 +153,18 @@ public static class BookEndpoints
             .WithName("SuggestSearch")
             .WithSummary("What to offer while a search is typed: for its last term, fields by key, then field values and tags by name (the most used in `library` first).")
             .WithDescription("`from` = where that term starts in `q`: an item's `insert` replaces the text from there on.");
+
+        tags.MapGet("/search/facets", async (int library, string? q, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
+                SearchFacets facets) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (!visibility.Libraries.ContainsKey(library))
+                    return Results.NotFound();
+                return Results.Ok(await facets.ListAsync(tenantId, visibility, library, q, context.RequestAborted));
+            })
+            .WithName("ListSearchFacets")
+            .WithSummary("The most frequent values of each field (and format) among the books of `library` matching `q`, with counts: each value's `term` narrows the search.")
+            .WithDescription($"Without `q` in a library seen whole, from the stored counts (fields of more than {SearchFacets.MaxValuesRead} values, as authors, left out); otherwise counted over at most {SearchFacets.MaxCounted} of the matches, `capped` when more may match (the counts are then at least that).");
     }
 
     private const string ValuesDescription = "With `library` (one the caller browses) only values with books there, each with its count; a page may then be short (a bounded number of rows read per request) while `next` says more follow. `from` = start at the first value sorted at or after it (a jump). Tags the caller's content filters deny are left out.";

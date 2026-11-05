@@ -37,6 +37,7 @@ public static class RunCommand
         var books = services.GetRequiredService<BookQueries>();
         var tags = services.GetRequiredService<TagQueries>();
         var suggestions = services.GetRequiredService<Librarion.Core.Search.SearchSuggestions>();
+        var facets = services.GetRequiredService<Librarion.Core.Search.SearchFacets>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
         var accounts = services.GetRequiredService<AccessService>();
 
@@ -123,11 +124,21 @@ public static class RunCommand
             ("search: books outside any series, newest", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Added, Query: "-series:"))),
             ("suggestions: two letters", SearchBudget, async _ => (await suggestions.SuggestAsync(tenant.Id, "ri", libraryId, open, cancellationToken)).Items.Count),
             ("suggestions: an author's first letters", SearchBudget, async _ => (await suggestions.SuggestAsync(tenant.Id, $"author:{middleName[..3]}", libraryId, open, cancellationToken)).Items.Count),
+            // Facets (D-5.8): the stored counts for the library seen whole, else counted over at most 10,000 matches.
+            ("facets: the library", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, null, cancellationToken)).Counted),
+            ("facets: a word in many titles", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, "night", cancellationToken)).Counted),
+            ("facets: two common words", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, "night river", cancellationToken)).Counted),
+            ("facets: the prolific author's last name", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, prolificName.Split(' ')[^1], cancellationToken)).Counted),
+            ("facets: an author with 5-20 books, by field", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, $"author:\"{middleName}\"", cancellationToken)).Counted),
+            ("facets: category Fiction, no PDF", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, "category:Fiction -format:pdf", cancellationToken)).Counted),
+            ("facets: books outside any series", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, "-series:", cancellationToken)).Counted),
         };
         foreach (var (name, visibility) in filtered)
         {
             scenarios.Add(($"{name} ({FilterShare(name)}), by title, first page", ListBudget, _ => List(visibility, new BookPageRequest())));
             scenarios.Add(($"{name} ({FilterShare(name)}), by title, middle page", ListBudget, _ => List(visibility, new BookPageRequest(After: titleCursor))));
+            scenarios.Add(($"facets: {name} ({FilterShare(name)}), the library", SearchBudget,
+                async _ => (await facets.ListAsync(tenant.Id, visibility, libraryId, null, cancellationToken)).Counted));
         }
 
         scenarios.RemoveAll(s => !s.Name.Contains(only, StringComparison.OrdinalIgnoreCase));
