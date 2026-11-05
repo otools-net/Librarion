@@ -1,6 +1,7 @@
 // Browsing by value on every device: a library of four books (two authors, a series of three), scanned through the
 // API; Authors lists its authors with their counts, "Go to" finds one, its page lists its books; a series lists its
-// books by number; All fields leads to the lists.
+// books by number; its readable address (/author/<id>/<name>) is put right from the id alone; All fields leads to the
+// lists.
 import fs from 'node:fs';
 import path from 'node:path';
 import { uniqueName } from '../fixtures/accounts';
@@ -56,6 +57,11 @@ test.describe('@browse', () => {
         await expect(page.locator('.browse-count')).toHaveText(`3 books in ${name}`);
         await expect(page.getByRole('list', { name: `Books with ${author}` }).locator('.book')).toHaveCount(3);
 
+        // A readable address: /author/<id>/<name>.
+        const readable = new RegExp(`/author/([0-9]+)/${encodeURIComponent(author)}$`);
+        await expect(page).toHaveURL(readable);
+        const id = readable.exec(page.url())![1];
+
         // Back: the list where it was.
         await page.goBack();
         await expect(page.locator('.value a').first().locator('.value-name')).toHaveText(author);
@@ -71,6 +77,15 @@ test.describe('@browse', () => {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(series);
         await expect(page.getByRole('combobox', { name: 'Sort' })).toHaveValue('number');
         await expect(page.locator('.book .book-title')).toHaveText(['Part One', 'Part Two', 'Part Three']);
+
+        // The id alone, an old name or the old /tags/<id> are put right in place: no history entry is added.
+        for (const address of [`./author/${id}`, `./author/${id}/Old%20Name`, `./tags/${id}`]) {
+            await page.goto(address);
+            const entries = await page.evaluate(() => history.length);
+            await expect(page).toHaveURL(readable);
+            await expect(page.getByRole('heading', { level: 1 })).toHaveText(author);
+            expect(await page.evaluate(() => history.length)).toBe(entries);
+        }
 
         // All fields leads to every list.
         await page.goto('./fields');

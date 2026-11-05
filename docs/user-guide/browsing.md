@@ -22,6 +22,10 @@ The home page is the library you picked in the top bar: its name, how many books
 - **Go to** starts the list at the name you type: its first letters are enough.
 - A name opens its page: what it is (an author, a series…), how many books, the tags it belongs under and the
   narrower ones, then its books, as covers or a list like the library's.
+- Its address reads like it: `/author/1234/Stephen King`, `/series/88/The Dark Tower`, `/tag/5/To read` for a plain
+  tag. The number finds it; the name is only for reading, so a link keeps working after a rename (the address shows
+  the new name) or a merge (it opens the tag it went into). A field whose key is also a page of the app (a Calibre
+  column named *books*) has its values under `/fields/books/…`.
 - A series shows its books by their number in the series first; pick another order in **Sort** (books without a
   number appear only in the other orders).
 

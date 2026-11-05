@@ -74,7 +74,7 @@ describe('The book page', () => {
         expect(element.querySelector('h1')?.classList).not.toContain('file-title');
         expect(element.querySelector('.book-page-cover img')?.getAttribute('src')).toBe('api/books/42/cover/l');
         const authors = [...element.querySelectorAll('.book-by a')];
-        expect(authors.map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Terry Pratchett', '/tags/21'], ['Neil Gaiman', '/tags/22']]);
+        expect(authors.map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Terry Pratchett', '/author/21/Terry%20Pratchett'], ['Neil Gaiman', '/author/22/Neil%20Gaiman']]);
         expect(element.querySelector('.book-in-series a')?.textContent).toBe('Discworld #8');
         expect(element.querySelector('.book-rating')?.textContent?.trim()).toBe('4.5 of 5');
         const fields = [...element.querySelectorAll('.book-field')].map(f => [

@@ -59,7 +59,7 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
 
 - `GET api/books?library&sort&after&tag&q&limit` (limit up to 200; `q` a search, [search](search.md)), `GET api/search/suggestions?q&library`, `GET api/books/{id}`, `GET api/books/{id}/duplicates`,
   `GET api/fields`, `GET api/fields/{key}/values?library&from&after&limit`, `GET api/tags?library&from&after&limit`,
-  `GET api/tags/{id}?library`. Documented by OpenAPI.
+  `GET api/tags/{id}?library`, `GET api/tags/{id}/moved?library` (where a merged tag went). Documented by OpenAPI.
 
 ## Known limits (accepted 2026-11-01, measure again before the release)
 

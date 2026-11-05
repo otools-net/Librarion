@@ -10,6 +10,7 @@ import { BookDetail, BookDuplicate, BookFile, BookListItem, BookTag } from '../c
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from '../tags/field-catalog';
+import { tagLink } from '../tags/tag-link';
 
 /** The book's tags of one field (or the plain tags, `field` null), in the order the server gave them. */
 interface FieldGroup {
@@ -48,14 +49,14 @@ interface FieldGroup {
                             <p class="book-by">
                                 {{ 'book.by' | t }}
                                 @for (author of authors(); track author.id; let last = $last) {
-                                    <a [routerLink]="['/tags', author.id]">{{ author.name }}</a>@if (!last) {, }
+                                    <a [routerLink]="link(author)">{{ author.name }}</a>@if (!last) {, }
                                 }
                             </p>
                         }
                         @for (series of series(); track series.id) {
                             <p class="book-in-series">
                                 <svg libIcon="series"></svg>
-                                <a [routerLink]="['/tags', series.id]">{{ seriesText(series) }}</a>
+                                <a [routerLink]="link(series)">{{ seriesText(series) }}</a>
                             </p>
                         }
                         @if (book.rating) {
@@ -77,7 +78,7 @@ interface FieldGroup {
                                         <dt>{{ fieldName(group) }}</dt>
                                         <dd>
                                             @for (tag of group.tags; track tag.id) {
-                                                <a class="chip" [routerLink]="['/tags', tag.id]">{{ catalog.value(tag.field, tag.name) }}</a>
+                                                <a class="chip" [routerLink]="link(tag)">{{ catalog.value(tag.field, tag.name) }}</a>
                                             }
                                         </dd>
                                     </div>
@@ -247,6 +248,10 @@ export class BookPage {
 
     protected download(book: BookDetail, file: BookFile): string {
         return fileUrl(book.id, file.id);
+    }
+
+    protected link(tag: BookTag): (string | number)[] {
+        return tagLink(tag);
     }
 
     protected title(book: BookDetail): string {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Api } from '../core/api.service';
 import { errorText } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
@@ -10,11 +10,12 @@ import { BookList } from '../browse/book-list';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from './field-catalog';
+import { tagLink } from './tag-link';
 
 const SERIES_SORTS: readonly BookSort[] = ['number', 'title', 'author', 'added'];
 
 /**
- * A tag or field value (`tags/:id`; agents/docs/features/browse.md): what it is (its field, linking to the field's
+ * A tag or field value (`/<key>/<id>/<name>`, `/tag/<id>/<name>`: tag-link.ts; agents/docs/features/browse.md): what it is (its field, linking to the field's
  * list), its name and books in the library being browsed, the tags it is under and those under it, then its books
  * (`BookList` with the tag; a series by its numbers first).
  */
@@ -40,7 +41,7 @@ const SERIES_SORTS: readonly BookSort[] = ['number', 'title', 'author', 'added']
                         <p class="tag-related">
                             <span class="tag-related-label">{{ 'tag.under' | t }}</span>
                             @for (parent of tag.parents; track parent.id) {
-                                <a class="chip" [routerLink]="['/tags', parent.id]">{{ refName(parent) }}</a>
+                                <a class="chip" [routerLink]="link(parent)">{{ refName(parent) }}</a>
                             }
                         </p>
                     }
@@ -48,7 +49,7 @@ const SERIES_SORTS: readonly BookSort[] = ['number', 'title', 'author', 'added']
                         <p class="tag-related">
                             <span class="tag-related-label">{{ 'tag.narrower' | t }}</span>
                             @for (child of tag.children; track child.id) {
-                                <a class="chip" [routerLink]="['/tags', child.id]">{{ refName(child) }}</a>
+                                <a class="chip" [routerLink]="link(child)">{{ refName(child) }}</a>
                             }
                             @if (tag.moreChildren) {
                                 <span class="tag-related-more">{{ 'tag.moreNarrower' | t }}</span>
@@ -80,6 +81,7 @@ export class TagPage {
     protected readonly i18n = inject(I18n);
     protected readonly catalog = inject(FieldCatalog);
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
     private readonly libraries = inject(LibraryContext);
 
     protected readonly seriesSorts = SERIES_SORTS;
@@ -113,6 +115,31 @@ export class TagPage {
         return this.catalog.value(tag.field, tag.name);
     }
 
+    protected link(tag: TagRef): (string | number)[] {
+        return tagLink(tag);
+    }
+
+    /**
+     * The address with the tag's key and current name, put in place of this one (no history entry) when it differs:
+     * the id alone, an old name, another key, `/tags/<id>`, a merged tag's id.
+     */
+    private async readable(tag: TagRef): Promise<boolean> {
+        const tree = this.router.createUrlTree(tagLink(tag), { queryParams: this.route.snapshot.queryParams });
+        if (this.router.serializeUrl(tree) === this.router.url)
+            return false;
+        return this.router.navigateByUrl(tree, { replaceUrl: true });
+    }
+
+    /** A merged tag's old address opens the tag it went into; false when it wasn't merged. */
+    private async moved(id: number, asked: number): Promise<boolean> {
+        try {
+            const target = await this.api.movedTag(id, this.library()?.id);
+            return asked === this.requested && await this.readable(target);
+        } catch {
+            return false;
+        }
+    }
+
     protected async load(): Promise<void> {
         const asked = ++this.requested;
         const id = this.id();
@@ -127,14 +154,17 @@ export class TagPage {
         }
         try {
             const tag = await this.api.tag(id, this.library()?.id);
-            if (asked === this.requested)
-                this.tag.set(tag);
+            if (asked !== this.requested)
+                return;
+            this.tag.set(tag);
+            await this.readable(tag);
         } catch (error) {
             if (asked !== this.requested)
                 return;
-            if ((error as { status?: number }).status === 404)
-                this.missing.set(true);
-            else
+            if ((error as { status?: number }).status === 404) {
+                if (!await this.moved(id, asked))
+                    this.missing.set(true);
+            } else
                 this.error.set(errorText(this.i18n, error));
         }
     }

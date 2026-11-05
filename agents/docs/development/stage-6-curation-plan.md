@@ -135,7 +135,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         transliteration, the same name in two fields; ranked by books; spelling distance on demand on a tag's or
         field's page, capped (D21); Not the same remembered; shown on the tag page and in the picker.
 15. [ ] Search additions: `special:untagged`, `special:duplicates` (curators), `tag:"name (parent)"`.
-15a. [ ] **Readable addresses for tag pages** (asked by the user 2026-11-05): a field value's page at
+15a. [x] **Readable addresses for tag pages** (asked by the user 2026-11-05): a field value's page at
        `/<field key>/<id>/<name>` (`/author/1234/Stephen King`, `/series/88/The Dark Tower`, `/category/9/Horror`), a
        plain tag at `/tag/<id>/<name>`, instead of `/tags/1234` today (`app.routes.ts`, `tags/tag-page.ts`). The id
        finds the tag; the name is decorative: `/author/1234` (or a stale name after a rename or merge) is replaced
@@ -145,6 +145,8 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        working as a redirect (bookmarks), as do the addresses of a merged tag (the merge's target, through the
        `MergeLog`). Field keys that clash with an app route (`books`, `search`, `admin`, `fields`, `tags`, `account`,
        `login`) can't be used as a field key, or the route is `/fields/<key>/<id>/<name>` for those: decide when built.
+       **Built:** the `/fields/<key>/…` form for clashing keys (imports make such keys); details in
+       [browse](../features/browse.md#readable-tag-addresses-stage-6-chunk-15a-asked-by-the-user-2026-11-05).
        Tests: the redirects (no name, a stale name, a wrong key, a merged id), every link's shape; e2e on a phone and
        the desktop.
 16. [ ] Docs, CHANGELOG, feature notes; budgets through the UI's calls on 2M; e2e for each flow on every device; axe AA

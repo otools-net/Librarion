@@ -209,6 +209,8 @@ public abstract partial class LibrarionDbContext
             entity.HasOne<Tenant>().WithMany().HasForeignKey(l => l.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(l => new { l.TenantId, l.Id });
             entity.HasIndex(l => l.TargetId);
+            // A merged tag's old address followed to the tag it went into (TagQueries.MovedAsync).
+            entity.HasIndex(l => l.SourceId);
             entity.HasIndex(l => l.ParentId);
             Filter(entity, l => l.TenantId == CurrentTenantId);
         });

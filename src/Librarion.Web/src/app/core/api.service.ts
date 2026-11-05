@@ -6,7 +6,7 @@ import {
     BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
-    TagDefinition, TagDetail, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput,
+    TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
 /** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
@@ -141,6 +141,8 @@ export class Api {
             library: query.library, from: query.from || undefined, after: query.after ?? undefined, limit: query.limit,
         });
     tag = (id: number, library?: number) => this.get<TagDetail>(`api/tags/${id}`, { library });
+    /** The tag a gone tag was merged into (its old address); 404 when it wasn't merged. */
+    movedTag = (id: number, library?: number) => this.get<TagRef>(`api/tags/${id}/moved`, { library });
 
     /** The tag manager (`tenant.tags`): the fields with their value counts; a field's tags (`field` null: plain tags) by key, or found by `q`. */
     managedFields = () => this.get<ManagedFields>('api/tags/manage/fields');

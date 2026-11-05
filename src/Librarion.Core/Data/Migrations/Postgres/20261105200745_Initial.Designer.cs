@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261105191300_Initial")]
+    [Migration("20261105200745_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -572,6 +572,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("SourceId");
 
                     b.HasIndex("TargetId");
 

@@ -6,6 +6,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- Readable addresses for authors, series and every tag: `/author/1234/Stephen King`, `/tag/5/To read`. The number
+  finds the page and the name is only for reading: an address without it, with an old name or the old `/tags/1234`
+  shows the current one, and a merged tag's address opens the tag it went into.
 - A third built-in group, **Curators**, and the rights for looking after the catalog, under a new Catalog heading in
   the group editor: **Tag books**, **Edit books**, **Merge books**, **Imported tags**, **Default tags** and **Manage
   tags**. Administrators and Curators have them; Curators also have what Users have, and nothing that manages

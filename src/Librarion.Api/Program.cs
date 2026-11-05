@@ -74,6 +74,10 @@ api.MapSecurityEventEndpoints();
 api.MapFallback(() => TypedResults.NotFound()).AllowAnonymous();
 
 // Addresses the client routes itself: its page, with the app's root as its base (ClientPage).
+// A tag page's readable address ends with its name, which may look like a file ("Vol. 2"): the fallback leaves those
+// to the static files, so they are routed here (tag-link.ts in the client).
+app.MapGet("{key:regex(^(?!api$|openapi$)[a-z0-9-]+$)}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
+app.MapGet("fields/{key}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
 app.MapFallback((HttpContext context, ClientPage page) => page.Serve(context));
 
 try

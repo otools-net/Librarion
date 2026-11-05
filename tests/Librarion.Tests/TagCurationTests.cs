@@ -203,6 +203,36 @@ public sealed class TagCurationTests
         Assert.AreEqual(3, await db.BookTags.CountAsync(l => l.Tag!.FieldId == null, Cancel), "Ex, Why and Zed on the book again");
     }
 
+    /// <summary>
+    /// A merged tag's old address (a bookmark of /author/&lt;id&gt;/…) opens the tag it went into, through later merges;
+    /// not once the merge is undone (the tag is back), and never for an id that wasn't merged.
+    /// </summary>
+    [TestMethod]
+    public async Task AMergedTagsIdLeadsToTheTagItWentInto()
+    {
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        shelf.Write("one.fb2", Fb2("One", ["Steven King"]));
+        shelf.Write("two.fb2", Fb2("Two", ["Stephen King"]));
+        shelf.Write("three.fb2", Fb2("Three", ["S. King"]));
+        await shelf.ScanAsync(Cancel);
+        var (steven, stephen, s) = (await TagIdAsync(shelf, "Steven King"), await TagIdAsync(shelf, "Stephen King"), await TagIdAsync(shelf, "S. King"));
+
+        var first = await WorkAsync(await shelf.Admin.PostAsJsonAsync($"/api/tags/{steven}/merge", new TagEndpoints.MergeInput(s), Cancel));
+        await WorkAsync(await shelf.Admin.PostAsJsonAsync($"/api/tags/{s}/merge", new TagEndpoints.MergeInput(stephen), Cancel));
+
+        using (var gone = await shelf.Admin.GetAsync($"/api/tags/{steven}", Cancel))
+            Assert.AreEqual(HttpStatusCode.NotFound, gone.StatusCode);
+        var moved = await shelf.Admin.GetAsync<TagRef>($"/api/tags/{steven}/moved", Cancel);
+        Assert.AreEqual(new TagRef(stephen, "Stephen King", "author"), moved);
+        using (var never = await shelf.Admin.GetAsync($"/api/tags/{stephen + 1000}/moved", Cancel))
+            Assert.AreEqual(HttpStatusCode.NotFound, never.StatusCode);
+
+        // Undoing the later merge puts S. King back: the first one leads there again.
+        var merges = await shelf.Admin.GetAsync<List<MergeLogInfo>>("/api/merges", Cancel);
+        await WorkAsync(await shelf.Admin.PostAsync($"/api/merges/{merges.First(m => m.Id != first.LogId).Id}/undo", null, Cancel));
+        Assert.AreEqual(s, (await shelf.Admin.GetAsync<TagRef>($"/api/tags/{steven}/moved", Cancel)).Id);
+    }
+
     [TestMethod]
     public async Task AFieldMergeKeepsItsKeyAndIsUndone()
     {

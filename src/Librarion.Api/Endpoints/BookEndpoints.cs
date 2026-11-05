@@ -142,6 +142,16 @@ public static class BookEndpoints
             .WithName("GetTag")
             .WithSummary("A tag or field value: its field, the tags it is under and those under it, its book count in `library`; its books are `GET api/books?tag=`.");
 
+        tags.MapGet("/tags/{id:int}/moved", async (int id, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities, TagQueries queries) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (library is { } only && !visibility.Libraries.ContainsKey(only))
+                    return Results.NotFound();
+                return await queries.MovedAsync(tenantId, id, library, visibility, context.RequestAborted) is { } tag ? Results.Ok(tag) : Results.NotFound();
+            })
+            .WithName("GetMovedTag")
+            .WithSummary("Where a tag that is gone went: the tag it was merged into (through later merges), for its old addresses; 404 when it wasn't merged.");
+
         tags.MapGet("/search/suggestions", async (string? q, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
                 SearchSuggestions suggestions) =>
             {

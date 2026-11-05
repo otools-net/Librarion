@@ -549,6 +549,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("ParentId");
 
+                    b.HasIndex("SourceId");
+
                     b.HasIndex("TargetId");
 
                     b.HasIndex("TenantId", "Id");
