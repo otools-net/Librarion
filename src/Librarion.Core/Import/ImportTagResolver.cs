@@ -30,6 +30,9 @@ public sealed class ImportTagResolver
     public static async Task<ImportTagResolver> CreateAsync(LibrarionDbContext db, int tenantId, CancellationToken cancellationToken)
     {
         var fields = await db.Tags.Where(t => t.FieldKey != null).ToDictionaryAsync(t => t.FieldKey!, t => t.Id, cancellationToken);
+        // A field merged into another: its key names the other (a Calibre column `#genre` after `genre:` became `category:`).
+        foreach (var alias in await db.FieldKeyAliases.Select(a => new { a.Key, a.FieldId }).ToListAsync(cancellationToken))
+            fields.TryAdd(alias.Key, alias.FieldId);
         return new ImportTagResolver(tenantId, fields);
     }
 

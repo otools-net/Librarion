@@ -54,10 +54,11 @@ public sealed class SearchSuggestions(TenantDb tenantDb)
 
         var colon = term.IndexOf(':', StringComparison.Ordinal);
         var key = colon > 0 ? term[..colon].ToLowerInvariant() : null;
-        if (key is not null && (key == "tag" || fields.ContainsKey(key)))
+        var known = key is null || fields.ContainsKey(key) ? fields : await BookSearch.KeysAsync(db, cancellationToken);
+        if (key is not null && (key == "tag" || known.ContainsKey(key)))
         {
             var value = term[(colon + 1)..].Trim('"', '*', ' ');
-            var fieldId = key == "tag" ? (int?)null : fields[key];
+            var fieldId = key == "tag" ? (int?)null : known[key];
             var values = await ValuesAsync(db, fieldId, value, libraryId, visibility, cancellationToken);
             return new SuggestionList(from, values.Select(v => Suggestion(v, keys, sign)).ToList());
         }

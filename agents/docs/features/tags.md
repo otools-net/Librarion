@@ -3,13 +3,43 @@
 Tables built (stage 2): `Tags`, `TagAliases`, `TagParents`, `TagClosure`, `BookTags`, `TagCounts`, built-in tags
 ([catalog](catalog.md)). Built (stage 3): imported tags at scan time (`Core/Import/ImportTagResolver`,
 `ImportTagMappings`; tests `LibraryScannerTests`): a source's mapping first, then a tag of that name or alias, else a
-new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. The
-tag services, the admin pages and the UI below are planned.
+new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. Built
+(stage 6, chunks 2-3): the tag service and merges, below. The admin pages and the UI are planned.
 
 Code (planned): `src/Librarion.Core/Tagging/` (`TagService`, `TagGraph`, `TagClosure`, `ImportedTags`, `ScopeTagger`,
 `BookTagRows`, `BuiltInTags`), entities in `Data/Entities/Tags/`; client `src/app/tags/`. Ported from SFE
 (`agents/docs/features/tags.md`, `scope-tagging.md`, `default-tags.md` there; model from
 https://github.com/TagStudioDev/TagStudio), extended for tags that arrive with imported books.
+
+## The tag service (built, stage 6)
+
+Code: `Core/Tagging/TagService.cs` (definitions, delete), `TagClosures.cs` (closure upkeep), `TagLinks.cs` (counts and
+sort columns per batch), `Core/Merging/TagMerger.cs` (merges, undo: [merging](merging.md#duplicate-tags)),
+`Api/Endpoints/TagEndpoints.cs`; tests `TagCurationTests` (both providers).
+
+- Routes (`tenant.tags`): `GET api/tags/{id}/definition`, `POST api/tags`, `PUT api/tags/{id}`, `DELETE api/tags/{id}`,
+  `POST api/tags/{id}/merge`, `POST api/fields/{key}/merge`, `GET api/merges`, `POST api/merges/{id}/undo`. A change of
+  more than 10,000 links (D-6.4; the sum of the tag's `TagCounts`, never a count of links) or one asked while a run
+  goes in the tenant answers **202** with a tenant run ([tasks](tasks.md#runs)); otherwise 200 when done.
+- Definitions: name, sort name (people's fields: "Last, First" by default), shorthand, color (`#rgb` / `#rrggbb`),
+  category, hidden, aliases (at most 50; one equal to the name dropped), parents (at most 20) and a disambiguation
+  parent (one of the parents). A plain tag's parents are plain tags; a value's are values of its own field (the field
+  itself is its `FieldId`, no `TagParents` row); a field has no parents. Cycles refused through the closure. A value's
+  name is unique in its field unless a disambiguation parent tells them apart. Built-in fields keep their names (the
+  client translates them). A changed sort name rewrites `Books.SortAuthor` of its books in one statement.
+- **Closure upkeep** (`TagClosures.RebuildAsync`): after the parents of some roots change, the ancestors of everything
+  under them (D) are rebuilt set-based: pairs inside D kept, pairs from outside dropped, then made again from each
+  edge leaving D (a parent, or a value's field) times that parent's ancestors. Valid for several roots at once while
+  every changed edge points out of D (re-parenting, a delete's children, a merge's moved children). No tag graph is
+  kept in memory yet, so there is no version to bump; tag changes bump `AccessChanges` (cached visibility reads
+  closure-derived lists).
+- **Delete:** links removed a batch of 1,000 books at a time (`TagLinks`: counts by delta, sort columns refreshed),
+  then the tag (closure, counts, aliases, mappings by cascade), its children's closure rebuilt. Refused: built-in tags
+  (`tag.builtIn`), a field with values (`field.notEmpty`: merge it), a tag a content filter names (`tag.inFilter`:
+  deleting it would change who sees what). A deleted imported tag comes back with the next import of its books
+  (ignoring a raw name is the Imported tags page's job, chunk 9).
+- `TagCounts` hold each tag's **direct** links of present books (not missing), as the importer writes them; a parent's
+  books are found through the closure, so re-parenting moves no counts.
 
 ## Model (as SFE)
 

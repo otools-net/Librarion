@@ -10,6 +10,14 @@ public enum BackgroundTaskKind : byte
     RemoveMissing,
     /// <summary>A manual import from another source (Calibre, INPX): its records written into the catalog.</summary>
     Import,
+    /// <summary>A tag deleted with its links (in every library of the tenant: no library).</summary>
+    TagDelete,
+    /// <summary>A tag merged into another, its links moved in batches.</summary>
+    TagMerge,
+    /// <summary>A field merged into another: its values merged by name or moved.</summary>
+    FieldMerge,
+    /// <summary>A merge undone: the links moved back.</summary>
+    MergeUndo,
 }
 
 public enum TaskTrigger : byte

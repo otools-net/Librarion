@@ -87,8 +87,29 @@ compared only within the key's group.
 
 ## Duplicate tags
 
-Tag merge itself is in [tags](tags.md) (links moved in batches, names become aliases, mappings follow, re-imports
-respect it). This adds **finding** them and doing it from one page:
+**Built (stage 6, chunks 2-3): tag and field merges with undo** (`Core/Merging/TagMerger.cs`, routes in
+[tags](tags.md#the-tag-service-built-stage-6), tests `TagCurationTests`):
+
+- **Tag merge** (source into target, plain tags or values, fields may differ): links moved a batch of 1,000 books at a
+  time (a target link of the same book and source kept, the source's dropped), counts by delta, `SortAuthor` /
+  `SeriesId` refreshed; then the source's aliases and its name become the target's aliases, its import mappings,
+  content filters (the target's own one for a group wins), disambiguation references, children and field-key aliases
+  go to the target, the source is deleted, the children's closure rebuilt. Refused: a field's own row
+  (`target.field`), a built-in source (`tag.builtIn`), a target under the source (`target.under`).
+- **Field merge** (`genre` into `category`; never a built-in source; not with a content filter on it): each value
+  merged into the target's value of the same normalized name (a child `MergeLog` each), the others moved under the
+  target field (`FieldId`, closure, sort columns when the target is `author` or `series`); the field's import mappings
+  follow, its key becomes a `FieldKeyAliases` row: `genre:` keeps working in searches (`BookSearch.KeysAsync`),
+  suggestions and the importer (a Calibre `#genre` column lands in `category`).
+- **`MergeLog`** (D-6.5): kind, source and target (ids and names, no foreign keys), links, `Completed`, `Data` (JSON:
+  the source's row and everything that moved), `Undone`; `MergeLogLinks` (book, source, ordinal, number, kept) for
+  each link taken. Undo makes the source again **with its id when free**, puts back its parents, aliases, mappings,
+  filters, children and links (counts and sort columns again), and deletes the log's links. Refused once undone
+  (`merge.undone`), when the target is gone (`merge.targetGone`), while a later merge into or of the target stands
+  (`merge.later`). A merge stopped half-way (a cancelled run) has `Completed` false: undo moves its links back only.
+- Above 10,000 links a merge, field merge or undo is a tenant run (kinds `TagMerge`, `FieldMerge`, `MergeUndo`).
+
+Still planned here: **finding** duplicate tags and doing it from one page:
 
 - Suggestions per field (and among plain tags), by blocking keys on the normalized name: same name after NFKC,
   case and spacing; transliteration (Стивен Кинг / Stephen King); name forms ("King, Stephen", "S. King", "King
@@ -111,9 +132,9 @@ respect it). This adds **finding** them and doing it from one page:
 - Merging a book is a handful of keyed updates; moving the links of a big tag (an author with 5k books) runs in batches
   of 1000; counts (`TagCounts`, book counts per library) are adjusted, not recomputed.
 
-## Rights (planned)
+## Rights
 
-`library.merge` (Write: merge, split, undo, mark not duplicate), `tenant.tags` covers tag and field merges. Seeing
+`library.merge` (planned use) (Write: merge, split, undo, mark not duplicate), `tenant.tags` covers tag and field merges. Seeing
 duplicates and copies comes with browsing.
 
 ## Tests to have

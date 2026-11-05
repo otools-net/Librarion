@@ -66,6 +66,8 @@ public static class ServiceCollectionExtensions
         services.Configure<LibraryOptions>(configuration.GetSection(LibraryOptions.SectionName));
         services.AddSingleton<LibraryRoots>();
         services.AddSingleton<BackgroundTasks>();
+        services.AddSingleton<Librarion.Core.Tagging.TagService>();
+        services.AddSingleton<Librarion.Core.Merging.TagMerger>();
         services.AddSingleton<TaskSchedules>();
         services.AddSingleton<Librarion.Core.Imports.ImportRequests>();
         services.AddHostedService<TaskScheduleWorker>();

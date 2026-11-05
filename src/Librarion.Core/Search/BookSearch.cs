@@ -46,6 +46,18 @@ internal static class BookSearch
         (await db.Tags.Where(t => t.FieldKey != null).OrderBy(t => t.FieldKey).Select(t => new { t.FieldKey, t.Id }).ToListAsync(cancellationToken))
             .ToDictionary(t => t.FieldKey!, t => t.Id, StringComparer.Ordinal);
 
+    /// <summary>
+    /// <see cref="FieldsAsync"/> and the keys of fields merged into others (<c>genre</c> → the <c>category</c> field's
+    /// id): what a query is read with. Listing fields uses <see cref="FieldsAsync"/>, which names each field once.
+    /// </summary>
+    public static async Task<Dictionary<string, int>> KeysAsync(LibrarionDbContext db, CancellationToken cancellationToken)
+    {
+        var keys = await FieldsAsync(db, cancellationToken);
+        foreach (var alias in await db.FieldKeyAliases.OrderBy(a => a.Key).Select(a => new { a.Key, a.FieldId }).ToListAsync(cancellationToken))
+            keys.TryAdd(alias.Key, alias.FieldId);
+        return keys;
+    }
+
     public static async Task<IQueryable<Book>> ApplyAsync(LibrarionDbContext db, IQueryable<Book> books, SearchQuery query, IReadOnlyDictionary<string, int> fields,
         IReadOnlyCollection<int> libraries, int limit, CancellationToken cancellationToken)
     {

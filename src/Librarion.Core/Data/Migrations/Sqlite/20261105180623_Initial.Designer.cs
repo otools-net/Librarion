@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Librarion.Core.Data.Migrations.Sqlite
 {
     [DbContext(typeof(SqliteLibrarionDbContext))]
-    [Migration("20261103110744_Initial")]
+    [Migration("20261105180623_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -319,6 +319,33 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("BookTags");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FieldId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("TenantId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("FieldKeyAliases");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.Property<int>("GroupId")
@@ -470,6 +497,94 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("LibraryId");
 
                     b.ToTable("LibraryRoots");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Links")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TargetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TargetName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("Undone")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("TargetId");
+
+                    b.HasIndex("TenantId", "Id");
+
+                    b.ToTable("MergeLogs");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLogLink", b =>
+                {
+                    b.Property<long>("LogId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Kept")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Number")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("Ordinal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("LogId", "BookId", "Source");
+
+                    b.ToTable("MergeLogLinks");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.SecurityEvent", b =>
@@ -1071,6 +1186,23 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Tag");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Field")
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Field");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.HasOne("Librarion.Core.Data.UserGroup", "Group")
@@ -1180,6 +1312,24 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLog", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLogLink", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.MergeLog", null)
+                        .WithMany()
+                        .HasForeignKey("LogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>

@@ -192,6 +192,34 @@ public abstract partial class LibrarionDbContext
             Filter(entity, m => m.TenantId == CurrentTenantId);
         });
 
+        modelBuilder.Entity<FieldKeyAlias>(entity =>
+        {
+            entity.Property(a => a.Key).HasMaxLength(Tag.MaxFieldKeyLength);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(a => a.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(a => a.Field).WithMany().HasForeignKey(a => a.FieldId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(a => new { a.TenantId, a.Key }).IsUnique();
+            entity.HasIndex(a => a.FieldId);
+            Filter(entity, a => a.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<MergeLog>(entity =>
+        {
+            entity.Property(l => l.SourceName).HasMaxLength(Tag.MaxNameLength);
+            entity.Property(l => l.TargetName).HasMaxLength(Tag.MaxNameLength);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(l => l.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(l => new { l.TenantId, l.Id });
+            entity.HasIndex(l => l.TargetId);
+            entity.HasIndex(l => l.ParentId);
+            Filter(entity, l => l.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<MergeLogLink>(entity =>
+        {
+            entity.HasKey(l => new { l.LogId, l.BookId, l.Source });
+            entity.HasOne<MergeLog>().WithMany().HasForeignKey(l => l.LogId).OnDelete(DeleteBehavior.Cascade);
+            Filter(entity, l => l.TenantId == CurrentTenantId);
+        });
+
         modelBuilder.Entity<GroupTagFilter>(entity =>
         {
             entity.HasKey(f => new { f.GroupId, f.TagId });

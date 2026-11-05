@@ -76,7 +76,7 @@ public sealed class BookQueries(TenantDb tenantDb)
         var libraries = request.LibraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
         if (!string.IsNullOrWhiteSpace(request.Query))
         {
-            var fields = await BookSearch.FieldsAsync(db, cancellationToken);
+            var fields = await BookSearch.KeysAsync(db, cancellationToken);
             query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(request.Query, fields.ContainsKey), fields, libraries, limit, cancellationToken);
         }
 

@@ -50,7 +50,8 @@ public sealed class SearchFacets(TenantDb tenantDb)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var fields = await BookSearch.FieldsAsync(db, cancellationToken);
-        var search = SearchQuery.Parse(query, fields.ContainsKey);
+        var keys = await BookSearch.KeysAsync(db, cancellationToken);
+        var search = SearchQuery.Parse(query, keys.ContainsKey);
         if (search.IsEmpty && visibility.IsOpenIn(libraryId))
             return await CountedAsync(db, libraryId, fields, cancellationToken);
 
@@ -72,7 +73,7 @@ public sealed class SearchFacets(TenantDb tenantDb)
         }
         else
         {
-            (books, capped) = await BookSearch.SampleAsync(db, visible, search, fields, [libraryId], cap, cancellationToken);
+            (books, capped) = await BookSearch.SampleAsync(db, visible, search, keys, [libraryId], cap, cancellationToken);
         }
 
         if (books.Count == 0)

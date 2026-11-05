@@ -11,6 +11,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   tags**. Administrators and Curators have them; Curators also have what Users have, and nothing that manages
   accounts, groups, libraries or settings. The screens using them come in the next changes. A tenant created before
   this version gets no Curators group (before 1.0 the database is not upgraded: delete it to start again).
+- Tags and fields can be created, edited (names, other names, parents, colour, hidden), deleted and merged through the
+  API (`api/tags`, `api/fields/{key}/merge`), and every merge undone (`api/merges`): a merged author's books move to
+  the other, its name becomes another name of it, and books imported later under the old name land there too; a
+  merged field's key keeps working in searches (`genre:` after merging it into `category:`). Changes of more than
+  10,000 links run in the background, shown in the progress panel to those who manage tags. The screens come next.
 
 ## 0.6.0
 

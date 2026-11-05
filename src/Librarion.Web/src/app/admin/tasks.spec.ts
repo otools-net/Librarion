@@ -46,6 +46,18 @@ describe('task-text', () => {
         expect(runDetail(i18n, run({ outcome: 'succeeded', counts }))).toContain('3 added');
         expect([formatElapsed(42), formatElapsed(725), formatElapsed(3723)]).toEqual(['0:42', '12:05', '1:02:03']);
     });
+
+    it('words a tag run, which belongs to no library, in links', async () => {
+        const api = mockApi();
+        await setUp(api, ['tenant.tags']);
+        const i18n = TestBed.inject(I18n);
+        const merge = run({ libraryId: null, task: 'tagMerge', progress: { ...run().progress!, changed: 1500, removed: 0, current: 'Steven King' } });
+        expect(runTitle(i18n, merge, TestBed.inject(TaskWatch).libraryName(merge))).toBe('Merging tags…');
+        expect(TestBed.inject(TaskWatch).libraryName(merge)).toBe('Every library');
+        expect(runDetail(i18n, merge)).toBe('1500 links done · Steven King');
+        expect(runDetail(i18n, run({ libraryId: null, task: 'tagDelete', outcome: 'succeeded', counts: { ...counts, removed: 12 } }))).toBe('12 links');
+        expect(runTitle(i18n, run({ libraryId: null, task: 'mergeUndo', outcome: 'succeeded' }), 'Every library')).toBe('Merge undone · Every library');
+    });
 });
 
 describe('TaskPanel', () => {

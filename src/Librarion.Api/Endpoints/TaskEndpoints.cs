@@ -170,14 +170,15 @@ public static class TaskEndpoints
             .WithName("DeleteLibrarySchedule")
             .WithSummary("Deletes a schedule.");
 
-        var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan);
+        // Tag runs (deletes, merges, undos) belong to no library: those who manage tags follow them.
+        var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan, Rights.ManageTags);
 
         runs.MapGet("/running", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state
-                    ? Results.Ok(await tasks.RunningAsync(tenantId, ScannableLibraries(state), context.RequestAborted))
+                    ? Results.Ok(await tasks.RunningAsync(tenantId, ScannableLibraries(state), context.RequestAborted, state.Has(Rights.ManageTags)))
                     : Results.NotFound())
             .WithName("ListRunningTasks")
-            .WithSummary("The runs going on (or waiting) in the libraries the caller may scan, with their progress: what the progress panel follows.");
+            .WithSummary("The runs going on (or waiting) in the libraries the caller may scan, and the tenant's tag runs for those who manage tags, with their progress: what the progress panel follows.");
 
         runs.MapGet("/overview", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks, TaskSchedules schedules) =>
             {
@@ -196,7 +197,7 @@ public static class TaskEndpoints
 
         runs.MapGet("/", async (long? before, int? limit, HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state
-                    ? Results.Ok(await tasks.HistoryAsync(tenantId, ScannableLibraries(state), before, limit ?? 20, context.RequestAborted))
+                    ? Results.Ok(await tasks.HistoryAsync(tenantId, ScannableLibraries(state), before, limit ?? 20, context.RequestAborted, state.Has(Rights.ManageTags)))
                     : Results.NotFound())
             .WithName("ListTasks")
             .WithSummary("The task runs of every library the caller may scan, newest first; `before` = the last id of the page before.");
@@ -268,7 +269,7 @@ public static class TaskEndpoints
         var state = await current.GetAsync();
         if (state.TenantId is not { } tenantId || await tasks.GetAsync(tenantId, run, context.RequestAborted) is not { } info)
             return null;
-        return info.LibraryId is { } library && state.Access.HasIn(Rights.Scan, library) ? info : null;
+        return info.LibraryId is { } library ? state.Access.HasIn(Rights.Scan, library) ? info : null : state.Has(Rights.ManageTags) ? info : null;
     }
 
     private static string Code(RootProblem problem) => problem switch

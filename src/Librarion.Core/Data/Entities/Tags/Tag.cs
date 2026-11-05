@@ -174,3 +174,74 @@ public sealed class ImportTagMapping
 
     public bool Ignored { get; set; }
 }
+
+/// <summary>
+/// Another key of a field: a field merged into another (<c>genre:</c> into <c>category:</c>) leaves its key here, so
+/// searches and import mappings that name it keep working (agents/docs/features/merging.md#duplicate-tags).
+/// </summary>
+public sealed class FieldKeyAlias
+{
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public int FieldId { get; set; }
+    public Tag? Field { get; set; }
+}
+
+public enum MergeKind : byte
+{
+    /// <summary>A tag (or a field's value) merged into another.</summary>
+    Tag,
+    /// <summary>A field merged into another: its values merged by name or moved, its key kept as an alias.</summary>
+    Field,
+}
+
+/// <summary>
+/// One merge, kept so it can be undone (D-6.5, agents/docs/features/merging.md): what the source was and what moved.
+/// The source tag is gone; its row, aliases, parents, mappings and filters are in <see cref="Data"/> (JSON), the links
+/// that moved in <see cref="MergeLogLink"/> rows. A field merge's value merges are its children (<see cref="ParentId"/>).
+/// </summary>
+public sealed class MergeLog
+{
+    public long Id { get; set; }
+    public int TenantId { get; set; }
+    public MergeKind Kind { get; set; }
+    public long? ParentId { get; set; }
+    public int? UserId { get; set; }
+
+    /// <summary>UTC.</summary>
+    public DateTime Created { get; set; }
+
+    /// <summary>The merged tag's id (gone once the merge is complete; not a foreign key) and name.</summary>
+    public int SourceId { get; set; }
+    public string SourceName { get; set; } = string.Empty;
+
+    /// <summary>The tag it went into; not a foreign key: a log outlives a tag deleted later (its undo is then refused).</summary>
+    public int TargetId { get; set; }
+    public string TargetName { get; set; } = string.Empty;
+
+    /// <summary>The links moved; until <see cref="Completed"/>, those moved so far (a run cancelled half-way).</summary>
+    public int Links { get; set; }
+
+    /// <summary>Every step done; a merge stopped half-way has moved some links and can only be undone or done again.</summary>
+    public bool Completed { get; set; }
+
+    public string? Data { get; set; }
+
+    /// <summary>UTC, when it was undone; null while it holds.</summary>
+    public DateTime? Undone { get; set; }
+}
+
+/// <summary>A book's link that a merge took from the source: moved to the target, or dropped when the target had it (<see cref="Kept"/>).</summary>
+public sealed class MergeLogLink
+{
+    public int TenantId { get; set; }
+    public long LogId { get; set; }
+    public int BookId { get; set; }
+    public TagSource Source { get; set; }
+    public int? Ordinal { get; set; }
+    public double? Number { get; set; }
+
+    /// <summary>The target already had this link: only the source's was removed, and an undo leaves the target's.</summary>
+    public bool Kept { get; set; }
+}

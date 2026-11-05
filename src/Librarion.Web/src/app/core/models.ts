@@ -399,7 +399,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;

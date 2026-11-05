@@ -24,6 +24,10 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
 - `BackgroundTasks`: one run per library at a time (a second start answers the running one, `started: false`); a root
   removal waits for the library's scan; at most `Librarion:Libraries:MaxParallelScans` (2) at once on the server, the
   rest wait (`waiting: true`).
+- **Tenant runs** (stage 6: `TagDelete`, `TagMerge`, `FieldMerge`, `MergeUndo`; `StartTenantAsync`) have no library:
+  one waits for every run of the tenant started before it, and every run started after it waits for it, so a scan
+  never links a tag a merge is taking away. Listed (`running`, history, `api/tasks/{id}`) for those with
+  `tenant.tags`; progress `changed` / `removed` count links, `current` names the tag.
 - Each run is a `TaskRuns` row written at start and completed at the end: outcome (`succeeded`, `failed`,
   `cancelled`, `interrupted`, `skipped`), counts as JSON (added, changed, removed, unchanged, archives read / skipped,
   unreadable entries, missing roots, the first 20 problems). A failure's summary says to look in the server log; the

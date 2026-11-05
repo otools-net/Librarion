@@ -18,6 +18,9 @@ Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), 
 - A bare word of free text is a prefix (it may be being typed); `"phrases"` are not unless followed by `*`; values
   are prefixes only with `*` (or an unclosed quote).
 
+- A key is a field's own key or the key of a field merged into another (`FieldKeyAliases`, stage 6):
+  `BookSearch.KeysAsync` reads queries (books, facets, suggestions); `FieldsAsync` lists fields, each once.
+
 ## The index (D3: the database's own)
 
 - `Books.SearchText` = `SearchText.ForBook(title, file title)`: NFKD, marks dropped, lower case, anything but

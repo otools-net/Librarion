@@ -31,7 +31,8 @@ export class TaskWatch {
 
     readonly running = signal<TaskRunInfo[]>([]);
     readonly ended = signal<TaskRunInfo[]>([]);
-    private readonly enabled = computed(() => this.session.session()?.user != null && this.session.can(Rights.scan));
+    // Tag runs (merges, deletes) belong to no library: those who manage tags follow them too.
+    private readonly enabled = computed(() => this.session.session()?.user != null && (this.session.can(Rights.scan) || this.session.can(Rights.manageTags)));
 
     private watchers = 0;
     private timer: ReturnType<typeof setTimeout> | null = null;
@@ -115,6 +116,8 @@ export class TaskWatch {
 
     /** The name of a run's library, as the switcher has it. */
     libraryName(run: TaskRunInfo): string {
+        if (run.libraryId === null)
+            return this.i18n.t('taskRun.everyLibrary');
         return this.libraries.libraries().find(library => library.id === run.libraryId)?.name ?? this.i18n.t('taskRun.library', { id: run.libraryId ?? 0 });
     }
 

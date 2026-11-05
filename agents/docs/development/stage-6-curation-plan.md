@@ -84,10 +84,10 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 0. [x] The user confirms D-6.1–D-6.7 and answers Q1–Q5; this plan updated.
 1. [x] Rights (D-6.1): catalog entries, default groups, texts, `core/rights.ts`, the client hiding what needs them;
        `EveryRouteNamesARight` and the rights editor show them.
-2. [ ] Tag service: create and edit (name, shorthand, color, category, hidden, disambiguation parent), aliases,
+2. [x] Tag service: create and edit (name, shorthand, color, category, hidden, disambiguation parent), aliases,
        parents with `TagClosure` kept and cycles refused, delete (links in batches, counts adjusted), the tag graph's
        version bumped; routes; both providers.
-3. [ ] Tag merge and field merge: links moved in batches (D-6.4), names become aliases, import mappings follow,
+3. [x] Tag merge and field merge: links moved in batches (D-6.4), names become aliases, import mappings follow,
        closure and counts kept, `MergeLog` with undo (D-6.5); `genre:` merged into `category:` keeps working in search
        and mappings.
 4. [ ] Administration › Catalog › Tags (D-6.2): fields as categories with counts, big ones paged and searched (never
@@ -126,7 +126,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 
 ### 6.0 Rights and the tag service
 - [x] Rights (D-6.1) with their texts and default groups.
-- [ ] `TagService`: definitions, aliases, parents and closure, delete; `MergeLog`; tag and field merge with undo.
+- [x] `TagService`: definitions, aliases, parents and closure, delete; `MergeLog`; tag and field merge with undo.
 
 ### 6.1 Curation screens
 - [ ] Administration › Catalog: Tags (manager, editor, merge, delete), Imported tags (mappings, bulk actions,
