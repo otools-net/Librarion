@@ -10,11 +10,20 @@ import { press } from '../fixtures/press';
 import { expect, test } from '../fixtures/test';
 import { fb2, writeZip } from '../fixtures/zip';
 
+/**
+ * A download started by `start`: the name the server gave (its `Content-Disposition`, asked again by the request API)
+ * and the bytes. The browser's own file name is not compared: WebKit on Linux saves "Sand Messiah.fb2" as
+ * "Sand_Messiah.fb2" (seen in CI; Windows keeps the space).
+ */
 async function downloaded(page: Page, start: () => Promise<void>): Promise<{ name: string; bytes: Buffer }> {
     const waiting = page.waitForEvent('download');
     await start();
     const download: Download = await waiting;
-    return { name: download.suggestedFilename(), bytes: fs.readFileSync((await download.path())!) };
+    const disposition = (await page.request.get(download.url())).headers()['content-disposition'] ?? '';
+    const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+    const name = encoded ? decodeURIComponent(encoded) : /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? '';
+    expect(download.suggestedFilename().replaceAll('_', ' ')).toBe(name.replaceAll('_', ' '));
+    return { name, bytes: fs.readFileSync((await download.path())!) };
 }
 
 test.describe('@browse', () => {
