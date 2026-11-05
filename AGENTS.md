@@ -92,6 +92,7 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
+| [stage-6-curation-plan](agents/docs/development/stage-6-curation-plan.md) | **stage 6, start here** (not started; decisions to confirm): tag manager, picker, tagging and editing books, default tags, imported tags, covers, duplicates and merges | `Core/Tagging/`, `Core/Merging/`, `src/Librarion.Web/` |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
