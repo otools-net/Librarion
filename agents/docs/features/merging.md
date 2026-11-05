@@ -66,7 +66,7 @@ compared only within the key's group.
 - **Possible duplicates** (other books in a group with this one, not yet merged): a panel "This book may also be in
   the library as: …" with each candidate's cover, title, authors, formats and the reason (same file, same ISBN, same
   title and author). Everyone who can see them gets the list (pick the better copy to read); users with
-  `books.merge` get **Compare and merge** and **Not a duplicate**.
+  `library.merge` get **Compare and merge** and **Not a duplicate**.
 - Grids and lists show a merged book once; for curators a small badge marks books with open duplicate suggestions, and
   search has `special:duplicates`.
 
@@ -113,7 +113,7 @@ respect it). This adds **finding** them and doing it from one page:
 
 ## Rights (planned)
 
-`books.merge` (Write: merge, split, undo, mark not duplicate), `tags.manage` covers tag and field merges. Seeing
+`library.merge` (Write: merge, split, undo, mark not duplicate), `tenant.tags` covers tag and field merges. Seeing
 duplicates and copies comes with browsing.
 
 ## Tests to have

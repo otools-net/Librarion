@@ -42,7 +42,9 @@ metadata editing and cover upload behave (behaviour only, its GPL-3 code is neve
   tags), `books.edit` (title, fields, description, rating, series number, cover; this is the `metadata.edit` of the
   notes, named as the other book rights), `books.merge` (merge, split, undo, not a duplicate). Library-scoped except
   `tags.manage` (tenant: the vocabulary is per tenant, D9). Default groups: Administrators all of them, and a new **built-in Curators group** (Q1) with all of them but no
-  account, group or tenant rights.
+  account, group or tenant rights. **Built (chunk 1) with ids by scope** (the catalog's rule): `library.tag`,
+  `library.edit`, `library.merge`, `library.importedTags`, `library.defaultTags`, `tenant.tags`; below, the old
+  names stand for these. Curators also hold the Users' rights.
 - **D-6.2 Where curation lives:** a new administration group **Catalog** (Tags, Imported tags, Duplicates, Cover
   styles), sub-pages as stage 5's; editing a book stays on its page (an Edit button for `books.edit`), tagging a
   selection or scope from the library and search lists.
@@ -80,7 +82,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 `edge` only: the version is bumped once, when the stage is complete and merged.
 
 0. [x] The user confirms D-6.1–D-6.7 and answers Q1–Q5; this plan updated.
-1. [ ] Rights (D-6.1): catalog entries, default groups, texts, `core/rights.ts`, the client hiding what needs them;
+1. [x] Rights (D-6.1): catalog entries, default groups, texts, `core/rights.ts`, the client hiding what needs them;
        `EveryRouteNamesARight` and the rights editor show them.
 2. [ ] Tag service: create and edit (name, shorthand, color, category, hidden, disambiguation parent), aliases,
        parents with `TagClosure` kept and cycles refused, delete (links in batches, counts adjusted), the tag graph's
@@ -123,7 +125,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 ## Work items
 
 ### 6.0 Rights and the tag service
-- [ ] Rights (D-6.1) with their texts and default groups.
+- [x] Rights (D-6.1) with their texts and default groups.
 - [ ] `TagService`: definitions, aliases, parents and closure, delete; `MergeLog`; tag and field merge with undo.
 
 ### 6.1 Curation screens

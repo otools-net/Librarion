@@ -22,7 +22,7 @@ Every list, grid, search result, book page and OPDS entry shows a book the same 
   name, normalised for sorting: case-folded, leading articles per language moved, digits padded). The UI shows
   `Title ?? FileTitle` and marks a file-name title subtly (italic, hint "title from the file name") so curators see what
   metadata is missing; search matches both.
-- An edited title (stage 6+, `metadata.edit`) wins over both and survives re-imports (same rule as tags' link
+- An edited title (stage 6+, `library.edit`) wins over both and survives re-imports (same rule as tags' link
   sources: imported values are recomputed, edited ones kept).
 
 ## Cover
@@ -59,7 +59,7 @@ the book** (decided 2026-10-31).
   columns per row: free at 2M books. The image is rendered on first view and cached with the thumbnails like any cover
   (cache key: template, variant, title, authors, series, size), so it changes when the metadata changes.
 - **Stable:** turning a template off doesn't reassign existing books unless the administrator asks ("reassign books of
-  this template", a background task in batches); a book page offers **Change cover style** (`metadata.edit`) to pick
+  this template", a background task in batches); a book page offers **Change cover style** (`library.edit`) to pick
   another template/variant, kept across re-imports. A real cover found later (re-import, upload) replaces the
   generated one; removing it falls back to the assigned template.
 - Covers' sources: `Book` (extracted), `Calibre`, `Uploaded` (stage 6+), `Generated`; `Books.CoverState` (unknown /

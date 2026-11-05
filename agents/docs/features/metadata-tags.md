@@ -100,7 +100,7 @@ separate `Authors`, `Series` or `Publishers` tables.
 
 - Chips grouped by field on the book page (`Authors`, `Series`, `Categories`…; field names translated for built-ins,
   as stored for others); a chip opens the value's books. Cards: title, first author.
-- Editing (stage 6, `metadata.edit` for fields, `tags.assign` for plain tags): the tag picker scoped to a field,
+- Editing (stage 6, `library.edit` for fields, `library.tag` for plain tags): the tag picker scoped to a field,
   author order by drag, series number in place; new values typed in create them under the field.
 - Tag manager: fields listed as categories with counts; the big ones paged and searched, never loaded whole.
 

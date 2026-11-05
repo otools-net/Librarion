@@ -84,10 +84,10 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
   `<category>` per book.
 - Web: chips on cards and the book page grouped by category, sidebar of tags, tag manager.
 
-## Rights (planned)
+## Rights (built in stage 6, chunk 1: [rights](rights.md))
 
-`tags.assign` (Write: tag books), `tags.manage` (Write: create, edit, merge, delete definitions),
-`tags.importMappings` (Write: imported tags page), `tags.defaults` (Write: library/folder default tags). Reading
+`library.tag` (Write: tag books), `tenant.tags` (Write: create, edit, merge, delete definitions),
+`library.importedTags` (Write: imported tags page), `library.defaultTags` (Write: library/folder default tags). Reading
 tags comes with browsing.
 
 ## Tests to have

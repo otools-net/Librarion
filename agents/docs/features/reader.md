@@ -52,7 +52,7 @@ A format without a viewer offers **Download** only. The choice per format is rec
 
 ## Rights
 
-`books.read` (Read: open in the reader; separate from `books.download`, so an administrator can allow reading without
+`library.read` (Read: open in the reader; separate from `library.download`, so an administrator can allow reading without
 downloading), progress is the user's own data.
 
 ## Tests to have

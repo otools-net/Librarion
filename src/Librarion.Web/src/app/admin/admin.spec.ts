@@ -337,6 +337,26 @@ describe('GroupsSection', () => {
 
         expect(api.updateGroup).toHaveBeenCalledWith(10, { name: 'Users', allLibraries: true, rights: ['library.browse', 'tenant.users'], libraryIds: [], memberIds: [2] });
     });
+
+    it('names the built-in Curators group and lists the catalog rights under their own heading', async () => {
+        const api = mockApi();
+        api.groups.mockResolvedValue([groupInfo({ id: 12, name: 'Curators', builtIn: 'curators', rights: ['library.tag', 'tenant.tags'] })]);
+        api.rights.mockResolvedValue([right('library.browse', 'library', 'read', 'library'), right('library.tag', 'catalog', 'write', 'library'), right('tenant.tags', 'catalog', 'write')]);
+        api.libraries.mockResolvedValue([]);
+        api.users.mockResolvedValue([]);
+        const { element, stable } = await render(GroupsSection, api);
+
+        expect(element.querySelector('.row')?.textContent).toContain('Curators');
+        expect(element.querySelector('.row')?.textContent).toContain('Built-in');
+        element.querySelector<HTMLButtonElement>('.row-main')!.click();
+        await stable();
+        const legends = [...element.querySelectorAll('legend')].map(legend => legend.textContent?.trim());
+        expect(legends.slice(0, 2)).toEqual(['Libraries', 'Catalog']);
+        const checked = [...element.querySelectorAll<HTMLLabelElement>('label.check')].filter(label => label.querySelector('input')!.checked).map(label => label.textContent);
+        expect(checked.some(text => text?.includes('Tag books'))).toBe(true);
+        expect(checked.some(text => text?.includes('Manage tags'))).toBe(true);
+        expect([...element.querySelectorAll('form.editor button')].map(button => button.textContent?.trim())).not.toContain('Delete');
+    });
 });
 
 describe('LibrariesSection', () => {

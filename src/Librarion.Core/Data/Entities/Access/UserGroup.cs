@@ -33,6 +33,9 @@ public enum BuiltInGroup
 {
     Administrators,
     Users,
+
+    /// <summary>Curate the catalog (tags, book metadata, merges) and browse; no account, group or tenant rights.</summary>
+    Curators,
 }
 
 public sealed class GroupMember

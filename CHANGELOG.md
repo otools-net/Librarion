@@ -2,6 +2,16 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## Unreleased
+
+### Added
+
+- A third built-in group, **Curators**, and the rights for looking after the catalog, under a new Catalog heading in
+  the group editor: **Tag books**, **Edit books**, **Merge books**, **Imported tags**, **Default tags** and **Manage
+  tags**. Administrators and Curators have them; Curators also have what Users have, and nothing that manages
+  accounts, groups, libraries or settings. The screens using them come in the next changes. A tenant created before
+  this version gets no Curators group (before 1.0 the database is not upgraded: delete it to start again).
+
 ## 0.6.0
 
 ### Changed

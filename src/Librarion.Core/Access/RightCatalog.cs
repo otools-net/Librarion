@@ -13,6 +13,12 @@ public static class Rights
     public const string Scan = "library.scan";
     public const string LibrarySettings = "library.settings";
     public const string Import = "library.import";
+    public const string TagBooks = "library.tag";
+    public const string EditBooks = "library.edit";
+    public const string MergeBooks = "library.merge";
+    public const string ImportedTags = "library.importedTags";
+    public const string DefaultTags = "library.defaultTags";
+    public const string ManageTags = "tenant.tags";
     public const string ManageUsers = "tenant.users";
     public const string ManageLibraries = "tenant.libraries";
     public const string TenantSettings = "tenant.settings";
@@ -52,8 +58,9 @@ public sealed record RightDefinition(string Id, RightScope Scope, RightKind Kind
 
 public static class RightCatalog
 {
-    private static readonly BuiltInGroup[] Members = [BuiltInGroup.Administrators, BuiltInGroup.Users];
+    private static readonly BuiltInGroup[] Members = [BuiltInGroup.Administrators, BuiltInGroup.Users, BuiltInGroup.Curators];
     private static readonly BuiltInGroup[] Administrators = [BuiltInGroup.Administrators];
+    private static readonly BuiltInGroup[] Curators = [BuiltInGroup.Administrators, BuiltInGroup.Curators];
 
     private const RightKind R = RightKind.Read;
     private const RightKind W = RightKind.Write;
@@ -65,6 +72,12 @@ public static class RightCatalog
         new(Rights.Scan, RightScope.Library, W, Administrators, "library"),
         new(Rights.LibrarySettings, RightScope.Library, W, Administrators, "library"),
         new(Rights.Import, RightScope.Library, W, Administrators, "library"),
+        new(Rights.TagBooks, RightScope.Library, W, Curators, "catalog"),
+        new(Rights.EditBooks, RightScope.Library, W, Curators, "catalog"),
+        new(Rights.MergeBooks, RightScope.Library, W, Curators, "catalog"),
+        new(Rights.ImportedTags, RightScope.Library, W, Curators, "catalog"),
+        new(Rights.DefaultTags, RightScope.Library, W, Curators, "catalog"),
+        new(Rights.ManageTags, RightScope.Tenant, W, Curators, "catalog"),
         new(Rights.ManageUsers, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.ManageLibraries, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.TenantSettings, RightScope.Tenant, W, Administrators, "tenant"),

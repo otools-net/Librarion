@@ -62,7 +62,7 @@ export interface SetupInput {
 
 export type RightScope = 'library' | 'tenant' | 'server';
 export type RightKind = 'read' | 'write';
-export type BuiltInGroup = 'administrators' | 'users';
+export type BuiltInGroup = 'administrators' | 'users' | 'curators';
 
 export interface RightInfo {
     id: string;

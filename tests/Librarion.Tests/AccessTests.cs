@@ -172,6 +172,30 @@ public sealed class AccessTests
     }
 
     [TestMethod]
+    public async Task ACuratorCuratesButDoesNotAdminister()
+    {
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        using var admin = (await ApiClients.SetUpAsync(factory, Cancel)).Client;
+        var curators = (await admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel)).Single(g => g.BuiltIn == BuiltInGroup.Curators);
+        await ApiClients.CreateUserAsync(admin, new NewUser("curator", Password: ApiClients.Password, GroupIds: [curators.Id]), Cancel);
+        using var curator = await ApiClients.SignInAsync(factory, "curator", ApiClients.Password, Cancel);
+
+        var session = await curator.GetAsync<SessionInfo>("/api/session", Cancel);
+        using var accounts = await curator.GetAsync("/api/users", Cancel);
+        using var deleted = await admin.DeleteAsync($"/api/groups/{curators.Id}", Cancel);
+
+        CollectionAssert.AreEquivalent(
+            RightCatalog.All.Where(r => r.DefaultGroups.Contains(BuiltInGroup.Curators)).Select(r => r.Id).ToList(),
+            session.Rights.ToList());
+        CollectionAssert.IsSubsetOf(
+            new[] { Rights.Browse, Rights.Download, Rights.TagBooks, Rights.EditBooks, Rights.MergeBooks, Rights.ImportedTags, Rights.DefaultTags, Rights.ManageTags },
+            session.Rights.ToList());
+        Assert.AreEqual(HttpStatusCode.Forbidden, accounts.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Conflict, deleted.StatusCode, "Built-in groups stay");
+    }
+
+    [TestMethod]
     public async Task LibraryRightsApplyInTheGroupsLibrariesOnly()
     {
         using var catalog = new TestCatalog();
