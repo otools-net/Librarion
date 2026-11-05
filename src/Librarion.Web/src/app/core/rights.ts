@@ -29,7 +29,7 @@ export const Rights = {
 
 /** Any of these opens the administration. */
 export const ADMIN_RIGHTS: string[] = [
-    Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings,
+    Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings, Rights.manageTags,
     Rights.manageTenants, Rights.manageAllUsers, Rights.serverSettings, Rights.serverSecurityLog,
 ];
 

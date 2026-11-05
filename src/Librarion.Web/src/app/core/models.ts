@@ -468,3 +468,96 @@ export interface ScheduleInfo extends ScheduleInput {
     lastRun: string | null;
     nextRun: string | null;
 }
+
+/** A field in the tag manager (`api/tags/manage/fields`): its values counted up to 10,000 (`capped` past it). */
+export interface ManagedField {
+    id: number;
+    key: string;
+    name: string;
+    builtIn: boolean;
+    color: string | null;
+    isHidden: boolean;
+    values: number;
+    capped: boolean;
+}
+
+export interface ManagedFields {
+    fields: ManagedField[];
+    plainTags: number;
+    plainCapped: boolean;
+}
+
+/** A tag in the tag manager: its books in every library, the tags directly under it. */
+export interface ManagedTag {
+    id: number;
+    name: string;
+    sortName: string;
+    color: string | null;
+    isCategory: boolean;
+    isHidden: boolean;
+    builtIn: boolean;
+    books: number;
+    children: number;
+}
+
+/** A page of the tag manager's list; a search is one page, `capped` when it found more. */
+export interface ManagedPage {
+    items: ManagedTag[];
+    next: string | null;
+    capped: boolean;
+}
+
+/** A tag as its editor has it (`api/tags/{id}/definition`). */
+export interface TagDefinition {
+    id: number;
+    name: string;
+    sortName: string;
+    shorthand: string | null;
+    color: string | null;
+    isCategory: boolean;
+    isHidden: boolean;
+    disambiguationParentId: number | null;
+    fieldId: number | null;
+    fieldKey: string | null;
+    builtIn: boolean;
+    aliases: string[];
+    parents: { id: number; name: string }[];
+    books: number;
+}
+
+export interface TagInput {
+    name: string;
+    sortName?: string | null;
+    shorthand?: string | null;
+    color?: string | null;
+    isCategory?: boolean;
+    isHidden?: boolean;
+    disambiguationParentId?: number | null;
+    aliases?: string[];
+    parentIds?: number[];
+    /** A new value of this field (create only). */
+    fieldId?: number | null;
+    /** A new field (create only). */
+    fieldKey?: string | null;
+}
+
+/** A change of books' links: done (`runId` null) or running in the background; `links` moved or removed. */
+export interface TagWork {
+    runId: number | null;
+    logId: number | null;
+    links: number;
+}
+
+/** A tag or field merge (`api/merges`), undone while nothing later stands in the way. */
+export interface MergeLogInfo {
+    id: number;
+    kind: 'tag' | 'field';
+    created: string;
+    sourceId: number;
+    sourceName: string;
+    targetId: number;
+    targetName: string;
+    links: number;
+    completed: boolean;
+    undone: string | null;
+}

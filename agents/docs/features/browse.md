@@ -69,3 +69,9 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - **D-5.5 Browse:** the home page is the library: a virtual grid of covers (or a dense list), sort and view remembered
   per browser, keyset pages loaded while scrolling, the scroll restored on the way back. Field pages (authors, series,
   categories, languages, publishers, custom fields) and tags, each value with its count.
+
+## Planned: readable tag addresses
+
+- `/author/1234/Stephen King` (field key, id, decorative name; `/tag/<id>/<name>` for plain tags), the id alone or a
+  stale name replaced by the current address, `/tags/<id>` redirected: chunk 15a of
+  [stage-6-curation-plan](../development/stage-6-curation-plan.md).

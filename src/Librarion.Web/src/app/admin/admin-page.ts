@@ -21,6 +21,7 @@ import { LibraryPage } from './library-page';
 import { SecuritySection } from './security-section';
 import { SettingsSection } from './settings-section';
 import { SystemSection } from './system-section';
+import { TagsSection } from './tags-section';
 import { TasksSection } from './tasks-section';
 import { TenantsSection } from './tenants-section';
 import { UsersSection } from './users-section';
@@ -36,7 +37,7 @@ import { UsersSection } from './users-section';
 @Component({
     selector: 'lib-admin-page',
     imports: [RouterLink, TranslatePipe, Icon, EmptyState, MarkedText, AccountSection, UsersSection, GroupsSection, LibrariesSection, TenantsSection,
-        SettingsSection, SecuritySection, SystemSection, LibraryPage, TasksSection],
+        SettingsSection, SecuritySection, SystemSection, LibraryPage, TasksSection, TagsSection],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'admin-page' },
     template: `
@@ -192,6 +193,7 @@ import { UsersSection } from './users-section';
                                 @case ('account') { <lib-account-section [page]="subpage()!.id" /> }
                                 @case ('libraries') { <lib-libraries-section /> }
                                 @case ('librarySettings') { <lib-settings-section level="library" /> }
+                                @case ('tags') { <lib-tags-section [page]="subpage()!.id" /> }
                                 @case ('users') { <lib-users-section /> }
                                 @case ('groups') { <lib-groups-section /> }
                                 @case ('tasks') { <lib-tasks-section [page]="subpage()!.id" /> }

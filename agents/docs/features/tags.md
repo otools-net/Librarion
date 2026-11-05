@@ -4,7 +4,7 @@ Tables built (stage 2): `Tags`, `TagAliases`, `TagParents`, `TagClosure`, `BookT
 ([catalog](catalog.md)). Built (stage 3): imported tags at scan time (`Core/Import/ImportTagResolver`,
 `ImportTagMappings`; tests `LibraryScannerTests`): a source's mapping first, then a tag of that name or alias, else a
 new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. Built
-(stage 6, chunks 2-3): the tag service and merges, below. The admin pages and the UI are planned.
+(stage 6, chunks 2-3): the tag service and merges; (chunk 4) the tag manager, below. Tagging books in the UI is planned.
 
 Code (planned): `src/Librarion.Core/Tagging/` (`TagService`, `TagGraph`, `TagClosure`, `ImportedTags`, `ScopeTagger`,
 `BookTagRows`, `BuiltInTags`), entities in `Data/Entities/Tags/`; client `src/app/tags/`. Ported from SFE
@@ -40,6 +40,27 @@ sort columns per batch), `Core/Merging/TagMerger.cs` (merges, undo: [merging](me
   (ignoring a raw name is the Imported tags page's job, chunk 9).
 - `TagCounts` hold each tag's **direct** links of present books (not missing), as the importer writes them; a parent's
   books are found through the closure, so re-parenting moves no counts.
+
+## The tag manager (built, stage 6 chunk 4)
+
+Code: `admin/tags-section.ts` (Administration › Catalog › Tags: pages `tags` and `merges`), `admin/tag-editor.ts`,
+`admin/tag-merge.ts`, `admin/tag-search.ts` (its own small finder, until chunk 5's shared picker), styles at the end of
+`styles/admin.css`; server `Core/Tagging/TagLists.cs`, routes `GET api/tags/manage/fields`, `GET api/tags/manage`;
+tests `tags.spec.ts` (client), `TagCurationTests.TheManagerListsEveryTagByKeyAndFindsThem`, e2e `specs/tags.spec.ts`
+(every device), axe on the list, the editor (both themes) and the merges.
+
+- A field chooser (a select: plain tags, then each field with its value count, capped at 10,000 as "10,000+"), the
+  list of every tag (books or not) by sort name 50 at a time by key, a search (name prefix on `NormalizedName`, then
+  words through the full-text index, one capped page). Each row: color dot, name, books (the sum of `TagCounts`
+  across libraries: direct links) and tags directly under it (a `GROUP BY` over `TagParents` for the page's ids).
+- Editor: the definition's fields, parents as chips added through `lib-tag-search` (same kind only), the
+  disambiguation parent among them; Delete and Merge in its footer, both asking with the number of books first. A
+  202 is followed by `TaskWatch.follow` and a toast. Merges: rows with Undo (asks first); a refusal (`merge.later`)
+  stays shown.
+- Texts `tagAdmin.*` (the `tags.*` keys are the browse pages'). The list is named "Tag list": the navigation's list of
+  the section's sub-pages is "Tags", and two lists of one name broke the e2e locators.
+- Seen once in a full e2e run (2026-11-05, iPhone): after saving a tag, the search for another one still showed the
+  first search's rows; passed alone 4 times and in the next full run. Watch for it.
 
 ## Model (as SFE)
 

@@ -110,7 +110,25 @@ test.describe('@a11y', () => {
             await page.goto('./admin/settings/server');
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
             await audit(page, 'settings (light)');
+            await page.goto('./admin/tags/tags');
+            await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+            await page.getByRole('button', { name: 'New tag' }).tap();
+            await expect(page.getByRole('dialog', { name: 'New tag' })).toBeVisible();
+            await audit(page, 'tag editor (light)');
         });
+    });
+
+    test('the tag manager: the list, the editor and the merges', async ({ page }) => {
+        await page.goto('./admin/tags/tags');
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+        await audit(page, 'tags');
+        await page.getByRole('button', { name: 'New tag' }).tap();
+        await expect(page.getByRole('dialog', { name: 'New tag' })).toBeVisible();
+        await audit(page, 'tag editor');
+        await page.keyboard.press('Escape');
+        await page.goto('./admin/tags/merges');
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+        await audit(page, 'merges');
     });
 
     test('the page not found', async ({ page }) => {

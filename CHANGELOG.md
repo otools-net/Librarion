@@ -15,7 +15,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   API (`api/tags`, `api/fields/{key}/merge`), and every merge undone (`api/merges`): a merged author's books move to
   the other, its name becomes another name of it, and books imported later under the old name land there too; a
   merged field's key keeps working in searches (`genre:` after merging it into `category:`). Changes of more than
-  10,000 links run in the background, shown in the progress panel to those who manage tags. The screens come next.
+  10,000 links run in the background, shown in the progress panel to those who manage tags.
+- Administration › Catalog › Tags: every plain tag or every value of a field (authors, series…), with how many books
+  have it and how many tags are under it, a page at a time or found by name; an editor for its names, other names,
+  parents, color, category and hidden; Merge and Delete, each saying first how many books change; and Merges, where a
+  merge is undone. See [Tags](docs/administration/tags.md).
 
 ## 0.6.0
 

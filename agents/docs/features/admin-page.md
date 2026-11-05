@@ -6,7 +6,7 @@ components (`*-section.ts`, `account/account-section.ts`); styles `styles/admin.
 `docs/administration/README.md`. Port of SFE's admin page (`admin-page.md` there); the user's rules, D-5.3 and D-5.9 under
 [Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
-- `ADMIN_SECTIONS`: groups (`account`, `libraries`, `people`, `server`) › sections (icon) › sub-pages (rights). A
+- `ADMIN_SECTIONS`: groups (`account`, `libraries`, `catalog` (stage 6, D-6.2), `people`, `server`) › sections (icon) › sub-pages (rights). A
   sub-page shows with one of its rights, a section with one of its sub-pages (`visibleSections`). Texts:
   `adminGroup.<g>`, `adminSection.<s>` + `.hint`, and for sections of several sub-pages `adminPage.<s>.<p>` + `.hint`
   (`admin-sections.spec.ts` fails on a missing one). The search reads the same catalog ([admin-search](admin-search.md)).

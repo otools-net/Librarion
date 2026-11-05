@@ -90,8 +90,21 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 3. [x] Tag merge and field merge: links moved in batches (D-6.4), names become aliases, import mappings follow,
        closure and counts kept, `MergeLog` with undo (D-6.5); `genre:` merged into `category:` keeps working in search
        and mappings.
-4. [ ] Administration › Catalog › Tags (D-6.2): fields as categories with counts, big ones paged and searched (never
+4. [x] Administration › Catalog › Tags (D-6.2): fields as categories with counts, big ones paged and searched (never
        loaded whole), the tag editor dialog, merge and delete dialogs saying how many books change; phones as stage 5.
+       Each tag's row also says how many child tags it has (one indexed count per page of tags).
+4a. [ ] **A parent tag's count includes its children's books** (asked by the user 2026-11-05): today `TagCounts` holds
+       a tag's own links only, so "Fiction" shows 0 when its books are tagged "Fantasy" and "Horror". **Cost at scale
+       (to confirm with the user before building):** the count must be of distinct books (a book under two children
+       counts once), so every link change (import batches, tagging, merges, re-parenting) works out, per batch of
+       books, which ancestors each book is under before and after through `TagClosure`: about 10-20 (book, ancestor)
+       pairs per book read twice per batch, an import estimated 20-40 % slower (to measure on the 2M catalog);
+       re-parenting a tag recounts the books under it (a category over 100k tags: a background run). Fields'
+       own rows would get counts too ("books with any author"). **Alternatives:** (a) on demand for one tag, capped
+       ("10,000+ books"), nothing stored: cheap to keep, a few hundred ms for a big category, unfit for lists; (b) a
+       sum of the children's counts without de-duplication, cheap but wrong for books under two children.
+       **Recommendation:** stored totals in a second column `TagCounts.TotalCount` kept per batch as above, after
+       measuring the import cost at 2M on both providers; `BookCount` (direct) stays what search sizes terms by.
 5. [ ] The tag picker (port of SFE's): prefix on name, alias and shorthand through the index, capped; scoped to a
        field; "Create"; chips with colors; keyboard and touch.
 6. [ ] A book's tags and metadata edited on its page (D-6.3): plain tags (`tags.assign`), fields with the scoped
@@ -119,6 +132,18 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         transliteration, the same name in two fields; ranked by books; spelling distance on demand on a tag's or
         field's page, capped (D21); Not the same remembered; shown on the tag page and in the picker.
 15. [ ] Search additions: `special:untagged`, `special:duplicates` (curators), `tag:"name (parent)"`.
+15a. [ ] **Readable addresses for tag pages** (asked by the user 2026-11-05): a field value's page at
+       `/<field key>/<id>/<name>` (`/author/1234/Stephen King`, `/series/88/The Dark Tower`, `/category/9/Horror`), a
+       plain tag at `/tag/<id>/<name>`, instead of `/tags/1234` today (`app.routes.ts`, `tags/tag-page.ts`). The id
+       finds the tag; the name is decorative: `/author/1234` (or a stale name after a rename or merge) is replaced
+       (`replaceUrl`, no history entry) by the address with the current name, and a wrong field key by the right one.
+       The name written as typed, the browser encoding it (spaces as `%20`), cut to a sane length. Every link to a tag
+       (book page, browse lists, Refine, suggestions, the tag manager) builds it with one helper; `/tags/<id>` keeps
+       working as a redirect (bookmarks), as do the addresses of a merged tag (the merge's target, through the
+       `MergeLog`). Field keys that clash with an app route (`books`, `search`, `admin`, `fields`, `tags`, `account`,
+       `login`) can't be used as a field key, or the route is `/fields/<key>/<id>/<name>` for those: decide when built.
+       Tests: the redirects (no name, a stale name, a wrong key, a merged id), every link's shape; e2e on a phone and
+       the desktop.
 16. [ ] Docs, CHANGELOG, feature notes; budgets through the UI's calls on 2M; e2e for each flow on every device; axe AA
         on the new screens in both themes; close the stage (merge 0.7.0, this plan removed as stage 5's was).
 

@@ -11,6 +11,7 @@ overview, its group and its section. The arrow at the top left returns to the li
 | Account | My account | your preferences and password ([your account](../user-guide/account.md)) | everyone |
 | Libraries | [Libraries](libraries.md) | the tenant's libraries | tenant administrators, server administrators |
 | Libraries | [Library settings](settings.md) | the settings of one library | whoever holds the library settings right |
+| Catalog | [Tags](tags.md) | the tags and fields: edit, merge, undo a merge, delete | whoever holds the manage tags right (Administrators, Curators) |
 | People and access | [Accounts](accounts.md) | people who sign in | tenant administrators (their tenant), server administrators (all) |
 | People and access | [Groups](groups.md) | what accounts may do, and in which libraries | tenant administrators, server administrators |
 | Tenant and server | [Background tasks](background-tasks.md) | scans and imports of every library: running now, history, schedules | whoever holds the scan right |

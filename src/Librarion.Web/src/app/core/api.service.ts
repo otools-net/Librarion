@@ -3,8 +3,10 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, SuggestionList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
-    SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
+    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
+    LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
+    SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
+    TagDefinition, TagDetail, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput,
 } from './models';
 
 /** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
@@ -139,6 +141,20 @@ export class Api {
             library: query.library, from: query.from || undefined, after: query.after ?? undefined, limit: query.limit,
         });
     tag = (id: number, library?: number) => this.get<TagDetail>(`api/tags/${id}`, { library });
+
+    /** The tag manager (`tenant.tags`): the fields with their value counts; a field's tags (`field` null: plain tags) by key, or found by `q`. */
+    managedFields = () => this.get<ManagedFields>('api/tags/manage/fields');
+    managedTags = (field: string | null, query: { q?: string | null; after?: string | null; limit?: number } = {}) =>
+        this.get<ManagedPage>('api/tags/manage', { field: field ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit });
+    tagDefinition = (id: number) => this.get<TagDefinition>(`api/tags/${id}/definition`);
+    createTag = (input: TagInput) => this.post<TagDefinition>('api/tags', input);
+    updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);
+    /** Done, or a run when it touches many books (`runId`). */
+    deleteTag = (id: number) => this.delete<TagWork>(`api/tags/${id}`);
+    mergeTag = (id: number, targetId: number) => this.post<TagWork>(`api/tags/${id}/merge`, { targetId });
+    mergeField = (key: string, target: string) => this.post<TagWork>(`api/fields/${encodeURIComponent(key)}/merge`, { target });
+    merges = (before?: number) => this.get<MergeLogInfo[]>('api/merges', { before });
+    undoMerge = (id: number) => this.post<TagWork>(`api/merges/${id}/undo`);
 
     /** The settings of a level; `owner`: the library (or another tenant); the user level is one's own preferences. */
     settings = (level: SettingLevel, owner?: number) =>

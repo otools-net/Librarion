@@ -20,6 +20,19 @@ public static class TagEndpoints
     {
         var tags = api.MapGroup("").WithTags("Tags").RequireRight(Rights.ManageTags);
 
+        tags.MapGet("/tags/manage/fields", async (HttpContext context, CurrentAccess current, TagLists lists) =>
+                await TenantOf(current) is { } tenantId ? Results.Ok(await lists.FieldsAsync(tenantId, context.RequestAborted)) : Results.NotFound())
+            .WithName("ListManagedFields")
+            .WithSummary($"The tag manager's fields with how many values each has, and the plain tags counted the same way (up to {TagLists.MaxCounted}).");
+
+        tags.MapGet("/tags/manage", async (string? field, string? q, string? after, int? limit, HttpContext context, CurrentAccess current, TagLists lists) =>
+                await TenantOf(current) is { } tenantId && await lists.ListAsync(tenantId, string.IsNullOrEmpty(field) ? null : field, q, after, limit ?? 50, context.RequestAborted) is { } page
+                    ? Results.Ok(page)
+                    : Results.NotFound())
+            .WithName("ListManagedTags")
+            .WithSummary("Every tag of a field (`field` = its key; none: plain tags), books or not, by sort name a page at a time (`after`); with `q`, those whose name starts so or has its words, one page (`capped` when there were more).")
+            .WithDescription($"Each with its books in every library and how many tags are directly under it. `limit` up to {TagLists.MaxLimit}.");
+
         tags.MapGet("/tags/{id:int}/definition", async (int id, HttpContext context, CurrentAccess current, TagService service) =>
                 await TenantOf(current) is { } tenantId && await service.GetAsync(tenantId, id, context.RequestAborted) is { } tag
                     ? Results.Ok(tag)

@@ -881,3 +881,97 @@ a.row-main {
         padding: var(--space-3);
     }
 }
+
+
+/* The tag manager (Administration › Catalog › Tags, stage 6): rows with a color dot, the editor's parents as chips,
+   the small finder's list under its box. */
+.tag-dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    margin-inline-end: var(--space-2);
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
+    vertical-align: middle;
+}
+
+.tag-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.tag-editor-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-3);
+}
+
+.tag-color {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.tag-color input[type="color"] {
+    width: 44px;
+    min-height: 36px;
+    padding: 2px;
+}
+
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    list-style: none;
+}
+
+.tag-chips .chip {
+    padding-inline-end: 2px;
+}
+
+.tag-chips .icon-button {
+    width: 32px;
+    height: 32px;
+}
+
+.tag-search input {
+    width: 100%;
+}
+
+.tag-search-list {
+    margin: var(--space-1) 0 0;
+    padding: var(--space-1);
+    list-style: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.tag-search-list [role="option"] {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+.tag-search-list [role="option"] .field-hint {
+    margin-inline-start: auto;
+}
+
+.tag-search-list [role="option"][aria-selected="true"],
+.tag-search-list [role="option"]:hover {
+    background: var(--surface-2);
+}
+
+.merge-row .row-main {
+    cursor: default;
+}

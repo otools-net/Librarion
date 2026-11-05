@@ -19,8 +19,8 @@ describe('admin-sections', () => {
         expect(missing).toEqual([]);
     });
 
-    it('keeps the groups in the order of D-5.3, and ids unique', () => {
-        expect(groupsOf(ADMIN_SECTIONS).map(group => group.id)).toEqual(['account', 'libraries', 'people', 'server']);
+    it('keeps the groups in the order of D-5.3 (Catalog: D-6.2), and ids unique', () => {
+        expect(groupsOf(ADMIN_SECTIONS).map(group => group.id)).toEqual(['account', 'libraries', 'catalog', 'people', 'server']);
         expect(new Set(ADMIN_SECTIONS.map(section => section.id)).size).toBe(ADMIN_SECTIONS.length);
     });
 

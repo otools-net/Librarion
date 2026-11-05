@@ -282,6 +282,33 @@ public sealed class TagCurationTests
     }
 
     [TestMethod]
+    public async Task TheManagerListsEveryTagByKeyAndFindsThem()
+    {
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        shelf.Write("one.fb2", Fb2("One", ["Ann Writer", "Bea King"], "Alpha, Beta"));
+        await shelf.ScanAsync(Cancel);
+        var parent = await TagIdAsync(shelf, "Alpha");
+        await CreateAsync(shelf, new TagInput("Gamma", ParentIds: [parent]));
+        await CreateAsync(shelf, new TagInput("Delta"));
+
+        var fields = await shelf.Admin.GetAsync<ManagedFields>("/api/tags/manage/fields", Cancel);
+        var first = await shelf.Admin.GetAsync<ManagedPage>("/api/tags/manage?limit=2", Cancel);
+        var second = await shelf.Admin.GetAsync<ManagedPage>($"/api/tags/manage?limit=2&after={first.Next}", Cancel);
+        var authors = await shelf.Admin.GetAsync<ManagedPage>("/api/tags/manage?field=author&q=king", Cancel);
+        using var unknown = await shelf.Admin.GetAsync("/api/tags/manage?field=nothing", Cancel);
+
+        Assert.AreEqual("author", fields.Fields[0].Key, "built-in fields first, in their order");
+        Assert.AreEqual(2, fields.Fields.Single(f => f.Key == "author").Values);
+        Assert.IsGreaterThanOrEqualTo(6, fields.PlainTags, "Alpha, Beta, Gamma, Delta, Meta Tags, Archived and the import category");
+        CollectionAssert.AreEqual(new[] { "Alpha", "Archived" }, first.Items.Select(t => t.Name).ToList(), "tags without books too, by sort name");
+        Assert.AreEqual(1, first.Items[0].Children);
+        Assert.AreEqual(1, first.Items[0].Books);
+        Assert.AreEqual("Beta", second.Items[0].Name);
+        CollectionAssert.AreEqual(new[] { "Bea King" }, authors.Items.Select(t => t.Name).ToList(), "found by a word of the name");
+        Assert.AreEqual(HttpStatusCode.NotFound, unknown.StatusCode);
+    }
+
+    [TestMethod]
     public async Task OnlyThoseWhoManageTagsChangeThem()
     {
         await using var shelf = await Shelf.CreateAsync(Cancel);
