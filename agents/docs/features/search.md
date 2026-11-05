@@ -83,7 +83,7 @@ Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), 
   the counted tags' fields looked up by key. Tried first and slower at 10,000 books on SQLite: grouping in the database
   through the closure with `COUNT(DISTINCT)` 540 ms; grouping by tag joined to `Tags` 210 ms.
 - The cap is the cost: at 2M on SQLite a broad word took 130 ms with 2,000, 290 with 5,000, 480 with 10,000 (D-5.8
-  said 10,000; brought to the user with this chunk).
+  said 10,000; the user kept 2,000, 2026-11-05). Past it the total is shown as "2,000+ books".
 - Plain tags are `FieldId IS NULL` minus the fields' own rows **by id**: with `FieldKey IS NULL` SQLite walked that
   index over nearly all 660k tags (111 ms).
 - The client asks again whenever the library or the search changes; the button stays disabled without values.

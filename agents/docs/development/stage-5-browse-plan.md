@@ -74,8 +74,8 @@ order: design foundation (5.0), then the administration with its search (5.1), t
   then values by prefix through the `(TenantId, FieldId, NormalizedName)` index).
 - **D-5.8 Facets with capped counts:** counts from `TagCounts` when nothing narrows the list; within a search, counted
   over at most the first 10,000 matches and shown "1000+" past the cap (never a count over the catalog per request).
-  Built (chunk 17) with **2,000**: 10,000 took 480–780 ms on SQLite at 2M, 5,000 290–420 (budget 300); put to the
-  user with the chunk. Without a search, fields of more than 2,000 values (authors) have no facet (no index by count).
+  Built (chunk 17) with **2,000**: 10,000 took 480–780 ms on SQLite at 2M, 5,000 290–420 (budget 300); kept by the
+  user (2026-11-05). Without a search, fields of more than 2,000 values (authors) have no facet (no index by count).
   As Refine: a button by Sort opening a sheet, on the library page and the search results.
 - **D-5.9 The administration is a page of its own (the user, 2026-11-01):** `/admin` replaces the shell's library
   sidebar with its own left column (search box, groups, sections, the open section's sub-pages), as SFE's
