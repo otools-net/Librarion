@@ -35,7 +35,8 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
 - Planted duplicates: same file (size + CRC) every 100th book, same ISBN, same work (title + author) every 50th.
 - Filter tags on 0.1 %, 1 % and 10 % of the books, one group with an account (`filter-0`, `filter-1`, `filter-2`,
   password `benchmark-password`) limited to each (D22's narrow allow-lists).
-- `TagCounts` (direct, parents, fields once per book) and `Libraries.BookCount`.
+- `TagCounts`: `BookCount` the direct links, `TotalCount` the tag with its parent and field once per book (as the
+  importer keeps them, stage 6 4a), and `Libraries.BookCount`.
 - Small-size tests: `CatalogGeneratorTests` (3,000 books, both providers).
 
 ## What `run` measures

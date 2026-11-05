@@ -10,7 +10,8 @@ Curators have.
 - **Show** chooses what is listed: the plain tags, or one field's values. Each choice says how many there are ("Authors
   (10,000+)" past ten thousand).
 - Every tag is listed, books or not, by name, 50 at a time: **More** brings the next ones. Each row says how many books
-  have it and how many tags are under it, and marks the hidden ones, categories and built-in tags.
+  have it, counting those of the tags under it once each (and, when that differs, how many are tagged with it
+  itself), how many tags are under it, and marks the hidden ones, categories and built-in tags.
 - **Find by name** finds tags whose name starts with what is typed, or has its words ("king" finds Stephen King). A
   search shows the first 50 found: type more to narrow it down.
 - **New tag** (or **New value** for a field) makes one; **New field** makes a field, such as *mood*, with its key: what

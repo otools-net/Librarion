@@ -120,13 +120,24 @@ public enum TagSource : byte
     Rule,
 }
 
-/// <summary>Books of a library with the tag or a descendant, kept by imports and tag changes (never counted per request).</summary>
+/// <summary>
+/// A tag's books in a library (present ones, not missing), kept by imports and tag changes by delta, never counted per
+/// request (agents/docs/features/tags.md#scale). A row is kept while either count is above zero.
+/// </summary>
 public sealed class TagCount
 {
     public int TenantId { get; set; }
     public int LibraryId { get; set; }
     public int TagId { get; set; }
+
+    /// <summary>Books linked to the tag itself: what search sizes a term by, and what a delete or merge moves.</summary>
     public int BookCount { get; set; }
+
+    /// <summary>
+    /// Books with the tag or any tag under it (through <see cref="TagClosure"/>, a field over its values), each once:
+    /// what lists and pages show ("Fiction" counts its "Fantasy" and "Horror" books; stage 6, 4a).
+    /// </summary>
+    public int TotalCount { get; set; }
 }
 
 /// <summary>A content filter of a group (D5): its members see only books with an allowed tag, never one with a denied tag.</summary>

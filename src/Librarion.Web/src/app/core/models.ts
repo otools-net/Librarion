@@ -399,7 +399,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;
@@ -496,7 +496,10 @@ export interface ManagedTag {
     isCategory: boolean;
     isHidden: boolean;
     builtIn: boolean;
+    /** With the books of the tags under it, each once. */
     books: number;
+    /** Linked to it itself: what a delete or merge moves. */
+    tagged: number;
     children: number;
 }
 

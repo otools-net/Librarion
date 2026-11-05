@@ -12,10 +12,11 @@ public sealed record ManagedField(int Id, string Key, string Name, bool BuiltIn,
 public sealed record ManagedFields(IReadOnlyList<ManagedField> Fields, int PlainTags, bool PlainCapped);
 
 /// <summary>
-/// A tag in the tag manager: <paramref name="Books"/> its own links in every library (from the counts),
-/// <paramref name="Children"/> the tags directly under it.
+/// A tag in the tag manager: <paramref name="Books"/> its books with those of the tags under it in every library,
+/// <paramref name="Tagged"/> those linked to it itself (what a delete or merge moves), <paramref name="Children"/> the
+/// tags directly under it.
 /// </summary>
-public sealed record ManagedTag(int Id, string Name, string SortName, string? Color, bool IsCategory, bool IsHidden, bool BuiltIn, long Books, int Children);
+public sealed record ManagedTag(int Id, string Name, string SortName, string? Color, bool IsCategory, bool IsHidden, bool BuiltIn, long Books, long Tagged, int Children);
 
 /// <summary>A page of the manager's list; a search answers one page, <paramref name="Capped"/> when it found more.</summary>
 public sealed record ManagedPage(IReadOnlyList<ManagedTag> Items, string? Next, bool Capped);
@@ -112,14 +113,16 @@ public sealed class TagLists(TenantDb tenantDb)
 
         var items = await db.Tags.Where(t => ids.Contains(t.Id))
             .Select(t => new { t.Id, t.Name, t.SortName, t.Color, t.IsCategory, t.IsHidden, t.BuiltIn }).ToListAsync(cancellationToken);
-        var books = (await db.TagCounts.Where(c => ids.Contains(c.TagId)).GroupBy(c => c.TagId).Select(g => new { g.Key, Books = g.Sum(c => (long)c.BookCount) })
-            .ToListAsync(cancellationToken)).ToDictionary(c => c.Key, c => c.Books);
+        var books = (await db.TagCounts.Where(c => ids.Contains(c.TagId)).GroupBy(c => c.TagId)
+                .Select(g => new { g.Key, Books = g.Sum(c => (long)c.TotalCount), Tagged = g.Sum(c => (long)c.BookCount) })
+            .ToListAsync(cancellationToken)).ToDictionary(c => c.Key);
         var children = (await db.TagParents.Where(p => ids.Contains(p.ParentId)).GroupBy(p => p.ParentId).Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken)).ToDictionary(c => c.Key, c => c.Count);
         var byId = items.ToDictionary(t => t.Id);
         var ordered = string.IsNullOrWhiteSpace(query) ? ids : ids.OrderBy(id => byId[id].SortName, StringComparer.CurrentCultureIgnoreCase).ToList();
         return new ManagedPage(ordered.Where(byId.ContainsKey).Select(id => byId[id])
-            .Select(t => new ManagedTag(t.Id, t.Name, t.SortName, t.Color, t.IsCategory, t.IsHidden, t.BuiltIn is not null, books.GetValueOrDefault(t.Id), children.GetValueOrDefault(t.Id)))
+            .Select(t => new ManagedTag(t.Id, t.Name, t.SortName, t.Color, t.IsCategory, t.IsHidden, t.BuiltIn is not null, books.GetValueOrDefault(t.Id)?.Books ?? 0,
+                books.GetValueOrDefault(t.Id)?.Tagged ?? 0, children.GetValueOrDefault(t.Id)))
             .ToList(), next, capped);
     }
 }

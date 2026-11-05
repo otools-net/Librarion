@@ -309,6 +309,65 @@ public sealed class TagCurationTests
     }
 
     [TestMethod]
+    public async Task AParentCountsTheBooksOfTheTagsUnderItOnce()
+    {
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        var fiction = await CreateAsync(shelf, new TagInput("Fiction"));
+        var other = await CreateAsync(shelf, new TagInput("Other"));
+        var fantasy = await CreateAsync(shelf, new TagInput("Fantasy", ParentIds: [fiction.Id]));
+        var horror = await CreateAsync(shelf, new TagInput("Horror", ParentIds: [fiction.Id]));
+        shelf.Write("both.fb2", Fb2("Both", ["Ann Writer"], "Fantasy, Horror"));
+        shelf.Write("one.fb2", Fb2("One", ["Ann Writer", "Bea Reader"], "Fantasy"));
+        await shelf.ScanAsync(Cancel);
+        int authorField;
+        await using (var db = await shelf.DbAsync(Cancel))
+            authorField = await db.Tags.Where(t => t.FieldKey == "author").Select(t => t.Id).SingleAsync(Cancel);
+
+        Assert.AreEqual((0, 2), await CountsAsync(shelf, fiction.Id), "a book under two of its children counts once");
+        Assert.AreEqual((2, 2), await CountsAsync(shelf, fantasy.Id));
+        Assert.AreEqual((0, 2), await CountsAsync(shelf, authorField), "a field: its books with any author, once each");
+
+        // Horror moves under Other: Fiction keeps Both through Fantasy.
+        using (var moved = await shelf.Admin.PutAsJsonAsync($"/api/tags/{horror.Id}", new TagInput("Horror", ParentIds: [other.Id]), Cancel))
+            Assert.AreEqual(HttpStatusCode.OK, moved.StatusCode);
+        Assert.AreEqual((0, 2), await CountsAsync(shelf, fiction.Id));
+        Assert.AreEqual((0, 1), await CountsAsync(shelf, other.Id));
+
+        // Fantasy merged into Horror: Fiction loses its books, Other gains One.
+        await WorkAsync(await shelf.Admin.PostAsJsonAsync($"/api/tags/{fantasy.Id}/merge", new TagEndpoints.MergeInput(horror.Id), Cancel));
+        Assert.AreEqual((0, 0), await CountsAsync(shelf, fiction.Id), "no row left");
+        Assert.AreEqual((0, 2), await CountsAsync(shelf, other.Id));
+        Assert.AreEqual((2, 2), await CountsAsync(shelf, horror.Id));
+
+        // A book gone missing leaves every count it was in.
+        File.Delete(Path.Combine(shelf.Root, "one.fb2"));
+        await shelf.ScanAsync(Cancel);
+        Assert.AreEqual((0, 1), await CountsAsync(shelf, other.Id));
+        Assert.AreEqual((0, 1), await CountsAsync(shelf, authorField));
+    }
+
+    [TestMethod]
+    public async Task MovingATagWithManyBooksCountsInTheBackground()
+    {
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        var fiction = await CreateAsync(shelf, new TagInput("Fiction"));
+        var saga = await CreateAsync(shelf, new TagInput("Saga"));
+        shelf.Write("one.fb2", Fb2("One", ["Ann Writer"], "Saga"));
+        shelf.Write("two.fb2", Fb2("Two", ["Ann Writer"], "Saga"));
+        await shelf.ScanAsync(Cancel);
+        shelf.Factory.Services.GetRequiredService<TagService>().Threshold = 1;
+
+        using var moved = await shelf.Admin.PutAsJsonAsync($"/api/tags/{saga.Id}", new TagInput("Saga", ParentIds: [fiction.Id]), Cancel);
+        Assert.AreEqual(HttpStatusCode.OK, moved.StatusCode);
+        Assert.IsTrue(await UnderAsync(shelf, saga.Id, fiction.Id), "the parent is there at once");
+        var runs = await shelf.Admin.GetAsync<List<TaskRunInfo>>("/api/tasks", Cancel);
+        var run = await WaitAsync(shelf.Admin, runs.Single(r => r.Task == BackgroundTaskKind.TagCounts).Id);
+
+        Assert.AreEqual(TaskOutcome.Succeeded, run.Outcome, run.Summary);
+        Assert.AreEqual((0, 2), await CountsAsync(shelf, fiction.Id), "counted by the run");
+    }
+
+    [TestMethod]
     public async Task OnlyThoseWhoManageTagsChangeThem()
     {
         await using var shelf = await Shelf.CreateAsync(Cancel);
@@ -363,6 +422,14 @@ public sealed class TagCurationTests
         return await db.TagCounts.Where(c => c.TagId == tagId).SumAsync(c => c.BookCount, Cancel);
     }
 
+    /// <summary>A tag's (direct, total) counts in the shelf's library; (0, 0) without a row.</summary>
+    private async Task<(int, int)> CountsAsync(Shelf shelf, int tagId)
+    {
+        await using var db = await shelf.DbAsync(Cancel);
+        var row = await db.TagCounts.SingleOrDefaultAsync(c => c.TagId == tagId && c.LibraryId == shelf.LibraryId, Cancel);
+        return row is null ? (0, 0) : (row.BookCount, row.TotalCount);
+    }
+
     private async Task<int> CountAsync(Shelf shelf, string q) =>
         (await shelf.Admin.GetAsync<Page<BookListItem>>($"/api/books?library={shelf.LibraryId}&limit=50&q={Uri.EscapeDataString(q)}", Cancel)).Items.Count;
 
@@ -371,10 +438,10 @@ public sealed class TagCurationTests
     {
         await using var db = await shelf.DbAsync(Cancel);
         var book = await db.Books.Where(b => b.Title == title).Select(b => b.Id).SingleAsync(Cancel);
-        var before = await TagLinks.PresentAsync(db, [tagId], [book], Cancel);
+        var before = await TagLinks.SnapshotAsync(db, [book], Cancel);
         db.BookTags.Add(new BookTag { TenantId = shelf.TenantId, BookId = book, TagId = tagId, Source = TagSource.Manual });
         await db.SaveChangesAsync(Cancel);
-        await TagLinks.CountAsync(db, shelf.TenantId, before, await TagLinks.PresentAsync(db, [tagId], [book], Cancel), Cancel);
+        await TagLinks.CountAsync(db, shelf.TenantId, before, await TagLinks.SnapshotAsync(db, [book], Cancel), Cancel);
     }
 
     private async Task<TaskRunInfo> WaitAsync(HttpClient client, long run)

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librarion.Core.Catalog;
 
-/// <param name="BookCount">Books of the library linked to it, from <see cref="TagCount"/>; null when no library was named.</param>
+/// <param name="BookCount">Books of the library with it or a tag under it (<see cref="TagCount.TotalCount"/>); null when no library was named.</param>
 public sealed record FieldValue(int Id, string Name, string SortName, int? BookCount);
 
 /// <param name="BuiltIn">One of the fields every tenant has (its name is translated by the client from its key).</param>
@@ -15,7 +15,7 @@ public sealed record TagRef(int Id, string Name, string? Field);
 
 /// <param name="Field">The field it is a value of (its key); null for a plain tag.</param>
 /// <param name="FieldName">That field's own name (a custom field's; a built-in one is translated from its key).</param>
-/// <param name="BookCount">Books of the library linked to it; null when no library was named.</param>
+/// <param name="BookCount">Books of the library with it or a tag under it; null when no library was named.</param>
 /// <param name="Parents">The tags it is under ("Horror" under "Fiction"), by name.</param>
 /// <param name="Children">The tags under it, by name, at most <see cref="TagQueries.MaxChildren"/>.</param>
 /// <param name="MoreChildren">More tags are under it than <paramref name="Children"/> holds (those are then any of them).</param>
@@ -95,7 +95,7 @@ public sealed class TagQueries(TenantDb tenantDb)
 
         int? count = null;
         if (libraryId is { } library)
-            count = await db.TagCounts.Where(c => c.LibraryId == library && c.TagId == tagId).Select(c => (int?)c.BookCount).FirstOrDefaultAsync(cancellationToken) ?? 0;
+            count = await db.TagCounts.Where(c => c.LibraryId == library && c.TagId == tagId).Select(c => (int?)c.TotalCount).FirstOrDefaultAsync(cancellationToken) ?? 0;
         var parents = await db.TagParents.Where(p => p.ChildId == tagId)
             .Select(p => new TagRef(p.ParentId, p.Parent!.Name, p.Parent.Field == null ? null : p.Parent.Field.FieldKey))
             .ToListAsync(cancellationToken);
@@ -146,8 +146,9 @@ public sealed class TagQueries(TenantDb tenantDb)
             else
             {
                 var ids = rows.Select(r => r.Id).ToList();
-                var counts = await db.TagCounts.Where(c => c.LibraryId == library && ids.Contains(c.TagId) && c.BookCount > 0)
-                    .ToDictionaryAsync(c => c.TagId, c => c.BookCount, cancellationToken);
+                // With what is under them: a category whose books are all in its subcategories is listed too.
+                var counts = await db.TagCounts.Where(c => c.LibraryId == library && ids.Contains(c.TagId) && c.TotalCount > 0)
+                    .ToDictionaryAsync(c => c.TagId, c => c.TotalCount, cancellationToken);
                 items.AddRange(rows.Where(r => counts.ContainsKey(r.Id)).Select(r => new FieldValue(r.Id, r.Name, r.SortName, counts[r.Id])));
             }
 

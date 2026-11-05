@@ -115,6 +115,8 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   not turned into a join), so `NarrowAsync`'s choice holds: 31–39 ms.
 - Imports with the search index kept row by row (2026-11-03, PostgreSQL): INPX 1M 9.2 min (8.9 before), Calibre 2M
   28.2 min (27.1; budget 30), unchanged re-imports 37 s and 2.7 min: within budget.
+- Imports with parents' totals kept (`TagCounts.TotalCount`, stage 6 4a, 2026-11-05, PostgreSQL): INPX 1M 9.0 min,
+  Calibre 2M 28.4 min (budget 30), unchanged re-imports 38 s and 2.7 min: the same as before.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

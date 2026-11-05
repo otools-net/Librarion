@@ -18,6 +18,8 @@ public enum BackgroundTaskKind : byte
     FieldMerge,
     /// <summary>A merge undone: the links moved back.</summary>
     MergeUndo,
+    /// <summary>A tag with many books under it moved: the totals of the tags it left and joined counted again.</summary>
+    TagCounts,
 }
 
 public enum TaskTrigger : byte

@@ -115,7 +115,7 @@ public sealed class SearchSuggestions(TenantDb tenantDb)
         if (libraryId is { } library)
         {
             var ids = candidates.Select(c => c.Id).ToList();
-            var counts = await db.TagCounts.Where(c => c.LibraryId == library && ids.Contains(c.TagId)).ToDictionaryAsync(c => c.TagId, c => c.BookCount, cancellationToken);
+            var counts = await db.TagCounts.Where(c => c.LibraryId == library && ids.Contains(c.TagId)).ToDictionaryAsync(c => c.TagId, c => c.TotalCount, cancellationToken);
             candidates = candidates.Where(c => counts.GetValueOrDefault(c.Id) > 0).Select(c => c with { BookCount = counts[c.Id] }).ToList();
         }
 

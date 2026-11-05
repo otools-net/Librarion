@@ -103,8 +103,15 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
             return problem;
         await db.SaveChangesAsync(cancellationToken);
         var newParents = await db.TagParents.Where(p => p.ChildId == tagId).Select(p => p.ParentId).OrderBy(p => p).ToListAsync(cancellationToken);
+        ClosureChange? recount = null;
         if (!oldParents.SequenceEqual(newParents))
-            await TagClosures.RebuildAsync(db, tenantId, [tagId], cancellationToken);
+        {
+            // The totals move for every book under it: past the threshold, in the background (the closure itself now).
+            var later = InBackground(tenantId, await BooksUnderAsync(db, [tagId], cancellationToken));
+            var change = await TagClosures.RebuildAsync(db, tenantId, [tagId], cancellationToken, countNow: !later);
+            if (later && !change.IsEmpty)
+                recount = change;
+        }
         // The books that copy its sort name (it is their first author): one statement, whatever their number.
         if (tag.SortName != oldSort)
         {
@@ -115,6 +122,14 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
 
         await transaction.CommitAsync(cancellationToken);
         changes.Changed();
+        if (recount is not null)
+            await tasks.StartTenantAsync(tenantId, BackgroundTaskKind.TagCounts, null, async (progress, cancel) =>
+            {
+                progress.Report(new ScanProgress(0, 0, 0, 0, 0, tag.Name));
+                await using var counting = await tenantDb.ForTenantAsync(tenantId, cancel);
+                await TagClosures.CountAsync(counting, tenantId, recount, cancel);
+                return new ScanResult(0, 0, 0, 0, 0, 0, 0, [], []);
+            }, cancellationToken);
         return AccessResult<TagDefinition>.Ok((await DefinitionAsync(db, tag.Id, cancellationToken))!);
     }
 
@@ -136,7 +151,8 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
                 return AccessResult<TagWork>.Conflict("field.notEmpty");
             if (await db.GroupTagFilters.AnyAsync(f => f.TagId == tagId, cancellationToken))
                 return AccessResult<TagWork>.Conflict("tag.inFilter");
-            links = await LinksAsync(db, [tagId], cancellationToken);
+            // Its children leave it: the totals of what it is under move for every book under them too.
+            links = Math.Max(await LinksAsync(db, [tagId], cancellationToken), await BooksUnderAsync(db, [tagId], cancellationToken));
         }
 
         if (InBackground(tenantId, links))
@@ -152,6 +168,10 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
     /// <summary>The links of <paramref name="tagIds"/> in every library: what deciding between inline and a run looks at (the counts, never a count of links).</summary>
     public static async Task<long> LinksAsync(LibrarionDbContext db, IReadOnlyCollection<int> tagIds, CancellationToken cancellationToken) =>
         await db.TagCounts.Where(c => tagIds.Contains(c.TagId)).SumAsync(c => (long)c.BookCount, cancellationToken);
+
+    /// <summary>The books with <paramref name="tagIds"/> or a tag under them in every library: what moving them costs the totals.</summary>
+    public static async Task<long> BooksUnderAsync(LibrarionDbContext db, IReadOnlyCollection<int> tagIds, CancellationToken cancellationToken) =>
+        await db.TagCounts.Where(c => tagIds.Contains(c.TagId)).SumAsync(c => (long)c.TotalCount, cancellationToken);
 
     /// <summary>The links removed a batch at a time, then the tag (its children keep their other parents, the closure rebuilt under them).</summary>
     private async Task<int> RemoveAsync(int tenantId, int tagId, IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
@@ -170,9 +190,9 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
             if (books.Count == 0)
                 break;
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            var before = await TagLinks.PresentAsync(db, [tagId], books, cancellationToken);
+            var before = await TagLinks.SnapshotAsync(db, books, cancellationToken);
             removed += await db.BookTags.Where(l => l.TagId == tagId && books.Contains(l.BookId)).ExecuteDeleteAsync(cancellationToken);
-            await TagLinks.CountAsync(db, tenantId, before, [], cancellationToken);
+            await TagLinks.CountAsync(db, tenantId, before, await TagLinks.SnapshotAsync(db, books, cancellationToken), cancellationToken);
             await TagLinks.SortColumnsAsync(db, books, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             after = books[^1];

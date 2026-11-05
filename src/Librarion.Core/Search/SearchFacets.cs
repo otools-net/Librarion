@@ -174,9 +174,10 @@ public sealed class SearchFacets(TenantDb tenantDb)
                 .Take(MaxValuesRead + 1).ToListAsync(cancellationToken);
             if (ids.Count == 0 || ids.Count > MaxValuesRead)
                 continue;
-            var counts = await db.TagCounts.Where(c => c.LibraryId == libraryId && EF.Parameter(ids).Contains(c.TagId) && c.BookCount > 0)
-                .OrderByDescending(c => c.BookCount).ThenBy(c => c.TagId).Take(MaxValues)
-                .Select(c => new Counted(c.TagId, field, c.BookCount))
+            // Totals: a category with its subcategories' books, each once, as a search's books are counted.
+            var counts = await db.TagCounts.Where(c => c.LibraryId == libraryId && EF.Parameter(ids).Contains(c.TagId) && c.TotalCount > 0)
+                .OrderByDescending(c => c.TotalCount).ThenBy(c => c.TagId).Take(MaxValues)
+                .Select(c => new Counted(c.TagId, field, c.TotalCount))
                 .ToListAsync(cancellationToken);
             if (counts.Count > 0)
                 top[fieldId] = counts;

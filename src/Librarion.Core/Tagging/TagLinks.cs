@@ -5,36 +5,33 @@ namespace Librarion.Core.Tagging;
 
 /// <summary>
 /// What a change of links (a delete, a merge, an undo) keeps up for a batch of books: <see cref="TagCount"/> by delta
-/// (never recounted whole, agents/docs/features/tags.md#scale) and the books' sort columns that copy a link (the first
-/// author's sort name, the first series).
+/// from the books' tags before and after (never recounted whole, agents/docs/features/tags.md#scale) and the books'
+/// sort columns that copy a link (the first author's sort name, the first series).
 /// </summary>
 public static class TagLinks
 {
-    /// <summary>The (library, tag, book) of the books present (not missing) among <paramref name="books"/> that have one of <paramref name="tags"/>.</summary>
-    public static async Task<HashSet<(int Library, int Tag, int Book)>> PresentAsync(LibrarionDbContext db, IReadOnlyCollection<int> tags, IReadOnlyCollection<int> books,
+    /// <summary>The tags of each present book (not missing) of <paramref name="books"/>, with its library: a side of a change.</summary>
+    public static async Task<Dictionary<int, (int Library, int[] Tags)>> SnapshotAsync(LibrarionDbContext db, IReadOnlyCollection<int> books,
         CancellationToken cancellationToken)
     {
-        var rows = await db.BookTags.Where(l => tags.Contains(l.TagId) && books.Contains(l.BookId) && l.Book!.MissingSince == null)
-            .Select(l => new { l.Book!.LibraryId, l.TagId, l.BookId }).Distinct().ToListAsync(cancellationToken);
-        return rows.Select(r => (r.LibraryId, r.TagId, r.BookId)).ToHashSet();
+        var rows = await db.BookTags.Where(l => books.Contains(l.BookId) && l.Book!.MissingSince == null)
+            .Select(l => new { l.BookId, l.Book!.LibraryId, l.TagId }).ToListAsync(cancellationToken);
+        return rows.GroupBy(r => r.BookId).ToDictionary(g => g.Key, g => (g.First().LibraryId, g.Select(r => r.TagId).Distinct().ToArray()));
     }
 
-    /// <summary>The counts moved from <paramref name="before"/> to <paramref name="after"/> (both from <see cref="PresentAsync"/>), written per library.</summary>
-    public static async Task CountAsync(LibrarionDbContext db, int tenantId, HashSet<(int Library, int Tag, int Book)> before, HashSet<(int Library, int Tag, int Book)> after,
-        CancellationToken cancellationToken)
+    /// <summary>The counts moved from <paramref name="before"/> to <paramref name="after"/> (both from <see cref="SnapshotAsync"/>), written per library.</summary>
+    public static async Task CountAsync(LibrarionDbContext db, int tenantId, Dictionary<int, (int Library, int[] Tags)> before,
+        Dictionary<int, (int Library, int[] Tags)> after, CancellationToken cancellationToken)
     {
-        var deltas = new Dictionary<(int Library, int Tag), int>();
-        foreach (var gone in before.Except(after))
-            deltas[(gone.Library, gone.Tag)] = deltas.GetValueOrDefault((gone.Library, gone.Tag)) - 1;
-        foreach (var come in after.Except(before))
-            deltas[(come.Library, come.Tag)] = deltas.GetValueOrDefault((come.Library, come.Tag)) + 1;
-        foreach (var library in deltas.Where(d => d.Value != 0).GroupBy(d => d.Key.Library))
+        var changes = new TagCountChanges();
+        foreach (var book in before.Keys.Union(after.Keys))
         {
-            var changes = library.Select(d => new KeyValuePair<int, int>(d.Key.Tag, d.Value)).ToList();
-            await BulkRows.AddCountsAsync(db, tenantId, library.Key, changes, cancellationToken);
-            var ids = changes.Select(c => c.Key).ToList();
-            await db.TagCounts.Where(c => c.LibraryId == library.Key && ids.Contains(c.TagId) && c.BookCount <= 0).ExecuteDeleteAsync(cancellationToken);
+            var was = before.GetValueOrDefault(book);
+            var now = after.GetValueOrDefault(book);
+            changes.Add(was.Tags is null ? now.Library : was.Library, was.Tags ?? [], now.Tags ?? []);
         }
+
+        await changes.WriteAsync(db, tenantId, new TagAncestors(), cancellationToken);
     }
 
     /// <summary>

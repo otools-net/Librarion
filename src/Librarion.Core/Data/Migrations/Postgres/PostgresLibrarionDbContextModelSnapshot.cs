@@ -831,6 +831,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TotalCount")
+                        .HasColumnType("integer");
+
                     b.HasKey("LibraryId", "TagId");
 
                     b.HasIndex("TagId");

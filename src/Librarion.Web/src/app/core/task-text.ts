@@ -7,7 +7,7 @@ import { TaskRunInfo } from './models';
  */
 
 /** Runs over a whole tenant's tags (no library): their counts are links. */
-const TAG_TASKS = new Set<TaskRunInfo['task']>(['tagDelete', 'tagMerge', 'fieldMerge', 'mergeUndo']);
+const TAG_TASKS = new Set<TaskRunInfo['task']>(['tagDelete', 'tagMerge', 'fieldMerge', 'mergeUndo', 'tagCounts']);
 
 /** "Scanning Comics…" while it runs; "Scan · Comics" once it ended (its outcome is shown beside). */
 export function runTitle(i18n: I18n, run: TaskRunInfo, library: string): string {

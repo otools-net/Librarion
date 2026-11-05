@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261105180634_Initial")]
+    [Migration("20261105191300_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -832,6 +832,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("integer");
 
                     b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalCount")
                         .HasColumnType("integer");
 
                     b.HasKey("LibraryId", "TagId");

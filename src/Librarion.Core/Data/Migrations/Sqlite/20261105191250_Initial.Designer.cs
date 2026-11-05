@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Librarion.Core.Data.Migrations.Sqlite
 {
     [DbContext(typeof(SqliteLibrarionDbContext))]
-    [Migration("20261105180623_Initial")]
+    [Migration("20261105191250_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -805,6 +805,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalCount")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("LibraryId", "TagId");

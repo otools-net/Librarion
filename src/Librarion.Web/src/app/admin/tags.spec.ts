@@ -17,7 +17,7 @@ const FIELDS: ManagedFields = {
 };
 
 const tag = (overrides: Partial<ManagedTag> = {}): ManagedTag => ({
-    id: 7, name: 'Fantasy', sortName: 'Fantasy', color: '#aa0000', isCategory: false, isHidden: false, builtIn: false, books: 1234, children: 3, ...overrides,
+    id: 7, name: 'Fantasy', sortName: 'Fantasy', color: '#aa0000', isCategory: false, isHidden: false, builtIn: false, books: 1234, tagged: 1234, children: 3, ...overrides,
 });
 
 const definition = (overrides: Partial<TagDefinition> = {}): TagDefinition => ({

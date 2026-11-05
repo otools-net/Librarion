@@ -67,7 +67,8 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
                 return AccessResult<TagWork>.Conflict("tag.builtIn");
             if (await TagClosures.IsUnderAsync(db, targetId, sourceId, cancellationToken))
                 return AccessResult<TagWork>.Invalid("targetId", "target.under");
-            links = await TagService.LinksAsync(db, [sourceId], cancellationToken);
+            // Its links move, and its children with every book under them (the totals above them).
+            links = Math.Max(await TagService.LinksAsync(db, [sourceId], cancellationToken), await TagService.BooksUnderAsync(db, [sourceId], cancellationToken));
             log = await NewLogAsync(db, tenantId, MergeKind.Tag, null, userId, sourceId, source.Name, targetId, target.Name, cancellationToken);
         }
 
@@ -225,7 +226,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         var links = await db.BookTags.Where(l => l.TagId == sourceId && books.Contains(l.BookId)).AsNoTracking().ToListAsync(cancellationToken);
         var held = (await db.BookTags.Where(l => l.TagId == targetId && books.Contains(l.BookId)).Select(l => new { l.BookId, l.Source }).ToListAsync(cancellationToken))
             .Select(l => (l.BookId, l.Source)).ToHashSet();
-        var before = await TagLinks.PresentAsync(db, [sourceId, targetId], books, cancellationToken);
+        var before = await TagLinks.SnapshotAsync(db, books, cancellationToken);
 
         await db.BookTags.Where(l => l.TagId == sourceId && books.Contains(l.BookId)).ExecuteDeleteAsync(cancellationToken);
         foreach (var link in links)
@@ -238,7 +239,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
 
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
-        await TagLinks.CountAsync(db, tenantId, before, await TagLinks.PresentAsync(db, [sourceId, targetId], books, cancellationToken), cancellationToken);
+        await TagLinks.CountAsync(db, tenantId, before, await TagLinks.SnapshotAsync(db, books, cancellationToken), cancellationToken);
         await TagLinks.SortColumnsAsync(db, books, cancellationToken);
         var count = links.Count;
         await db.MergeLogs.Where(l => l.Id == logId).ExecuteUpdateAsync(s => s.SetProperty(l => l.Links, l => l.Links + count), cancellationToken);
@@ -426,7 +427,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
     {
         var books = rows.Select(r => r.BookId).Distinct().ToList();
         var present = (await db.Books.Where(b => books.Contains(b.Id)).Select(b => b.Id).ToListAsync(cancellationToken)).ToHashSet();
-        var before = await TagLinks.PresentAsync(db, [sourceId, targetId], books, cancellationToken);
+        var before = await TagLinks.SnapshotAsync(db, books, cancellationToken);
         var held = (await db.BookTags.Where(l => l.TagId == sourceId && books.Contains(l.BookId)).Select(l => new { l.BookId, l.Source }).ToListAsync(cancellationToken))
             .Select(l => (l.BookId, l.Source)).ToHashSet();
         var back = rows.Where(r => present.Contains(r.BookId)).ToList();
@@ -441,7 +442,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
             .Select(r => new BookTag { TenantId = tenantId, BookId = r.BookId, TagId = sourceId, Source = r.Source, Ordinal = r.Ordinal, Number = r.Number }));
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
-        await TagLinks.CountAsync(db, tenantId, before, await TagLinks.PresentAsync(db, [sourceId, targetId], books, cancellationToken), cancellationToken);
+        await TagLinks.CountAsync(db, tenantId, before, await TagLinks.SnapshotAsync(db, books, cancellationToken), cancellationToken);
         await TagLinks.SortColumnsAsync(db, books, cancellationToken);
         return back.Count;
     }

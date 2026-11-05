@@ -38,8 +38,21 @@ sort columns per batch), `Core/Merging/TagMerger.cs` (merges, undo: [merging](me
   (`tag.builtIn`), a field with values (`field.notEmpty`: merge it), a tag a content filter names (`tag.inFilter`:
   deleting it would change who sees what). A deleted imported tag comes back with the next import of its books
   (ignoring a raw name is the Imported tags page's job, chunk 9).
-- `TagCounts` hold each tag's **direct** links of present books (not missing), as the importer writes them; a parent's
-  books are found through the closure, so re-parenting moves no counts.
+- `TagCounts` hold two counts per library of present books (not missing): `BookCount`, the tag's **direct** links
+  (what search sizes a term by, what a delete or merge moves), and `TotalCount` (stage 6, 4a: the user asked
+  2026-11-05), its books **with those of every tag under it**, each once (a field's row: its books with any value).
+  Lists, a tag's page, suggestions, Refine and the tag manager show the total; the manager adds "N tagged with it"
+  when the two differ.
+- How the total is kept (`TagCountChanges`, `TagAncestors`, `TagClosures.CountAsync`): every change gives each
+  touched book's tags before and after; their ancestors come from `TagClosure` through a cache per import (cleared
+  past 200k tags, and when `TagClosures.Version` moved: a rebuild while a scan runs); a tag gains a book it is now
+  above and wasn't, loses one it no longer is. Both counts go in the one upsert per thousand tags the importer wrote
+  before. A closure rebuild records each changed tag's ancestors outside the subtree before and after; only the
+  ancestors that differ are recounted, over the present books under the changed tags (their other tags' ancestors
+  counted in), so the cost follows the books moved, never the size of a big category above them. Re-parenting a tag
+  with more books under it than the threshold rebuilds the closure at once and counts in a tenant run (`TagCounts`).
+- Known limit: a closure change while an import writes a batch can leave that batch counted with the old ancestors
+  (the version is read per batch). No full recount exists yet: a drift stays until the books are counted again.
 
 ## The tag manager (built, stage 6 chunk 4)
 

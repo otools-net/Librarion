@@ -173,8 +173,13 @@ export class TagsSection implements OnInit {
     }
 
     protected meta(tag: ManagedTag): string {
-        const books = this.i18n.t('tagAdmin.books', { count: this.i18n.number(tag.books) });
-        return tag.children ? `${books} · ${this.i18n.t('tagAdmin.children', { count: this.i18n.number(tag.children) })}` : books;
+        const parts = [this.i18n.t('tagAdmin.books', { count: this.i18n.number(tag.books) })];
+        // Books under it through other tags: how many it holds itself.
+        if (tag.tagged !== tag.books)
+            parts.push(this.i18n.t('tagAdmin.tagged', { count: this.i18n.number(tag.tagged) }));
+        if (tag.children)
+            parts.push(this.i18n.t('tagAdmin.children', { count: this.i18n.number(tag.children) }));
+        return parts.join(' · ');
     }
 
     protected choose(key: string): void {

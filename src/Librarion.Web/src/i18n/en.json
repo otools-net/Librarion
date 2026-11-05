@@ -112,6 +112,7 @@
     "tagAdmin.editHint": "Edit {name}",
     "tagAdmin.books": "{count} books",
     "tagAdmin.children": "{count} tags under it",
+    "tagAdmin.tagged": "{count} tagged with it",
     "tagAdmin.hiddenBadge": "Hidden",
     "tagAdmin.categoryBadge": "Category",
     "tagAdmin.builtIn": "Built-in",
@@ -506,6 +507,7 @@
     "taskRun.running.tagMerge": "Merging tags…",
     "taskRun.running.fieldMerge": "Merging fields…",
     "taskRun.running.mergeUndo": "Undoing a merge…",
+    "taskRun.running.tagCounts": "Counting the books under a moved tag…",
     "taskRun.ended": "{task} · {library}",
     "taskRun.library": "Library {id}",
     "taskPanel.elapsed": "Time taken so far",
@@ -817,5 +819,6 @@
     "task.tagMerge": "Tags merged",
     "task.fieldMerge": "Fields merged",
     "task.mergeUndo": "Merge undone",
+    "task.tagCounts": "Tag counts updated",
     "taskRun.everyLibrary": "Every library"
 }

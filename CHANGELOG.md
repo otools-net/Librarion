@@ -16,6 +16,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   the other, its name becomes another name of it, and books imported later under the old name land there too; a
   merged field's key keeps working in searches (`genre:` after merging it into `category:`). Changes of more than
   10,000 links run in the background, shown in the progress panel to those who manage tags.
+- A tag's number of books now includes the books of the tags under it, each once: "Fiction" counts its "Fantasy" and
+  "Horror" books, a field (Authors) the books with any author. Shown in the lists of values, on a tag's page, in
+  search suggestions, in Refine and in the tag manager, which also says how many are tagged with it itself.
 - Administration › Catalog › Tags: every plain tag or every value of a field (authors, series…), with how many books
   have it and how many tags are under it, a page at a time or found by name; an editor for its names, other names,
   parents, color, category and hidden; Merge and Delete, each saying first how many books change; and Merges, where a

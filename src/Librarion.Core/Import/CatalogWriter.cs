@@ -38,7 +38,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
 
     private static readonly string[] FileColumns =
         ["TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
-    private readonly Dictionary<int, int> tagDeltas = [];
+    private readonly TagCountChanges counts = new();
+    private readonly TagAncestors ancestors = new();
     private int bookDelta;
 
     public int Added { get; private set; }
@@ -80,10 +81,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             book.Files.Add(file.File);
             Apply(book, file.File.Path, file.Metadata, new HashSet<int>(), out var links);
             foreach (var link in links)
-            {
                 book.Tags.Add(link);
-                Move(link.TagId, +1);
-            }
+            counts.Add(libraryId, [], links.Select(l => l.TagId));
 
             db.Books.Add(book);
             added++;
@@ -233,11 +232,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             var before = old.Select(l => l.TagId).ToHashSet();
             Apply(book, path, metadata, kept, out var fresh);
             db.BookTags.AddRange(fresh.Select(l => { l.BookId = bookId; return l; }));
-            var after = kept.Concat(fresh.Select(l => l.TagId)).ToHashSet();
-            foreach (var tag in before.Except(after))
-                Move(tag, -1);
-            foreach (var tag in after.Except(before))
-                Move(tag, +1);
+            counts.Add(libraryId, before, kept.Concat(fresh.Select(l => l.TagId)));
             book.Updated = now;
             then?.Invoke(book);
         }
@@ -275,8 +270,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             {
                 var book = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now, MetadataSource = record.Owner, ImportHash = record.Hash };
                 Apply(book, record.Path, record.Metadata, new HashSet<int>(), out var links);
-                foreach (var link in links)
-                    Move(link.TagId, +1);
+                counts.Add(libraryId, [], links.Select(l => l.TagId));
                 SourceCover(book, record);
                 made.Add((book, record, links, book.Identifiers, book.Properties));
                 book.Identifiers = [];
@@ -349,8 +343,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                 continue;
             // A missing book's counts went down when it went missing.
             var counted = empty.Where(b => !b.Missing).Select(b => b.Id).ToList();
-            foreach (var tag in await db.BookTags.Where(l => counted.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
-                Move(tag.TagId, -1);
+            await CountAsync(db, counted, gone: true, cancellationToken);
             var ids = empty.Select(b => b.Id).ToList();
             await db.Books.Where(b => ids.Contains(b.Id)).ExecuteDeleteAsync(cancellationToken);
             if (undoAdd)
@@ -381,8 +374,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                 .Select(b => b.Id).ToListAsync(cancellationToken);
             if (gone.Count == 0)
                 continue;
-            foreach (var tag in await db.BookTags.Where(l => gone.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
-                Move(tag.TagId, -1);
+            await CountAsync(db, gone, gone: true, cancellationToken);
             await db.Books.Where(b => gone.Contains(b.Id)).ExecuteUpdateAsync(s => s.SetProperty(b => b.MissingSince, now), cancellationToken);
             Missing += gone.Count;
             bookDelta -= gone.Count;
@@ -398,38 +390,36 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                 .Select(b => b.Id).ToListAsync(cancellationToken);
             if (back.Count == 0)
                 continue;
-            foreach (var tag in await db.BookTags.Where(l => back.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).Distinct().ToListAsync(cancellationToken))
-                Move(tag.TagId, +1);
+            await CountAsync(db, back, gone: false, cancellationToken);
             await db.Books.Where(b => back.Contains(b.Id)).ExecuteUpdateAsync(s => s.SetProperty(b => b.MissingSince, (DateTime?)null), cancellationToken);
             Returned += back.Count;
             bookDelta += back.Count;
         }
     }
 
-    /// <summary>The counts moved since the last flush, written: one upsert per touched tag, one update of the library.</summary>
+    /// <summary>The counts moved since the last flush, written: one upsert per thousand touched tags, one update of the library.</summary>
     public async Task FlushCountsAsync(LibrarionDbContext db, CancellationToken cancellationToken)
     {
-        var touched = tagDeltas.Where(d => d.Value != 0).ToList();
-        foreach (var chunk in touched.Chunk(1000))
-        {
-            // One upsert per chunk (a row per tag through EF was most of a big import's time: thousands of authors per
-            // batch), then the rows left at zero or below among these tags removed.
-            await BulkRows.AddCountsAsync(db, tenantId, libraryId, chunk, cancellationToken);
-            var ids = chunk.Select(d => d.Key).ToList();
-            await db.TagCounts.Where(c => c.LibraryId == libraryId && ids.Contains(c.TagId) && c.BookCount <= 0).ExecuteDeleteAsync(cancellationToken);
-        }
-
+        await counts.WriteAsync(db, tenantId, ancestors, cancellationToken);
         if (bookDelta != 0)
         {
             var delta = bookDelta;
             await db.Libraries.Where(l => l.Id == libraryId).ExecuteUpdateAsync(s => s.SetProperty(l => l.BookCount, l => l.BookCount + delta), cancellationToken);
         }
 
-        tagDeltas.Clear();
         bookDelta = 0;
     }
 
-    private void Move(int tagId, int delta) => tagDeltas[tagId] = tagDeltas.GetValueOrDefault(tagId) + delta;
+    /// <summary><paramref name="books"/>' tags leave the counts (<paramref name="gone"/>) or come back into them.</summary>
+    private async Task CountAsync(LibrarionDbContext db, IReadOnlyCollection<int> books, bool gone, CancellationToken cancellationToken)
+    {
+        var links = await db.BookTags.Where(l => books.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId }).ToListAsync(cancellationToken);
+        foreach (var book in links.GroupBy(l => l.BookId))
+        {
+            var tags = book.Select(l => l.TagId);
+            counts.Add(libraryId, gone ? tags : [], gone ? [] : tags);
+        }
+    }
 
     private static IEnumerable<ImportTagResolver.Name> Names(BookMetadata? metadata)
     {

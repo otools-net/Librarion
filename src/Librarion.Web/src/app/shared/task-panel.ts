@@ -7,7 +7,7 @@ import { ConfirmService } from './confirm';
 import { Icon, IconName } from './icon';
 
 const ICONS: Record<TaskRunInfo['task'], IconName> = {
-    libraryScan: 'refresh', import: 'import', removeRoot: 'folder', removeMissing: 'missing', tagDelete: 'trash', tagMerge: 'tag', fieldMerge: 'category', mergeUndo: 'back',
+    libraryScan: 'refresh', import: 'import', removeRoot: 'folder', removeMissing: 'missing', tagDelete: 'trash', tagMerge: 'tag', fieldMerge: 'category', mergeUndo: 'back', tagCounts: 'refresh',
 };
 
 /**

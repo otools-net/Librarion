@@ -235,8 +235,11 @@ public sealed class CatalogGenerator
 
     public static readonly string[] BookTagColumns = ["TenantId", "BookId", "TagId", "Source", "Ordinal", "Number"];
 
-    /// <summary>The links; counts per tag (direct, via parents and per field: once per book) gathered on the way.</summary>
-    public IEnumerable<object?[]> BookTags(int[] counts)
+    /// <summary>
+    /// The links; counts per tag gathered on the way, as the importer keeps them: <paramref name="direct"/> the links
+    /// themselves, <paramref name="counts"/> the totals (the tag, its parent and its field: once per book).
+    /// </summary>
+    public IEnumerable<object?[]> BookTags(int[] counts, int[] direct)
     {
         var seen = new HashSet<int>();
         for (var id = 1; id <= _shape.Books; id++)
@@ -246,6 +249,7 @@ public sealed class CatalogGenerator
 
             object?[] Link(int tagId, int? ordinal = null, double? number = null, int? field = null, int? parent = null)
             {
+                direct[tagId - _target.FirstTagId + Fields.Length]++;
                 Count(tagId);
                 if (field is { } f)
                     Count(f);
@@ -293,16 +297,16 @@ public sealed class CatalogGenerator
     /// <summary>The counts array <see cref="BookTags"/> fills: the fields first, then every generated tag.</summary>
     public int[] NewCounts() => new int[Fields.Length + LastTagId - _target.FirstTagId + 1];
 
-    public static readonly string[] CountColumns = ["TenantId", "LibraryId", "TagId", "BookCount"];
+    public static readonly string[] CountColumns = ["TenantId", "LibraryId", "TagId", "BookCount", "TotalCount"];
 
-    public IEnumerable<object?[]> TagCounts(int[] counts)
+    public IEnumerable<object?[]> TagCounts(int[] counts, int[] direct)
     {
         for (var i = 0; i < counts.Length; i++)
         {
-            if (counts[i] == 0)
+            if (counts[i] == 0 && direct[i] == 0)
                 continue;
             var tagId = i < Fields.Length ? _target.Fields[Fields[i]] : _target.FirstTagId + i - Fields.Length;
-            yield return [_target.TenantId, _target.LibraryId, tagId, counts[i]];
+            yield return [_target.TenantId, _target.LibraryId, tagId, direct[i], counts[i]];
         }
     }
 

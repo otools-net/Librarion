@@ -18,7 +18,7 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
 - `BookProperties` (book, name → value): imported values that are neither tags nor columns (Calibre custom columns);
   `Books.MetadataSource` (`Heads`, `Calibre`, `Inpx`) and `ImportHash` ([imports](imports.md)).
 - `Tags` (plain tags, fields and field values in one table, D18), `TagAliases`, `TagParents`, `TagClosure` (ancestor,
-  descendant, depth), `BookTags` (key BookId, TagId, Source; `Ordinal`, `Number`), `TagCounts` (library, tag, books),
+  descendant, depth), `BookTags` (key BookId, TagId, Source; `Ordinal`, `Number`), `TagCounts` (library, tag, direct books and books with what is under it, [tags](tags.md#the-tag-service-built-stage-6)),
   `Libraries.BookCount`; `GroupTagFilters` (group, tag, allow / deny): content filters
   ([rights](rights.md)). Model in [tags](tags.md) and [metadata-tags](metadata-tags.md).
 - Built-in fields made with each tenant (`author`, `translator`, `editor`, `illustrator`, `series`, `category`,

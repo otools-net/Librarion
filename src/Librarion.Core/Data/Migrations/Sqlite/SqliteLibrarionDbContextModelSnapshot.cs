@@ -804,6 +804,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<int>("TenantId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("TotalCount")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("LibraryId", "TagId");
 
                     b.HasIndex("TagId");

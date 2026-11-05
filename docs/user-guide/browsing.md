@@ -16,7 +16,8 @@ The home page is the library you picked in the top bar: its name, how many books
 ## Authors, series, tags and other fields
 
 - **Authors**, **Series** and **Tags** in the navigation list their names from A to Z, each with how many of its books
-  are in the library you picked; names without books there are left out. **All fields** shows every list: translators,
+  are in the library you picked, the books of the names under it included, each once (a category counts its
+  subcategories' books); names without books there are left out. **All fields** shows every list: translators,
   categories, publishers, languages, years, and the fields your libraries' imports brought (such as Calibre columns).
 - **Go to** starts the list at the name you type: its first letters are enough.
 - A name opens its page: what it is (an author, a series…), how many books, the tags it belongs under and the
