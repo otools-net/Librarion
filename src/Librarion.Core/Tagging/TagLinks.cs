@@ -1,3 +1,4 @@
+using Librarion.Core.Catalog;
 using Librarion.Core.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,8 +36,9 @@ public static class TagLinks
     }
 
     /// <summary>
-    /// Sets <see cref="Book.SortAuthor"/> and <see cref="Book.SeriesId"/> / <see cref="Book.SeriesNumber"/> of
-    /// <paramref name="books"/> from their links (the first by ordinal), writing only the books whose values change.
+    /// Sets <see cref="Book.SortAuthor"/>, <see cref="Book.SeriesId"/> / <see cref="Book.SeriesNumber"/> and the work key
+    /// (<see cref="Book.WorkKey"/>: title, else file name, and first author) of <paramref name="books"/> from their links
+    /// (the first by ordinal), writing only the books whose values change.
     /// </summary>
     public static async Task SortColumnsAsync(LibrarionDbContext db, IReadOnlyCollection<int> books, CancellationToken cancellationToken)
     {
@@ -46,9 +48,11 @@ public static class TagLinks
         foreach (var chunk in books.Distinct().Chunk(1000))
         {
             var links = await db.BookTags.Where(l => chunk.Contains(l.BookId) && (l.Tag!.FieldId == author || l.Tag.FieldId == series))
-                .Select(l => new { l.BookId, l.TagId, l.Tag!.FieldId, l.Tag.SortName, l.Ordinal, l.Number }).ToListAsync(cancellationToken);
+                .Select(l => new { l.BookId, l.TagId, l.Tag!.FieldId, l.Tag.Name, l.Tag.SortName, l.Ordinal, l.Number }).ToListAsync(cancellationToken);
             var byBook = links.ToLookup(l => l.BookId);
-            var rows = await db.Books.Where(b => chunk.Contains(b.Id)).Select(b => new { b.Id, b.SortAuthor, b.SeriesId, b.SeriesNumber }).ToListAsync(cancellationToken);
+            var rows = await db.Books.Where(b => chunk.Contains(b.Id)).Select(b => new { b.Id, b.Title, b.SortAuthor, b.SeriesId, b.SeriesNumber, b.WorkKey }).ToListAsync(cancellationToken);
+            var paths = (await db.BookFiles.Where(f => chunk.Contains(f.BookId)).Select(f => new { f.BookId, f.Id, f.Path }).ToListAsync(cancellationToken))
+                .GroupBy(f => f.BookId).ToDictionary(g => g.Key, g => g.MinBy(f => f.Id)!.Path);
             foreach (var row in rows)
             {
                 var first = byBook[row.Id].Where(l => l.FieldId == author).OrderBy(l => l.Ordinal ?? int.MaxValue).ThenBy(l => l.TagId).FirstOrDefault();
@@ -56,10 +60,13 @@ public static class TagLinks
                 var inSeries = byBook[row.Id].Where(l => l.FieldId == series).OrderBy(l => l.Ordinal ?? int.MaxValue).ThenBy(l => l.TagId).FirstOrDefault();
                 var seriesId = inSeries?.TagId;
                 var number = inSeries?.Number;
-                if (sortAuthor == row.SortAuthor && seriesId == row.SeriesId && number == row.SeriesNumber)
+                var workKey = PathKeys.Of(TagNames.Normalize(row.Title ?? FileTitles.FromPath(paths.GetValueOrDefault(row.Id) ?? "")),
+                    first is null ? "" : TagNames.Normalize(first.Name));
+                if (sortAuthor == row.SortAuthor && seriesId == row.SeriesId && number == row.SeriesNumber && workKey == row.WorkKey)
                     continue;
                 await db.Books.Where(b => b.Id == row.Id).ExecuteUpdateAsync(s => s
-                    .SetProperty(b => b.SortAuthor, sortAuthor).SetProperty(b => b.SeriesId, seriesId).SetProperty(b => b.SeriesNumber, number), cancellationToken);
+                    .SetProperty(b => b.SortAuthor, sortAuthor).SetProperty(b => b.SeriesId, seriesId).SetProperty(b => b.SeriesNumber, number)
+                    .SetProperty(b => b.WorkKey, workKey), cancellationToken);
             }
         }
     }

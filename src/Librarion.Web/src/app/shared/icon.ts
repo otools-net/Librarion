@@ -8,9 +8,9 @@ export const ICON_NAMES = [
     'library', 'book', 'author', 'series', 'tag', 'category', 'language', 'publisher', 'calendar', 'star', 'folder',
     // Actions
     'plus', 'minus', 'check', 'edit', 'trash', 'download', 'import', 'refresh', 'copy', 'external', 'more', 'filter', 'sort',
-    'grid', 'list', 'hidden',
+    'grid', 'list', 'hidden', 'grip',
     // Navigation
-    'back', 'chevron-left', 'chevron-right', 'chevron-down',
+    'back', 'chevron-left', 'chevron-right', 'chevron-down', 'chevron-up',
     // Administration
     'settings', 'sliders', 'user', 'users', 'key', 'shield', 'server', 'database', 'tenant', 'clock', 'activity',
     'missing',
@@ -69,6 +69,7 @@ export class Icon {
             <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4.5h-4.5" /></symbol>
             <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" /></symbol>
             <symbol id="icon-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" /></symbol>
+            <symbol id="icon-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3" /></symbol>
             <symbol id="icon-more" viewBox="0 0 24 24"><path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="3" /></symbol>
             <symbol id="icon-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z" /></symbol>
             <symbol id="icon-sort" viewBox="0 0 24 24"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4M13.5 7.5 17 4l3.5 3.5" /></symbol>
@@ -80,6 +81,7 @@ export class Icon {
             <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></symbol>
             <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></symbol>
             <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+            <symbol id="icon-chevron-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6" /></symbol>
 
             <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M18.70 10.34 L21.10 10.63 L21.10 13.37 L18.70 13.66 L17.91 15.56 L19.40 17.47 L17.47 19.40 L15.56 17.91 L13.66 18.70 L13.37 21.10 L10.63 21.10 L10.34 18.70 L8.44 17.91 L6.53 19.40 L4.60 17.47 L6.09 15.56 L5.30 13.66 L2.90 13.37 L2.90 10.63 L5.30 10.34 L6.09 8.44 L4.60 6.53 L6.53 4.60 L8.44 6.09 L10.34 5.30 L10.63 2.90 L13.37 2.90 L13.66 5.30 L15.56 6.09 L17.47 4.60 L19.40 6.53 L17.91 8.44z" /><circle cx="12" cy="12" r="2.8" /></symbol>
             <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5" /></symbol>

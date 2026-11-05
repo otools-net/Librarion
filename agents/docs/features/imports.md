@@ -38,7 +38,8 @@ The source is never read live and never written; importing again is how its chan
 
 - `Books.MetadataSource`: `Heads` (a scan reads the file's head), `Calibre`, `Inpx`. An import sets it; the record's
   metadata replaces title, sort title, description, rating, identifiers, properties and every `Imported` link (manual
-  and rule links stay, counts move by differences).
+  and rule links stay, counts move by differences). What a user edited stays: flagged columns (`Books.Edited`),
+  tags taken off (`BookTagSuppressions`), manual links with their order ([book-page](book-page.md#editing-a-book-built-stage-6-chunk-6-d-63)).
 - A scan that sees an imported book's file changed updates the file row only (`CatalogWriter.RefreshAsync` skips the
   metadata of books not owned by `Heads`): **imported metadata wins** (the user's decision, 2026-11-01).
 - Nothing is removed by an import: books no longer in the source stay; books whose files are gone become missing books

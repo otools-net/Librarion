@@ -174,6 +174,15 @@ public abstract partial class LibrarionDbContext
             Filter(entity, l => l.TenantId == CurrentTenantId);
         });
 
+        modelBuilder.Entity<BookTagSuppression>(entity =>
+        {
+            entity.HasKey(s => new { s.BookId, s.TagId });
+            entity.HasOne<Book>().WithMany().HasForeignKey(s => s.BookId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Tag>().WithMany().HasForeignKey(s => s.TagId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(s => s.TagId);
+            Filter(entity, s => s.TenantId == CurrentTenantId);
+        });
+
         modelBuilder.Entity<TagCount>(entity =>
         {
             entity.HasKey(c => new { c.LibraryId, c.TagId });

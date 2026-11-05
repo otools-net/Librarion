@@ -60,6 +60,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<GroupTagFilter> GroupTagFilters => Set<GroupTagFilter>();
     public DbSet<ImportTagMapping> ImportTagMappings => Set<ImportTagMapping>();
     public DbSet<FieldKeyAlias> FieldKeyAliases => Set<FieldKeyAlias>();
+    public DbSet<BookTagSuppression> BookTagSuppressions => Set<BookTagSuppression>();
     public DbSet<MergeLog> MergeLogs => Set<MergeLog>();
     public DbSet<MergeLogLink> MergeLogLinks => Set<MergeLogLink>();
     public DbSet<LibraryRoot> LibraryRoots => Set<LibraryRoot>();

@@ -113,6 +113,17 @@ public sealed class BookTag
     public double? Number { get; set; }
 }
 
+/// <summary>
+/// A tag a user took off a book that its metadata gives it (stage 6, D-6.3): a re-read or re-import doesn't put it back.
+/// Removed when a user gives the tag back.
+/// </summary>
+public sealed class BookTagSuppression
+{
+    public int TenantId { get; set; }
+    public int BookId { get; set; }
+    public int TagId { get; set; }
+}
+
 public enum TagSource : byte
 {
     Imported,

@@ -76,6 +76,9 @@ public sealed class Book
     /// <summary>Blocking key for "same work" duplicates: a hash of the normalized title (else file stem) and first author.</summary>
     public long? WorkKey { get; set; }
 
+    /// <summary>The columns a user edited (stage 6, D-6.3): a re-read or re-import keeps them.</summary>
+    public BookEdits Edited { get; set; }
+
     public List<BookFile> Files { get; set; } = [];
     public List<BookTag> Tags { get; set; } = [];
     public List<BookIdentifier> Identifiers { get; set; } = [];
@@ -238,4 +241,15 @@ public sealed class LibraryRoot
     public string Path { get; set; } = string.Empty;
 
     public DateTime Created { get; set; }
+}
+
+/// <summary>A book's columns edited by a user, which imports leave as they are.</summary>
+[Flags]
+public enum BookEdits : byte
+{
+    None = 0,
+    /// <summary>The title, with its sort key and search text.</summary>
+    Title = 1,
+    Description = 2,
+    Rating = 4,
 }

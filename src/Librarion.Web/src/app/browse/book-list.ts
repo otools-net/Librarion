@@ -194,7 +194,7 @@ export class BookList {
     }
 
     protected cover(book: BookListItem): string {
-        return coverUrl(book.id, this.view() === 'grid' ? 'm' : 's');
+        return coverUrl(book.id, this.view() === 'grid' ? 'm' : 's', book.coverVersion);
     }
 
     /** The next page, by key. */

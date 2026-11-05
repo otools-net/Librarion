@@ -6,11 +6,16 @@ import {
     BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
-    PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput,
+    PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
 } from './models';
 
-/** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
-export const coverUrl = (book: number, size: 's' | 'm' | 'l') => `api/books/${book}/cover/${size}`;
+/**
+ * A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands
+ * in. `version` (the book's `coverVersion`) changes with the book, so the browser's cached cover (a day) is not shown
+ * after an edit.
+ */
+export const coverUrl = (book: number, size: 's' | 'm' | 'l', version?: string | null) =>
+    `api/books/${book}/cover/${size}${version ? `?v=${version}` : ''}`;
 
 /** A file of a book to download (`library.download` in its library); streamed from the library, never unpacked. */
 export const fileUrl = (book: number, file: number) => `api/books/${book}/files/${file}`;
@@ -152,6 +157,7 @@ export class Api {
         this.get<ManagedPage>('api/tags/manage', { field: field ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit });
     tagDefinition = (id: number) => this.get<TagDefinition>(`api/tags/${id}/definition`);
     createTag = (input: TagInput) => this.post<TagDefinition>('api/tags', input);
+    editBook = (id: number, edit: BookEdit) => this.put<BookDetail>(`api/books/${id}`, edit);
     updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);
     /** Done, or a run when it touches many books (`runId`). */
     deleteTag = (id: number) => this.delete<TagWork>(`api/tags/${id}`);

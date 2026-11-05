@@ -41,5 +41,10 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   not offered. Downloading needs the right to download in that library; without it the page says so.
 - **Details**: when the book was added, its identifiers (ISBN and others) and the values an import brought that are
   not fields (such as Calibre's custom columns).
+- **Edit** (for those allowed to tag or edit books in that library, such as Curators) changes the book: its title,
+  authors (drag them into order, or use the arrows), series and its number, its other fields (**Add a field** for one
+  it has no value of yet), its tags, description and rating. Type a name to find a value; **Create** makes a new one.
+  What you change stays when the book's file is read again or the library is imported again, and a tag you took off
+  stays off.
 - **Possible duplicates** lists other books you can see that may be the same one, with why: the same file (in
   another library), the same identifier, or the same title and author. Merging them comes later.

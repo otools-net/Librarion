@@ -126,7 +126,11 @@
 }
 
 .book-fields .chip {
+    max-width: 100%;
     text-decoration: none;
+    /* A long value wraps inside its chip: beside the label the values may have 90 px (landscape phones). */
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .book-details {
@@ -298,4 +302,65 @@
     .book-duplicate .book-formats {
         display: none;
     }
+}
+
+/* The book editor (stage 6, books/book-editor.ts): a field's values one per row, with a handle to drag, Move up /
+   down and Remove; a series' number in place; plain tags as chips (tags.css). */
+.book-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.book-edit-values {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    list-style: none;
+}
+
+.book-edit-value {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 44px;
+    padding: 0 var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.book-edit-value.dragging {
+    background: var(--surface-2);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.book-edit-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 44px;
+    color: var(--text-muted);
+    cursor: grab;
+    touch-action: none;
+}
+
+.book-edit-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.book-edit-number {
+    width: 5.5em;
+}
+
+.book-edit-field {
+    margin: 0;
+    padding: 0;
+    border: 0;
 }

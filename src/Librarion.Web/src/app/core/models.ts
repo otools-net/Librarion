@@ -101,6 +101,8 @@ export interface BookListItem {
     seriesNumber: number | null;
     formats: string[];
     coverSource: 'book' | 'calibre' | 'uploaded' | 'generated';
+    /** Changes with the book: the cover's address carries it. */
+    coverVersion?: string | null;
 }
 
 /** A link of a book to a tag: `field` the field's key (null for a plain tag); `number` its place in a series. */
@@ -146,6 +148,25 @@ export interface BookDetail {
     mergedIntoId: number | null;
     properties: KeyValue[] | null;
     canDownload: boolean;
+    /** May change the book's plain tags (`library.tag` in its library). */
+    canTag: boolean;
+    /** May change its title, description, rating and fields (`library.edit`). */
+    canEdit: boolean;
+    coverVersion?: string | null;
+}
+
+/** A tag a book's field is to have: by id, or by name (found in the field, else made). */
+export interface BookTagEdit {
+    id?: number | null;
+    name?: string | null;
+    number?: number | null;
+}
+
+/** What a save of the book editor changes (`PUT api/books/{id}`); a part left out stays as it is. */
+export interface BookEdit {
+    columns?: { title: string | null; description: string | null; rating: number | null } | null;
+    /** Each field's tags set whole, in order; `field` null for the plain tags. */
+    fields?: { field: string | null; tags: BookTagEdit[] }[] | null;
 }
 
 /** What the search box offers for the term being typed: a field to type a value of, or a value as a whole term. */

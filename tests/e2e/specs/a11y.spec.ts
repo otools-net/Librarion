@@ -62,6 +62,9 @@ test.describe('@a11y', () => {
         await expect(page.locator('.book-files')).toBeVisible();
         await expect(page.locator('.book-duplicate')).toBeVisible();
         await audit(page, 'a book');
+        await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+        await expect(page.getByRole('dialog', { name: 'Edit the book' })).toBeVisible();
+        await audit(page, 'the book editor');
     });
 
     test('search: the suggestions open, the results and the help, Refine open', async ({ page }, testInfo) => {

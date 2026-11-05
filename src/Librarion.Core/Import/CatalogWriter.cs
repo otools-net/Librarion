@@ -27,13 +27,13 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     private static readonly string[] BookColumns =
     [
         "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SearchText", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added", "Updated", "CoverSource",
-        "GeneratedTemplate", "GeneratedVariant", "CoverState", "WorkKey", "MetadataSource", "ImportHash",
+        "GeneratedTemplate", "GeneratedVariant", "CoverState", "WorkKey", "MetadataSource", "ImportHash", "Edited",
     ];
 
     private static object?[] BookRow(Book b) =>
     [
         b.Id, b.TenantId, b.LibraryId, b.Title, b.SortTitle, b.SearchText, b.SortAuthor, b.SeriesId, b.SeriesNumber, b.Description, b.Rating, b.Added, b.Updated, (int)b.CoverSource,
-        b.GeneratedTemplate, b.GeneratedVariant, (int)b.CoverState, b.WorkKey, (byte)b.MetadataSource, b.ImportHash,
+        b.GeneratedTemplate, b.GeneratedVariant, (int)b.CoverState, b.WorkKey, (byte)b.MetadataSource, b.ImportHash, (byte)b.Edited,
     ];
 
     private static readonly string[] FileColumns =
@@ -221,6 +221,11 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         var links = (await db.BookTags.Where(l => ids.Contains(l.BookId)).Select(l => new { l.BookId, l.TagId, l.Source }).ToListAsync(cancellationToken))
             .GroupBy(l => l.BookId).ToDictionary(g => g.Key, g => g.ToList());
         await db.BookTags.Where(l => ids.Contains(l.BookId) && l.Source == TagSource.Imported).ExecuteDeleteAsync(cancellationToken);
+        // What users took off (a removed imported tag stays off) and the books with links of their own, whose sort
+        // columns follow those links too (stage 6, D-6.3).
+        var suppressed = (await db.BookTagSuppressions.Where(s => ids.Contains(s.BookId)).Select(s => new { s.BookId, s.TagId }).ToListAsync(cancellationToken))
+            .ToLookup(s => s.BookId, s => s.TagId);
+        var edited = new List<int>();
 
         var now = time.GetUtcNow().UtcDateTime;
         foreach (var (bookId, path, metadata, then) in changed)
@@ -230,7 +235,9 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             var old = links.GetValueOrDefault(bookId) ?? [];
             var kept = old.Where(l => l.Source != TagSource.Imported).Select(l => l.TagId).ToHashSet();
             var before = old.Select(l => l.TagId).ToHashSet();
-            Apply(book, path, metadata, kept, out var fresh);
+            Apply(book, path, metadata, kept, out var fresh, suppressed[bookId].ToHashSet());
+            if (old.Any(l => l.Source == TagSource.Manual))
+                edited.Add(bookId);
             db.BookTags.AddRange(fresh.Select(l => { l.BookId = bookId; return l; }));
             counts.Add(libraryId, before, kept.Concat(fresh.Select(l => l.TagId)));
             book.Updated = now;
@@ -239,6 +246,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
 
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
+        if (edited.Count > 0)
+            await TagLinks.SortColumnsAsync(db, edited, cancellationToken);
     }
 
     /// <summary>A record of an import, for <see cref="ImportAsync"/>.</summary>
@@ -431,22 +440,36 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             yield return new ImportTagResolver.Name(metadata.Source, null, tag);
     }
 
-    /// <summary>The book's columns and imported links from its metadata (the file name when it has no title).</summary>
-    private void Apply(Book book, string path, BookMetadata? metadata, IReadOnlySet<int> kept, out List<BookTag> links)
+    /// <summary>
+    /// The book's columns and imported links from its metadata (the file name when it has no title); the columns a user
+    /// edited (<see cref="Book.Edited"/>) and the tags taken off (<paramref name="suppressed"/>) left as they are.
+    /// </summary>
+    private void Apply(Book book, string path, BookMetadata? metadata, IReadOnlySet<int> kept, out List<BookTag> links, IReadOnlySet<int>? suppressed = null)
     {
         var title = metadata?.Title?.Trim() is { Length: > 0 } t ? Cut(t, Book.MaxTitleLength) : null;
-        book.Title = title;
-        book.SortTitle = BookTitles.SortKey(metadata?.SortTitle?.Trim() is { Length: > 0 } sortTitle ? sortTitle : title ?? FileTitles.FromPath(path));
-        book.SearchText = Search.SearchText.ForBook(title, FileTitles.FromPath(path));
-        if (metadata?.Source is ImportTagSourceKind.Calibre or ImportTagSourceKind.Inpx)
+        if (book.Edited.HasFlag(BookEdits.Title))
+        {
+            title = book.Title;
+        }
+        else
+        {
+            book.Title = title;
+            book.SortTitle = BookTitles.SortKey(metadata?.SortTitle?.Trim() is { Length: > 0 } sortTitle ? sortTitle : title ?? FileTitles.FromPath(path));
+            book.SearchText = Search.SearchText.ForBook(title, FileTitles.FromPath(path));
+        }
+
+        if (metadata?.Source is ImportTagSourceKind.Calibre or ImportTagSourceKind.Inpx && !book.Edited.HasFlag(BookEdits.Rating))
             book.Rating = metadata.Rating is { } rating ? Math.Min(rating, (byte)10) : null;
-        book.Description = metadata?.Description?.Trim() is { Length: > 0 } d ? d : null;
+        if (!book.Edited.HasFlag(BookEdits.Description))
+            book.Description = metadata?.Description?.Trim() is { Length: > 0 } d ? d : null;
         links = [];
         string? firstAuthor = null;
         book.SortAuthor = "";
         book.SeriesId = null;
         book.SeriesNumber = null;
         var seen = new HashSet<int>(kept);
+        if (suppressed is not null)
+            seen.UnionWith(suppressed);
         if (metadata is not null)
         {
             foreach (var value in metadata.FieldValues)

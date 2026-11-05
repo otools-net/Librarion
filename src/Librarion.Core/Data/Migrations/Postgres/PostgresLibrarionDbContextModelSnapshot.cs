@@ -94,6 +94,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<byte>("Edited")
+                        .HasColumnType("smallint");
+
                     b.Property<short?>("GeneratedTemplate")
                         .HasColumnType("smallint");
 
@@ -325,6 +328,24 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasFilter("\"Number\" IS NOT NULL");
 
                     b.ToTable("BookTags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTagSuppression", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BookId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("BookTagSuppressions");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
@@ -1226,6 +1247,21 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Book");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTagSuppression", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>

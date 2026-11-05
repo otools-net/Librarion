@@ -6,6 +6,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- Edit a book on its page: title, authors in order, series and number, other fields, tags, description and rating,
+  for those allowed to tag or edit books there (such as Curators). Edits stay when the book is read or imported
+  again, and a tag taken off stays off.
 - Choosing a tag (a parent, the tag a merge goes into) finds it by its other names and its shorthand too, the most
   used first, with its color, books and the name it was found by; the arrow keys and Enter choose.
 - Readable addresses for authors, series and every tag: `/author/1234/Stephen King`, `/tag/5/To read`. The number
@@ -28,6 +31,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   have it and how many tags are under it, a page at a time or found by name; an editor for its names, other names,
   parents, color, category and hidden; Merge and Delete, each saying first how many books change; and Merges, where a
   merge is undone. See [Tags](docs/administration/tags.md).
+
+### Fixed
+
+- A book's page no longer gets wider than the screen on a phone held sideways when a field has a long value: the value
+  wraps inside its chip.
 
 ## 0.6.0
 

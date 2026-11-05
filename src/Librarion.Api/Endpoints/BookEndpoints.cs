@@ -36,11 +36,31 @@ public static class BookEndpoints
                 var state = await current.GetAsync();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 return await queries.GetAsync(state.TenantId!.Value, visibility, id, context.RequestAborted) is { } book
-                    ? Results.Ok(book with { CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId) })
+                    ? Results.Ok(WithRights(book, state))
                     : Results.NotFound();
             })
             .WithName("GetBook")
-            .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book; `canDownload` when the caller may download its files.");
+            .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book; `canDownload` when the caller may download its files, `canTag` / `canEdit` when it may change its tags / its metadata.");
+
+        books.MapPut("/{id:int}", async (int id, BookEdit edit, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries,
+                BookEditor editor) =>
+            {
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                if (await queries.GetAsync(state.TenantId!.Value, visibility, id, context.RequestAborted) is not { MergedIntoId: null } book)
+                    return Results.NotFound();
+                var metadata = edit.Columns is not null || edit.Fields?.Any(f => f.Field is not null) == true;
+                var plain = edit.Fields?.Any(f => f.Field is null) == true;
+                if (metadata && !state.Access.HasIn(Rights.EditBooks, book.LibraryId) || plain && !state.Access.HasIn(Rights.TagBooks, book.LibraryId))
+                    return Results.Forbid();
+                var saved = await editor.SaveAsync(state.TenantId.Value, id, edit, context.RequestAborted);
+                if (saved.Status != AccessStatus.Ok)
+                    return ApiResults.From(saved);
+                return Results.Ok(WithRights((await queries.GetAsync(state.TenantId.Value, visibility, id, context.RequestAborted))!, state));
+            })
+            .RequireRight(Rights.TagBooks, Rights.EditBooks)
+            .WithName("EditBook")
+            .WithSummary("Changes a book: `columns` (title, description, rating 0-10, 0 none) need `library.edit`, as do `fields` of a field; `fields` with `field` null (plain tags) need `library.tag`. Each field's tags are set whole, in order (authors), by `id` or by `name` (found in the field, else made); what is set stays through re-imports, a tag taken off stays off. Answers the book as `GET` does.");
 
         books.MapGet("/{id:int}/duplicates", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {
@@ -203,4 +223,11 @@ public static class BookEndpoints
         new(target.Crc is { } crc
             ? $"\"{crc:x8}-{target.Size:x}\""
             : $"\"{target.Size:x}-{target.Modified?.Ticks ?? 0:x}\"");
+
+    private static BookDetail WithRights(BookDetail book, AccessState state) => book with
+    {
+        CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId),
+        CanTag = book.MergedIntoId is null && state.Access.HasIn(Rights.TagBooks, book.LibraryId),
+        CanEdit = book.MergedIntoId is null && state.Access.HasIn(Rights.EditBooks, book.LibraryId),
+    };
 }

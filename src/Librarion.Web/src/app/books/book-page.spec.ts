@@ -31,7 +31,7 @@ const detail = (overrides: Partial<BookDetail> = {}): BookDetail => ({
         { id: 8, format: 'fb2', size: 900, name: 'Guards.fb2', inArchive: false, archive: null, missing: true },
     ],
     identifiers: [{ key: 'isbn', value: '9780552134637' }, { key: 'goodreads', value: '64216' }],
-    mergedIntoId: null, properties: [{ key: 'Shelf', value: 'Top' }], canDownload: true, ...overrides,
+    mergedIntoId: null, properties: [{ key: 'Shelf', value: 'Top' }], canDownload: true, canTag: false, canEdit: false, ...overrides,
 });
 
 const listed = (id: number, title: string): BookListItem => ({

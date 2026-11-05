@@ -110,9 +110,11 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        and 2.7 min: no measurable cost, far under the 20-40 % estimated.
 5. [x] The tag picker (port of SFE's): prefix on name, alias and shorthand through the index, capped; scoped to a
        field; "Create"; chips with colors; keyboard and touch.
-6. [ ] A book's tags and metadata edited on its page (D-6.3): plain tags (`tags.assign`), fields with the scoped
+6. [x] A book's tags and metadata edited on its page (D-6.3): plain tags (`tags.assign`), fields with the scoped
        picker, author order by drag, series number in place, title, description, rating; suppression when an imported
-       tag is removed; search text, sort keys and counts kept; a re-import keeps the edits.
+       tag is removed; search text, sort keys and counts kept; a re-import keeps the edits. **Built:** edited columns as
+       flags on `Books` (not a row of values), see
+       [book-page](../features/book-page.md#editing-a-book-built-stage-6-chunk-6-d-63).
 7. [ ] Selection in the library and search lists (long press, click / Ctrl / Shift, the selection bar) and tagging a
        selection (tri-state); scope tagging of a search, an author or a library: counted, confirmed, a background run
        past the threshold.

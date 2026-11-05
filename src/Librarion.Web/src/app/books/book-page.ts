@@ -10,6 +10,7 @@ import { BookDetail, BookDuplicate, BookFile, BookListItem, BookTag } from '../c
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from '../tags/field-catalog';
+import { BookEditor } from './book-editor';
 import { tagLink } from '../tags/tag-link';
 
 /** The book's tags of one field (or the plain tags, `field` null), in the order the server gave them. */
@@ -23,11 +24,11 @@ interface FieldGroup {
  * metadata gave none, marked), authors and series linking to their pages, the other fields as chips, the description,
  * its files with Download (when the session may download in its library), details (added, identifiers, imported
  * properties), and other books that may be the same one (read only until merging comes). A merged book goes to the
- * book it now lives in.
+ * book it now lives in. Edit (with `library.edit` or `library.tag` in its library) opens `BookEditor`.
  */
 @Component({
     selector: 'lib-book-page',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'book-page' },
     template: `
@@ -38,7 +39,7 @@ interface FieldGroup {
             <article class="book-sheet" aria-labelledby="book-title">
                 <div class="book-head">
                     <span class="book-page-cover">
-                        <img [src]="cover(book.id, 'l')" alt="" width="600" height="900" decoding="async">
+                        <img [src]="cover(book.id, 'l', book.coverVersion)" alt="" width="600" height="900" decoding="async">
                     </span>
                     <div class="book-main">
                         @if (libraryName(); as name) {
@@ -64,11 +65,18 @@ interface FieldGroup {
                                 <svg libIcon="star"></svg>{{ 'book.rating' | t: { stars: i18n.number(book.rating / 2) } }}
                             </p>
                         }
-                        @if (first(); as file) {
+                        @if (first() || book.canEdit || book.canTag) {
                             <p class="book-actions">
-                                <a class="button primary" [href]="download(book, file)" download [title]="'book.downloadHint' | t: { name: file.name }">
-                                    <svg libIcon="download"></svg>{{ 'book.download' | t: { format: file.format.toUpperCase() } }}
-                                </a>
+                                @if (first(); as file) {
+                                    <a class="button primary" [href]="download(book, file)" download [title]="'book.downloadHint' | t: { name: file.name }">
+                                        <svg libIcon="download"></svg>{{ 'book.download' | t: { format: file.format.toUpperCase() } }}
+                                    </a>
+                                }
+                                @if (book.canEdit || book.canTag) {
+                                    <button type="button" class="button" [title]="'book.editHint' | t" (click)="editing.set(true)">
+                                        <svg libIcon="edit"></svg>{{ 'book.edit' | t }}
+                                    </button>
+                                }
                             </p>
                         }
                         @if (fields().length) {
@@ -149,7 +157,7 @@ interface FieldGroup {
                                 @let other = duplicate.book;
                                 <li>
                                     <a class="book-duplicate" [routerLink]="['/books', other.id]">
-                                        <span class="book-cover"><img [src]="cover(other.id, 's')" alt="" loading="lazy" decoding="async" width="80" height="120"></span>
+                                        <span class="book-cover"><img [src]="cover(other.id, 's', other.coverVersion)" alt="" loading="lazy" decoding="async" width="80" height="120"></span>
                                         <span class="book-text">
                                             <span class="book-title">{{ listTitle(other) }}</span>
                                             <span class="book-authors">{{ other.authors.join(', ') }}</span>
@@ -167,6 +175,9 @@ interface FieldGroup {
                     </section>
                 }
             </article>
+            @if (editing()) {
+                <lib-book-editor [book]="book" (saved)="edited($event)" (closed)="editing.set(false)" />
+            }
         } @else if (missing()) {
             <h1>{{ 'book.missingTitle' | t }}</h1>
             <p class="empty large" libEmpty="book">
@@ -197,6 +208,7 @@ export class BookPage {
     protected readonly duplicates = signal<BookDuplicate[]>([]);
     protected readonly missing = signal(false);
     protected readonly error = signal<string | null>(null);
+    protected readonly editing = signal(false);
     private requested = 0;
 
     protected readonly authors = computed(() => this.book()?.tags.filter(tag => tag.field === 'author') ?? []);
@@ -242,8 +254,14 @@ export class BookPage {
             void this.router.navigateByUrl('/');
     }
 
-    protected cover(id: number, size: 's' | 'l'): string {
-        return coverUrl(id, size);
+    /** The book as saved; its possible duplicates asked again (a title or first author may have changed). */
+    protected edited(book: BookDetail): void {
+        this.book.set(book);
+        void this.api.bookDuplicates(book.id).then(duplicates => this.book()?.id === book.id && this.duplicates.set(duplicates), () => { });
+    }
+
+    protected cover(id: number, size: 's' | 'l', version?: string | null): string {
+        return coverUrl(id, size, version);
     }
 
     protected download(book: BookDetail, file: BookFile): string {

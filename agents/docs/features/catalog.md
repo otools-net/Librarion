@@ -10,7 +10,9 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
 - `Books`: library, `Title` (null = none in the metadata), `SortTitle` (never null), `SortAuthor` (first author's
   sort name, empty without one: the providers sort nulls at opposite ends), `SeriesId` + `SeriesNumber` (first series),
   description, rating, added / updated, cover columns ([book-display](book-display.md)), `MergedIntoId` and `WorkKey`
-  ([merging](merging.md)).
+  ([merging](merging.md)), `Edited` (flags of the columns a user changed: imports keep them).
+- `BookTagSuppressions` (book, tag): an imported tag a user took off, skipped by re-imports
+  ([book-page](book-page.md#editing-a-book-built-stage-6-chunk-6-d-63)).
 - `BookFiles`: a book's copies and formats; `ArchiveId` null = loose file, `Path` relative to the root or the entry
   name, `PathKey` (64-bit hash, indexed instead of the string), size, CRC, ZIP locator and method
   ([archives](archives.md)). `Archives`: one row per ZIP container (filled in stage 3).
@@ -59,7 +61,8 @@ Code: `src/Librarion.Core/Data/Entities/Catalog/Book.cs`, `Data/Entities/Tags/Ta
 
 - `GET api/books?library&sort&after&tag&q&limit` (limit up to 200; `q` a search, [search](search.md)), `GET api/search/suggestions?q&library`, `GET api/books/{id}`, `GET api/books/{id}/duplicates`,
   `GET api/fields`, `GET api/fields/{key}/values?library&from&after&limit`, `GET api/tags?library&from&after&limit`,
-  `GET api/tags/{id}?library`, `GET api/tags/{id}/moved?library` (where a merged tag went). Documented by OpenAPI.
+  `GET api/tags/{id}?library`, `GET api/tags/{id}/moved?library` (where a merged tag went), `GET api/tags/pick`;
+  `PUT api/books/{id}` needs `library.edit` / `library.tag`. Documented by OpenAPI.
 
 ## Known limits (accepted 2026-11-01, measure again before the release)
 
