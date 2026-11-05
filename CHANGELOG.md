@@ -6,6 +6,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- Select books (the box on a cover, Ctrl- or Shift-click, a long press on a phone) and give them tags or take tags
+  away at once; **Tag all** does it for every book of the list on screen (the library, an author, a tag, a search),
+  saying first how many books that is. A big change runs in the background.
 - Edit a book on its page: title, authors in order, series and number, other fields, tags, description and rating,
   for those allowed to tag or edit books there (such as Curators). Edits stay when the book is read or imported
   again, and a tag taken off stays off.

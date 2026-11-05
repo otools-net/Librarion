@@ -162,6 +162,33 @@ export interface BookTagEdit {
     number?: number | null;
 }
 
+/** A plain tag among selected books: how many of them have it (all, some). */
+export interface SelectionTag {
+    id: number;
+    name: string;
+    color: string | null;
+    books: number;
+}
+
+export interface SelectionTags {
+    /** The selected books the caller may tag. */
+    books: number;
+    tags: SelectionTag[];
+}
+
+/** Plain tags to give to many books (by id, or by name: found, else made) and to take away. */
+export interface TagChangeInput {
+    add?: BookTagEdit[];
+    remove?: number[];
+}
+
+/** Every book of a library's list: all, those with a tag (its page), those matching a search. */
+export interface BookScope {
+    library: number;
+    tag?: number | null;
+    q?: string | null;
+}
+
 /** What a save of the book editor changes (`PUT api/books/{id}`); a part left out stays as it is. */
 export interface BookEdit {
     columns?: { title: string | null; description: string | null; rating: number | null } | null;
@@ -438,7 +465,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;

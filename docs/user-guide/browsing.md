@@ -13,6 +13,21 @@ The home page is the library you picked in the top bar: its name, how many books
 - After visiting another page (the administration, for instance), coming back shows the library where you left it.
 - A library without books says so; administrators get a link to add a folder and scan it.
 
+## Selecting and tagging books
+
+If you may tag books in the library (Curators and Administrators may), you can give many books a tag at once.
+
+- **Select** a book with the box on its cover, or Ctrl-click it (Cmd on a Mac); Shift-click selects every book up to
+  the one before. On a phone, rest your finger on a book. Once one is selected, a tap or click selects more instead of
+  opening them. **Esc** clears the selection.
+- The bar at the bottom says how many are selected; **Select all** takes every book shown so far, **Tags** opens their
+  tags: a tick means all of them have it, a dash some of them. Tick a tag to give it to all, clear it to take it from
+  all, leave a dash as it is, or add a tag (type its name; **Create** makes a new one). Up to 1,000 books at a time.
+- **Tag all** (next to Sort) does it for every book of the list on screen: the whole library, an author's or a tag's
+  books, or a search's results. It says how many books that is first; choose the tags to give and to take away, then
+  **Apply**. A big change runs in the background, shown in the panel under the top bar.
+- A tag you take away stays away when the library is scanned or imported again.
+
 ## Authors, series, tags and other fields
 
 - **Authors**, **Series** and **Tags** in the navigation list their names from A to Z, each with how many of its books

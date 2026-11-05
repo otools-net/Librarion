@@ -7,6 +7,7 @@ import {
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
+    BookScope, SelectionTags, TagChangeInput,
 } from './models';
 
 /**
@@ -157,6 +158,10 @@ export class Api {
         this.get<ManagedPage>('api/tags/manage', { field: field ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit });
     tagDefinition = (id: number) => this.get<TagDefinition>(`api/tags/${id}/definition`);
     createTag = (input: TagInput) => this.post<TagDefinition>('api/tags', input);
+    selectionTags = (books: number[]) => this.post<SelectionTags>('api/books/tags/state', { books });
+    tagSelection = (books: number[], change: TagChangeInput) => this.post<TagWork>('api/books/tags', { books, ...change });
+    countScope = (scope: BookScope) => this.get<{ books: number }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q });
+    tagScope = (scope: BookScope, change: TagChangeInput) => this.post<TagWork>('api/books/scope/tags', { ...scope, ...change });
     editBook = (id: number, edit: BookEdit) => this.put<BookDetail>(`api/books/${id}`, edit);
     updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);
     /** Done, or a run when it touches many books (`runId`). */

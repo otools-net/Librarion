@@ -142,6 +142,35 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
 
 - Book, selection, and **scope tagging** (a search, an author, a series, a whole library): counted with one
   `GROUP BY`, changed in batches of 1000 keyed on `Books.Id`, confirmed in the dialog, never listing the books.
+
+## Tagging many books (built, stage 6 chunk 7)
+
+Code: `Core/Tagging/BookTagger.cs`, `BookQueries.ScopeAsync` (a list's books as a query: the list's own visibility,
+search and tag rules); routes `POST api/books/tags/state`, `POST api/books/tags`, `GET api/books/scope`,
+`POST api/books/scope/tags` (all `library.tag`, checked per library); client `browse/book-list.ts` (selection, bar),
+`browse/selection-tags.ts`, `browse/scope-tags.ts`, styles at the end of `styles/browse.css`; tests
+`selection.spec.ts` (client), `BookTaggingTests` (both providers), e2e `selection.spec.ts` (every device), axe on the
+bar and both dialogs.
+
+- Plain tags only (fields are edited per book, [book-page](book-page.md#editing-a-book-built-stage-6-chunk-6-d-63)).
+  As there: a given tag is a `Manual` link (none added when the book has it from any source), a tag taken off deletes
+  `Imported` and `Manual` links and writes a suppression, a given tag deletes its suppression, `Rule` links stay;
+  counts by delta per batch (`TagLinks.SnapshotAsync` / `CountAsync`).
+- **Selection** (at most 1,000 ids, `books.tooMany` past it): only the books the caller sees in libraries where it
+  has `library.tag`; Missing when none is. `state` answers per plain tag how many of them have it: the dialog shows a
+  three-state box (all, some = left alone, none), cycling all → none → some (only when some had it at first) → all;
+  Save sends only the rows that changed (`add` the ones now all, `remove` the ones now none).
+- **Scope** (`library` + `tag` and / or `q`, as the list on screen): counted first (`LongCountAsync` of the scope
+  query), confirmed as "Apply to N books"; links = books × changed tags decide inline or a **library run** of kind
+  `ScopeTags` (`BackgroundTasks.StartLibraryAsync`: waits for the library's scan and for tenant tag runs). Walked by
+  `Id > last` in batches of 1,000 with the scope asked again each time, so taking off the very tag the scope is about
+  still reaches every book (`BookTaggingTests`).
+- Runs: holders of `library.tag` follow their libraries' runs (`api/tasks/running`, history, a run) and may cancel a
+  `ScopeTags` run there, not a scan ([tasks](tasks.md)); the client's `TaskWatch` polls with that right too.
+- Known costs, to measure at 2M in chunk 16: the count reads the whole scope (a library of 2M with the content
+  filters, or a search with a million matches: seconds), and each batch of a search scope asks the search again with
+  `Id > last` (a big search walked to its end may read its matches many times). Both only on an explicit, confirmed
+  action, never per page view.
 - **Default tags** of a library and, for folder-scanned libraries, of folders (inherited by sub-folders): given once
   when a book enters the catalog or moves in, as `Rule` links; adding one asks "new books only or also those there".
 

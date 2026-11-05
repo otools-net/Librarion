@@ -16,5 +16,7 @@ every library you may scan. It has three pages:
 
 While a scan, an import or a removal runs, a panel under the top bar shows it on every page: what runs and where
 ("Scanning Comics…"), the time it has taken, what it found so far and the file being read, with **Cancel**. Tasks
-started by schedules or by other administrators show too. When a task ends, the panel shows how it went until you close
+started by schedules or by other administrators show too. Tagging every book of a big list (**Tag all**, see
+[Browsing](../user-guide/browsing.md#selecting-and-tagging-books)) shows there too, also to those who tag books in
+that library without scanning it; they may cancel it. When a task ends, the panel shows how it went until you close
 it (×), and a short message says so.

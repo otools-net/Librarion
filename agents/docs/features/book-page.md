@@ -77,3 +77,4 @@ editor.
 - **D-5.6 Book page:** cover, title, authors, series and number, fields as chips linking to their pages, description,
   properties (imported custom columns), copies and formats with **Download** (Read comes with the reader stage),
   possible duplicates (from the merge work, read only here).
+- Flaky once (2026-11-05, landscape, full run with 127 others): `book.spec.ts` failed; it passed 5 times alone and repeated. Watch it.

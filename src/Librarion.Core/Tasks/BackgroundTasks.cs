@@ -92,6 +92,11 @@ public sealed class BackgroundTasks : IDisposable
         Func<IProgress<ScanProgress>, CancellationToken, Task<ScanResult>> work, CancellationToken cancellationToken) =>
         (await StartAsync(tenantId, null, kind, TaskTrigger.Manual, userId, null, work, cancellationToken)).RunId;
 
+    /// <summary>Starts <paramref name="work"/> as a run of the library (after the runs before it there and in the tenant).</summary>
+    public async Task<long> StartLibraryAsync(int tenantId, int libraryId, BackgroundTaskKind kind, int? userId,
+        Func<IProgress<ScanProgress>, CancellationToken, Task<ScanResult>> work, CancellationToken cancellationToken) =>
+        (await StartAsync(tenantId, libraryId, kind, TaskTrigger.Manual, userId, null, work, cancellationToken)).RunId;
+
     /// <summary>Starts a scan of the library, or answers the run already going there (<c>Started</c> false).</summary>
     public Task<(long RunId, bool Started)> StartScanAsync(int tenantId, int libraryId, TaskTrigger trigger, int? userId, int? scheduleId, CancellationToken cancellationToken) =>
         StartAsync(tenantId, libraryId, BackgroundTaskKind.LibraryScan, trigger, userId, scheduleId,

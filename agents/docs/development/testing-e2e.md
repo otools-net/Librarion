@@ -46,3 +46,6 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
 - The final layout check measures the page as the test leaves it: a test that ends scrolled (a row further down as the
   run's other specs add libraries) can put a small link against the sticky top bar's buttons. End such a test scrolled
   to the top; targets covered at their centre are not measured (`expectTapTargets`).
+- Two Ctrl-clicks on links in a row (`click({ modifiers: ['ControlOrMeta'] })`) made headless Chromium drop every
+  later input now and then (2 runs in 5 under load: no event reached the page at all, though the app prevents the
+  default): `selection.spec.ts` Ctrl-clicks one book and takes the next by its box; the client tests cover more.

@@ -62,6 +62,54 @@ public static class BookEndpoints
             .WithName("EditBook")
             .WithSummary("Changes a book: `columns` (title, description, rating 0-10, 0 none) need `library.edit`, as do `fields` of a field; `fields` with `field` null (plain tags) need `library.tag`. Each field's tags are set whole, in order (authors), by `id` or by `name` (found in the field, else made); what is set stays through re-imports, a tag taken off stays off. Answers the book as `GET` does.");
 
+        // Plain tags on many books (library.tag in their libraries): a selection, or every book of a list (a scope).
+        books.MapPost("/tags/state", async (SelectionInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                return Results.Ok(await tagger.StateAsync(state.TenantId!.Value, visibility, Taggable(state), input.Books ?? [], context.RequestAborted));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("GetSelectionTags")
+            .WithSummary($"The plain tags of the selected books (at most {BookTagger.MaxSelection}) the caller may tag, each with how many of them have it.");
+
+        books.MapPost("/tags", async (SelectionInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                return ApiResults.From(await tagger.TagSelectionAsync(state.TenantId!.Value, visibility, Taggable(state), input.Books ?? [],
+                    new TagChange(input.Add, input.Remove), context.RequestAborted));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("TagSelection")
+            .WithSummary("Gives the selected books the tags of `add` (by `id`, or by `name`: found, else made) and takes those of `remove` away; books the caller can't tag are left out. A tag taken off stays off through re-imports.");
+
+        books.MapGet("/scope", async (int library, int? tag, string? q, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                if (!state.Access.HasIn(Rights.TagBooks, library))
+                    return Results.NotFound();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                return Results.Ok(new ScopeCount(await tagger.CountAsync(state.TenantId!.Value, visibility, new BookScope(library, tag, q), context.RequestAborted)));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("CountScope")
+            .WithSummary("How many books a list holds (the library's, with `tag`, matching `q`): what tagging all of them asks to confirm.");
+
+        books.MapPost("/scope/tags", async (ScopeInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                if (!state.Access.HasIn(Rights.TagBooks, input.Library))
+                    return Results.NotFound();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                var result = await tagger.TagScopeAsync(state.TenantId!.Value, visibility, new BookScope(input.Library, input.Tag, input.Q),
+                    new TagChange(input.Add, input.Remove), state.User.Id, context.RequestAborted);
+                return ApiResults.From(result, work => work.RunId is null ? Results.Ok(work) : Results.Accepted($"/api/tasks/{work.RunId}", work));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("TagScope")
+            .WithSummary($"Gives every book of a list (`library`, with `tag`, matching `q`) the tags of `add` and takes those of `remove` away, by batches of {TagService.BatchSize}; past {TagService.InlineLinks} changes a background run of the library (202 with it).");
+
         books.MapGet("/{id:int}/duplicates", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {
                 var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
@@ -230,4 +278,13 @@ public static class BookEndpoints
         CanTag = book.MergedIntoId is null && state.Access.HasIn(Rights.TagBooks, book.LibraryId),
         CanEdit = book.MergedIntoId is null && state.Access.HasIn(Rights.EditBooks, book.LibraryId),
     };
+
+    /// <summary>The libraries where the caller may tag books.</summary>
+    private static IReadOnlySet<int> Taggable(AccessState state) => state.Access.LibrariesWith(Rights.TagBooks).ToHashSet();
+
+    public sealed record SelectionInput(IReadOnlyList<int>? Books, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null);
+
+    public sealed record ScopeInput(int Library, int? Tag = null, string? Q = null, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null);
+
+    public sealed record ScopeCount(long Books);
 }

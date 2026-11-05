@@ -115,7 +115,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        tag is removed; search text, sort keys and counts kept; a re-import keeps the edits. **Built:** edited columns as
        flags on `Books` (not a row of values), see
        [book-page](../features/book-page.md#editing-a-book-built-stage-6-chunk-6-d-63).
-7. [ ] Selection in the library and search lists (long press, click / Ctrl / Shift, the selection bar) and tagging a
+7. [x] Selection in the library and search lists (long press, click / Ctrl / Shift, the selection bar) and tagging a
        selection (tri-state); scope tagging of a search, an author or a library: counted, confirmed, a background run
        past the threshold.
 8. [ ] Default tags of a library and of folders (inherited by sub-folders) as `Rule` links, given when a book enters
@@ -167,7 +167,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 
 ### 6.2 Tagging and editing books
 - [ ] A book's tags and metadata on its page; edits kept through re-imports; suppressions.
-- [ ] Selection, selection tagging, scope tagging; default tags of libraries and folders.
+- [ ] Selection, selection tagging, scope tagging (built, chunk 7); default tags of libraries and folders.
 - [ ] Cover upload, Change cover style, reassign a template's books.
 
 ### 6.3 Duplicates

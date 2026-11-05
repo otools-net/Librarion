@@ -32,6 +32,22 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - Every book is a link to its page ([book-page](book-page.md)): `a.book-link` inside the `li`, which keeps the layout's
   measures.
 
+## Selecting books (built, stage 6 chunk 7)
+
+- `BookList` (library, tag page, search) selects with `library.tag` (`SessionService.can`): a box over each cover
+  (`.book-select`, `role="checkbox"`; shown on hover / focus and on every card once one is selected), Ctrl / Cmd-click,
+  Shift-click for a range from the last book toggled, a **long press** on touch (`pointerdown` with `pointerType`
+  touch, 500 ms, cancelled by a 10 px move or a lift: iOS fires no `contextmenu` on links; `-webkit-touch-callout:
+  none`). While books are selected a click selects instead of opening.
+- Clicks are caught by a **capture** listener on the host, which stops them: a host `(click)` runs after RouterLink's
+  own handler on the `<a>` and the book had opened. Escape clears (not from inputs or with a dialog open); another
+  list (library, tag, search, sort) clears; at most 1,000.
+- The bar (`.selection-dock`, fixed at the bottom over the safe area; the list gets 72 px more padding while it shows):
+  Clear, the count (`role="status"`), Select all (the loaded books), Tags. **Tag all** in the list's tools tags the
+  whole list ([tags](tags.md#tagging-many-books-built-stage-6-chunk-7)); under 480 px it shows its icon only
+  (`.tool-label` hidden but read), and the tools row wraps: on a 360 px phone the button had pushed the row, then the
+  page, past the screen.
+
 ## Fields and tags
 
 - The sidebar: Library, Authors (`fields/author`), Series (`fields/series`), Tags (`tags`), All fields (`fields`: every

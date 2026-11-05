@@ -68,6 +68,33 @@ public sealed class BookQueries(TenantDb tenantDb)
 {
     public const int MaxLimit = 200;
 
+    /// <summary>
+    /// The books of a list as a query (scope tagging walks it by id, a batch at a time): those the account sees in
+    /// <paramref name="libraryId"/> (null: every library it sees), with <paramref name="tagId"/> or a tag under it, matching
+    /// <paramref name="search"/>; the same rules as <see cref="ListAsync"/>. <paramref name="batch"/> sizes the plans as a page would.
+    /// </summary>
+    public static async Task<IQueryable<Book>> ScopeAsync(LibrarionDbContext db, BookVisibility visibility, int? libraryId, int? tagId, string? search, int batch,
+        CancellationToken cancellationToken)
+    {
+        if (libraryId is { } only && !visibility.Libraries.ContainsKey(only))
+            return db.Books.Where(b => false);
+        var query = await VisibleAsync(db, visibility, libraryId, cancellationToken, batch);
+        var libraries = libraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var fields = await BookSearch.KeysAsync(db, cancellationToken);
+            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(search, fields.ContainsKey), fields, libraries, batch, cancellationToken);
+        }
+
+        if (tagId is { } tag)
+        {
+            var tags = await DescendantsAsync(db, [tag], cancellationToken);
+            query = query.Where(await NarrowAsync(db, [tag], libraries, batch, cancellationToken) ? From(db, tags) : Probe(db, tags));
+        }
+
+        return query;
+    }
+
     public async Task<Page<BookListItem>> ListAsync(int tenantId, BookVisibility visibility, BookPageRequest request, CancellationToken cancellationToken = default)
     {
         if (request.LibraryId is { } only && !visibility.Libraries.ContainsKey(only))

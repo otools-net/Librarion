@@ -20,6 +20,8 @@ public enum BackgroundTaskKind : byte
     MergeUndo,
     /// <summary>A tag with many books under it moved: the totals of the tags it left and joined counted again.</summary>
     TagCounts,
+    /// <summary>Tags given to or taken from every book of a library's list (a search, a tag's page, the library), in batches.</summary>
+    ScopeTags,
 }
 
 public enum TaskTrigger : byte

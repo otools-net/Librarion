@@ -28,6 +28,9 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
   one waits for every run of the tenant started before it, and every run started after it waits for it, so a scan
   never links a tag a merge is taking away. Listed (`running`, history, `api/tasks/{id}`) for those with
   `tenant.tags`; progress `changed` / `removed` count links, `current` names the tag.
+- `ScopeTags` (stage 6, chunk 7) is a run of a library (`StartLibraryAsync`): tags given to or taken from every book
+  of a list. Those with `library.tag` there follow the library's runs too (the `tasks` routes accept it) and cancel
+  only `ScopeTags` runs; scans stay theirs who scan ([tags](tags.md#tagging-many-books-built-stage-6-chunk-7)).
 - Each run is a `TaskRuns` row written at start and completed at the end: outcome (`succeeded`, `failed`,
   `cancelled`, `interrupted`, `skipped`), counts as JSON (added, changed, removed, unchanged, archives read / skipped,
   unreadable entries, missing roots, the first 20 problems). A failure's summary says to look in the server log; the
