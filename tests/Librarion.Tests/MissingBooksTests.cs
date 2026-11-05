@@ -164,7 +164,7 @@ public sealed class MissingBooksTests
 
         var (admin, _) = await library.AdminAsync(Cancel);
         var listed = await admin.GetAsync<Page<BookListItem>>($"/api/books?library={library.LibraryId}", Cancel);
-        Assert.AreEqual("kept", listed.Items.Single().FileName.Replace(".fb2", ""), "missing books are not listed");
+        Assert.AreEqual("kept", listed.Items.Single().FileName?.Replace(".fb2", ""), "missing books are not listed");
 
         var missing = await admin.GetAsync<MissingBookPage>($"/api/libraries/{library.LibraryId}/missing", Cancel);
         Assert.AreEqual(3, missing.Total);

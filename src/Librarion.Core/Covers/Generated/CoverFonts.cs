@@ -81,10 +81,11 @@ public static class CoverFonts
     private static string Covered(SKTypeface typeface, string text)
     {
         var kept = new StringBuilder(text.Length);
+        using var font = new SKFont(typeface);
         foreach (var rune in text.EnumerateRunes())
         {
             if (Rune.IsWhiteSpace(rune) || Rune.GetUnicodeCategory(rune) is UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or UnicodeCategory.Format
-                || typeface.GetGlyph(rune.Value) != 0)
+                || font.GetGlyph(rune.Value) != 0)
                 kept.Append(rune.ToString());
         }
 

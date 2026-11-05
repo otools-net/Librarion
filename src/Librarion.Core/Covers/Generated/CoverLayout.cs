@@ -79,7 +79,7 @@ public static class CoverLayout
         {
             var width = Width(shaper, font, lines[i]);
             var x = style.Align == TextAlign.Center ? box.MidX - width / 2 : Rtl(lines[i]) ? box.Right - width : box.Left;
-            canvas.DrawShapedText(shaper, lines[i], x, top + i * lineHeight + baselineOffset, font, paint);
+            canvas.DrawShapedText(shaper, lines[i], x, top + i * lineHeight + baselineOffset, SKTextAlign.Left, font, paint);
         }
 
         return height;

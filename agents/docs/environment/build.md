@@ -13,6 +13,12 @@ Code: `src/Librarion.Api/Librarion.Api.csproj` (targets `LibrarionWebInstall`, `
   project was read were removed inside a target with a wildcard, which matches files on disk and so missed the
   previous build's chunks. `LibrarionWebContent` now removes them by name. Checked: two client changes in a row, each
   built once.
+- **CI treats warnings as errors** (`Directory.Build.props`: `CI=true`, which GitHub sets); locally they stay
+  warnings and go unseen. Before pushing C# changes: `CI=true dotnet build --no-incremental` (0 errors). Once a
+  project fails, the ones depending on it aren't compiled, so build again after each fix (2026-11-05: SkiaSharp 4
+  deprecations, EF1002 on raw SQL, then a nullable warning in a test, one behind the other).
+- Raw SQL that interpolates identifiers (`SearchIndex.cs`) carries `#pragma warning disable EF1002` with the reason;
+  a value goes as a parameter (`SqlQuery` with a formattable string), never interpolated.
 - `NG_CLI_ANALYTICS=false` is set for the npm steps; `angular.json` has `cli.analytics: false`
   (`TheAngularCliSendsNoAnalytics`).
 - Initial bundle budget 500 kB warning / 1 MB error (`angular.json`); stage 0: ~260 kB raw, ~72 kB transferred.

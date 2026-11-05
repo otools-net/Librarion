@@ -4,6 +4,10 @@ using System.Text;
 using Librarion.Core.Data;
 using Microsoft.EntityFrameworkCore;
 
+// EF1002 (interpolated raw SQL): what is interpolated here are table, column, index and parameter names written
+// in this file, which SQL cannot take as parameters; the words searched for always go as a parameter.
+#pragma warning disable EF1002
+
 namespace Librarion.Core.Search;
 
 /// <summary>
@@ -68,7 +72,7 @@ internal sealed class SqliteSearchIndex : ISearchIndex
 
     private static async Task EnsureTableAsync(LibrarionDbContext db, string table, string content, string column, CancellationToken cancellationToken)
     {
-        var exists = await db.Database.SqlQueryRaw<int>($"SELECT count(*) AS \"Value\" FROM sqlite_master WHERE type = 'table' AND name = '{table}'")
+        var exists = await db.Database.SqlQuery<int>($"SELECT count(*) AS \"Value\" FROM sqlite_master WHERE type = 'table' AND name = {table}")
             .SingleAsync(cancellationToken) > 0;
         // Accents and case are folded by the tokenizer too: tag names are indexed as spelled.
         await db.Database.ExecuteSqlRawAsync($"""

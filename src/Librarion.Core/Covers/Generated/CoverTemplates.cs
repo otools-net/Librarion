@@ -99,11 +99,12 @@ public sealed class GeometricTemplate : CoverTemplate
                     canvas.DrawCircle(x, y, r, paint);
                 else
                 {
-                    using var path = new SKPath();
-                    path.MoveTo(x, y - r);
-                    path.LineTo(x + r, y + r);
-                    path.LineTo(x - r, y + r);
-                    path.Close();
+                    using var builder = new SKPathBuilder();
+                    builder.MoveTo(x, y - r);
+                    builder.LineTo(x + r, y + r);
+                    builder.LineTo(x - r, y + r);
+                    builder.Close();
+                    using var path = builder.Detach();
                     canvas.DrawPath(path, paint);
                 }
             }
