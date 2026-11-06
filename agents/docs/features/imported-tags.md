@@ -69,7 +69,8 @@ axe on the page in both themes). Built in stage 6 chunk 9; the model and the imp
 
 - Imports with the new index and the mapping rows (PostgreSQL): INPX 1M 9.7 min (9.1 before), Calibre 2M 31.3 min
   (28.9 before, **over its 30 min budget**), unchanged re-imports 35 s and 2.6 min. The user kept the index; imports
-  are made faster next ([stage 6 plan](../development/stage-6-curation-plan.md)).
+  were made faster: Calibre 2M 25.4 min with the new files read in parallel
+  ([stage 6 plan](../development/stage-6-curation-plan.md), [imports](imports.md#scale)).
 - The page's queries on the generated 2M catalog (`run --only imported`) and the coverage: to measure.
 
 ## Known limits

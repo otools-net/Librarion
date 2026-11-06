@@ -191,6 +191,14 @@ A session may end early: this list is the state of the work. Tick a chunk when i
   upserts, the search index), bigger batches, `COPY` for the books on SQLite's side too, writing links and counts in
   parallel with reading the next batch, deferring secondary indexes (or the GIN / FTS5 index) on a first import into
   an empty library and building them once at the end. Measure each idea on both providers before keeping it.
+- **Profiled** (2026-11-06, `StepTimes`, printed by the benchmark's `import`): of Calibre 2M's 30.7 min, matching the
+  records took 433 s, almost all of it each new file's details read from the disk one by one while not cached (about
+  200 µs each); links copied 329 s, tag names 316 s (mostly ~600k new tags made through EF), tag counts 245 s, books
+  copied 166 s.
+- **Done:** a batch's new loose files read 8 at a time (`CatalogImporter.Run.Stat`): matching 433 → 90 s, **Calibre 2M
+  25.4 min** (1,312 a second), unchanged re-import 2.4 min. INPX reads ZIP directories, not files: unchanged.
+- **Still to try, in this order:** new tags copied in bulk on PostgreSQL (ids from the sequence, as books), the tag
+  counts flushed every few batches instead of each, the links' `COPY` overlapped with reading the next batch.
 
 ## Found with real books (2026-11-06)
 

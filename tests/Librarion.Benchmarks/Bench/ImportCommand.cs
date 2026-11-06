@@ -60,6 +60,8 @@ public static class ImportCommand
 
         IImportSource Open() => source == "calibre" ? new CalibreSource(path, folder) : new InpxSource(path, folder);
         var importer = services.GetRequiredService<CatalogImporter>();
+        StepTimes.Enabled = true;
+        StepTimes.Reset();
         var import = Stopwatch.StartNew();
         var progress = new Progress<ScanProgress>(p =>
         {
@@ -70,6 +72,9 @@ public static class ImportCommand
         var importSeconds = import.Elapsed.TotalSeconds;
         report($"import: {first.Added:N0} books in {importSeconds:0.0} s ({first.Added / Math.Max(importSeconds, 0.001):N0} a second), {first.Skipped:N0} skipped, "
             + $"{first.Problems.Count} problems");
+        foreach (var (name, time, count) in StepTimes.Totals())
+            report($"  {time.TotalSeconds,8:0.0} s  {100 * time.TotalSeconds / importSeconds,5:0.0} %  {name} ({count:N0})");
+        StepTimes.Enabled = false;
 
         var again = Stopwatch.StartNew();
         var second = await importer.ImportAsync(tenant.Id, libraryId, root.Id, Open, null, cancellationToken);

@@ -283,11 +283,15 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         var fresh = records.Where(r => r.BookId is null && r.Files.Count > 0).ToList();
         if (fresh.Count > 0)
         {
-            await resolver.ResolveAsync(db, fresh.SelectMany(r => Names(r.Metadata)), cancellationToken);
-            await folders.AssignAsync(db, fresh.SelectMany(r => r.Files), cancellationToken);
+            using (StepTimes.Step("write: tag names"))
+                await resolver.ResolveAsync(db, fresh.SelectMany(r => Names(r.Metadata)), cancellationToken);
+            using (StepTimes.Step("write: folders"))
+                await folders.AssignAsync(db, fresh.SelectMany(r => r.Files), cancellationToken);
             foreach (var file in fresh.SelectMany(r => r.Files))
                 folders.Count(file.FolderId, 1);
-            await DefaultsAsync(db, fresh.SelectMany(r => r.Files).Select(f => f.FolderId), cancellationToken);
+            using (StepTimes.Step("write: default tags"))
+                await DefaultsAsync(db, fresh.SelectMany(r => r.Files).Select(f => f.FolderId), cancellationToken);
+            var planning = StepTimes.Step("write: books planned");
             // The books through EF (their ids come back), everything hanging on them in bulk: EF's per-row cost was
             // most of an import's time (agents/docs/features/imports.md#scale).
             var made = new List<(Book Book, ImportedBook Record, List<BookTag> Links, List<BookIdentifier> Ids, List<BookProperty> Properties)>(fresh.Count);
@@ -303,8 +307,10 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                 book.Properties = [];
             }
 
+            planning.Dispose();
             await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
             {
+                var inserting = StepTimes.Step("write: books inserted");
                 if (await BulkRows.ReserveIdsAsync(db, "Books", made.Count, cancellationToken) is { } reserved)
                 {
                     // PostgreSQL: ids from the table's sequence (safe beside other writers), the books copied too.
@@ -318,17 +324,25 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                     await db.SaveChangesAsync(cancellationToken);
                 }
 
+                inserting.Dispose();
+                inserting = StepTimes.Step("write: files inserted");
                 await BulkRows.InsertAsync(db, "BookFiles", FileColumns, made.SelectMany(m => m.Record.Files.Select(f => new object?[]
                 {
                     tenantId, libraryId, m.Book.Id, f.RootId, f.ArchiveId, f.FolderId, f.Path, f.PathKey, f.Format, f.Size, f.Crc32, f.Modified, f.Locator, f.Method, f.PackedSize,
                 })).ToList(), cancellationToken);
+                inserting.Dispose();
+                inserting = StepTimes.Step("write: links inserted");
                 await BulkRows.InsertAsync(db, "BookTags", ["TenantId", "BookId", "TagId", "Source", "Ordinal", "Number"],
                     made.SelectMany(m => m.Links.Select(l => new object?[] { tenantId, m.Book.Id, l.TagId, (byte)l.Source, l.Ordinal, l.Number })).ToList(), cancellationToken);
+                inserting.Dispose();
+                inserting = StepTimes.Step("write: identifiers and properties inserted");
                 await BulkRows.InsertAsync(db, "BookIdentifiers", ["BookId", "TenantId", "Scheme", "Value"],
                     made.SelectMany(m => m.Ids.Select(i => new object?[] { m.Book.Id, tenantId, i.Scheme, i.Value })).ToList(), cancellationToken);
                 await BulkRows.InsertAsync(db, "BookProperties", ["BookId", "TenantId", "Name", "Value"],
                     made.SelectMany(m => m.Properties.Select(p => new object?[] { m.Book.Id, tenantId, p.Name, p.Value })).ToList(), cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                inserting.Dispose();
+                using (StepTimes.Step("write: commit"))
+                    await transaction.CommitAsync(cancellationToken);
             }
 
             db.ChangeTracker.Clear();
@@ -430,8 +444,10 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     /// <summary>The counts moved since the last flush, written: one upsert per thousand touched tags, one update of the library.</summary>
     public async Task FlushCountsAsync(LibrarionDbContext db, CancellationToken cancellationToken)
     {
-        await counts.WriteAsync(db, tenantId, ancestors, cancellationToken);
-        await folders.FlushAsync(db, cancellationToken);
+        using (StepTimes.Step("counts: tags"))
+            await counts.WriteAsync(db, tenantId, ancestors, cancellationToken);
+        using (StepTimes.Step("counts: folders"))
+            await folders.FlushAsync(db, cancellationToken);
         if (bookDelta != 0)
         {
             var delta = bookDelta;

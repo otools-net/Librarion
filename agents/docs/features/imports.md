@@ -104,7 +104,7 @@ Measured 2026-11-01 (`import` command, [benchmark](../../tools/benchmark/README.
 
 | Source | Import | Unchanged re-import | Budget |
 |---|---|---|---|
-| Calibre, 2M books (one EPUB each, 500k authors) | 27.1 min (1,232 a second) | 2.6 min | 30 min / 5 min |
+| Calibre, 2M books (one EPUB each, 500k authors) | 27.1 min (1,232 a second); 25.4 min (1,312) on 2026-11-06 | 2.6 min; 2.4 min | 30 min / 5 min |
 | INPX, 1M records (100 zips, 1 % deleted) | 8.9 min (1,845 a second) | 38 s | 15 min / 5 min |
 | SQLite, 100k: Calibre / INPX | 92 s / 75 s | 15 s / 10 s | recorded |
 
@@ -119,6 +119,9 @@ What it took (each found by the benchmark):
 - The source-id lookup is two plain queries (identifiers by `(TenantId, Scheme, Value)`, then books by key): as a join,
   PostgreSQL's statistics lagged the growing tables and planned a walk over every book per identifier (a 30 s timeout
   at 9,000 books).
+- A batch's new loose files are read from the disk 8 at a time (`CatalogImporter.Run.Stat`): one by one, 2M files
+  whose entries weren't cached took 7 of a Calibre import's 31 minutes (2026-11-06: 30.7 → 25.4 min). Where an import's
+  time goes is printed by the benchmark's `import` (`StepTimes`, off otherwise).
 - Calibre's own indexes on its link tables (`books_authors_link_bidx`…) are what makes reading by book fast; a
   database without them (the first generated one) reads each link table whole per batch (2.4 min per 100k books).
 

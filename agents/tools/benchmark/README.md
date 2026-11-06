@@ -105,6 +105,8 @@ agents/tools/benchmark/import.sh postgres [inpx-records 1000000] [calibre-books 
   their zips (stored one-byte entries; one record in a hundred `DEL=1`).
 - Into a fresh database (the target is recreated): the source's folder added as a root, the real `CatalogImporter`
   run, then run again with the source unchanged (must write nothing).
+- After the import, where its time went by step (`Core/Import/StepTimes.cs`, switched on only here): the importer's
+  steps (matching, tag names, each bulk copy, the counts) with their seconds and share; steps nest.
 - Budgets (checked only at their sizes): Calibre 2M < 30 min, INPX 1M < 15 min, each unchanged re-import < 5 min;
   exit 1 past one. Report `import-<source>-<provider>-<records>-<time>.json` in the work folder.
 - `import.sh` builds the benchmark in Release, starts the PostgreSQL container for `postgres` (Docker Desktop must

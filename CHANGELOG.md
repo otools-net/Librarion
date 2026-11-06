@@ -48,6 +48,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Changed
 
+- Importing a Calibre library is faster: the books' files are checked several at a time (2M books in 25 minutes
+  instead of 31 on the test machine).
 - The catalog now records the folder (or ZIP) each book file is in, for browsing by folder and folder default tags
   coming next. A database made by an earlier build must be deleted and the libraries scanned again (before 1.0 the
   database is not upgraded).
