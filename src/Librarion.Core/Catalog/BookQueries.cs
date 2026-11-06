@@ -47,7 +47,11 @@ public sealed record BookFileItem(int Id, string Format, long Size, string Name,
 public sealed record BookDetail(
     int Id, int LibraryId, string? Title, string? FileName, string? Description, byte? Rating, DateTime Added, CoverSource CoverSource,
     IReadOnlyList<BookTagItem> Tags, IReadOnlyList<BookFileItem> Files, IReadOnlyList<KeyValuePair<string, string>> Identifiers, int? MergedIntoId,
-    IReadOnlyList<KeyValuePair<string, string>>? Properties = null, bool CanDownload = false, bool CanTag = false, bool CanEdit = false, string? CoverVersion = null);
+    IReadOnlyList<KeyValuePair<string, string>>? Properties = null, bool CanDownload = false, bool CanTag = false, bool CanEdit = false, string? CoverVersion = null,
+    BookCoverInfo? Cover = null);
+
+/// <summary>How a book's cover is chosen (stage 6 chunk 10): the generated style it has, and whether a user chose the cover (an upload or a style over its own).</summary>
+public sealed record BookCoverInfo(short Template, short Variant, bool Chosen);
 
 /// <summary>Why another book may be the same one, strongest first.</summary>
 public enum DuplicateReason
@@ -256,7 +260,8 @@ public sealed class BookQueries(TenantDb tenantDb)
             .Select(p => new KeyValuePair<string, string>(p.Name, p.Value)).ToListAsync(cancellationToken);
         return new BookDetail(
             book.Id, book.LibraryId, book.Title, book.Title is null && files.Count > 0 ? FileTitles.FromPath(files[0].Name) : null, book.Description,
-            book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null, properties, CoverVersion: CoverVersion(book.Updated));
+            book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null, properties, CoverVersion: CoverVersion(book.Updated),
+            Cover: new BookCoverInfo(book.GeneratedTemplate ?? 0, book.GeneratedVariant ?? 0, book.Edited.HasFlag(BookEdits.Cover)));
     }
 
     private static string LastSegment(string path) => path[(path.LastIndexOfAny(['/', '\\']) + 1)..];

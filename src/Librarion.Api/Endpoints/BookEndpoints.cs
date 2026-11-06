@@ -276,7 +276,7 @@ public static class BookEndpoints
             ? $"\"{crc:x8}-{target.Size:x}\""
             : $"\"{target.Size:x}-{target.Modified?.Ticks ?? 0:x}\"");
 
-    private static BookDetail WithRights(BookDetail book, AccessState state) => book with
+    internal static BookDetail WithRights(BookDetail book, AccessState state) => book with
     {
         CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId),
         CanTag = book.MergedIntoId is null && state.Access.HasIn(Rights.TagBooks, book.LibraryId),

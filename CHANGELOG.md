@@ -6,6 +6,10 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Cover** on a book's page (for those who may edit books): upload a picture (JPEG, PNG or WebP, up to 5 MB), pick
+  a drawn cover from previews of the book in every style and color set, or go back to the book's own cover. The
+  choice stays through re-imports. Uploaded covers are kept in a new data folder (`Librarion:Data:Directory`,
+  default `data`): back it up with the database.
 - **Administration → Catalog → Imported tags** (with the Imported tags right): the tags and genres that books came
   with, in one library by how many books have them, with the names and sources they came from and how much the first
   500 cover. Tick some to **Keep** them as they are, **Map** them onto the right tag (a merge, undone under Tags →

@@ -153,6 +153,14 @@ export interface BookDetail {
     /** May change its title, description, rating and fields (`library.edit`). */
     canEdit: boolean;
     coverVersion?: string | null;
+    /** How its cover is chosen: the generated style it has, whether a user chose the cover (an upload, a style over its own). */
+    cover?: { template: number; variant: number; chosen: boolean } | null;
+}
+
+/** The generated cover styles: template names by index, and how many palettes each has. */
+export interface CoverStyles {
+    templates: string[];
+    palettes: number;
 }
 
 /** A tag a book's field is to have: by id, or by name (found in the field, else made). */

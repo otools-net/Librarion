@@ -67,20 +67,46 @@ public static class CoverImages
         return thumbnails;
     }
 
-    /// <summary>A picture at <paramref name="width"/> (never enlarged), as WebP.</summary>
-    public static byte[] Resize(SKBitmap bitmap, int width)
+    /// <summary>The formats a cover is uploaded in.</summary>
+    private static readonly SKEncodedImageFormat[] Uploadable = [SKEncodedImageFormat.Jpeg, SKEncodedImageFormat.Png, SKEncodedImageFormat.Webp];
+
+    /// <summary>
+    /// An uploaded cover decoded and made again (stage 6 chunk 10): JPEG, PNG or WebP within the limits of
+    /// <see cref="Thumbnails"/>, at most <paramref name="maxWidth"/> wide, as WebP; null for anything else. Nothing of
+    /// what was sent is kept as it was.
+    /// </summary>
+    public static byte[]? Remake(byte[] source, int maxWidth, long maxBytes)
     {
-        if (bitmap.Width <= width)
-            return Encode(bitmap);
-        var height = Math.Max(1, (int)Math.Round((double)bitmap.Height * width / bitmap.Width));
-        using var resized = bitmap.Resize(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul), new SKSamplingOptions(SKCubicResampler.Mitchell));
-        return Encode(resized ?? bitmap);
+        if (source.Length == 0 || source.Length > maxBytes)
+            return null;
+        using var data = SKData.CreateCopy(source);
+        using var codec = SKCodec.Create(data);
+        if (codec is null || !Uploadable.Contains(codec.EncodedFormat))
+            return null;
+        var info = codec.Info;
+        if (info.Width <= 0 || info.Height <= 0 || info.Width > MaxSide || info.Height > MaxSide || (long)info.Width * info.Height > MaxPixels
+            || Math.Max(info.Width, info.Height) > MaxAspect * Math.Min(info.Width, info.Height))
+            return null;
+        using var bitmap = new SKBitmap(new SKImageInfo(info.Width, info.Height, SKColorType.Rgba8888, SKAlphaType.Premul));
+        if (codec.GetPixels(bitmap.Info, bitmap.GetPixels()) is not (SKCodecResult.Success or SKCodecResult.IncompleteInput))
+            return null;
+        return Resize(bitmap, maxWidth, 85);
     }
 
-    public static byte[] Encode(SKBitmap bitmap)
+    /// <summary>A picture at <paramref name="width"/> (never enlarged), as WebP.</summary>
+    public static byte[] Resize(SKBitmap bitmap, int width, int quality = Quality)
+    {
+        if (bitmap.Width <= width)
+            return Encode(bitmap, quality);
+        var height = Math.Max(1, (int)Math.Round((double)bitmap.Height * width / bitmap.Width));
+        using var resized = bitmap.Resize(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul), new SKSamplingOptions(SKCubicResampler.Mitchell));
+        return Encode(resized ?? bitmap, quality);
+    }
+
+    public static byte[] Encode(SKBitmap bitmap, int quality = Quality)
     {
         using var image = SKImage.FromBitmap(bitmap);
-        using var encoded = image.Encode(SKEncodedImageFormat.Webp, Quality);
+        using var encoded = image.Encode(SKEncodedImageFormat.Webp, quality);
         return encoded.ToArray();
     }
 }

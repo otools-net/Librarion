@@ -8,7 +8,7 @@ import {
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
     BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
-    ImportedStatus, ImportedSummary, ImportedTag, ImportSource,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles,
 } from './models';
 
 /**
@@ -18,6 +18,10 @@ import {
  */
 export const coverUrl = (book: number, size: 's' | 'm' | 'l', version?: string | null) =>
     `api/books/${book}/cover/${size}${version ? `?v=${version}` : ''}`;
+
+/** A book drawn in a generated style, small: Change cover style's previews. */
+export const coverPreviewUrl = (book: number, template: number, variant: number, version?: string | null) =>
+    `api/books/${book}/cover/preview/${template}/${variant}${version ? `?v=${version}` : ''}`;
 
 /** A file of a book to download (`library.download` in its library); streamed from the library, never unpacked. */
 export const fileUrl = (book: number, file: number) => `api/books/${book}/files/${file}`;
@@ -180,6 +184,11 @@ export class Api {
         this.get<{ books: number }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q, folder: scope.folder ?? undefined });
     tagScope = (scope: BookScope, change: TagChangeInput) => this.post<TagWork>('api/books/scope/tags', { ...scope, ...change });
     editBook = (id: number, edit: BookEdit) => this.put<BookDetail>(`api/books/${id}`, edit);
+    /** A book's cover (`library.edit`): a picture uploaded (its type is the body's), a generated style, back to its own. */
+    uploadCover = (id: number, picture: Blob) => this.put<BookDetail>(`api/books/${id}/cover`, picture);
+    coverStyle = (id: number, template: number, variant: number) => this.put<BookDetail>(`api/books/${id}/cover/style`, { template, variant });
+    useOwnCover = (id: number) => this.delete<BookDetail>(`api/books/${id}/cover`);
+    coverStyles = () => this.get<CoverStyles>('api/covers/styles');
     updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);
     /** Done, or a run when it touches many books (`runId`). */
     deleteTag = (id: number) => this.delete<TagWork>(`api/tags/${id}`);

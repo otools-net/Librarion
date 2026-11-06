@@ -19,5 +19,8 @@ Later sources win:
   `Librarion:Cache:Directory` (default `data/cache`, env `LIBRARION__CACHE__DIRECTORY`; `CacheOptions.PathOf(root,
   name)` gives each cache its subfolder). The user's rule (2026-11-01): no cache path is fixed in code. Tests point it
   into their temp folder (`TestCatalog.Settings`).
+- **Data files** (uploaded covers now) go under `Librarion:Data:Directory` (default `data`, env
+  `LIBRARION__DATA__DIRECTORY`; `DataOptions.PathOf(root, name)`): not cache, never deleted by the server; backed up
+  with the database. Tests point it into their temp folder (`TestCatalog.Settings`).
 - Keys so far: `Librarion:Database:Provider` (`sqlite` default | `postgres`), `ConnectionStrings:Librarion` (SQLite
   default `data/librarion.db` next to the app; required for PostgreSQL), `Urls` (default `http://localhost:5090`).

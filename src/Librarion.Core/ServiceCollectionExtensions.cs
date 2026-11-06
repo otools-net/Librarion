@@ -56,6 +56,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Librarion.Core.Reading.BookDownloads>();
         var cacheOptions = configuration.GetSection(CacheOptions.SectionName).Get<CacheOptions>() ?? new CacheOptions();
         services.AddSingleton(new Librarion.Core.Covers.CoverCache(cacheOptions.PathOf(contentRoot, "covers")));
+        var dataOptions = configuration.GetSection(DataOptions.SectionName).Get<DataOptions>() ?? new DataOptions();
+        services.AddSingleton(new Librarion.Core.Covers.CoverUploads(dataOptions.PathOf(contentRoot, "covers")));
+        services.AddSingleton<Librarion.Core.Covers.CoverEditor>();
         services.AddSingleton(configuration.GetSection(Librarion.Core.Covers.CoverOptions.SectionName).Get<Librarion.Core.Covers.CoverOptions>() ?? new Librarion.Core.Covers.CoverOptions());
         services.AddSingleton<Librarion.Core.Covers.CoverService>();
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();

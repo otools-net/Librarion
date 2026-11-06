@@ -3,8 +3,9 @@
 Built (stage 2): `Title` / `SortTitle`, the cover columns, `BookTitles` and `FileTitles` ([catalog](catalog.md)).
 Built (stage 3): `Core/Covers/` (`CoverExtractor` per format, `CoverImages` decode / resize / WebP, `CoverCache`,
 `CoverService`, `Generated/` fonts, layout, templates), route `GET api/books/{id}/cover/{s|m|l}` (`library.browse`),
-assignment at import (`CatalogWriter.Apply`); tests `CoverTests`. Planned: client `app/books/book-card`,
-`book-cover`; templates on / off per tenant; "change cover style". Reference for the behaviour (not the code:
+assignment at import (`CatalogWriter.Apply`); tests `CoverTests`. Built (stage 6 chunk 10a): upload, Change cover
+style, back to the book's own ([below](#a-books-cover-chosen-built-stage-6-chunk-10a)). Planned (10b): templates on /
+off per tenant. Reference for the behaviour (not the code:
 GPL-3): calibre-web (`C:\workspace\calibre-web`: `cps/helper.py` `get_book_cover*`,
 `cps/tasks/thumbnail.py`, `cps/static/generic_cover.jpg`). Decision D15 in [foundation-plan](../development/foundation-plan.md).
 
@@ -104,6 +105,36 @@ the book** (decided 2026-10-31).
   between characters at any size); the last line ends with an ellipsis. Characters no bundled font has are dropped.
   A new script: its font in `Covers/Fonts/` and its ranges in `CoverFonts.Scripts`.
 - `LIBRARION_COVER_SAMPLES=<folder>` makes `CoverTests` write PNGs of every template for a look by eye.
+
+## A book's cover chosen (built, stage 6 chunk 10a)
+
+Code: `Core/Covers/CoverEditor.cs`, `CoverUploads.cs`, `CoverImages.Remake`, `CoverService` (uploads, previews),
+`Api/Endpoints/CoverEndpoints.cs`; client `books/cover-editor.ts` (the book page's **Cover**), styles at the end of
+`styles/book.css`; tests `CoverEditTests` (both providers), `books/cover-editor.spec.ts`, e2e `specs/covers.spec.ts`
+(every device, axe on the sheet in both themes). The user's answers (2026-11-06) in the
+[stage 6 plan](../development/stage-6-curation-plan.md).
+
+- Routes (`library.edit` in the book's library; a book the caller can't see is not found): `PUT api/books/{id}/cover`
+  (the picture as the body), `PUT …/cover/style {template, variant}`, `DELETE …/cover` (back to its own),
+  `GET …/cover/preview/{template}/{variant}` (the book drawn small, cached as any generated cover), `GET
+  api/covers/styles` (template names, palette count). Each change answers the book as `GET api/books/{id}`.
+- **Upload:** at most 5 MB (`cover.tooBig`), JPEG, PNG or WebP within the extraction's limits (`cover.invalid`: other
+  formats, too many pixels, sides past 16,384, aspect past 4:1), decoded and made again at most 1,200 px wide as WebP
+  (quality 85): nothing a stranger sent is kept as it was. Stored by content hash in the data folder,
+  `covers/<tenant>/ab/<hash>.webp` (`Librarion:Data:Directory`, [config-files](../architecture/config-files.md)), so
+  one picture on several books is one file; `Books.CoverFile` keeps the path (a filtered index finds its other users
+  before the file is deleted). Served through the cover cache as `u:<hash>` at every size.
+- **Style:** a template and palette (the book's `GeneratedTemplate` / `GeneratedVariant`) with `CoverSource =
+  Generated`, over an upload or the book's own cover (the user's answer).
+- **Kept through imports:** a choice sets `BookEdits.Cover`; `CatalogWriter.Apply` and `SourceCover` leave the cover's
+  source alone while it is set. `Book.Updated` moves with each change, so the cover's address (`?v=`) does too.
+- **Back to its own:** the flag cleared, an upload let go (its file deleted when no other book uses it), the source as
+  an import would set it: Calibre for a Calibre book, the book's files when a format has covers, else its generated
+  style (kept as chosen); `CoverState` unknown, so it is looked for again.
+- The `.Accepts(...)` content-type metadata was left off the upload route: it filtered other types out before the
+  route, which then answered 404; the route checks the picture itself.
+- The client checks the 5 MB before sending. A sheet's host must call `open()` (an effect on `viewChild(Sheet)`, as
+  `book-editor.ts`): jsdom finds elements in a closed `<dialog>`, so the spec checks the `open` attribute too.
 
 ## Image library (D17)
 

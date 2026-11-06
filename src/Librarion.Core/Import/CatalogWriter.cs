@@ -472,11 +472,13 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     /// <summary>The default tags of the library and of <paramref name="folderIds"/>' folders and those above them.</summary>
     private HashSet<int> DefaultsOf(IEnumerable<int> folderIds)
     {
-        var given = new HashSet<int>(defaults!.GetValueOrDefault(0) ?? []);
-        if (defaults.Keys.Any(k => k != 0))
+        // Read by DefaultsAsync first, for the same books.
+        var known = defaults ?? throw new InvalidOperationException("The default tags weren't read before they were given.");
+        var given = new HashSet<int>(known.GetValueOrDefault(0) ?? []);
+        if (known.Keys.Any(k => k != 0))
             foreach (var folder in folderIds.Distinct())
                 foreach (var id in folders.Chain(folder))
-                    if (defaults.TryGetValue(id, out var tags))
+                    if (known.TryGetValue(id, out var tags))
                         given.UnionWith(tags);
         return given;
     }
@@ -622,7 +624,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         // cover inside the book is looked for on first view, and again after a re-read.
         if (book.GeneratedTemplate is null || book.GeneratedVariant is null)
             (book.GeneratedTemplate, book.GeneratedVariant) = GeneratedCovers.Assign(book.WorkKey.Value);
-        if (book.CoverSource is CoverSource.Book or CoverSource.Generated)
+        // A cover a user chose (an upload, a style over the book's own) stays (stage 6 chunk 10).
+        if (book.CoverSource is CoverSource.Book or CoverSource.Generated && !book.Edited.HasFlag(BookEdits.Cover))
         {
             book.CoverSource = CoverExtractor.HasCovers(BookFormats.Of(path) ?? "") ? CoverSource.Book : CoverSource.Generated;
             book.CoverState = CoverState.Unknown;
@@ -632,6 +635,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     /// <summary>The source's cover when it has one; else the book's own (or generated) again, looked for anew.</summary>
     private static void SourceCover(Book book, ImportedBook record)
     {
+        if (book.Edited.HasFlag(BookEdits.Cover))
+            return;
         if (record.Cover)
             book.CoverSource = CoverSource.Calibre;
         else if (book.CoverSource == CoverSource.Calibre)

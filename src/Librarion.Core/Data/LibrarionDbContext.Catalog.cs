@@ -31,6 +31,9 @@ public abstract partial class LibrarionDbContext
             entity.HasIndex(b => new { b.TenantId, b.WorkKey });
             // The missing books of a library, oldest first: only missing rows are in it (agents/docs/features/missing-books.md).
             entity.HasIndex(b => new { b.LibraryId, b.MissingSince, b.Id }).HasFilter("\"MissingSince\" IS NOT NULL");
+            // An uploaded cover's other users, found before its file is deleted (stage 6 chunk 10): few rows.
+            entity.Property(b => b.CoverFile).HasMaxLength(100);
+            entity.HasIndex(b => new { b.TenantId, b.CoverFile }).HasFilter("\"CoverFile\" IS NOT NULL");
             Filter(entity, b => b.TenantId == CurrentTenantId);
         });
 

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261106123131_Initial")]
+    [Migration("20261106165755_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -88,6 +88,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<DateTime>("Added")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CoverFile")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<int>("CoverSource")
                         .HasColumnType("integer");
 
@@ -158,6 +162,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CoverFile")
+                        .HasFilter("\"CoverFile\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "WorkKey");
 

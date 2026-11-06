@@ -87,6 +87,11 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   it has no value of yet), its tags, description and rating. Type a name to find a value; **Create** makes a new one.
   What you change stays when the book's file is read again or the library is imported again, and a tag you took off
   stays off.
+- **Cover** (for those allowed to edit books there) changes the book's cover: **Upload a picture…** (JPEG, PNG or
+  WebP, at most 5 MB; it is checked and stored at most 1,200 pixels wide), or pick a **drawn cover** among the book
+  drawn in each style and set of colors, also over a cover the book came with. **Use the book's cover** goes back to
+  the one it came with (or its drawn one when it has none). What you choose stays when the book is read or imported
+  again.
 - **Possible duplicates** lists other books you can see that may be the same one, with why: the same file (in
   another library), the same identifier, or the same title and author. An FB2 id counts only when the title or the
   first author is also the same: hand-made FB2 files often copy it from one another. Merging them comes later.

@@ -375,3 +375,96 @@
     padding: 0;
     border: 0;
 }
+
+/* A book's cover chosen (cover-editor.ts): the cover now beside the choices, a row of previews per drawn style. */
+.cover-editor {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-4);
+}
+
+.cover-editor-now {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.cover-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+/* The file box is the label's: the button is what shows, the input stays reachable to the keyboard. */
+.cover-upload {
+    position: relative;
+}
+
+.cover-upload input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.cover-upload:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.cover-styles-title {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--text-md);
+}
+
+.cover-style-row {
+    margin: 0 0 var(--space-3);
+}
+
+.cover-style-name {
+    display: block;
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.cover-style-options {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: 2px;
+}
+
+.cover-style {
+    flex: none;
+    width: 56px;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    cursor: pointer;
+}
+
+.cover-style img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+}
+
+.cover-style[aria-pressed="true"] {
+    border-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+    .cover-editor {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cover-editor-now .book-page-cover {
+        width: 120px;
+    }
+}

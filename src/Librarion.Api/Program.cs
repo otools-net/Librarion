@@ -68,6 +68,7 @@ api.MapBookEndpoints();
 api.MapFolderEndpoints();
 api.MapTagEndpoints();
 api.MapImportedTagEndpoints();
+api.MapCoverEndpoints();
 api.MapTaskEndpoints();
 api.MapUserEndpoints();
 api.MapGroupEndpoints();

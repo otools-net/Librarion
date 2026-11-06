@@ -152,6 +152,16 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        user's answer:** keep the index and make imports faster now (below), before the stage goes on.
 10. [ ] Covers (D-6.7): upload with Replace / Remove on the book page, Change cover style (template and palette
         picker with previews), Administration › Catalog › Cover styles (templates on / off, reassign as a run).
+        **The user's answers (2026-11-06):** a new right `tenant.coverStyles` (Administrators and Curators) for Cover
+        styles; uploads kept under a new data folder (`Librarion:Data:Directory`, default `data`), checked, decoded,
+        capped at 1,200 px wide and stored as WebP (`covers/<tenant>/ab/<hash>.webp`), the book keeping the path and
+        hash; Change cover style is allowed on a book with its own cover and overrides it (kept through re-imports,
+        "Use the book's cover" goes back); uploads at most **5 MB**, the extraction's pixel, side and aspect limits.
+        Split:
+    - 10a. [x] A book's cover on its page (`library.edit`): upload (Replace), remove, Change cover style with previews,
+          "Use the book's cover"; imports leave a user's choice alone.
+    - 10b. [ ] Administration › Catalog › Cover styles (`tenant.coverStyles`): templates on / off per tenant (new books
+          get the ones on), previews, reassign a template's books as a background run.
 11. [ ] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
         (resumable), groups kept by imports and edits, the noise cap, `NotDuplicates`; the same-file setting (Q4: on by default);
         benchmark: the build and the planted duplicates found at 2M within budget. **`fb2-id` is a weak key** (see

@@ -304,6 +304,7 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     CoverSource = table.Column<int>(type: "INTEGER", nullable: false),
                     GeneratedTemplate = table.Column<short>(type: "INTEGER", nullable: true),
                     GeneratedVariant = table.Column<short>(type: "INTEGER", nullable: true),
+                    CoverFile = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     CoverState = table.Column<int>(type: "INTEGER", nullable: false),
                     MergedIntoId = table.Column<int>(type: "INTEGER", nullable: true),
                     MissingSince = table.Column<DateTime>(type: "TEXT", nullable: true),
@@ -976,6 +977,12 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 name: "IX_Books_TenantId_Added_Id",
                 table: "Books",
                 columns: new[] { "TenantId", "Added", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Books_TenantId_CoverFile",
+                table: "Books",
+                columns: new[] { "TenantId", "CoverFile" },
+                filter: "\"CoverFile\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Books_TenantId_SortAuthor_Id",

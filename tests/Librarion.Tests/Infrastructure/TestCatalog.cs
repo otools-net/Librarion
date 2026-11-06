@@ -54,6 +54,7 @@ public sealed class TestCatalog : IDisposable
         [SetupOptions.SectionName + ":" + nameof(SetupOptions.CodeFile)] = Path.Combine(BasePath, "data", "setup-code.txt"),
         [SecurityOptions.SectionName + ":" + nameof(SecurityOptions.KeysDirectory)] = Path.Combine(BasePath, "data", "keys"),
         [Librarion.Core.CacheOptions.SectionName + ":" + nameof(Librarion.Core.CacheOptions.Directory)] = Path.Combine(BasePath, "cache"),
+        [Librarion.Core.DataOptions.SectionName + ":" + nameof(Librarion.Core.DataOptions.Directory)] = Path.Combine(BasePath, "data"),
         // Many sign-ins from one address in a test run.
         [SecurityOptions.SectionName + ":" + nameof(SecurityOptions.SignInsPerMinute)] = "10000",
     };

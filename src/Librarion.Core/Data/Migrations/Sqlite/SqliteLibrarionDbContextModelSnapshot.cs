@@ -76,6 +76,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<DateTime>("Added")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoverFile")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("CoverSource")
                         .HasColumnType("INTEGER");
 
@@ -146,6 +150,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CoverFile")
+                        .HasFilter("\"CoverFile\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "WorkKey");
 

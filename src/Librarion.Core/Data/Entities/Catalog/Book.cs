@@ -51,6 +51,12 @@ public sealed class Book
     public short? GeneratedTemplate { get; set; }
     public short? GeneratedVariant { get; set; }
 
+    /// <summary>
+    /// An uploaded cover (<see cref="CoverSource.Uploaded"/>, stage 6 chunk 10): its path in the data folder's covers
+    /// (<see cref="Covers.CoverUploads"/>); its file name is its hash.
+    /// </summary>
+    public string? CoverFile { get; set; }
+
     /// <summary>Whether the cover in the book could be read (extracted covers only).</summary>
     public CoverState CoverState { get; set; }
 
@@ -313,4 +319,6 @@ public enum BookEdits : byte
     Title = 1,
     Description = 2,
     Rating = 4,
+    /// <summary>The cover's source chosen by a user (an upload, or a generated style over the book's own): imports leave it.</summary>
+    Cover = 8,
 }

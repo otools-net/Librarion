@@ -11,6 +11,7 @@ import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from '../tags/field-catalog';
 import { BookEditor } from './book-editor';
+import { CoverEditor } from './cover-editor';
 import { tagLink } from '../tags/tag-link';
 
 /** The book's tags of one field (or the plain tags, `field` null), in the order the server gave them. */
@@ -28,7 +29,7 @@ interface FieldGroup {
  */
 @Component({
     selector: 'lib-book-page',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor, CoverEditor],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'book-page' },
     template: `
@@ -75,6 +76,11 @@ interface FieldGroup {
                                 @if (book.canEdit || book.canTag) {
                                     <button type="button" class="button" [title]="'book.editHint' | t" (click)="editing.set(true)">
                                         <svg libIcon="edit"></svg>{{ 'book.edit' | t }}
+                                    </button>
+                                }
+                                @if (book.canEdit) {
+                                    <button type="button" class="button" [title]="'cover.editHint' | t" (click)="coverEditing.set(true)">
+                                        <svg libIcon="book"></svg>{{ 'cover.edit' | t }}
                                     </button>
                                 }
                             </p>
@@ -178,6 +184,9 @@ interface FieldGroup {
             @if (editing()) {
                 <lib-book-editor [book]="book" (saved)="edited($event)" (closed)="editing.set(false)" />
             }
+            @if (coverEditing()) {
+                <lib-cover-editor [book]="book" (changed)="book$.set($event)" (closed)="coverEditing.set(false)" />
+            }
         } @else if (missing()) {
             <h1>{{ 'book.missingTitle' | t }}</h1>
             <p class="empty large" libEmpty="book">
@@ -209,6 +218,8 @@ export class BookPage {
     protected readonly missing = signal(false);
     protected readonly error = signal<string | null>(null);
     protected readonly editing = signal(false);
+    protected readonly coverEditing = signal(false);
+    protected readonly book$ = this.book;
     private requested = 0;
 
     protected readonly authors = computed(() => this.book()?.tags.filter(tag => tag.field === 'author') ?? []);

@@ -48,6 +48,12 @@ devices: `"Urls": "http://0.0.0.0:5090"`.
 | `Librarion:Cache:Directory` | the folder for cache files (default `data/cache` next to the program; environment `LIBRARION__CACHE__DIRECTORY`). Book covers go in its `covers` folder. Everything in it can be deleted: it is made again when needed. Put it on a fast disk with room to spare |
 | `Librarion:Covers:MaxParallel` | covers made at once (default: half the processor cores, at least 2) |
 
+## Data
+
+| Setting | Values |
+|---|---|
+| `Librarion:Data:Directory` | the folder for files people add (default `data` next to the program; environment `LIBRARION__DATA__DIRECTORY`): uploaded covers go in its `covers` folder, one folder per tenant. Unlike the cache it can't be made again: back it up with the database |
+
 ## Setup
 
 | Setting | Values |

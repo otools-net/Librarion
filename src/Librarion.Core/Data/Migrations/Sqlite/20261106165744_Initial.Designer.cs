@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Librarion.Core.Data.Migrations.Sqlite
 {
     [DbContext(typeof(SqliteLibrarionDbContext))]
-    [Migration("20261106123118_Initial")]
+    [Migration("20261106165744_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -77,6 +77,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("Added")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoverFile")
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CoverSource")
@@ -149,6 +153,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CoverFile")
+                        .HasFilter("\"CoverFile\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "WorkKey");
 
