@@ -42,7 +42,10 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(f => f.Book).WithMany(b => b.Files).HasForeignKey(f => f.BookId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(f => f.Archive).WithMany().HasForeignKey(f => f.ArchiveId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(f => f.Root).WithMany().HasForeignKey(f => f.RootId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(f => f.Folder).WithMany().HasForeignKey(f => f.FolderId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(f => f.BookId);
+            // A folder's books, and the folders left empty (Folders.PruneAsync).
+            entity.HasIndex(f => new { f.FolderId, f.BookId });
             // A scan looks its files up by path and sweeps the ones it didn't see by id, per root or per archive.
             entity.HasIndex(f => new { f.RootId, f.PathKey });
             entity.HasIndex(f => new { f.ArchiveId, f.PathKey });
@@ -60,6 +63,19 @@ public abstract partial class LibrarionDbContext
             entity.HasOne(a => a.Root).WithMany().HasForeignKey(a => a.RootId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(a => new { a.RootId, a.PathKey });
             Filter(entity, a => a.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<Folder>(entity =>
+        {
+            entity.Property(f => f.Name).HasMaxLength(Folder.MaxNameLength);
+            entity.HasOne(f => f.Root).WithMany().HasForeignKey(f => f.RootId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(f => f.Parent).WithMany().HasForeignKey(f => f.ParentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Archive>().WithMany().HasForeignKey(f => f.ArchiveId).OnDelete(DeleteBehavior.SetNull);
+            // Found by path (its hash) when a file needs it; a folder's folders by name, paged by key.
+            entity.HasIndex(f => new { f.RootId, f.PathKey });
+            entity.HasIndex(f => new { f.ParentId, f.Name, f.Id });
+            entity.HasIndex(f => f.ArchiveId);
+            Filter(entity, f => f.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<LibraryRoot>(entity =>

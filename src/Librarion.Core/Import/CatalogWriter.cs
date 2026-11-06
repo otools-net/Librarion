@@ -37,8 +37,9 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     ];
 
     private static readonly string[] FileColumns =
-        ["TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
+        ["TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "FolderId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
     private readonly TagCountChanges counts = new();
+    private readonly Folders folders = new(tenantId, libraryId);
     private readonly TagAncestors ancestors = new();
     private int bookDelta;
 
@@ -49,11 +50,15 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     /// <summary>Files that came in as another copy of a book already there (the same bytes), not as a book.</summary>
     public int Copies { get; private set; }
 
+    /// <summary>The library's folders, as this writer's files find them (<see cref="Import.Folders"/>).</summary>
+    public Folders Folders => folders;
+
     /// <summary>New books, one per file; a file with the same bytes as one of the library becomes another file of its book (D19).</summary>
     public async Task AddAsync(LibrarionDbContext db, IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
     {
         if (files.Count == 0)
             return;
+        await folders.AssignAsync(db, files.Select(f => f.File), cancellationToken);
         var copies = await CopiesAsync(db, files, cancellationToken);
         await resolver.ResolveAsync(db, files.Where((_, i) => copies[i] == default).SelectMany(f => Names(f.Metadata)), cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
@@ -272,6 +277,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         if (fresh.Count > 0)
         {
             await resolver.ResolveAsync(db, fresh.SelectMany(r => Names(r.Metadata)), cancellationToken);
+            await folders.AssignAsync(db, fresh.SelectMany(r => r.Files), cancellationToken);
             // The books through EF (their ids come back), everything hanging on them in bulk: EF's per-row cost was
             // most of an import's time (agents/docs/features/imports.md#scale).
             var made = new List<(Book Book, ImportedBook Record, List<BookTag> Links, List<BookIdentifier> Ids, List<BookProperty> Properties)>(fresh.Count);
@@ -303,7 +309,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
 
                 await BulkRows.InsertAsync(db, "BookFiles", FileColumns, made.SelectMany(m => m.Record.Files.Select(f => new object?[]
                 {
-                    tenantId, libraryId, m.Book.Id, f.RootId, f.ArchiveId, f.Path, f.PathKey, f.Format, f.Size, f.Crc32, f.Modified, f.Locator, f.Method, f.PackedSize,
+                    tenantId, libraryId, m.Book.Id, f.RootId, f.ArchiveId, f.FolderId, f.Path, f.PathKey, f.Format, f.Size, f.Crc32, f.Modified, f.Locator, f.Method, f.PackedSize,
                 })).ToList(), cancellationToken);
                 await BulkRows.InsertAsync(db, "BookTags", ["TenantId", "BookId", "TagId", "Source", "Ordinal", "Number"],
                     made.SelectMany(m => m.Links.Select(l => new object?[] { tenantId, m.Book.Id, l.TagId, (byte)l.Source, l.Ordinal, l.Number })).ToList(), cancellationToken);
@@ -323,6 +329,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         if (matched.Count == 0)
             return;
         var ids = matched.Select(r => r.BookId!.Value).ToList();
+        // Before the books are tracked: making folders clears the tracker.
+        await folders.AssignAsync(db, matched.SelectMany(r => r.Files), cancellationToken);
         var books = await db.Books.Where(b => ids.Contains(b.Id)).ToDictionaryAsync(b => b.Id, cancellationToken);
         foreach (var record in matched)
             foreach (var file in record.Files)

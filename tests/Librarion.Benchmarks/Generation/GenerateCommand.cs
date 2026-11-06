@@ -54,6 +54,7 @@ public static class GenerateCommand
             await Load("TagParents", CatalogGenerator.ParentColumns, generator.TagParents());
             await Load("TagClosure", CatalogGenerator.ClosureColumns, generator.Closure());
             await Load("Archives", CatalogGenerator.ArchiveColumns, generator.Archives());
+            await Load("Folders", CatalogGenerator.FolderColumns, generator.Folders());
             await Load("Books", CatalogGenerator.BookColumns, generator.Books());
             await Load("BookFiles", CatalogGenerator.FileColumns, generator.Files());
             await Load("BookIdentifiers", CatalogGenerator.IdentifierColumns, generator.Identifiers());

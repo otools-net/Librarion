@@ -199,6 +199,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<long?>("Crc32")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("FolderId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -244,6 +247,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("BookId");
 
                     b.HasIndex("ArchiveId", "PathKey");
+
+                    b.HasIndex("FolderId", "BookId");
 
                     b.HasIndex("RootId", "PathKey");
 
@@ -375,6 +380,52 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("FieldKeyAliases");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Folder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ArchiveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("PathKey")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RootId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArchiveId");
+
+                    b.HasIndex("RootId", "PathKey");
+
+                    b.HasIndex("ParentId", "Name", "Id");
+
+                    b.ToTable("Folders");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
@@ -1196,6 +1247,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Librarion.Core.Data.Folder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
                         .WithMany()
                         .HasForeignKey("RootId")
@@ -1204,6 +1261,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Archive");
 
                     b.Navigation("Book");
+
+                    b.Navigation("Folder");
 
                     b.Navigation("Root");
                 });
@@ -1279,6 +1338,29 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Field");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Folder", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Archive", null)
+                        .WithMany()
+                        .HasForeignKey("ArchiveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Librarion.Core.Data.Folder", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
+                        .WithMany()
+                        .HasForeignKey("RootId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("Root");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>

@@ -130,6 +130,10 @@ public sealed class BookFile
     public int? ArchiveId { get; set; }
     public Archive? Archive { get; set; }
 
+    /// <summary>The folder the file is in (a directory, a ZIP, a directory inside one): set by <c>Folders.AssignAsync</c>.</summary>
+    public int FolderId { get; set; }
+    public Folder? Folder { get; set; }
+
     /// <summary>Path relative to <see cref="Root"/> (<c>/</c> separators), or the entry's name inside <see cref="Archive"/>.</summary>
     public string Path { get; set; } = string.Empty;
 
@@ -179,6 +183,39 @@ public sealed class Archive
 
     /// <summary>Set when a scan didn't find the archive: its entries are missing too, kept until they come back or are removed.</summary>
     public DateTime? MissingSince { get; set; }
+}
+
+/// <summary>
+/// A folder books are found in (stage 6, chunk 8): a root itself (<see cref="Path"/> empty, no parent), a directory
+/// under it, a ZIP container (<see cref="ArchiveId"/>) or a directory inside one. Every book file has one
+/// (<see cref="BookFile.FolderId"/>): a library's books by folder, and default tags given by folder, are indexed joins.
+/// Made when a file first needs it, removed when it holds neither files nor folders (<c>Folders.PruneAsync</c>).
+/// </summary>
+public sealed class Folder
+{
+    public const int MaxNameLength = 255;
+
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public int LibraryId { get; set; }
+    public int RootId { get; set; }
+    public LibraryRoot? Root { get; set; }
+
+    /// <summary>Null for a root's own folder.</summary>
+    public int? ParentId { get; set; }
+    public Folder? Parent { get; set; }
+
+    /// <summary>The last part of <see cref="Path"/> (cut to <see cref="MaxNameLength"/>: it sorts the lists).</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Relative to <see cref="Root"/>, <c>/</c> separators; inside a ZIP the archive's path, then the entry's directories.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary><see cref="Catalog.PathKeys"/> of <see cref="Path"/>.</summary>
+    public long PathKey { get; set; }
+
+    /// <summary>Set on a ZIP container's own folder (not on the directories inside it).</summary>
+    public int? ArchiveId { get; set; }
 }
 
 public enum ArchiveScanState

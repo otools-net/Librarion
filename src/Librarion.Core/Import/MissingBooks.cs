@@ -81,6 +81,8 @@ public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, Ti
         var writer = new CatalogWriter(tenantId, libraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time);
         var ids = removal.BookIds?.Distinct().ToList();
         var afterId = 0;
+        // The folders the removed files were in: removed after them when nothing else is in them.
+        var left = new HashSet<int>();
         try
         {
             while (true)
@@ -94,6 +96,7 @@ public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, Ti
                 var batch = await query.OrderBy(b => b.Id).Take(BatchSize).Select(b => b.Id).ToListAsync(cancellationToken);
                 if (batch.Count == 0)
                     break;
+                left.UnionWith(await db.BookFiles.Where(f => batch.Contains(f.BookId)).Select(f => f.FolderId).Distinct().ToListAsync(cancellationToken));
                 await db.BookFiles.Where(f => batch.Contains(f.BookId)).ExecuteDeleteAsync(cancellationToken);
                 await writer.RemoveEmptyBooksAsync(db, batch, cancellationToken);
                 afterId = batch[^1];
@@ -102,6 +105,7 @@ public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, Ti
 
             await db.Archives.Where(a => a.LibraryId == libraryId && a.MissingSince != null && !db.BookFiles.Any(f => f.ArchiveId == a.Id))
                 .ExecuteDeleteAsync(cancellationToken);
+            await writer.Folders.PruneAsync(db, left, cancellationToken);
         }
         finally
         {

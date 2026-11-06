@@ -119,7 +119,20 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        selection (tri-state); scope tagging of a search, an author or a library: counted, confirmed, a background run
        past the threshold.
 8. [ ] Default tags of a library and of folders (inherited by sub-folders) as `Rule` links, given when a book enters
-       or moves in; "new books only or also those there"; a badge on the folder rows.
+       or moves in; "new books only or also those there"; a badge on the folder rows. **The user's answers
+       (2026-11-06):** there was no folder view, so one is added (as SFE's, the badge there); folders are indexed
+       (a `Folders` table, one row per directory and per ZIP, `FolderId` on files) so "books under a folder" is an
+       indexed join, not a read of the root's file rows; a ZIP is a folder (its entries inherit from it and the
+       folders above); books from Calibre / INPX imports get the library's and their folders' defaults too. Split:
+   - 8a. [x] `Folders` (tenant, library, root, parent, name, path key; per provider migrations), `FolderId` on
+         `BookFiles` (a ZIP's folder points to its archive instead of the archive to it), kept by scans, relinks,
+         imports and removals: [folders](../features/folders.md). No stored counts: 8b decides how a row's books are
+         counted (capped on demand through `(FolderId, BookId)`, or stored) and measures it at 2M.
+   - 8b. [ ] The folder view: a library's roots, then folders and ZIPs with their counts, then the books of a folder
+         (the book list, keyset, selection and Tag all as other lists); phones and desktop; deep addresses.
+   - 8c. [ ] Default tags (`FolderDefaultTags` / library's, `library.defaultTags`): given at entry and on moves as
+         `Rule` links, "new only or also those there" (a scope tagging of the folder's books, D-6.4), removing asks
+         whether the books keep them; the badge (SFE's `default-tags-badge`) on folder rows and the library.
 9. [ ] Administration › Catalog › Imported tags: raw names by source with book counts and their mapping, sorted by
        count, bulk map / merge / ignore; the coverage shown ("the top 500 cover 93 % of imported links"); the
        benchmark's generator makes raw imported names so the exit criterion can be measured.

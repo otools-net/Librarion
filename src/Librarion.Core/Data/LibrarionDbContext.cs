@@ -49,6 +49,7 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<Book> Books => Set<Book>();
     public DbSet<BookFile> BookFiles => Set<BookFile>();
     public DbSet<Archive> Archives => Set<Archive>();
+    public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<BookIdentifier> BookIdentifiers => Set<BookIdentifier>();
     public DbSet<BookProperty> BookProperties => Set<BookProperty>();
     public DbSet<Tag> Tags => Set<Tag>();

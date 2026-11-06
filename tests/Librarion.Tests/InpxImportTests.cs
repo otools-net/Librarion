@@ -66,6 +66,9 @@ public sealed class InpxImportTests
             Assert.IsFalse(await db.Books.AnyAsync(b => b.Title == "Not local", Cancel), "extra.inp is an online collection's, not read");
             var archives = await db.Archives.OrderBy(a => a.Path).ToListAsync(Cancel);
             Assert.IsTrue(archives.All(a => a.ScanState == ArchiveScanState.Done), "the zips are written as done");
+            var zipFolders = await db.Folders.Where(f => f.ArchiveId != null).ToDictionaryAsync(f => f.ArchiveId!.Value, f => f.Id, Cancel);
+            foreach (var file in await db.BookFiles.ToListAsync(Cancel))
+                Assert.AreEqual(zipFolders[file.ArchiveId!.Value], file.FolderId, "an imported book is in its zip's folder");
         }
 
         var scan = await library.ScanAsync(Cancel);

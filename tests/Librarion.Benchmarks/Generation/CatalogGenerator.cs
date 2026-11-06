@@ -176,6 +176,29 @@ public sealed class CatalogGenerator
 
     private static string ArchivePath(int index) => $"archives/fb2-{index:D4}.zip";
 
+    public static readonly string[] FolderColumns = ["Id", "TenantId", "LibraryId", "RootId", "ParentId", "Name", "Path", "PathKey", "ArchiveId"];
+
+    /// <summary>
+    /// The folders as a scan makes them: the root's own (1), <c>archives</c> (2) and each ZIP under it, <c>books</c> and
+    /// its thousand sub-folders of loose files (<see cref="FolderOf"/>).
+    /// </summary>
+    public IEnumerable<object?[]> Folders()
+    {
+        object?[] Row(int id, int? parent, string path, int? archive) =>
+            [id, _target.TenantId, _target.LibraryId, _target.RootId, parent, path[(path.LastIndexOf('/') + 1)..], path, PathKeys.Of(path), archive];
+        yield return Row(1, null, "", null);
+        yield return Row(2, 1, "archives", null);
+        for (var i = 0; i < _shape.Archives; i++)
+            yield return Row(3 + i, 2, ArchivePath(i), i + 1);
+        var books = 3 + _shape.Archives;
+        yield return Row(books, 1, "books", null);
+        for (var n = 0; n < 1000; n++)
+            yield return Row(books + 1 + n, books, $"books/{n:D3}", null);
+    }
+
+    /// <summary>The folder of a file: its ZIP's, or the sub-folder of <c>books</c> it is in.</summary>
+    private int FolderOf(int bookId, FilePlan file) => file.Archive is { } archive ? 3 + archive : 4 + _shape.Archives + bookId % 1000;
+
     public static readonly string[] BookColumns =
     [
         "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SearchText", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added",
@@ -200,7 +223,7 @@ public sealed class CatalogGenerator
     }
 
     public static readonly string[] FileColumns =
-        ["Id", "TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
+        ["Id", "TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "FolderId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
 
     public IEnumerable<object?[]> Files()
     {
@@ -211,7 +234,8 @@ public sealed class CatalogGenerator
             {
                 yield return
                 [
-                    ++fileId, _target.TenantId, _target.LibraryId, id, file.Archive is null ? _target.RootId : null, file.Archive is { } a ? a + 1 : null, file.Path, PathKeys.Of(file.Path),
+                    ++fileId, _target.TenantId, _target.LibraryId, id, file.Archive is null ? _target.RootId : null, file.Archive is { } a ? a + 1 : null, FolderOf(id, file), file.Path,
+                    PathKeys.Of(file.Path),
                     file.Format, file.Size, file.Crc32, Start, file.Archive is null ? null : (long)id * 1024, file.Archive is null ? null : (short)8,
                     file.Archive is null ? null : file.Size / 3,
                 ];
