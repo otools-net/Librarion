@@ -12,7 +12,9 @@ Formats are dispatched through their `BookFormat` ([book-formats](book-formats.m
   translators from their parts (sort name "Last, First Middle"), genres named by `Fb2Genres` (English; MyHomeLib's
   `Installer/GenreLists/genres_fb2_en.glst`, MIT, fills the codes ours lacked; unknown codes as they came; its
   group numbers could become parent categories later), `<sequence>` with its number, `<lang>`, year from `<date>` or `<publish-info>`, publisher, ISBN,
-  `<document-info><id>` as `fb2-id`, `<keywords>` as plain tags. Code pages from the XML declaration
+  `<document-info><id>` as `fb2-id` (only the direct child: the file maker's `<author>` and `<publisher>` in
+  `<document-info>` may carry an `<id>` of the person, shared by all their files; read before 2026-11-06 it made
+  false duplicates), `<keywords>` as plain tags. Code pages from the XML declaration
   (windows-1251).
 - **EPUB / KEPUB**: `container.xml` → OPF `<metadata>`; creators by role (`opf:role` or EPUB 3 `refines`; `aut` or
   none → author, `trl`, `edt`, `ill`; others dropped), `file-as` as sort name, subjects → `category`, series from

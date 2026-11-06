@@ -37,7 +37,7 @@ public sealed class MetadataReaderTests
               <sequence name="НИИЧАВО" number="1"/>
             </title-info>
             <src-title-info><book-title>Not this one</book-title></src-title-info>
-            <document-info><id>8f5c-41d2</id></document-info>
+            <document-info><author><nickname>Scanner</nickname><id>maker-of-files</id></author><id>8f5c-41d2</id><publisher><id>publisher-of-files</id></publisher></document-info>
             <publish-info><publisher>Детская литература</publisher><year>1965</year><isbn>978-5-17-090334-4</isbn></publish-info>
           </description>
           <body><section><p>Text that is never read.</p></section></body>
@@ -66,7 +66,8 @@ public sealed class MetadataReaderTests
         CollectionAssert.AreEqual(new[] { "1965" }, Values(metadata, "year"));
         CollectionAssert.AreEqual(new[] { "Детская литература" }, Values(metadata, "publisher"));
         CollectionAssert.AreEqual(new[] { "magic", "science", "humor" }, metadata.PlainTags.ToList());
-        CollectionAssert.AreEquivalent(new[] { ("fb2-id", "8f5c-41d2"), ("isbn", "9785170903344") }, metadata.Ids.ToList());
+        CollectionAssert.AreEquivalent(new[] { ("fb2-id", "8f5c-41d2"), ("isbn", "9785170903344") }, metadata.Ids.ToList(),
+            "the document's id, not the ids of the file maker or publisher inside <document-info>");
     }
 
     [TestMethod]

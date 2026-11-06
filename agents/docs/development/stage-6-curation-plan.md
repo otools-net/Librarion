@@ -127,7 +127,9 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         picker with previews), Administration › Catalog › Cover styles (templates on / off, reassign as a run).
 11. [ ] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
         (resumable), groups kept by imports and edits, the noise cap, `NotDuplicates`; the same-file setting (Q4: on by default);
-        benchmark: the build and the planted duplicates found at 2M within budget.
+        benchmark: the build and the planted duplicates found at 2M within budget. **`fb2-id` is a weak key** (see
+        [Found with real books](#found-with-real-books-2026-11-06)): the stored groups keep the on-demand rule (a shared
+        FB2 id joins a group only with the same title or first author), never the id alone.
 12. [ ] Administration › Catalog › Duplicates and Compare and merge: groups by level and size, compare side by side
         (stacked on phones), choices per single value, merge (files, links, identifiers move; the old id redirects in
         web, API and covers), Not a duplicate; the book page's panel gets the actions for `books.merge`.
@@ -153,6 +155,19 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        the desktop.
 16. [ ] Docs, CHANGELOG, feature notes; budgets through the UI's calls on 2M; e2e for each flow on every device; axe AA
         on the new screens in both themes; close the stage (merge 0.7.0, this plan removed as stage 5's was).
+
+## Found with real books (2026-11-06)
+
+- **False duplicates by FB2 id (fixed):** `Fb2Reader` took every `<id>` under `<document-info>`, so the file maker's
+  `<author><id>` (and `<publisher><id>`) became a second `fb2-id`, shared by every file that person made: the book page
+  listed them all as possible duplicates (groups under 50 escape the noise cap). Now only the direct child is read
+  ([metadata-readers](../features/metadata-readers.md)); books imported before keep the wrong id until read again
+  (before 1.0: rescan or start a new database).
+- **FB2 ids are weak keys (decided by the user):** no rule makes them; FB Editor and converters make a GUID per new
+  file (copies of one book differ), large sources (LitRes-style time UUIDs) are reliable, hand-made files copy them
+  from templates or write constants (unrelated books share one). `BookQueries.DuplicatesAsync` counts a shared
+  `fb2-id` only with the same `SortTitle` or first author (`SortAuthor`), checked on the capped group
+  ([book-page](../features/book-page.md#possible-duplicates-read-only-until-merging-merging)). Chunk 11 keeps the rule.
 
 ## Work items
 

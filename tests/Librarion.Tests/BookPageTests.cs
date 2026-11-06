@@ -24,9 +24,9 @@ public sealed class BookPageTests
 
     private CancellationToken Cancel => TestContext.CancellationToken;
 
-    private static string Fb2(string title, string? author = null, string? isbn = null, string text = "") => $"""
+    private static string Fb2(string title, string? author = null, string? isbn = null, string text = "", string? id = null) => $"""
         <?xml version="1.0" encoding="utf-8"?>
-        <FictionBook><description><title-info>{(author is null ? "" : $"<author><first-name>{author.Split(' ')[0]}</first-name><last-name>{author.Split(' ')[^1]}</last-name></author>")}<book-title>{title}</book-title></title-info>{(isbn is null ? "" : $"<publish-info><isbn>{isbn}</isbn></publish-info>")}</description><body><p>{text}</p></body></FictionBook>
+        <FictionBook><description><title-info>{(author is null ? "" : $"<author><first-name>{author.Split(' ')[0]}</first-name><last-name>{author.Split(' ')[^1]}</last-name></author>")}<book-title>{title}</book-title></title-info>{(id is null ? "" : $"<document-info><id>{id}</id></document-info>")}{(isbn is null ? "" : $"<publish-info><isbn>{isbn}</isbn></publish-info>")}</description><body><p>{text}</p></body></FictionBook>
         """;
 
     [TestMethod]
@@ -109,6 +109,25 @@ public sealed class BookPageTests
         Assert.IsTrue(seen.Any(d => d.Book.Id == dune));
         using var hidden = await reader.GetAsync($"/api/books/{copy}/duplicates", Cancel);
         Assert.AreEqual(HttpStatusCode.NotFound, hidden.StatusCode, "a book the caller can't see");
+    }
+
+    [TestMethod]
+    public async Task AnFb2IdCountsOnlyWithTheSameTitleOrAuthor()
+    {
+        // FB2 ids are copied from template to template: a shared one alone is not the same book.
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", id: "copied-id"));
+        shelf.Write("Dune Messiah.fb2", Fb2("Dune Messiah", "Frank Herbert", id: "copied-id"));
+        shelf.Write("Dune by another.fb2", Fb2("Dune", "Brian Herbert", id: "copied-id"));
+        shelf.Write("Solaris.fb2", Fb2("Solaris", "Stanislaw Lem", id: "copied-id"));
+        await shelf.ScanAsync(Cancel);
+
+        var duplicates = (await shelf.Admin.GetAsync<List<BookDuplicate>>($"/api/books/{await BookOfAsync(shelf, "Dune.fb2")}/duplicates", Cancel))!;
+        CollectionAssert.AreEquivalent(new[] { await BookOfAsync(shelf, "Dune Messiah.fb2"), await BookOfAsync(shelf, "Dune by another.fb2") },
+            duplicates.Select(d => d.Book.Id).ToList(), "the same author, the same title; not Solaris");
+        Assert.IsTrue(duplicates.All(d => d is { Reason: DuplicateReason.Identifier, Scheme: "fb2-id" }));
+        var solaris = await shelf.Admin.GetAsync<List<BookDuplicate>>($"/api/books/{await BookOfAsync(shelf, "Solaris.fb2")}/duplicates", Cancel);
+        Assert.IsEmpty(solaris!);
     }
 
     [TestMethod]

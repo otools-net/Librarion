@@ -35,6 +35,13 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   parents, color, category and hidden; Merge and Delete, each saying first how many books change; and Merges, where a
   merge is undone. See [Tags](docs/administration/tags.md).
 
+### Fixed
+
+- Possible duplicates no longer lists every book made by the same person as the same book: an FB2 file's maker (in
+  its document info) can have an id of their own, which was read as the book's FB2 id. Read the library again to
+  drop the wrong ids from books already there. A shared FB2 id now also needs the same title or the same first
+  author, since hand-made files often copy it from one another.
+
 ## 0.6.1
 
 ### Fixed

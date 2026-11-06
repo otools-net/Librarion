@@ -64,7 +64,9 @@ editor.
 
 - Computed on demand per book, no tables: other visible books with a file of the same size and CRC-32 (`File`; another
   library's: copies in one library are merged at import), the same identifier (`Identifier` with its scheme; `inpx`
-  left out, its numbers are per collection), the same `WorkKey` (`Work`). Strongest reason first, then title; at
+  left out, its numbers are per collection; `fb2-id` is weak: counted only when the other book also has the same
+  `SortTitle` or non-empty `SortAuthor`, as hand-made FB2s copy ids from template to template, checked on the capped
+  group so still bounded), the same `WorkKey` (`Work`). Strongest reason first, then title; at
   most 20.
 - Each key is one seek on its index (`BookFiles (TenantId, Size, Crc32)`, `BookIdentifiers (TenantId, Scheme, Value)`,
   `Books (TenantId, WorkKey)`), at most 20 files and 20 identifiers per book, at most `MaxGroup` (50) rows read per key:

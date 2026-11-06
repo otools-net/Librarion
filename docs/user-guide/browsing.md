@@ -62,4 +62,5 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   What you change stays when the book's file is read again or the library is imported again, and a tag you took off
   stays off.
 - **Possible duplicates** lists other books you can see that may be the same one, with why: the same file (in
-  another library), the same identifier, or the same title and author. Merging them comes later.
+  another library), the same identifier, or the same title and author. An FB2 id counts only when the title or the
+  first author is also the same: hand-made FB2 files often copy it from one another. Merging them comes later.

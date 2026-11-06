@@ -49,7 +49,7 @@ compared only within the key's group.
 | Level | Key | Action |
 |---|---|---|
 | **Same file** | content hash (SHA-256 of the bytes, computed lazily: candidates first by size + CRC32, which zip entries give for free) | merged automatically into one book on import (tenant setting, on by default), the copies kept as files of it |
-| **Same document** | FB2 `<document-info><id>`, EPUB `dc:identifier` (UUID), Calibre `uuid`, ISBN | suggested, high confidence |
+| **Same document** | FB2 `<document-info><id>` (weak: with the same title or first author only), EPUB `dc:identifier` (UUID), Calibre `uuid`, ISBN | suggested, high confidence |
 | **Same work** | normalized title (case-folded, punctuation and articles removed, transliterated) + first author's normalized name; also file name stem + author when there is no title | suggested, medium confidence (different formats or editions show here) |
 | **Similar** | small edit distance on the title | **on demand only** (D21): never a catalog-wide pass; computed when a curator opens one book, one author or one field page, capped (200 candidates); Postgres `pg_trgm`, SQLite in memory over the capped set |
 

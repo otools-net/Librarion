@@ -250,6 +250,12 @@ public sealed class BookQueries(TenantDb tenantDb)
     private static readonly string[] SourceSchemes = ["inpx"];
 
     /// <summary>
+    /// Identifiers whose makers reuse them: an FB2's document id is copied from template to template by hand-made files,
+    /// so a shared one counts only when the other book also has the same title or first author.
+    /// </summary>
+    private static readonly string[] WeakSchemes = ["fb2-id"];
+
+    /// <summary>
     /// Other books the caller can see that may be this one (agents/docs/features/merging.md; read only until merging is
     /// built): a file of the same size and CRC, a shared identifier, the same work key. Each key is one seek on its
     /// index reading at most <see cref="MaxGroup"/> books (a bigger group is noise, dropped): bounded by the book,
@@ -259,7 +265,7 @@ public sealed class BookQueries(TenantDb tenantDb)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var visible = await VisibleAsync(db, visibility, null, cancellationToken);
-        var book = await visible.Where(b => b.Id == id).Select(b => new { b.WorkKey }).FirstOrDefaultAsync(cancellationToken);
+        var book = await visible.Where(b => b.Id == id).Select(b => new { b.WorkKey, b.SortTitle, b.SortAuthor }).FirstOrDefaultAsync(cancellationToken);
         if (book is null)
             return null;
 
@@ -278,8 +284,14 @@ public sealed class BookQueries(TenantDb tenantDb)
         var identifiers = await db.BookIdentifiers.Where(i => i.BookId == id && !SourceSchemes.Contains(i.Scheme))
             .OrderBy(i => i.Scheme).ThenBy(i => i.Value).Select(i => new { i.Scheme, i.Value }).Take(MaxKeys).ToListAsync(cancellationToken);
         foreach (var identifier in identifiers)
-            Add(await GroupAsync(db.BookIdentifiers.Where(i => i.Scheme == identifier.Scheme && i.Value == identifier.Value && i.BookId != id).Select(i => i.BookId), cancellationToken),
-                DuplicateReason.Identifier, identifier.Scheme);
+        {
+            var group = await GroupAsync(db.BookIdentifiers.Where(i => i.Scheme == identifier.Scheme && i.Value == identifier.Value && i.BookId != id).Select(i => i.BookId), cancellationToken);
+            // A weak key's group is already capped: the check reads at most MaxGroup books by key.
+            if (WeakSchemes.Contains(identifier.Scheme) && group.Count > 0)
+                group = await db.Books.Where(b => group.Contains(b.Id) && (b.SortTitle == book.SortTitle || (book.SortAuthor != "" && b.SortAuthor == book.SortAuthor)))
+                    .Select(b => b.Id).ToListAsync(cancellationToken);
+            Add(group, DuplicateReason.Identifier, identifier.Scheme);
+        }
         if (book.WorkKey is { } work)
             Add(await GroupAsync(db.Books.Where(b => b.WorkKey == work && b.Id != id).Select(b => b.Id), cancellationToken), DuplicateReason.Work, null);
         if (found.Count == 0)
