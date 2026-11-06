@@ -6,7 +6,8 @@ namespace Librarion.Core.Catalog;
 /// <param name="Zip">A ZIP container (its books inside), not a directory.</param>
 /// <param name="Files">Present files directly in it; <paramref name="TotalFiles"/> with those under it.</param>
 /// <param name="Folders">Folders directly under it.</param>
-public sealed record FolderItem(int Id, string Name, bool Zip, int Files, int TotalFiles, int Folders);
+/// <param name="DefaultTags">Its own default tags (stage 6 chunk 8c): the badge on its row.</param>
+public sealed record FolderItem(int Id, string Name, bool Zip, int Files, int TotalFiles, int Folders, int DefaultTags = 0);
 
 public sealed record FolderCrumb(int Id, string Name);
 
@@ -28,7 +29,8 @@ public sealed class FolderQueries(TenantDb tenantDb)
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var rows = await db.Folders.Where(f => f.LibraryId == libraryId && f.ParentId == null)
             .Select(f => new { f.Id, RootPath = f.Root!.Path, f.FileCount, f.TotalFileCount, f.FolderCount }).ToListAsync(cancellationToken);
-        return rows.Select(r => new FolderItem(r.Id, RootName(r.RootPath), false, r.FileCount, r.TotalFileCount, r.FolderCount))
+        var defaults = await DefaultsAsync(db, rows.Select(r => r.Id).ToList(), cancellationToken);
+        return rows.Select(r => new FolderItem(r.Id, RootName(r.RootPath), false, r.FileCount, r.TotalFileCount, r.FolderCount, defaults.GetValueOrDefault(r.Id)))
             .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ThenBy(r => r.Id).ToList();
     }
 
@@ -52,7 +54,8 @@ public sealed class FolderQueries(TenantDb tenantDb)
         var libraryId = folder.LibraryId;
         var roots = await db.Folders.CountAsync(f => f.LibraryId == libraryId && f.ParentId == null, cancellationToken);
         var above = chain.Skip(1).Reverse().Where(c => roots > 1 || c.Row.ParentId is not null).Select(c => new FolderCrumb(c.Row.Id, Name(c.Row, c.RootPath))).ToList();
-        return new FolderDetail(Item(folder, chain[0].RootPath), libraryId, above);
+        var defaults = await DefaultsAsync(db, [folder.Id], cancellationToken);
+        return new FolderDetail(Item(folder, chain[0].RootPath, defaults), libraryId, above);
     }
 
     /// <summary>A folder's folders by name (then id), a page at a time.</summary>
@@ -67,11 +70,18 @@ public sealed class FolderQueries(TenantDb tenantDb)
         var more = rows.Count > limit;
         if (more)
             rows.RemoveAt(limit);
-        return new Page<FolderItem>(rows.Select(r => Item(r, "")).ToList(), more ? new KeysetCursor(rows[^1].Name, null, rows[^1].Id).Encode() : null);
+        var defaults = await DefaultsAsync(db, rows.Select(r => r.Id).ToList(), cancellationToken);
+        return new Page<FolderItem>(rows.Select(r => Item(r, "", defaults)).ToList(), more ? new KeysetCursor(rows[^1].Name, null, rows[^1].Id).Encode() : null);
     }
 
-    private static FolderItem Item(Folder folder, string rootPath) =>
-        new(folder.Id, Name(folder, rootPath), folder.ArchiveId is not null, folder.FileCount, folder.TotalFileCount, folder.FolderCount);
+    /// <summary>How many default tags each of the folders has (one grouped read of a small table).</summary>
+    private static async Task<Dictionary<int, int>> DefaultsAsync(LibrarionDbContext db, List<int> folderIds, CancellationToken cancellationToken) =>
+        await db.DefaultTags.Where(d => d.FolderId != null && folderIds.Contains(d.FolderId.Value)).GroupBy(d => d.FolderId!.Value)
+            .Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
+
+    private static FolderItem Item(Folder folder, string rootPath, Dictionary<int, int> defaults) =>
+        new(folder.Id, Name(folder, rootPath), folder.ArchiveId is not null, folder.FileCount, folder.TotalFileCount, folder.FolderCount,
+            defaults.GetValueOrDefault(folder.Id));
 
     /// <summary>A root's own folder is named after the root's folder on disk (its last part, not the server's path).</summary>
     private static string Name(Folder folder, string rootPath) => folder.ParentId is null ? RootName(rootPath) : folder.Name;

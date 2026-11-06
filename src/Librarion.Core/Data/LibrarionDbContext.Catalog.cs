@@ -78,6 +78,18 @@ public abstract partial class LibrarionDbContext
             Filter(entity, f => f.TenantId == CurrentTenantId);
         });
 
+        modelBuilder.Entity<DefaultTag>(entity =>
+        {
+            entity.HasOne<Library>().WithMany().HasForeignKey(d => d.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Folder>().WithMany().HasForeignKey(d => d.FolderId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Tag>().WithMany().HasForeignKey(d => d.TagId).OnDelete(DeleteBehavior.Cascade);
+            // A library's defaults (a few rows) read whole by a scan or an import; a folder's by its id.
+            entity.HasIndex(d => new { d.LibraryId, d.FolderId, d.TagId }).IsUnique();
+            entity.HasIndex(d => d.FolderId);
+            entity.HasIndex(d => d.TagId);
+            Filter(entity, d => d.TenantId == CurrentTenantId);
+        });
+
         modelBuilder.Entity<LibraryRoot>(entity =>
         {
             entity.Property(r => r.Path).HasMaxLength(LibraryRoot.MaxPathLength);

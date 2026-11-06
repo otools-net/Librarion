@@ -65,8 +65,15 @@ public sealed class Folders(int tenantId, int libraryId)
         }
     }
 
+    /// <summary>The folder and every folder above it, nearest first (after <see cref="ParentsAsync"/> for it).</summary>
+    public IEnumerable<int> Chain(int folderId)
+    {
+        for (int? at = folderId; at is { } id; at = parents.GetValueOrDefault(id))
+            yield return id;
+    }
+
     /// <summary>The parents of <paramref name="folderIds"/> and of every folder above them, into the cache.</summary>
-    private async Task ParentsAsync(LibrarionDbContext db, IEnumerable<int> folderIds, CancellationToken cancellationToken)
+    public async Task ParentsAsync(LibrarionDbContext db, IEnumerable<int> folderIds, CancellationToken cancellationToken)
     {
         if (parents.Count > MaxCached)
             parents.Clear();
@@ -118,7 +125,9 @@ public sealed class Folders(int tenantId, int libraryId)
             foreach (var chunk in candidates.Chunk(BatchSize))
             {
                 var empty = await db.Folders
-                    .Where(f => chunk.Contains(f.Id) && f.ParentId != null && !db.BookFiles.Any(b => b.FolderId == f.Id) && !db.Folders.Any(c => c.ParentId == f.Id))
+                    .Where(f => chunk.Contains(f.Id) && f.ParentId != null && !db.BookFiles.Any(b => b.FolderId == f.Id) && !db.Folders.Any(c => c.ParentId == f.Id)
+                        // A folder with default tags stays (the user's answer, 2026-11-06): its books may come back.
+                        && !db.DefaultTags.Any(d => d.FolderId == f.Id))
                     .Select(f => new { f.Id, f.ParentId }).ToListAsync(cancellationToken);
                 if (empty.Count == 0)
                     continue;

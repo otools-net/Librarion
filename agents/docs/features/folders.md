@@ -31,7 +31,8 @@ view), for folder default tags (8c): [stage 6 plan](../development/stage-6-curat
 - A ZIP made again (removed, then back with a new archive row) gives its folder the new `ArchiveId`.
 - **Moved files** (relink): the old row takes the new file's folder; the folders it left are pruned.
 - **Pruned** (`Folders.PruneAsync`, from the folders some files left): a folder with neither files nor folders goes,
-  then its parent the same way; a root's own folder stays. Called after relinks and after removing missing books.
+  then its parent the same way; a root's own folder stays, and so does a folder holding default tags
+  ([default-tags](default-tags.md)). Called after relinks and after removing missing books.
 - A **missing** file keeps its folder (the book may come back): a folder whose books are all missing stays.
 
 ## Counts (the user's answer, 2026-11-06: stored, exact)

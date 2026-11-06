@@ -28,7 +28,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         string Name, string NormalizedName, string SortName, string? Shorthand, string? Color, bool IsCategory, bool IsHidden, int? DisambiguationParentId,
         int? FieldId, string? FieldKey, List<int> Parents, List<int> MovedAliases, int? AddedAlias, List<int> MovedChildren, List<int> DroppedChildren,
         List<int> Mappings, List<int> MovedFilters, List<FilterData> DroppedFilters, List<int> Disambiguated, List<int> KeyAliases,
-        List<int>? MovedValues = null, int? KeyAlias = null, List<int>? FieldMappings = null);
+        List<int>? MovedValues = null, int? KeyAlias = null, List<int>? FieldMappings = null, List<int>? DefaultTags = null);
 
     internal sealed record FilterData(int GroupId, bool Deny);
 
@@ -290,10 +290,16 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         var keyAliases = await db.FieldKeyAliases.Where(a => a.FieldId == sourceId).Select(a => a.Id).ToListAsync(cancellationToken);
         await db.FieldKeyAliases.Where(a => a.FieldId == sourceId).ExecuteUpdateAsync(s => s.SetProperty(a => a.FieldId, targetId), cancellationToken);
 
+        // Default tags: the source's become the target's where the target isn't one already (those go with the source).
+        var defaults = await db.DefaultTags.Where(d => d.TagId == sourceId
+                && !db.DefaultTags.Any(o => o.TagId == targetId && o.LibraryId == d.LibraryId && o.FolderId == d.FolderId))
+            .Select(d => d.Id).ToListAsync(cancellationToken);
+        await db.DefaultTags.Where(d => defaults.Contains(d.Id)).ExecuteUpdateAsync(s => s.SetProperty(d => d.TagId, targetId), cancellationToken);
+
         await db.Tags.Where(t => t.Id == sourceId).ExecuteDeleteAsync(cancellationToken);
         return new TagData(source.Name, source.NormalizedName, source.SortName, source.Shorthand, source.Color, source.IsCategory, source.IsHidden,
             source.DisambiguationParentId, source.FieldId, source.FieldKey, parents, aliases, added, movedChildren, already, mappings, movedFilters, droppedFilters,
-            disambiguated, keyAliases);
+            disambiguated, keyAliases, DefaultTags: defaults);
     }
 
     // ---- Field merge ----
@@ -482,6 +488,8 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         await db.Tags.Where(t => t.DisambiguationParentId == target && data.Disambiguated.Contains(t.Id))
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.DisambiguationParentId, (int?)id), cancellationToken);
         await db.FieldKeyAliases.Where(a => a.FieldId == target && data.KeyAliases.Contains(a.Id)).ExecuteUpdateAsync(s => s.SetProperty(a => a.FieldId, id), cancellationToken);
+        var defaults = data.DefaultTags ?? [];
+        await db.DefaultTags.Where(d => d.TagId == target && defaults.Contains(d.Id)).ExecuteUpdateAsync(s => s.SetProperty(d => d.TagId, id), cancellationToken);
 
         // Children back under it: the moved edges leave the target, the dropped ones (already under the target) get theirs back.
         await db.TagParents.Where(p => p.ParentId == target && data.MovedChildren.Contains(p.ChildId)).ExecuteDeleteAsync(cancellationToken);

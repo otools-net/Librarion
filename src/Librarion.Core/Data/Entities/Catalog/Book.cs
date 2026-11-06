@@ -227,6 +227,21 @@ public sealed class Folder
     public int FolderCount { get; set; }
 }
 
+/// <summary>
+/// A plain tag a library (<see cref="FolderId"/> null) or a folder and every folder under it gives the books that come
+/// in (stage 6 chunk 8c; SFE's default tags, agents/docs/features/default-tags.md), as <see cref="TagSource.Rule"/>
+/// links. A folder holding one is never pruned while it does.
+/// </summary>
+public sealed class DefaultTag
+{
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public int LibraryId { get; set; }
+    public int? FolderId { get; set; }
+    public int TagId { get; set; }
+    public DateTime Created { get; set; }
+}
+
 public enum ArchiveScanState
 {
     Pending,

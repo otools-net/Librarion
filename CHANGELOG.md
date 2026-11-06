@@ -9,6 +9,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - **Folders** in the navigation, for those with the new **Browse by folder** right (Administrators and Curators):
   the library's folders and ZIP files with how many files each holds, then the books of each, which can be selected
   and tagged as anywhere else.
+- **Default tags** for a library and its folders (with the Default tags right): books that come in get them, a book
+  moved into a folder gets that folder's, and adding one can also tag the books already there. Shown under each
+  folder's name; a folder with its own has a badge in the list.
 - Select books (the box on a cover, Ctrl- or Shift-click, a long press on a phone) and give them tags or take tags
   away at once; **Tag all** does it for every book of the list on screen (the library, an author, a tag, a search),
   saying first how many books that is. A big change runs in the background.

@@ -171,8 +171,8 @@ bar and both dialogs.
   filters, or a search with a million matches: seconds), and each batch of a search scope asks the search again with
   `Id > last` (a big search walked to its end may read its matches many times). Both only on an explicit, confirmed
   action, never per page view.
-- **Default tags** of a library and, for folder-scanned libraries, of folders (inherited by sub-folders): given once
-  when a book enters the catalog or moves in, as `Rule` links; adding one asks "new books only or also those there".
+- **Default tags** of a library and of its folders (inherited by sub-folders), given once when a book enters the
+  catalog or moves in, as `Rule` links: built in stage 6 chunk 8c, [default-tags](default-tags.md).
 
 ## Scale
 

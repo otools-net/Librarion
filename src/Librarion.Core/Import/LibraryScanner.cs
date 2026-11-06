@@ -201,6 +201,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
             // A new file two missing files would claim stays a new book.
             var claimed = chosen.GroupBy(c => c.File.Id).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
             var relinked = new List<int>();
+            var moves = new List<(int BookId, int From, int To)>();
             foreach (var (oldId, file) in chosen.Where(c => !claimed.Contains(c.File.Id)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -213,7 +214,12 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
                 await writer.RemoveEmptyBooksAsync(db, [file.BookId], cancellationToken, undoAdd: true);
                 await writer.ReturnAsync(db, [missingBooks[oldId]], cancellationToken);
                 relinked.Add(oldFolders[oldId]);
+                if (oldFolders[oldId] != file.FolderId)
+                    moves.Add((missingBooks[oldId], oldFolders[oldId], file.FolderId));
             }
+
+            // Moved into a place with other default tags: those come with it.
+            await writer.MovedAsync(db, moves, cancellationToken);
 
             if (relinked.Count > 0)
             {

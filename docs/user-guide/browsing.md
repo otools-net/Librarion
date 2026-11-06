@@ -55,6 +55,21 @@ library as it is on disk: its folders and its ZIP files, each with how many file
 - Folder names are shown as they are on disk, even when your group's content filters hide some of the books in them;
   the books themselves are still hidden.
 
+### Default tags
+
+A library and each folder can have **default tags**: books that come into it, or into a folder under it, get them
+(a folder's default tags count for the folders inside it, and ZIP files are folders here). Under a folder's name,
+**Default tags** lists its own and, with a dashed border, those it gets from above. With the **Default tags** right
+(Administrators and Curators have it), the button there changes them:
+
+- **Add a default tag**: type its name (or create it), then choose **New books only** or **Also the files already
+  there**; the second tags those books now (a big folder in the background, followed in the progress panel).
+- **Stop giving** a tag asks whether the books there keep it. **Take it off them** removes only what the default tag
+  gave, not the same tag given by hand or by an import.
+- New books get them when a scan or an import brings them in; a book moved to another folder gets that folder's
+  default tags. A tag you took off a book is not given back.
+- At the top of **Folders** you change the library's own default tags, given to every book that comes into it.
+
 ## A book's page
 
 A cover or row opens the book's page; **Back** returns to where you were, scrolled as you left it.

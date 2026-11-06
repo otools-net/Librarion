@@ -47,6 +47,30 @@ test.describe('@browse', () => {
         if (isPhoneWidth(page))
             await expectFitsScreen(page);
 
+        // A default tag of the folder, given to the books already there too (stage 6 chunk 8c).
+        const tag = `Quilled ${suffix}`;
+        await press(page.locator('.folder-defaults').getByRole('button', { name: 'Default tags' }), isMobile);
+        const dialog = page.getByRole('dialog', { name: 'Default tags' });
+        await dialog.getByRole('combobox', { name: 'Add a default tag' }).fill(tag);
+        await press(dialog.getByRole('option', { name: `Create “${tag}”` }), isMobile);
+        await press(dialog.getByRole('radio', { name: 'Also the 2 files already there' }), isMobile);
+        if (isPhoneWidth(page))
+            await expectFitsScreen(page);
+        await press(dialog.getByRole('button', { name: 'Add', exact: true }), isMobile);
+        await expect(page.getByRole('status').filter({ hasText: `${tag} is a default tag now.` })).toBeVisible();
+        await expect(dialog.locator('.default-tag-row .chip')).toHaveText(tag);
+        if (testInfo.project.name === 'android')
+            await audit(page, 'default tags');
+        await press(dialog.getByRole('button', { name: 'Close', exact: true }).last(), isMobile);
+        // Gone first: on phones a sheet closes through the history, which must be done before the next page opens.
+        await expect(dialog).toHaveCount(0);
+        await expect(page.locator('.folder-defaults .chip')).toHaveText(tag);
+        await press(page.locator('.book', { hasText: 'Ink' }).locator('.book-link'), isMobile);
+        await expect(page).toHaveURL(/\/books\/\d+/);
+        await expect(page.locator('lib-book-page .chip', { hasText: tag })).toBeVisible();
+        await page.goBack();
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Quill');
+
         // Back to the top through the path, then into the ZIP.
         await press(page.locator('.folder-crumbs a', { hasText: name }), isMobile);
         await press(page.locator('.folder-row a', { hasText: 'lib' }), isMobile);

@@ -200,6 +200,23 @@ export interface FolderItem {
     totalFiles: number;
     /** Folders directly under it. */
     folders: number;
+    /** Its own default tags (the badge on its row). */
+    defaultTags: number;
+}
+
+/** A default tag of a library (`folderId` null) or a folder; `from` names where an inherited one is set (null: the library). */
+export interface DefaultTagItem {
+    tagId: number;
+    name: string;
+    color: string | null;
+    folderId: number | null;
+    from: string | null;
+}
+
+/** A library's or folder's own default tags, then those it inherits, nearest first. */
+export interface DefaultTagList {
+    own: DefaultTagItem[];
+    inherited: DefaultTagItem[];
 }
 
 /** A folder with the folders above it (a library's only root left out: the library is the top). */

@@ -40,6 +40,9 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         ["TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "FolderId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
     private readonly TagCountChanges counts = new();
     private readonly Folders folders = new(tenantId, libraryId);
+
+    /// <summary>The library's default tags (stage 6 chunk 8c): its own (key 0) and each folder's; null until read, empty when none.</summary>
+    private Dictionary<int, int[]>? defaults;
     private readonly TagAncestors ancestors = new();
     private int bookDelta;
 
@@ -61,6 +64,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         await folders.AssignAsync(db, files.Select(f => f.File), cancellationToken);
         foreach (var file in files)
             folders.Count(file.File.FolderId, 1);
+        await DefaultsAsync(db, files.Select(f => f.File.FolderId), cancellationToken);
         var copies = await CopiesAsync(db, files, cancellationToken);
         await resolver.ResolveAsync(db, files.Where((_, i) => copies[i] == default).SelectMany(f => Names(f.Metadata)), cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
@@ -87,6 +91,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             var book = books[i] = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now };
             book.Files.Add(file.File);
             Apply(book, file.File.Path, file.Metadata, new HashSet<int>(), out var links);
+            GiveDefaults(links, [file.File.FolderId]);
             foreach (var link in links)
                 book.Tags.Add(link);
             counts.Add(libraryId, [], links.Select(l => l.TagId));
@@ -282,6 +287,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             await folders.AssignAsync(db, fresh.SelectMany(r => r.Files), cancellationToken);
             foreach (var file in fresh.SelectMany(r => r.Files))
                 folders.Count(file.FolderId, 1);
+            await DefaultsAsync(db, fresh.SelectMany(r => r.Files).Select(f => f.FolderId), cancellationToken);
             // The books through EF (their ids come back), everything hanging on them in bulk: EF's per-row cost was
             // most of an import's time (agents/docs/features/imports.md#scale).
             var made = new List<(Book Book, ImportedBook Record, List<BookTag> Links, List<BookIdentifier> Ids, List<BookProperty> Properties)>(fresh.Count);
@@ -289,6 +295,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             {
                 var book = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now, MetadataSource = record.Owner, ImportHash = record.Hash };
                 Apply(book, record.Path, record.Metadata, new HashSet<int>(), out var links);
+                GiveDefaults(links, record.Files.Select(f => f.FolderId));
                 counts.Add(libraryId, [], links.Select(l => l.TagId));
                 SourceCover(book, record);
                 made.Add((book, record, links, book.Identifiers, book.Properties));
@@ -432,6 +439,70 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         }
 
         bookDelta = 0;
+    }
+
+    /// <summary>
+    /// The library's default tags read once (a few rows), and the folders above <paramref name="folderIds"/> into the
+    /// folder cache when there are folder defaults: nothing more when the library has none.
+    /// </summary>
+    private async Task DefaultsAsync(LibrarionDbContext db, IEnumerable<int> folderIds, CancellationToken cancellationToken)
+    {
+        defaults ??= (await db.DefaultTags.Where(d => d.LibraryId == libraryId).Select(d => new { d.FolderId, d.TagId }).ToListAsync(cancellationToken))
+            .GroupBy(d => d.FolderId ?? 0).ToDictionary(g => g.Key, g => g.Select(d => d.TagId).ToArray());
+        if (defaults.Keys.Any(k => k != 0))
+            await folders.ParentsAsync(db, folderIds, cancellationToken);
+    }
+
+    /// <summary>The default tags of the library and of <paramref name="folderIds"/>' folders and those above them.</summary>
+    private HashSet<int> DefaultsOf(IEnumerable<int> folderIds)
+    {
+        var given = new HashSet<int>(defaults!.GetValueOrDefault(0) ?? []);
+        if (defaults.Keys.Any(k => k != 0))
+            foreach (var folder in folderIds.Distinct())
+                foreach (var id in folders.Chain(folder))
+                    if (defaults.TryGetValue(id, out var tags))
+                        given.UnionWith(tags);
+        return given;
+    }
+
+    /// <summary>A new book's default tags as rule links (those its metadata gave already left as they are).</summary>
+    private void GiveDefaults(List<BookTag> links, IEnumerable<int> folderIds)
+    {
+        if (defaults is not { Count: > 0 })
+            return;
+        var have = links.Select(l => l.TagId).ToHashSet();
+        foreach (var tagId in DefaultsOf(folderIds))
+            if (have.Add(tagId))
+                links.Add(new BookTag { TenantId = tenantId, TagId = tagId, Source = TagSource.Rule });
+    }
+
+    /// <summary>
+    /// Books whose file moved to another folder (a relink): the default tags the new place gives and the old one didn't,
+    /// as rule links, unless the book has the tag or had it taken off (SFE: a rename gives nothing).
+    /// </summary>
+    public async Task MovedAsync(LibrarionDbContext db, IReadOnlyList<(int BookId, int From, int To)> moves, CancellationToken cancellationToken)
+    {
+        if (moves.Count == 0)
+            return;
+        await DefaultsAsync(db, moves.SelectMany(m => new[] { m.From, m.To }), cancellationToken);
+        if (defaults is not { Count: > 0 })
+            return;
+        foreach (var (bookId, from, to) in moves)
+        {
+            var gained = DefaultsOf([to]);
+            gained.ExceptWith(DefaultsOf([from]));
+            if (gained.Count == 0)
+                continue;
+            var before = await db.BookTags.Where(l => l.BookId == bookId).Select(l => l.TagId).Distinct().ToListAsync(cancellationToken);
+            var off = await db.BookTagSuppressions.Where(s => s.BookId == bookId).Select(s => s.TagId).ToListAsync(cancellationToken);
+            var fresh = gained.Except(before).Except(off).ToList();
+            if (fresh.Count == 0)
+                continue;
+            db.BookTags.AddRange(fresh.Select(t => new BookTag { TenantId = tenantId, BookId = bookId, TagId = t, Source = TagSource.Rule }));
+            await db.SaveChangesAsync(cancellationToken);
+            db.ChangeTracker.Clear();
+            counts.Add(libraryId, before, before.Concat(fresh));
+        }
     }
 
     /// <summary>

@@ -49,3 +49,6 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
 - Two Ctrl-clicks on links in a row (`click({ modifiers: ['ControlOrMeta'] })`) made headless Chromium drop every
   later input now and then (2 runs in 5 under load: no event reached the page at all, though the app prevents the
   default): `selection.spec.ts` Ctrl-clicks one book and takes the next by its box; the client tests cover more.
+- After a press that opens another page, wait for its address (`toHaveURL`) or scope the check to its component
+  (`lib-book-page .chip`): a check the page left behind also passes (a tag chip in the folder's default tags line) let
+  `goBack` run before the book opened, and it left the folder instead (`folders.spec.ts`, 2026-11-06).

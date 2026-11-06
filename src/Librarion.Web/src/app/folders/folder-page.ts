@@ -5,10 +5,13 @@ import { Api } from '../core/api.service';
 import { errorText } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
-import { FolderDetail, FolderItem } from '../core/models';
+import { DefaultTagList, FolderDetail, FolderItem } from '../core/models';
+import { Rights } from '../core/rights';
+import { SessionService } from '../core/session.service';
 import { BookList } from '../browse/book-list';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
+import { DefaultTags } from './default-tags';
 
 /** Folders asked for at a time. */
 const PAGE = 100;
@@ -26,7 +29,7 @@ export function folderLink(folder: { id: number; name: string }): (string | numb
  */
 @Component({
     selector: 'lib-folder-page',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookList],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookList, DefaultTags],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'folder-page' },
     template: `
@@ -47,7 +50,34 @@ export function folderLink(folder: { id: number; name: string }): (string | numb
                 @if (folder(); as folder) {
                     <p class="browse-count">{{ summary(folder) }}</p>
                 }
+                @if (defaults(); as defaults) {
+                    @if (defaults.own.length || defaults.inherited.length || canDefault()) {
+                        <div class="folder-defaults">
+                            <span class="folder-defaults-label"><svg libIcon="tag-auto"></svg>{{ 'defaultTags.label' | t }}</span>
+                            @for (tag of defaults.own; track tag.tagId) {
+                                <span class="chip"><span class="tag-dot" [style.background]="tag.color"></span>{{ tag.name }}</span>
+                            }
+                            @for (tag of defaults.inherited; track tag.tagId + '-' + tag.folderId) {
+                                <span class="chip inherited" [title]="tag.from === null ? ('defaultTags.fromLibrary' | t) : ('defaultTags.from' | t: { name: tag.from })">
+                                    <span class="tag-dot" [style.background]="tag.color"></span>{{ tag.name }}</span>
+                            }
+                            @if (!defaults.own.length && !defaults.inherited.length) {
+                                <span class="folder-defaults-none">{{ 'defaultTags.none' | t }}</span>
+                            }
+                            @if (canDefault()) {
+                                <button type="button" class="button quiet" [title]="'defaultTags.editHint' | t" (click)="editing.set(true)">
+                                    <svg libIcon="edit"></svg><span>{{ 'defaultTags.edit' | t }}</span>
+                                </button>
+                            }
+                        </div>
+                    }
+                }
             </header>
+            @if (editing()) {
+                <lib-default-tags [library]="library.id" [folder]="place()" [place]="id() ? (folder()?.name ?? '') : library.name"
+                                  [books]="id() ? (folder()?.totalFiles ?? 0) : (library.bookCount ?? 0)"
+                                  (changed)="reloadDefaults()" (closed)="editing.set(false)" />
+            }
 
             @if (children().length) {
                 <ul class="values folders" [attr.aria-label]="'folders.list' | t">
@@ -56,6 +86,12 @@ export function folderLink(folder: { id: number; name: string }): (string | numb
                             <a [routerLink]="link(child)" [title]="child.name">
                                 <svg [libIcon]="child.zip ? 'zip' : 'folder'"></svg>
                                 <span class="value-name">{{ child.name }}</span>
+                                @if (child.defaultTags) {
+                                    <span class="default-badge" [attr.aria-label]="(child.defaultTags === 1 ? 'defaultTags.badge.one' : 'defaultTags.badge') | t: { count: child.defaultTags }"
+                                          [title]="(child.defaultTags === 1 ? 'defaultTags.badge.one' : 'defaultTags.badge') | t: { count: child.defaultTags }">
+                                        <svg libIcon="tag-auto"></svg>@if (child.defaultTags > 1) {<span>{{ child.defaultTags }}</span>}
+                                    </span>
+                                }
                                 <span class="value-count" [attr.aria-label]="rowCount(child)">{{ i18n.number(child.totalFiles) }}</span>
                             </a>
                         </li>
@@ -101,6 +137,7 @@ export class FolderPage {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly libraries = inject(LibraryContext);
+    private readonly session = inject(SessionService);
 
     private readonly params = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
     /** The folder asked for; 0 at the library's top. */
@@ -115,6 +152,12 @@ export class FolderPage {
     protected readonly loading = signal(false);
     protected readonly missing = signal(false);
     protected readonly error = signal<string | null>(null);
+    /** The default tags of the place shown (stage 6 chunk 8c): a folder's, or the library's at the top. */
+    protected readonly defaults = signal<DefaultTagList | null>(null);
+    protected readonly editing = signal(false);
+    protected readonly canDefault = computed(() => this.session.can(Rights.defaultTags));
+    /** Whose default tags: the folder asked for, or the library (null) at the top. */
+    protected readonly place = computed(() => this.id() ? this.folder()?.id ?? null : null);
     private requested = 0;
 
     constructor() {
@@ -167,6 +210,7 @@ export class FolderPage {
                 if (roots.length !== 1) {
                     this.detail.set(null);
                     this.children.set(roots);
+                    void this.reloadDefaults();
                     return;
                 }
                 shown = roots[0].id;
@@ -182,6 +226,7 @@ export class FolderPage {
             this.detail.set(detail);
             this.children.set(page.items);
             this.next.set(page.next);
+            void this.reloadDefaults();
             if (id)
                 await this.readable(detail.folder);
         } catch (error) {
@@ -194,6 +239,27 @@ export class FolderPage {
         } finally {
             if (asked === this.requested)
                 this.loading.set(false);
+        }
+    }
+
+    /** The default tags of the place shown, and the rows' badges after a change. */
+    protected async reloadDefaults(): Promise<void> {
+        const library = this.library();
+        if (!library)
+            return;
+        const asked = this.requested;
+        try {
+            const list = await this.api.defaultTags(library.id, this.place());
+            if (asked === this.requested)
+                this.defaults.set(list);
+        } catch {
+            if (asked === this.requested)
+                this.defaults.set(null);
+        }
+        if (this.editing() && this.folder()) {
+            const page = await this.api.folders(this.folder()!.id, null, Math.max(this.children().length, PAGE));
+            if (asked === this.requested)
+                this.children.set(page.items);
         }
     }
 

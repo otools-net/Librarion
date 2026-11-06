@@ -353,6 +353,41 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("BookTagSuppressions");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.DefaultTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("FolderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FolderId");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("LibraryId", "FolderId", "TagId")
+                        .IsUnique();
+
+                    b.ToTable("DefaultTags");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
                 {
                     b.Property<int>("Id")
@@ -1322,6 +1357,26 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasOne("Librarion.Core.Data.Book", null)
                         .WithMany()
                         .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DefaultTag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

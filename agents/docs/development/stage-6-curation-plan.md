@@ -118,7 +118,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 7. [x] Selection in the library and search lists (long press, click / Ctrl / Shift, the selection bar) and tagging a
        selection (tri-state); scope tagging of a search, an author or a library: counted, confirmed, a background run
        past the threshold.
-8. [ ] Default tags of a library and of folders (inherited by sub-folders) as `Rule` links, given when a book enters
+8. [x] Default tags of a library and of folders (inherited by sub-folders) as `Rule` links, given when a book enters
        or moves in; "new books only or also those there"; a badge on the folder rows. **The user's answers
        (2026-11-06):** there was no folder view, so one is added (as SFE's, the badge there); folders are indexed
        (a `Folders` table, one row per directory and per ZIP, `FolderId` on files) so "books under a folder" is an
@@ -133,9 +133,11 @@ A session may end early: this list is the state of the work. Tick a chunk when i
          user's answers (2026-11-06):** a new right **Browse by folder** (`library.folders`, Administrators and
          Curators by default): folder names and counts aren't filtered by content filters, the books opened still are;
          **stored exact counts** on each folder (kept by deltas in every scan, import, move and removal).
-   - 8c. [ ] Default tags (`FolderDefaultTags` / library's, `library.defaultTags`): given at entry and on moves as
+   - 8c. [x] Default tags (`FolderDefaultTags` / library's, `library.defaultTags`): given at entry and on moves as
          `Rule` links, "new only or also those there" (a scope tagging of the folder's books, D-6.4), removing asks
          whether the books keep them; the badge (SFE's `default-tags-badge`) on folder rows and the library.
+         **The user's answer (2026-11-06):** a folder holding default tags is kept (never pruned). **Built:**
+         [default-tags](../features/default-tags.md).
 9. [ ] Administration › Catalog › Imported tags: raw names by source with book counts and their mapping, sorted by
        count, bulk map / merge / ignore; the coverage shown ("the top 500 cover 93 % of imported links"); the
        benchmark's generator makes raw imported names so the exit criterion can be measured.
@@ -172,6 +174,15 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 16. [ ] Docs, CHANGELOG, feature notes; budgets through the UI's calls on 2M; e2e for each flow on every device; axe AA
         on the new screens in both themes; close the stage (merge 0.7.0, this plan removed as stage 5's was).
 
+## Later: faster imports (asked by the user, 2026-11-06)
+
+- Investigate whether imports can be made faster: Calibre 2M takes 28.9 min against its 30 min budget (chunk 8b,
+  [scale](scale.md#measured)), so every addition to the import path eats the last minute. To look at: where the time
+  goes per batch (profile one 2M run: metadata reads, tag resolution, EF inserts of books, `COPY` of links, the count
+  upserts, the search index), bigger batches, `COPY` for the books on SQLite's side too, writing links and counts in
+  parallel with reading the next batch, deferring secondary indexes (or the GIN / FTS5 index) on a first import into
+  an empty library and building them once at the end. Measure each idea on both providers before keeping it.
+
 ## Found with real books (2026-11-06)
 
 - **False duplicates by FB2 id (fixed):** `Fb2Reader` took every `<id>` under `<document-info>`, so the file maker's
@@ -198,7 +209,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 
 ### 6.2 Tagging and editing books
 - [ ] A book's tags and metadata on its page; edits kept through re-imports; suppressions.
-- [ ] Selection, selection tagging, scope tagging (built, chunk 7); default tags of libraries and folders.
+- [x] Selection, selection tagging, scope tagging (built, chunk 7); default tags of libraries and folders (chunk 8).
 - [ ] Cover upload, Change cover style, reassign a template's books.
 
 ### 6.3 Duplicates

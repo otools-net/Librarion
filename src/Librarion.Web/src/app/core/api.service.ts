@@ -7,7 +7,7 @@ import {
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
-    BookScope, FolderDetail, FolderItem, SelectionTags, TagChangeInput,
+    BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput,
 } from './models';
 
 /**
@@ -137,6 +137,13 @@ export class Api {
     folder = (id: number) => this.get<FolderDetail>(`api/folders/${id}`);
     folders = (id: number, after?: string | null, limit?: number) =>
         this.get<KeysetPage<FolderItem>>(`api/folders/${id}/folders`, { after: after ?? undefined, limit });
+    /** Default tags (stage 6 chunk 8c) of a library (`folder` null) or a folder. */
+    defaultTags = (library: number, folder: number | null) =>
+        this.get<DefaultTagList>(`api/libraries/${library}/default-tags`, { folder: folder ?? undefined });
+    addDefaultTag = (library: number, input: { folder: number | null; tag: BookTagEdit; existing: boolean }) =>
+        this.post<TagWork>(`api/libraries/${library}/default-tags`, input);
+    removeDefaultTag = (library: number, tagId: number, folder: number | null, books: boolean) =>
+        this.delete<TagWork>(`api/libraries/${library}/default-tags/${tagId}?${new URLSearchParams({ ...(folder === null ? {} : { folder: String(folder) }), books: String(books) })}`);
     /** What to offer for the last term of a search being typed, the most used in `library` first. */
     suggestions = (q: string, library?: number) => this.get<SuggestionList>('api/search/suggestions', { q, library });
     /** The most frequent values of each field among the books of `library` matching `q` (all of them without), with counts. */

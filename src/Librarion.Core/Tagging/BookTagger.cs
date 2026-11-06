@@ -98,6 +98,16 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
         return AccessResult<TagWork>.Ok(new TagWork(null, null, await WalkAsync(tenantId, visibility, scope, resolved, null, cancellationToken)));
     }
 
+    /// <summary>One plain tag by id, or by name (found, else made): what a default tag is given as.</summary>
+    public async Task<AccessResult<int>> PlainTagAsync(int tenantId, BookTagEdit tag, CancellationToken cancellationToken = default)
+    {
+        if (await ResolveAsync(tenantId, new TagChange([tag]), cancellationToken) is not { } resolved)
+            return AccessResult<int>.Invalid("tag", "name.required");
+        if (resolved.Problem is { } problem)
+            return problem.As<int>();
+        return AccessResult<int>.Ok(resolved.Add.Single());
+    }
+
     private sealed record Resolved(List<int> Add, List<int> Remove, string Name, AccessResult<TagWork>? Problem = null);
 
     /// <summary>The tags to give, by id or name (a missing name made as a plain tag); null when a name is empty.</summary>

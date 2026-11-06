@@ -339,6 +339,81 @@
     color: var(--text-muted);
 }
 
+.default-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    color: var(--accent);
+    font-size: var(--text-sm);
+}
+
+.folder-defaults {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.folder-defaults-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.folder-defaults .chip.inherited {
+    border-style: dashed;
+}
+
+.folder-defaults-none {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.default-tag-rows {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    list-style: none;
+}
+
+.default-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+}
+
+.default-tag-ask {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.chip-note {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.default-tags-when {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.default-tags-when label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 32px;
+}
+
 .folders-more {
     margin: var(--space-3) 0;
 }

@@ -5,7 +5,7 @@ export const ICON_NAMES = [
     // The shell
     'menu', 'close', 'search', 'sun', 'moon', 'home', 'logout',
     // Books and their fields
-    'library', 'book', 'author', 'series', 'tag', 'category', 'language', 'publisher', 'calendar', 'star', 'folder', 'zip',
+    'library', 'book', 'author', 'series', 'tag', 'category', 'language', 'publisher', 'calendar', 'star', 'folder', 'zip', 'tag-auto',
     // Actions
     'plus', 'minus', 'check', 'edit', 'trash', 'download', 'import', 'refresh', 'copy', 'external', 'more', 'filter', 'sort',
     'grid', 'list', 'hidden', 'grip',
@@ -58,6 +58,7 @@ export class Icon {
             <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2" /><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" /></symbol>
             <symbol id="icon-star" viewBox="0 0 24 24"><path d="m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z" /></symbol>
             <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M3.5 6.5h6l2 2h9v10.5h-17z" /></symbol>
+            <symbol id="icon-tag-auto" viewBox="0 0 24 24"><path d="M4 12.5V5h7.5l8 8-7.5 7.5zM7.5 8.5h.01" /><path d="M19 2.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" fill="currentColor" /></symbol>
             <symbol id="icon-zip" viewBox="0 0 24 24"><path d="M5.5 3.5h13v17h-13zM12 3.5v2m0 2v2m0 2v2M10.5 13.5h3v3h-3z" /></symbol>
 
             <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>

@@ -863,6 +863,41 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "DefaultTags",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    FolderId = table.Column<int>(type: "INTEGER", nullable: true),
+                    TagId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DefaultTags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DefaultTags_Folders_FolderId",
+                        column: x => x.FolderId,
+                        principalTable: "Folders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DefaultTags_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DefaultTags_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Archives_LibraryId",
                 table: "Archives",
@@ -969,6 +1004,22 @@ namespace Librarion.Core.Data.Migrations.Sqlite
             migrationBuilder.CreateIndex(
                 name: "IX_BookTagSuppressions_TagId",
                 table: "BookTagSuppressions",
+                column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTags_FolderId",
+                table: "DefaultTags",
+                column: "FolderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTags_LibraryId_FolderId_TagId",
+                table: "DefaultTags",
+                columns: new[] { "LibraryId", "FolderId", "TagId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTags_TagId",
+                table: "DefaultTags",
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
@@ -1192,6 +1243,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 name: "BookTagSuppressions");
 
             migrationBuilder.DropTable(
+                name: "DefaultTags");
+
+            migrationBuilder.DropTable(
                 name: "FieldKeyAliases");
 
             migrationBuilder.DropTable(
@@ -1243,10 +1297,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 name: "TenantDisabledRights");
 
             migrationBuilder.DropTable(
-                name: "Folders");
+                name: "Books");
 
             migrationBuilder.DropTable(
-                name: "Books");
+                name: "Folders");
 
             migrationBuilder.DropTable(
                 name: "Users");

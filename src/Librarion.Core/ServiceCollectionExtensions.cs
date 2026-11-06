@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<BookVisibilities>();
         services.AddSingleton<BookQueries>();
         services.AddSingleton<FolderQueries>();
+        services.AddSingleton<Librarion.Core.Tagging.DefaultTags>();
         services.AddSingleton<TagQueries>();
         services.AddSingleton<Librarion.Core.Search.SearchSuggestions>();
         services.AddSingleton<Librarion.Core.Search.SearchFacets>();
