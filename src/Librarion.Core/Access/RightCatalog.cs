@@ -10,6 +10,7 @@ public static class Rights
 {
     public const string Browse = "library.browse";
     public const string Download = "library.download";
+    public const string Folders = "library.folders";
     public const string Scan = "library.scan";
     public const string LibrarySettings = "library.settings";
     public const string Import = "library.import";
@@ -69,6 +70,8 @@ public static class RightCatalog
     [
         new(Rights.Browse, RightScope.Library, R, Members, "library"),
         new(Rights.Download, RightScope.Library, R, Members, "library"),
+        // Folder names and counts aren't narrowed by content filters (the user's answer, 2026-11-06): trusted groups only.
+        new(Rights.Folders, RightScope.Library, R, Curators, "library"),
         new(Rights.Scan, RightScope.Library, W, Administrators, "library"),
         new(Rights.LibrarySettings, RightScope.Library, W, Administrators, "library"),
         new(Rights.Import, RightScope.Library, W, Administrators, "library"),

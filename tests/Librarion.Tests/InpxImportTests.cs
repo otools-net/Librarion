@@ -69,6 +69,7 @@ public sealed class InpxImportTests
             var zipFolders = await db.Folders.Where(f => f.ArchiveId != null).ToDictionaryAsync(f => f.ArchiveId!.Value, f => f.Id, Cancel);
             foreach (var file in await db.BookFiles.ToListAsync(Cancel))
                 Assert.AreEqual(zipFolders[file.ArchiveId!.Value], file.FolderId, "an imported book is in its zip's folder");
+            Assert.AreEqual(3, (await db.Folders.SingleAsync(f => f.ParentId == null, Cancel)).TotalFileCount, "imported files are counted");
         }
 
         var scan = await library.ScanAsync(Cancel);

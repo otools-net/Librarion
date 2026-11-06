@@ -44,6 +44,17 @@ If you may tag books in the library (Curators and Administrators may), you can g
 - A series shows its books by their number in the series first; pick another order in **Sort** (books without a
   number appear only in the other orders).
 
+## Folders
+
+With the **Browse by folder** right (Administrators and Curators have it), **Folders** in the navigation shows the
+library as it is on disk: its folders and its ZIP files, each with how many files it holds, sub-folders included.
+
+- A library with one folder opens inside it; one with several lists them first.
+- Open a folder or a ZIP file to see the folders in it, then its own books (sorted, selected and tagged as in the
+  library). The path above its name leads back up.
+- Folder names are shown as they are on disk, even when your group's content filters hide some of the books in them;
+  the books themselves are still hidden.
+
 ## A book's page
 
 A cover or row opens the book's page; **Back** returns to where you were, scrolled as you left it.

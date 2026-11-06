@@ -17,7 +17,7 @@ public sealed record SelectionTags(int Books, IReadOnlyList<SelectionTag> Tags);
 public sealed record TagChange(IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null);
 
 /// <summary>Every book of a library's list: all of them, those with <paramref name="Tag"/> (a tag's page), those matching <paramref name="Query"/>.</summary>
-public sealed record BookScope(int Library, int? Tag = null, string? Query = null);
+public sealed record BookScope(int Library, int? Tag = null, string? Query = null, int? Folder = null);
 
 /// <summary>
 /// Plain tags given to or taken from many books (stage 6, chunk 7; SFE's selection and scope tagging,
@@ -71,7 +71,8 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
     public async Task<long> CountAsync(int tenantId, BookVisibility visibility, BookScope scope, CancellationToken cancellationToken = default)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
-        return await (await BookQueries.ScopeAsync(db, visibility, scope.Library, scope.Tag, scope.Query, TagService.BatchSize, cancellationToken)).LongCountAsync(cancellationToken);
+        return await (await BookQueries.ScopeAsync(db, visibility, scope.Library, scope.Tag, scope.Query, TagService.BatchSize, cancellationToken, scope.Folder))
+            .LongCountAsync(cancellationToken);
     }
 
     /// <summary>Every book of the scope gets the change: inline, or a run of the library past the threshold (or behind another run).</summary>
@@ -162,7 +163,7 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
         {
             await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
             var last = after;
-            var books = await (await BookQueries.ScopeAsync(db, visibility, scope.Library, scope.Tag, scope.Query, TagService.BatchSize, cancellationToken))
+            var books = await (await BookQueries.ScopeAsync(db, visibility, scope.Library, scope.Tag, scope.Query, TagService.BatchSize, cancellationToken, scope.Folder))
                 .Where(b => b.Id > last).OrderBy(b => b.Id).Select(b => b.Id).Take(TagService.BatchSize).ToListAsync(cancellationToken);
             if (books.Count == 0)
                 break;

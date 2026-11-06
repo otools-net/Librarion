@@ -7,7 +7,7 @@ import {
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
-    BookScope, SelectionTags, TagChangeInput,
+    BookScope, FolderDetail, FolderItem, SelectionTags, TagChangeInput,
 } from './models';
 
 /**
@@ -125,10 +125,18 @@ export class Api {
     deleteGroup = (id: number) => this.delete<void>(`api/groups/${id}`);
 
     /** The books of a library the session may browse, a page at a time by key (`after`: the `next` of the page before). */
-    books = (query: { library: number; sort: BookSort; tag?: number | null; q?: string | null; after?: string | null; limit?: number }) =>
+    books = (query: {
+        library: number; sort: BookSort; tag?: number | null; q?: string | null; folder?: number | null; after?: string | null; limit?: number;
+    }) =>
         this.get<KeysetPage<BookListItem>>('api/books', {
-            library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit,
+            library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, folder: query.folder ?? undefined,
+            after: query.after ?? undefined, limit: query.limit,
         });
+    /** The folder view (agents/docs/features/folders.md, `library.folders`): a library's roots, a folder, its folders by key. */
+    libraryFolders = (library: number) => this.get<FolderItem[]>(`api/libraries/${library}/folders`);
+    folder = (id: number) => this.get<FolderDetail>(`api/folders/${id}`);
+    folders = (id: number, after?: string | null, limit?: number) =>
+        this.get<KeysetPage<FolderItem>>(`api/folders/${id}/folders`, { after: after ?? undefined, limit });
     /** What to offer for the last term of a search being typed, the most used in `library` first. */
     suggestions = (q: string, library?: number) => this.get<SuggestionList>('api/search/suggestions', { q, library });
     /** The most frequent values of each field among the books of `library` matching `q` (all of them without), with counts. */
@@ -160,7 +168,8 @@ export class Api {
     createTag = (input: TagInput) => this.post<TagDefinition>('api/tags', input);
     selectionTags = (books: number[]) => this.post<SelectionTags>('api/books/tags/state', { books });
     tagSelection = (books: number[], change: TagChangeInput) => this.post<TagWork>('api/books/tags', { books, ...change });
-    countScope = (scope: BookScope) => this.get<{ books: number }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q });
+    countScope = (scope: BookScope) =>
+        this.get<{ books: number }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q, folder: scope.folder ?? undefined });
     tagScope = (scope: BookScope, change: TagChangeInput) => this.post<TagWork>('api/books/scope/tags', { ...scope, ...change });
     editBook = (id: number, edit: BookEdit) => this.put<BookDetail>(`api/books/${id}`, edit);
     updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);

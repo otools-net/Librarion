@@ -176,24 +176,35 @@ public sealed class CatalogGenerator
 
     private static string ArchivePath(int index) => $"archives/fb2-{index:D4}.zip";
 
-    public static readonly string[] FolderColumns = ["Id", "TenantId", "LibraryId", "RootId", "ParentId", "Name", "Path", "PathKey", "ArchiveId"];
+    public static readonly string[] FolderColumns =
+        ["Id", "TenantId", "LibraryId", "RootId", "ParentId", "Name", "Path", "PathKey", "ArchiveId", "FileCount", "TotalFileCount", "FolderCount"];
 
     /// <summary>
     /// The folders as a scan makes them: the root's own (1), <c>archives</c> (2) and each ZIP under it, <c>books</c> and
-    /// its thousand sub-folders of loose files (<see cref="FolderOf"/>).
+    /// its thousand sub-folders of loose files (<see cref="FolderOf"/>), with their counts (a pass over the files' plans).
     /// </summary>
     public IEnumerable<object?[]> Folders()
     {
-        object?[] Row(int id, int? parent, string path, int? archive) =>
-            [id, _target.TenantId, _target.LibraryId, _target.RootId, parent, path[(path.LastIndexOf('/') + 1)..], path, PathKeys.Of(path), archive];
-        yield return Row(1, null, "", null);
-        yield return Row(2, 1, "archives", null);
-        for (var i = 0; i < _shape.Archives; i++)
-            yield return Row(3 + i, 2, ArchivePath(i), i + 1);
         var books = 3 + _shape.Archives;
-        yield return Row(books, 1, "books", null);
+        var files = new int[books + 1001];
+        for (var id = 1; id <= _shape.Books; id++)
+            foreach (var file in Plan(id).Files)
+                files[FolderOf(id, file)]++;
+        var archived = files.Skip(3).Take(_shape.Archives).Sum();
+        var loose = files.Skip(books + 1).Sum();
+
+        object?[] Row(int id, int? parent, string path, int? archive, int total, int folders) =>
+        [
+            id, _target.TenantId, _target.LibraryId, _target.RootId, parent, path[(path.LastIndexOf('/') + 1)..], path, PathKeys.Of(path), archive,
+            files[id], total, folders,
+        ];
+        yield return Row(1, null, "", null, archived + loose, 2);
+        yield return Row(2, 1, "archives", null, archived, _shape.Archives);
+        for (var i = 0; i < _shape.Archives; i++)
+            yield return Row(3 + i, 2, ArchivePath(i), i + 1, files[3 + i], 0);
+        yield return Row(books, 1, "books", null, loose, 1000);
         for (var n = 0; n < 1000; n++)
-            yield return Row(books + 1 + n, books, $"books/{n:D3}", null);
+            yield return Row(books + 1 + n, books, $"books/{n:D3}", null, files[books + 1 + n], 0);
     }
 
     /// <summary>The folder of a file: its ZIP's, or the sub-folder of <c>books</c> it is in.</summary>

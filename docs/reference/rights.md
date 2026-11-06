@@ -7,6 +7,7 @@ libraries; the others tenant-wide (Manage tags too: a tenant's libraries share i
 |---|---|---|---|---|
 | Browse | Libraries | | Administrators, Users, Curators | see the library and its books |
 | Download | Libraries | | Administrators, Users, Curators | download the books' files |
+| Browse by folder | Libraries | | Administrators, Curators | browse the library by its folders and ZIP files and see how many files each holds; folder names are shown even when content filters hide the books in them |
 | Scan | Libraries | yes | Administrators | scan the library's folders now, cancel a scan, schedule scans |
 | Library settings | Libraries | yes | Administrators | change the library's settings |
 | Import | Libraries | yes | Administrators | import a Calibre library or an INPX catalog into the library (its metadata is stored in Librarion; nothing is written back) |

@@ -36,6 +36,7 @@ public static class RunCommand
         var tenantDb = services.GetRequiredService<TenantDb>();
         var books = services.GetRequiredService<BookQueries>();
         var tags = services.GetRequiredService<TagQueries>();
+        var folders = services.GetRequiredService<FolderQueries>();
         var suggestions = services.GetRequiredService<Librarion.Core.Search.SearchSuggestions>();
         var facets = services.GetRequiredService<Librarion.Core.Search.SearchFacets>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
@@ -50,8 +51,13 @@ public static class RunCommand
         int middleAddedId;
         string prolificName, middleName;
         List<int> sampleIds;
+        int zipFolder, looseParent, looseFolder;
         await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
         {
+            // The folder view (stage 6 chunk 8b): a ZIP of 100k entries, the folder of the thousand folders of loose files, one of those.
+            zipFolder = await db.Folders.Where(f => f.ArchiveId != null).OrderByDescending(f => f.FileCount).Select(f => f.Id).FirstAsync(cancellationToken);
+            looseParent = await db.Folders.Where(f => f.Path == "books").Select(f => f.Id).SingleAsync(cancellationToken);
+            looseFolder = await db.Folders.Where(f => f.Path == "books/500").Select(f => f.Id).SingleAsync(cancellationToken);
             var library = await db.Libraries.SingleAsync(cancellationToken);
             libraryId = library.Id;
             bookCount = library.BookCount;
@@ -117,6 +123,12 @@ public static class RunCommand
             ("a tag's page: the most prolific author", DetailBudget, async _ => await tags.GetAsync(tenant.Id, prolificAuthor, libraryId, open, cancellationToken) is null ? 0 : 1),
             ("a tag's page: category Fiction", DetailBudget, async _ => await tags.GetAsync(tenant.Id, fiction, libraryId, open, cancellationToken) is null ? 0 : 1),
             ("possible duplicates", ListBudget, async i => (await books.DuplicatesAsync(tenant.Id, open, sampleIds[i], cancellationToken))?.Count ?? 0),
+            // The folder view (stage 6 chunk 8b): a folder's folders by key, a folder with its path, a folder's books.
+            ("folders: a folder of 1,000 folders, first page", ListBudget, async _ => (await folders.ChildrenAsync(tenant.Id, looseParent, null, 100, cancellationToken)).Items.Count),
+            ("folders: a folder with the folders above it", DetailBudget, async _ => await folders.GetAsync(tenant.Id, looseFolder, cancellationToken) is null ? 0 : 1),
+            ("books of a ZIP of 100k entries, by title", ListBudget, _ => List(open, new BookPageRequest(libraryId, FolderId: zipFolder))),
+            ("books of a ZIP of 100k entries, by title, middle page", ListBudget, _ => List(open, new BookPageRequest(libraryId, After: titleCursor, FolderId: zipFolder))),
+            ("books of a folder of loose files, by author", ListBudget, _ => List(open, new BookPageRequest(libraryId, BookSort.Author, FolderId: looseFolder))),
             // Search (agents/docs/features/search.md): each title word is on about 2 % of the books (the generator's word list),
             // a file name (the id) on one; author names reach books through the tag-name index.
             ("search: a word in many titles", SearchBudget, _ => List(open, new BookPageRequest(Query: "night"))),

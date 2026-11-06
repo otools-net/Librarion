@@ -8,7 +8,9 @@ namespace Librarion.Core.Import;
 /// The folders of one library's files (<see cref="Folder"/>, agents/docs/features/folders.md): a file's folder and every
 /// folder above it found by path key or made, parents first, a batch of files at a time; a cache of the folders seen
 /// (cleared past <see cref="MaxCached"/>: memory stays flat whatever the library's size). Used by one writer at a time
-/// (the library's scan or import), so two can't make the same folder.
+/// (the library's scan or import), so two can't make the same folder. Keeps the folders' counts by deltas
+/// (<see cref="Count"/>, written by <see cref="FlushAsync"/>): a folder's own files, its total with every folder under
+/// it, its folders.
 /// </summary>
 public sealed class Folders(int tenantId, int libraryId)
 {
@@ -17,6 +19,72 @@ public sealed class Folders(int tenantId, int libraryId)
 
     private readonly Dictionary<(int Root, string Path), int> ids = [];
     private readonly Dictionary<int, (int Root, string Path)> archives = [];
+    private readonly Dictionary<int, int?> parents = [];
+    private readonly Dictionary<int, (int Files, int Folders)> deltas = [];
+
+    /// <summary>Present files came into (positive) or left (negative) a folder: counted at the next <see cref="FlushAsync"/>.</summary>
+    public void Count(int folderId, int files) => Add(folderId, files, 0);
+
+    private void Add(int folderId, int files, int folders)
+    {
+        var (f, d) = deltas.GetValueOrDefault(folderId);
+        deltas[folderId] = (f + files, d + folders);
+    }
+
+    /// <summary>
+    /// The counts moved since the last flush, written: each folder's own, the totals of the folders above it, grouped by
+    /// the change so most batches are a few statements, never one per folder.
+    /// </summary>
+    public async Task FlushAsync(LibrarionDbContext db, CancellationToken cancellationToken)
+    {
+        if (deltas.Count == 0)
+            return;
+        var changes = deltas.Where(d => d.Value != default).ToList();
+        deltas.Clear();
+        await ParentsAsync(db, changes.Where(c => c.Value.Files != 0).Select(c => c.Key), cancellationToken);
+        var totals = new Dictionary<int, int>();
+        foreach (var (folderId, (files, _)) in changes)
+        {
+            if (files == 0)
+                continue;
+            for (int? at = folderId; at is { } id; at = parents.GetValueOrDefault(id))
+                totals[id] = totals.GetValueOrDefault(id) + files;
+        }
+
+        var rows = changes.ToDictionary(c => c.Key, c => (c.Value.Files, Total: 0, c.Value.Folders));
+        foreach (var (id, total) in totals)
+            rows[id] = rows.TryGetValue(id, out var row) ? row with { Total = total } : (0, total, 0);
+        foreach (var group in rows.Where(r => r.Value != default).GroupBy(r => r.Value))
+        {
+            var (files, total, folders) = group.Key;
+            foreach (var chunk in group.Select(g => g.Key).Chunk(BatchSize))
+                await db.Folders.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s
+                    .SetProperty(f => f.FileCount, f => f.FileCount + files)
+                    .SetProperty(f => f.TotalFileCount, f => f.TotalFileCount + total)
+                    .SetProperty(f => f.FolderCount, f => f.FolderCount + folders), cancellationToken);
+        }
+    }
+
+    /// <summary>The parents of <paramref name="folderIds"/> and of every folder above them, into the cache.</summary>
+    private async Task ParentsAsync(LibrarionDbContext db, IEnumerable<int> folderIds, CancellationToken cancellationToken)
+    {
+        if (parents.Count > MaxCached)
+            parents.Clear();
+        var unknown = folderIds.Where(id => !parents.ContainsKey(id)).Distinct().ToList();
+        while (unknown.Count > 0)
+        {
+            var next = new List<int>();
+            foreach (var chunk in unknown.Chunk(BatchSize))
+                foreach (var row in await db.Folders.Where(f => chunk.Contains(f.Id)).Select(f => new { f.Id, f.ParentId }).ToListAsync(cancellationToken))
+                {
+                    parents[row.Id] = row.ParentId;
+                    if (row.ParentId is { } parent && !parents.ContainsKey(parent))
+                        next.Add(parent);
+                }
+
+            unknown = next.Distinct().ToList();
+        }
+    }
 
     /// <summary>Sets <see cref="BookFile.FolderId"/> of the files that have none, making the folders they need.</summary>
     /// <param name="files">Loose files carry their <see cref="BookFile.RootId"/>, archive entries their <see cref="BookFile.ArchiveId"/>.</param>
@@ -46,7 +114,7 @@ public sealed class Folders(int tenantId, int libraryId)
         var removed = false;
         while (candidates.Count > 0)
         {
-            var parents = new HashSet<int>();
+            var above = new HashSet<int>();
             foreach (var chunk in candidates.Chunk(BatchSize))
             {
                 var empty = await db.Folders
@@ -56,11 +124,17 @@ public sealed class Folders(int tenantId, int libraryId)
                     continue;
                 var gone = empty.Select(f => f.Id).ToList();
                 await db.Folders.Where(f => gone.Contains(f.Id)).ExecuteDeleteAsync(cancellationToken);
-                parents.UnionWith(empty.Select(f => f.ParentId!.Value));
+                foreach (var folder in empty)
+                {
+                    above.Add(folder.ParentId!.Value);
+                    Add(folder.ParentId!.Value, 0, -1);
+                    deltas.Remove(folder.Id);
+                    this.parents.Remove(folder.Id);
+                }
                 removed = true;
             }
 
-            candidates = parents.ToList();
+            candidates = above.ToList();
         }
 
         if (removed)
@@ -137,7 +211,12 @@ public sealed class Folders(int tenantId, int libraryId)
                 await db.SaveChangesAsync(cancellationToken);
                 db.ChangeTracker.Clear();
                 foreach (var (key, row) in chunk)
+                {
                     ids[key] = row.Id;
+                    parents[row.Id] = row.ParentId;
+                    if (row.ParentId is { } parent)
+                        Add(parent, 0, 1);
+                }
             }
         }
     }

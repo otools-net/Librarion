@@ -19,7 +19,10 @@ public enum BookSort
 /// <param name="LibraryId">One library; null = every library the account browses.</param>
 /// <param name="TagId">Only books with this tag or a descendant (a field value's page: an author, a category).</param>
 /// <param name="Query">A search in the search language (<see cref="Search.SearchQuery"/>); null or blank: no search.</param>
-public sealed record BookPageRequest(int? LibraryId = null, BookSort Sort = BookSort.Title, string? After = null, int Limit = 50, int? TagId = null, string? Query = null);
+/// <param name="FolderId">Only books with a present file directly in this folder of <paramref name="LibraryId"/>
+/// (agents/docs/features/folders.md).</param>
+public sealed record BookPageRequest(int? LibraryId = null, BookSort Sort = BookSort.Title, string? After = null, int Limit = 50, int? TagId = null, string? Query = null,
+    int? FolderId = null);
 
 /// <param name="Title">From the metadata; null when it gave none (<see cref="FileName"/> is shown).</param>
 /// <param name="FileName">The first file's name without its book extensions, for a book without a title.</param>
@@ -74,7 +77,7 @@ public sealed class BookQueries(TenantDb tenantDb)
     /// <paramref name="search"/>; the same rules as <see cref="ListAsync"/>. <paramref name="batch"/> sizes the plans as a page would.
     /// </summary>
     public static async Task<IQueryable<Book>> ScopeAsync(LibrarionDbContext db, BookVisibility visibility, int? libraryId, int? tagId, string? search, int batch,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, int? folderId = null)
     {
         if (libraryId is { } only && !visibility.Libraries.ContainsKey(only))
             return db.Books.Where(b => false);
@@ -92,7 +95,26 @@ public sealed class BookQueries(TenantDb tenantDb)
             query = query.Where(await NarrowAsync(db, [tag], libraries, batch, cancellationToken) ? From(db, tags) : Probe(db, tags));
         }
 
+        if (folderId is { } folder)
+            query = await InFolderAsync(db, query, folder, libraryId, batch, cancellationToken);
         return query;
+    }
+
+    /// <summary>
+    /// Books with a present file directly in the folder (of <paramref name="libraryId"/>; none without one). As for a tag
+    /// (<see cref="NarrowAsync"/>): from the folder's files (index <c>(FolderId, BookId)</c>) when its stored count is
+    /// small next to the library, else each book of the sort index tested by its files (index <c>BookId</c>).
+    /// </summary>
+    private static async Task<IQueryable<Book>> InFolderAsync(LibrarionDbContext db, IQueryable<Book> query, int folderId, int? libraryId, int limit,
+        CancellationToken cancellationToken)
+    {
+        var files = await db.Folders.Where(f => f.Id == folderId && f.LibraryId == libraryId).Select(f => (int?)f.FileCount).FirstOrDefaultAsync(cancellationToken);
+        if (files is null)
+            return query.Where(b => false);
+        var books = await db.Libraries.Where(l => l.Id == libraryId).Select(l => (long)l.BookCount).FirstOrDefaultAsync(cancellationToken);
+        return files < Math.Sqrt((double)limit * Math.Max(books, 1))
+            ? query.Where(b => db.BookFiles.Where(f => f.FolderId == folderId && f.MissingSince == null).Select(f => f.BookId).Contains(b.Id))
+            : query.Where(b => db.BookFiles.Any(f => f.BookId == b.Id && f.FolderId == folderId && f.MissingSince == null));
     }
 
     public async Task<Page<BookListItem>> ListAsync(int tenantId, BookVisibility visibility, BookPageRequest request, CancellationToken cancellationToken = default)
@@ -117,6 +139,8 @@ public sealed class BookQueries(TenantDb tenantDb)
             query = query.Where(await NarrowAsync(db, [tagId], libraries, limit, cancellationToken) ? From(db, tags) : Probe(db, tags));
         }
 
+        if (request.FolderId is { } folderId)
+            query = await InFolderAsync(db, query, folderId, request.LibraryId, limit, cancellationToken);
         var after = KeysetCursor.Decode(request.After);
         var rows = await Order(query, request.Sort, after)
             .Take(limit + 1)

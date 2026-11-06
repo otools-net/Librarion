@@ -56,13 +56,21 @@ export class Shell {
     /** Phones, on a library's pages: the arrow goes back to the list of libraries. */
     protected readonly inLibrary = computed(() => this.phone() && /^\/admin\/libraries\/\d+/.test(this.url()));
 
-    protected readonly nav: NavItem[] = [
+    private readonly browseNav: NavItem[] = [
         { label: 'shell.nav.library', icon: 'library', link: '/' },
         { label: 'shell.nav.authors', icon: 'author', link: '/fields/author' },
         { label: 'shell.nav.series', icon: 'series', link: '/fields/series' },
         { label: 'shell.nav.tags', icon: 'tag', link: '/tags' },
         { label: 'shell.nav.fields', icon: 'category', link: '/fields' },
     ];
+
+    /** The browse navigation; Folders for those who may browse by folder (`library.folders`). */
+    protected readonly nav = computed<NavItem[]>(() => {
+        this.sessions.session();
+        return this.sessions.can(Rights.folders)
+            ? [...this.browseNav, { label: 'shell.nav.folders', icon: 'folder', link: '/folders' }]
+            : this.browseNav;
+    });
 
     /** A navigation item is lit on its own page only (a tag's page is under none; "Go to" keeps Authors lit). */
     protected readonly exactPath: IsActiveMatchOptions = { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };

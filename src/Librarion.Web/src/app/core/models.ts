@@ -182,11 +182,31 @@ export interface TagChangeInput {
     remove?: number[];
 }
 
-/** Every book of a library's list: all, those with a tag (its page), those matching a search. */
+/** Every book of a library's list: all, those with a tag (its page), those matching a search, those in a folder. */
 export interface BookScope {
     library: number;
     tag?: number | null;
     q?: string | null;
+    folder?: number | null;
+}
+
+/** A folder of the folder view: a directory, a ZIP (`zip`), a directory inside one; counts of present files. */
+export interface FolderItem {
+    id: number;
+    name: string;
+    zip: boolean;
+    /** Files directly in it; `totalFiles` with those of every folder under it. */
+    files: number;
+    totalFiles: number;
+    /** Folders directly under it. */
+    folders: number;
+}
+
+/** A folder with the folders above it (a library's only root left out: the library is the top). */
+export interface FolderDetail {
+    folder: FolderItem;
+    libraryId: number;
+    path: { id: number; name: string }[];
 }
 
 /** What a save of the book editor changes (`PUT api/books/{id}`); a part left out stays as it is. */

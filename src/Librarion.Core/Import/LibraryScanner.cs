@@ -125,6 +125,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
         {
             if (fileIds.Count == 0)
                 return;
+            await writer.CountFilesAsync(db, fileIds, present: true, -1, cancellationToken);
             if (purge)
             {
                 await db.BookFiles.Where(f => fileIds.Contains(f.Id)).ExecuteDeleteAsync(cancellationToken);
@@ -142,6 +143,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
         {
             if (fileIds.Count == 0)
                 return;
+            await writer.CountFilesAsync(db, fileIds, present: false, 1, cancellationToken);
             await db.BookFiles.Where(f => fileIds.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, (DateTime?)null), cancellationToken);
             await writer.ReturnAsync(db, bookIds, cancellationToken);
         }

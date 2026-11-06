@@ -27,6 +27,9 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   `library.defaultTags` (library and folder default tags), `tenant.tags` (the tag and field vocabulary, per tenant:
   D9). The plan named them `tags.assign`, `books.edit`…; ids start with their scope (`EveryRightIsWellFormed`), so
   they were named by scope.
+- `library.folders` (stage 6 chunk 8b, Read, area `library`, Administrators and Curators): the folder view
+  ([folders](folders.md)). Folder names and counts aren't narrowed by content filters (the user's answer,
+  2026-11-06), so it is for trusted groups; the books listed in a folder still are.
 - **Evaluation** (`RightsEvaluator.GetAsync`): union of the account's groups' rights in its tenant; library rights only
   in the group's libraries (`AllLibraries`, or `GroupLibraries` rows); minus the tenant's `TenantDisabledRights`;
   minus the server's `Librarion:Rights:Disabled` (ids, `prefix*`, `kind:write`), applied at each read so a

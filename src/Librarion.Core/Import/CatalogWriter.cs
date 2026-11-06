@@ -59,6 +59,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         if (files.Count == 0)
             return;
         await folders.AssignAsync(db, files.Select(f => f.File), cancellationToken);
+        foreach (var file in files)
+            folders.Count(file.File.FolderId, 1);
         var copies = await CopiesAsync(db, files, cancellationToken);
         await resolver.ResolveAsync(db, files.Where((_, i) => copies[i] == default).SelectMany(f => Names(f.Metadata)), cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
@@ -278,6 +280,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         {
             await resolver.ResolveAsync(db, fresh.SelectMany(r => Names(r.Metadata)), cancellationToken);
             await folders.AssignAsync(db, fresh.SelectMany(r => r.Files), cancellationToken);
+            foreach (var file in fresh.SelectMany(r => r.Files))
+                folders.Count(file.FolderId, 1);
             // The books through EF (their ids come back), everything hanging on them in bulk: EF's per-row cost was
             // most of an import's time (agents/docs/features/imports.md#scale).
             var made = new List<(Book Book, ImportedBook Record, List<BookTag> Links, List<BookIdentifier> Ids, List<BookProperty> Properties)>(fresh.Count);
@@ -331,6 +335,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         var ids = matched.Select(r => r.BookId!.Value).ToList();
         // Before the books are tracked: making folders clears the tracker.
         await folders.AssignAsync(db, matched.SelectMany(r => r.Files), cancellationToken);
+        foreach (var file in matched.SelectMany(r => r.Files))
+            folders.Count(file.FolderId, 1);
         var books = await db.Books.Where(b => ids.Contains(b.Id)).ToDictionaryAsync(b => b.Id, cancellationToken);
         foreach (var record in matched)
             foreach (var file in record.Files)
@@ -418,6 +424,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     public async Task FlushCountsAsync(LibrarionDbContext db, CancellationToken cancellationToken)
     {
         await counts.WriteAsync(db, tenantId, ancestors, cancellationToken);
+        await folders.FlushAsync(db, cancellationToken);
         if (bookDelta != 0)
         {
             var delta = bookDelta;
@@ -425,6 +432,18 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         }
 
         bookDelta = 0;
+    }
+
+    /// <summary>
+    /// Of <paramref name="fileIds"/>, the present ones (<paramref name="present"/>) or the missing ones leave or join
+    /// their folders' counts: called before they go missing, are removed, or are found again.
+    /// </summary>
+    public async Task CountFilesAsync(LibrarionDbContext db, IReadOnlyCollection<int> fileIds, bool present, int delta, CancellationToken cancellationToken)
+    {
+        foreach (var chunk in fileIds.Chunk(1000))
+            foreach (var folder in await db.BookFiles.Where(f => chunk.Contains(f.Id) && (f.MissingSince == null) == present)
+                         .GroupBy(f => f.FolderId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(cancellationToken))
+                folders.Count(folder.Key, folder.Count * delta);
     }
 
     /// <summary><paramref name="books"/>' tags leave the counts (<paramref name="gone"/>) or come back into them.</summary>

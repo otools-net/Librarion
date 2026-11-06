@@ -10,6 +10,7 @@ import { leaveWithUnsaved } from './core/unsaved-changes';
 import { Shell } from './shell/shell';
 
 const tagPage = () => import('./tags/tag-page').then(m => m.TagPage);
+const folderPage = () => import('./folders/folder-page').then(m => m.FolderPage);
 
 export const routes: Routes = [
     { path: 'setup', component: SetupPage, title: 'Librarion' },
@@ -31,6 +32,10 @@ export const routes: Routes = [
             { path: 'tags/:id', loadComponent: tagPage, title: 'Librarion' },
             { path: 'fields/:key/:id', loadComponent: tagPage, title: 'Librarion' },
             { path: 'fields/:key/:id/:name', loadComponent: tagPage, title: 'Librarion' },
+            // The folder view (library.folders): the library's top, then a folder by id (its name only for reading).
+            { path: 'folders', loadComponent: folderPage, title: 'Librarion' },
+            { path: 'folders/:id', loadComponent: folderPage, title: 'Librarion' },
+            { path: 'folders/:id/:name', loadComponent: folderPage, title: 'Librarion' },
             { path: 'books/:id', loadComponent: () => import('./books/book-page').then(m => m.BookPage), title: 'Librarion' },
             { path: 'search', loadComponent: () => import('./search/search-page').then(m => m.SearchPage), title: 'Librarion' },
             // My account is a section of the administration (as SFE's); the old address still opens it.

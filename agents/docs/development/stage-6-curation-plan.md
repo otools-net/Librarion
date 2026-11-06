@@ -128,8 +128,11 @@ A session may end early: this list is the state of the work. Tick a chunk when i
          `BookFiles` (a ZIP's folder points to its archive instead of the archive to it), kept by scans, relinks,
          imports and removals: [folders](../features/folders.md). No stored counts: 8b decides how a row's books are
          counted (capped on demand through `(FolderId, BookId)`, or stored) and measures it at 2M.
-   - 8b. [ ] The folder view: a library's roots, then folders and ZIPs with their counts, then the books of a folder
-         (the book list, keyset, selection and Tag all as other lists); phones and desktop; deep addresses.
+   - 8b. [x] The folder view: a library's roots, then folders and ZIPs with their counts, then the books of a folder
+         (the book list, keyset, selection and Tag all as other lists); phones and desktop; deep addresses. **The
+         user's answers (2026-11-06):** a new right **Browse by folder** (`library.folders`, Administrators and
+         Curators by default): folder names and counts aren't filtered by content filters, the books opened still are;
+         **stored exact counts** on each folder (kept by deltas in every scan, import, move and removal).
    - 8c. [ ] Default tags (`FolderDefaultTags` / library's, `library.defaultTags`): given at entry and on moves as
          `Rule` links, "new only or also those there" (a scope tagging of the folder's books, D-6.4), removing asks
          whether the books keep them; the badge (SFE's `default-tags-badge`) on folder rows and the library.

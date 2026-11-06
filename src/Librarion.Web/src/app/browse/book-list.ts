@@ -138,7 +138,7 @@ const DEFAULT_PAGE = 50;
         @if (dialog() === 'selection') {
             <lib-selection-tags [books]="selectedIds()" (saved)="clear()" (closed)="dialog.set(null)" />
         } @else if (dialog() === 'scope') {
-            <lib-scope-tags [scope]="{ library: library(), tag: tag(), q: query() }" [subtitle]="label()" (closed)="dialog.set(null)" />
+            <lib-scope-tags [scope]="{ library: library(), tag: tag(), q: query(), folder: folder() }" [subtitle]="label()" (closed)="dialog.set(null)" />
         }
     `,
     host: {
@@ -161,6 +161,8 @@ export class BookList {
     readonly tag = input<number | null>(null);
     /** Only books matching this search (the search language); null or empty: no search. */
     readonly query = input<string | null>(null);
+    /** Only books with a file directly in this folder (the folder view, agents/docs/features/folders.md); null: any. */
+    readonly folder = input<number | null>(null);
     readonly sorts = input<readonly BookSort[]>(['title', 'author', 'added']);
     readonly sortScope = input<SortScope>('library');
     /** The list's accessible name. */
@@ -188,7 +190,7 @@ export class BookList {
     private press: { timer: ReturnType<typeof setTimeout>; x: number; y: number } | null = null;
     /** A long press selected: the click the finger's release makes is not an open. */
     private swallowClick = false;
-    private readonly key = computed(() => `books|${this.library()}|${this.tag() ?? ''}|${this.sort()}|${this.query() ?? ''}`);
+    private readonly key = computed(() => `books|${this.library()}|${this.tag() ?? ''}|${this.sort()}|${this.query() ?? ''}|${this.folder() ?? ''}`);
 
     protected readonly window = new ListWindow({
         element: () => this.list()?.nativeElement,
@@ -364,7 +366,7 @@ export class BookList {
         this.error.set(null);
         try {
             const page = await this.api.books({
-                library: this.library(), sort: this.sort(), tag: this.tag(), q: this.query(), after: this.next(), limit: this.pageSize(),
+                library: this.library(), sort: this.sort(), tag: this.tag(), q: this.query(), folder: this.folder(), after: this.next(), limit: this.pageSize(),
             });
             if (asked !== this.requested)
                 return;

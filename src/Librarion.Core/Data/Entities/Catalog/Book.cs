@@ -216,6 +216,15 @@ public sealed class Folder
 
     /// <summary>Set on a ZIP container's own folder (not on the directories inside it).</summary>
     public int? ArchiveId { get; set; }
+
+    /// <summary>Present (not missing) files directly in it; kept by deltas (<c>Folders.FlushAsync</c>), never counted over the catalog.</summary>
+    public int FileCount { get; set; }
+
+    /// <summary>Present files in it and every folder under it.</summary>
+    public int TotalFileCount { get; set; }
+
+    /// <summary>Folders directly under it.</summary>
+    public int FolderCount { get; set; }
 }
 
 public enum ArchiveScanState

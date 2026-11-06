@@ -5,6 +5,7 @@ export const Rights = {
     browse: 'library.browse',
     scan: 'library.scan',
     download: 'library.download',
+    folders: 'library.folders',
     import: 'library.import',
     librarySettings: 'library.settings',
     tagBooks: 'library.tag',

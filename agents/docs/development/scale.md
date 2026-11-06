@@ -117,6 +117,13 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   28.2 min (27.1; budget 30), unchanged re-imports 37 s and 2.7 min: within budget.
 - Imports with parents' totals kept (`TagCounts.TotalCount`, stage 6 4a, 2026-11-05, PostgreSQL): INPX 1M 9.0 min,
   Calibre 2M 28.4 min (budget 30), unchanged re-imports 38 s and 2.7 min: the same as before.
+- The folder view (stage 6 chunk 8b, 2026-11-06, 2M PostgreSQL, warm, p95 in ms): a folder of 1,000 folders 3.9, a
+  folder with its path 10.2 (budget 50), books of a ZIP of 100k entries 22.1 (middle page 25.5: the sort index walked,
+  each book tested by its files), books of a folder of ~1,000 loose files by author 23.3 (from the folder's files,
+  sorted): within budget, no full scans. Generation 15.3 min with `Folders` (other work ran meanwhile).
+- Imports with folders and their counts (stage 6 chunk 8b, 2026-11-06, PostgreSQL): INPX 1M 9.1 min (9.0), Calibre
+  2M 28.9 min (28.4; budget 30), unchanged re-imports 38 s and 2.7 min. Within budget, but Calibre 2M has about a
+  minute left: the next change to the import path should be measured before it is kept.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

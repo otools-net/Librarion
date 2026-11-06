@@ -1,10 +1,13 @@
 # Folders
 
 Code: `Folder` and `BookFile.FolderId` (`Data/Entities/Catalog/Book.cs`, configured in `LibrarionDbContext.Catalog.cs`),
-`Core/Import/Folders.cs` (find or make, prune), used by `CatalogWriter` (every file it writes), `LibraryScanner`
-(relinks), `MissingBooks` (removals); the benchmark's `CatalogGenerator.Folders`. Tests: `FolderTests`,
-`InpxImportTests` (imported books in their ZIP's folder). Built in stage 6, chunk 8a, for the folder view (8b) and
-folder default tags (8c): [stage 6 plan](../development/stage-6-curation-plan.md).
+`Core/Import/Folders.cs` (find or make, counts, prune), used by `CatalogWriter` (every file it writes), `LibraryScanner`
+(missing, found again, relinks), `MissingBooks` (removals); the view: `Core/Catalog/FolderQueries.cs`,
+`BookQueries.InFolderAsync`, `Api/Endpoints/FolderEndpoints.cs`, client `app/folders/folder-page.ts` (styles in
+`styles/browse.css`); the benchmark's `CatalogGenerator.Folders` and its folder scenarios. Tests: `FolderTests`
+(counts against a recount after each step), `FolderRouteTests`, `InpxImportTests`, `folders.spec.ts` (client), e2e
+`specs/folders.spec.ts` (every device, layout, axe in both themes). Built in stage 6, chunks 8a (folders) and 8b (the
+view), for folder default tags (8c): [stage 6 plan](../development/stage-6-curation-plan.md).
 
 ## Model (the user's answers, 2026-11-06)
 
@@ -31,10 +34,40 @@ folder default tags (8c): [stage 6 plan](../development/stage-6-curation-plan.md
   then its parent the same way; a root's own folder stays. Called after relinks and after removing missing books.
 - A **missing** file keeps its folder (the book may come back): a folder whose books are all missing stays.
 
+## Counts (the user's answer, 2026-11-06: stored, exact)
+
+- `FileCount` (present files directly in it), `TotalFileCount` (with every folder under it), `FolderCount` (folders
+  directly under it). Files, not books: two formats of one book in one folder count twice (the book list there shows
+  the book once).
+- Kept by deltas in `Folders` (`Count`, then `FlushAsync` with the writer's tag counts): +1 for each file written
+  (scans, imports, copies), -1 for a present file going missing or removed (`CatalogWriter.CountFilesAsync`, before
+  the update), +1 for a missing one found again; a relink moves nothing (the new row's -1 and the old row's +1 in the
+  same folder); a removal of missing books moves nothing (their files were already missing). A made folder adds 1 to
+  its parent's `FolderCount`, a pruned one takes 1 away.
+- The flush walks each changed folder's ancestors (a parent cache, cleared past 100,000) and writes one
+  `UPDATE … WHERE Id IN (…)` per distinct change, not one per folder.
+- No recount exists: a drift (a crash between a write and its flush) stays until the files move again.
+
+## The view (stage 6 chunk 8b)
+
+- Right `library.folders` ("Browse by folder", Read, Administrators and Curators; [rights](rights.md)). Folder names
+  and counts aren't narrowed by content filters (the user's answer, 2026-11-06); the books of a folder are.
+- Routes: `GET api/libraries/{id}/folders` (the roots holding books, named after the root's folder on disk: its
+  last part, never the server's path), `GET api/folders/{id}` (counts and the folders above it; a library's only root
+  left out of the path: it is the library), `GET api/folders/{id}/folders?after&limit` (by `(ParentId, Name, Id)`),
+  `GET api/books?library&folder` (books with a present file directly in it), `api/books/scope` and `scope/tags` with
+  `folder` (Tag all). A folder of a library without the right is not found.
+- A folder's books: `BookQueries.InFolderAsync` picks as tag pages do: from the folder's files (index
+  `(FolderId, BookId)`, then sorted) when `FileCount` < √(page × library books), else the sort index walked and each
+  book tested by its files (index `BookId`).
+- Client: `/folders` (the library's top: its only root's folders, or its roots), `/folders/<id>/<name>` (the name only
+  for reading, put right with `replaceUrl`; `folders` is a reserved first segment in `tag-link.ts`); the path as
+  links, the folders by name with their total files (100 at a time, "Show more folders"), then `BookList` with the
+  folder when it has files of its own. A folder of another library switches the library. Navigation item Folders
+  for the right (`shell.ts`). Icon `zip` for ZIPs.
+
 ## Known limits, next
 
 - Empty folders aren't made (a directory without books has no row) and the scanner doesn't remove a folder whose
   files went missing: only removals and relinks prune.
-- Costs to measure with the folder view (8b) at 2M: the lookup per batch is cached (the generated catalog has
-  about 1,000 folders: the archives and `books/000`–`books/999`); the extra `BookFiles (FolderId, BookId)` index is
-  one more index on 2.5M rows written at import.
+- A folder of 100,000 folders is shown 100 at a time with a button, all kept in the page (no windowing yet).

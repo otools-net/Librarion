@@ -11,7 +11,7 @@ import { UrlMatchResult, UrlSegment } from '@angular/router';
  * named "books") has its values under `/fields/<key>/<id>/<name>` instead.
  */
 export const RESERVED_KEYS: ReadonlySet<string> = new Set([
-    'setup', 'login', 'fields', 'tags', 'tag', 'books', 'search', 'account', 'admin', 'api', 'openapi',
+    'setup', 'login', 'fields', 'tags', 'tag', 'books', 'folders', 'search', 'account', 'admin', 'api', 'openapi',
 ]);
 
 /** The name's length in the address, in characters; past it the name is cut (the id finds the tag anyway). */

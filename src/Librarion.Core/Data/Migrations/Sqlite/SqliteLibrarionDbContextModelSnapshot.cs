@@ -378,6 +378,12 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<int?>("ArchiveId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("FileCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FolderCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("LibraryId")
                         .HasColumnType("INTEGER");
 
@@ -400,6 +406,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalFileCount")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

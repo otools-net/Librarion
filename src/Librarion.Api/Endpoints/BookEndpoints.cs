@@ -18,18 +18,21 @@ public static class BookEndpoints
     {
         var books = api.MapGroup("/books").WithTags("Books").RequireRight(Rights.Browse);
 
-        books.MapGet("/", async (int? library, string? sort, string? after, int? limit, int? tag, string? q, HttpContext context, CurrentAccess current,
+        books.MapGet("/", async (int? library, string? sort, string? after, int? limit, int? tag, string? q, int? folder, HttpContext context, CurrentAccess current,
                 BookVisibilities visibilities, BookQueries queries) =>
             {
                 var state = await current.GetAsync();
+                // A folder's books need the folder view's right in its library (named: a folder is of one library).
+                if (folder is not null && (library is not { } inLibrary || !state.Access.HasIn(Rights.Folders, inLibrary)))
+                    return Results.NotFound();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 return TypedResults.Ok(await queries.ListAsync(state.TenantId!.Value, visibility,
-                    new BookPageRequest(library, Enum.TryParse<BookSort>(sort, ignoreCase: true, out var order) ? order : BookSort.Title, after, limit ?? 50, tag, q),
+                    new BookPageRequest(library, Enum.TryParse<BookSort>(sort, ignoreCase: true, out var order) ? order : BookSort.Title, after, limit ?? 50, tag, q, folder),
                     context.RequestAborted));
             })
             .WithName("ListBooks")
             .WithSummary("Books the caller may browse, a page at a time by key.")
-            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `q` = a search (words, \"phrases\", `author:\"Stephen King\"`, `author:`, `tag:`, `format:epub`, `title:`, `-` to leave out, `*` for a prefix; books with a hidden tag left out unless it is named); `limit` up to 200.");
+            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `q` = a search (words, \"phrases\", `author:\"Stephen King\"`, `author:`, `tag:`, `format:epub`, `title:`, `-` to leave out, `*` for a prefix; books with a hidden tag left out unless it is named); `folder` (with `library`, and `library.folders` there) = only books with a file directly in that folder; `limit` up to 200.");
 
         books.MapGet("/{id:int}", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {
@@ -84,13 +87,14 @@ public static class BookEndpoints
             .WithName("TagSelection")
             .WithSummary("Gives the selected books the tags of `add` (by `id`, or by `name`: found, else made) and takes those of `remove` away; books the caller can't tag are left out. A tag taken off stays off through re-imports.");
 
-        books.MapGet("/scope", async (int library, int? tag, string? q, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+        books.MapGet("/scope", async (int library, int? tag, string? q, int? folder, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
+                BookTagger tagger) =>
             {
                 var state = await current.GetAsync();
-                if (!state.Access.HasIn(Rights.TagBooks, library))
+                if (!state.Access.HasIn(Rights.TagBooks, library) || folder is not null && !state.Access.HasIn(Rights.Folders, library))
                     return Results.NotFound();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
-                return Results.Ok(new ScopeCount(await tagger.CountAsync(state.TenantId!.Value, visibility, new BookScope(library, tag, q), context.RequestAborted)));
+                return Results.Ok(new ScopeCount(await tagger.CountAsync(state.TenantId!.Value, visibility, new BookScope(library, tag, q, folder), context.RequestAborted)));
             })
             .RequireRight(Rights.TagBooks)
             .WithName("CountScope")
@@ -99,10 +103,10 @@ public static class BookEndpoints
         books.MapPost("/scope/tags", async (ScopeInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
             {
                 var state = await current.GetAsync();
-                if (!state.Access.HasIn(Rights.TagBooks, input.Library))
+                if (!state.Access.HasIn(Rights.TagBooks, input.Library) || input.Folder is not null && !state.Access.HasIn(Rights.Folders, input.Library))
                     return Results.NotFound();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
-                var result = await tagger.TagScopeAsync(state.TenantId!.Value, visibility, new BookScope(input.Library, input.Tag, input.Q),
+                var result = await tagger.TagScopeAsync(state.TenantId!.Value, visibility, new BookScope(input.Library, input.Tag, input.Q, input.Folder),
                     new TagChange(input.Add, input.Remove), state.User.Id, context.RequestAborted);
                 return ApiResults.From(result, work => work.RunId is null ? Results.Ok(work) : Results.Accepted($"/api/tasks/{work.RunId}", work));
             })
@@ -284,7 +288,8 @@ public static class BookEndpoints
 
     public sealed record SelectionInput(IReadOnlyList<int>? Books, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null);
 
-    public sealed record ScopeInput(int Library, int? Tag = null, string? Q = null, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null);
+    public sealed record ScopeInput(int Library, int? Tag = null, string? Q = null, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null,
+        int? Folder = null);
 
     public sealed record ScopeCount(long Books);
 }

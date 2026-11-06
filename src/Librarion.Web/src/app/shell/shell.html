@@ -133,7 +133,7 @@
             <div class="nav-group">
                 <p class="group-label">{{ 'shell.nav.browse' | t }}</p>
                 <ul>
-                    @for (item of nav; track item.label) {
+                    @for (item of nav(); track item.label) {
                         <li>
                             <a class="nav-item" [routerLink]="item.link" routerLinkActive="active"
                                [routerLinkActiveOptions]="exactPath" [title]="item.label | t">

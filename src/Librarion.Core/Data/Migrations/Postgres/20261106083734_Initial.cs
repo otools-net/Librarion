@@ -783,7 +783,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     Name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     Path = table.Column<string>(type: "text", nullable: false),
                     PathKey = table.Column<long>(type: "bigint", nullable: false),
-                    ArchiveId = table.Column<int>(type: "integer", nullable: true)
+                    ArchiveId = table.Column<int>(type: "integer", nullable: true),
+                    FileCount = table.Column<int>(type: "integer", nullable: false),
+                    TotalFileCount = table.Column<int>(type: "integer", nullable: false),
+                    FolderCount = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

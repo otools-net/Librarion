@@ -363,6 +363,8 @@ internal sealed class ScannedLibrary : IAsyncDisposable
 
     public T Service<T>() where T : notnull => factory.Services.GetRequiredService<T>();
 
+    public WebApplicationFactory<Program> Factory => factory;
+
     public Task<LibrarionDbContext> DbAsync(CancellationToken cancellationToken) =>
         factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(TenantId, cancellationToken);
 

@@ -136,7 +136,7 @@ describe('Selecting and tagging books', () => {
         button('Tag all').click();
         await stable();
 
-        expect(api.countScope).toHaveBeenCalledWith({ library: 5, tag: null, q: null });
+        expect(api.countScope).toHaveBeenCalledWith({ library: 5, tag: null, q: null, folder: null });
         expect(element.querySelector('.scope-count')?.textContent).toBe('This list has 12,345 books.');
         const apply = element.querySelector<HTMLButtonElement>('button[form="scope-tags-form"]')!;
         expect(apply.textContent?.trim()).toBe('Apply to 12,345 books');
@@ -156,7 +156,7 @@ describe('Selecting and tagging books', () => {
 
         apply.click();
         await stable();
-        expect(api.tagScope).toHaveBeenLastCalledWith({ library: 5, tag: null, q: null }, { add: [], remove: [9] });
+        expect(api.tagScope).toHaveBeenLastCalledWith({ library: 5, tag: null, q: null, folder: null }, { add: [], remove: [9] });
         expect(follow).toHaveBeenCalledWith(77);
         expect(element.querySelector('lib-scope-tags')).toBeNull();
     });

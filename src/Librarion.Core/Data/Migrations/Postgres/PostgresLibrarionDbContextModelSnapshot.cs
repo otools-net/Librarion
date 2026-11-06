@@ -393,6 +393,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<int?>("ArchiveId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("FileCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FolderCount")
+                        .HasColumnType("integer");
+
                     b.Property<int>("LibraryId")
                         .HasColumnType("integer");
 
@@ -415,6 +421,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("integer");
 
                     b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalFileCount")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");

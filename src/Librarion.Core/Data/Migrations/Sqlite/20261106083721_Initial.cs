@@ -782,7 +782,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: false),
                     PathKey = table.Column<long>(type: "INTEGER", nullable: false),
-                    ArchiveId = table.Column<int>(type: "INTEGER", nullable: true)
+                    ArchiveId = table.Column<int>(type: "INTEGER", nullable: true),
+                    FileCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    TotalFileCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    FolderCount = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
