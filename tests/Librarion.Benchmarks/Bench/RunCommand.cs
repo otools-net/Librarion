@@ -29,6 +29,9 @@ public static class RunCommand
     private const double DetailBudget = 50;
     private const double SearchBudget = 300;
 
+    /// <summary>A figure asked once when a page or a choice opens and kept after (the Imported tags page's coverage line).</summary>
+    private const double OnDemandBudget = 500;
+
     /// <param name="only">Only the scenarios whose name contains it (empty: all).</param>
     public static async Task<int> RunAsync(BenchTarget target, string workFolder, int iterations, Action<string> report, CancellationToken cancellationToken, string only = "")
     {
@@ -143,7 +146,9 @@ public static class RunCommand
             ("imported tags: plain tags none reviewed (bounded walk)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Reviewed, null, 50, cancellationToken))!.Items.Count),
             ("imported tags: languages (a small field)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, "language", null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
             ("imported tags: categories (a small field)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, "category", null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
-            ("imported tags: the coverage of plain tags", ListBudget, async _ => (await imported.SummaryAsync(tenant.Id, libraryId, null, null, cancellationToken))!.Tags),
+            // The coverage line reads the field's 50k tags: kept between views, its first view on demand (OnDemandBudget).
+            ("imported tags: the coverage of plain tags, computed", OnDemandBudget, async _ => (await imported.SummaryAsync(tenant.Id, libraryId, null, null, cancellationToken, fresh: true))!.Tags),
+            ("imported tags: the coverage of plain tags, kept", ListBudget, async _ => (await imported.SummaryAsync(tenant.Id, libraryId, null, null, cancellationToken))!.Tags),
             ("imported tags: the fields", ListBudget, async _ => (await imported.FieldsAsync(tenant.Id, cancellationToken)).Count),
             // Search (agents/docs/features/search.md): each title word is on about 2 % of the books (the generator's word list),
             // a file name (the id) on one; author names reach books through the tag-name index.

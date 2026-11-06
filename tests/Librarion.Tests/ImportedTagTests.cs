@@ -104,8 +104,11 @@ public sealed class ImportedTagTests
         var (alpha, beta, junk) = (await TagIdAsync(shelf, "Alpha"), await TagIdAsync(shelf, "Beta"), await TagIdAsync(shelf, "Junk"));
         await LinkAsync(shelf, "One", junk);
 
+        var before = await shelf.Admin.GetAsync<ImportedSummary>($"/api/imported-tags/summary?library={shelf.LibraryId}", Cancel);
         using (var kept = await shelf.Admin.PostAsJsonAsync("/api/imported-tags/review", new ImportedTagEndpoints.ReviewInput([alpha]), Cancel))
             Assert.AreEqual(HttpStatusCode.OK, kept.StatusCode);
+        var after = await shelf.Admin.GetAsync<ImportedSummary>($"/api/imported-tags/summary?library={shelf.LibraryId}", Cancel);
+        Assert.AreEqual((0L, 2L), (before.Reviewed, after.Reviewed), "the kept coverage line is read again after a change");
         var mapped = await WorkAsync(await shelf.Admin.PostAsJsonAsync("/api/imported-tags/map", new ImportedTagEndpoints.MapInput([beta], alpha), Cancel));
         var ignored = await WorkAsync(await shelf.Admin.PostAsJsonAsync("/api/imported-tags/ignore", new ImportedTagEndpoints.TagsInput([junk]), Cancel));
 

@@ -40,9 +40,15 @@ public sealed class ImportedTags(TenantDb tenantDb, AccessChanges changes)
 {
     public const int SmallField = 1000;
     public const int Chunk = 2000;
-    public const int MaxChunks = 10;
+    public const int MaxChunks = 4;
     public const int TopCount = 500;
     public const int MaxLimit = 100;
+
+    /// <summary>How long a coverage line is kept while no tag changes (imports move the counts meanwhile: it is a guide).</summary>
+    public static readonly TimeSpan SummaryLife = TimeSpan.FromMinutes(2);
+    private const int MaxSummaries = 1000;
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(int, int, string?, ImportTagSourceKind?), (long Version, long At, ImportedSummary Summary)> summaries = new();
 
     /// <summary>Tests walk tiny fields as big ones (<see cref="SmallField"/>, <see cref="Chunk"/>).</summary>
     internal int Small { get; set; } = SmallField;
@@ -110,21 +116,27 @@ public sealed class ImportedTags(TenantDb tenantDb, AccessChanges changes)
         }
         else
         {
-            var (books, id) = cursor is { Number: { } n } ? (n, cursor.Id) : (long.MaxValue, int.MaxValue);
+            // An int like the column: a long made SQLite compare a cast, off the index (each chunk read from the top).
+            var (books, id) = cursor is { Number: { } n } ? ((int)Math.Clamp(n, 0, int.MaxValue), cursor.Id) : (int.MaxValue, int.MaxValue);
             for (var chunk = 0; chunk < MaxChunks && rows.Count <= limit; chunk++)
             {
                 var (lastBooks, lastId) = (books, id);
-                var candidates = await db.TagCounts
+                var chunkRows = db.TagCounts
                     .Where(c => c.LibraryId == libraryId && c.BookCount > 0 && (c.BookCount < lastBooks || c.BookCount == lastBooks && c.TagId < lastId))
-                    .OrderByDescending(c => c.BookCount).ThenByDescending(c => c.TagId).Take(ChunkSize).Select(c => new { c.TagId, c.BookCount }).ToListAsync(cancellationToken);
+                    .OrderByDescending(c => c.BookCount).ThenByDescending(c => c.TagId).Take(ChunkSize);
+                var candidates = await chunkRows.Select(c => new { c.TagId, c.BookCount }).ToListAsync(cancellationToken);
                 if (candidates.Count == 0)
                 {
                     books = -1;
                     break;
                 }
 
+                // SQLite: the chunk again as a subquery (a list of 2,000 ids as parameters took most of the time there).
                 var ids = candidates.Select(c => c.TagId).ToList();
-                var matched = (await Matching(names.Where(m => ids.Contains(m.TagId!.Value)), status).ToListAsync(cancellationToken)).ToHashSet();
+                var inChunk = db.Database.IsSqlite()
+                    ? names.Where(m => chunkRows.Any(c => c.TagId == m.TagId))
+                    : names.Where(m => ids.Contains(m.TagId!.Value));
+                var matched = (await Matching(inChunk, status).ToListAsync(cancellationToken)).ToHashSet();
                 foreach (var candidate in candidates)
                 {
                     (books, id) = (candidate.BookCount, candidate.TagId);
@@ -155,20 +167,53 @@ public sealed class ImportedTags(TenantDb tenantDb, AccessChanges changes)
         return new Page<ImportedTag>(await DescribeAsync(db, rows, cancellationToken), next);
     }
 
-    /// <summary>The coverage line of field <paramref name="fieldKey"/> in library <paramref name="libraryId"/>; null for an unknown field.</summary>
-    public async Task<ImportedSummary?> SummaryAsync(int tenantId, int libraryId, string? fieldKey, ImportTagSourceKind? source, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// The coverage line of field <paramref name="fieldKey"/> in library <paramref name="libraryId"/>; null for an unknown
+    /// field. It reads every tag of the field with imported names (50k plain tags at 2M books: a few hundred ms), so it is
+    /// kept until a tag change (<see cref="AccessChanges"/>) or for <see cref="SummaryLife"/>; <paramref name="fresh"/>
+    /// computes it anyway (the benchmark).
+    /// </summary>
+    public async Task<ImportedSummary?> SummaryAsync(int tenantId, int libraryId, string? fieldKey, ImportTagSourceKind? source, CancellationToken cancellationToken = default,
+        bool fresh = false)
     {
+        var key = (tenantId, libraryId, fieldKey, source);
+        var version = changes.Version;
+        var now = Environment.TickCount64;
+        if (!fresh && summaries.TryGetValue(key, out var kept) && kept.Version == version && now - kept.At < SummaryLife.TotalMilliseconds)
+            return kept.Summary;
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         if (await FieldAsync(db, fieldKey, cancellationToken) is not (true, var fieldId))
             return null;
+        // The field's tags with their counts, summed here. PostgreSQL: the tags through the mappings' index, then their
+        // counts by key a chunk at a time (as one join it read TagCounts whole: 480 ms at 2M books). SQLite: one join
+        // (the chunks' long parameter lists took 2 s); agents/docs/features/imported-tags.md#scale.
         var names = Names(db, fieldId, source);
-        var tags = names.Select(m => m.TagId!.Value);
-        var counts = db.TagCounts.Where(c => c.LibraryId == libraryId && c.BookCount > 0 && tags.Contains(c.TagId));
-        var count = await counts.CountAsync(cancellationToken);
-        var links = await counts.SumAsync(c => (long)c.BookCount, cancellationToken);
-        var top = await counts.OrderByDescending(c => c.BookCount).Take(TopCount).SumAsync(c => (long)c.BookCount, cancellationToken);
-        var reviewed = await counts.Where(c => !names.Any(m => m.TagId == c.TagId && !m.Reviewed)).SumAsync(c => (long)c.BookCount, cancellationToken);
-        return new ImportedSummary(count, links, TopCount, top, reviewed);
+        var counts = new List<(long Books, bool Reviewed)>();
+        if (db.Database.IsSqlite())
+        {
+            var rows = await db.TagCounts.Where(c => c.LibraryId == libraryId && c.BookCount > 0)
+                .Join(names, c => c.TagId, m => m.TagId!.Value, (c, m) => new { c.TagId, c.BookCount, m.Reviewed }).ToListAsync(cancellationToken);
+            counts.AddRange(rows.GroupBy(r => r.TagId).Select(g => ((long)g.First().BookCount, g.All(r => r.Reviewed))));
+        }
+        else
+        {
+            var tags = (await names.Select(m => new { TagId = m.TagId!.Value, m.Reviewed }).ToListAsync(cancellationToken))
+                .GroupBy(m => m.TagId).ToDictionary(g => g.Key, g => g.All(m => m.Reviewed));
+            foreach (var chunk in tags.Keys.Chunk(5000))
+            {
+                var ids = chunk.ToList();
+                foreach (var row in await db.TagCounts.Where(c => c.LibraryId == libraryId && ids.Contains(c.TagId) && c.BookCount > 0)
+                             .Select(c => new { c.TagId, c.BookCount }).ToListAsync(cancellationToken))
+                    counts.Add((row.BookCount, tags[row.TagId]));
+            }
+        }
+
+        var top = counts.Select(c => c.Books).OrderDescending().Take(TopCount).Sum();
+        var summary = new ImportedSummary(counts.Count, counts.Sum(c => c.Books), TopCount, top, counts.Where(c => c.Reviewed).Sum(c => c.Books));
+        if (summaries.Count > MaxSummaries)
+            summaries.Clear();
+        summaries[key] = (version, now, summary);
+        return summary;
     }
 
     /// <summary>Marks the imported names of <paramref name="tagIds"/> reviewed (Keep: the tag is right as it is) or not; how many changed.</summary>
@@ -214,6 +259,8 @@ public sealed class ImportedTags(TenantDb tenantDb, AccessChanges changes)
 
     private static async Task<IReadOnlyList<ImportedTag>> DescribeAsync(LibrarionDbContext db, List<(int Id, long Books)> rows, CancellationToken cancellationToken)
     {
+        if (rows.Count == 0)
+            return [];
         var ids = rows.Select(r => r.Id).ToList();
         var tags = (await db.Tags.Where(t => ids.Contains(t.Id)).Select(t => new { t.Id, t.Name, t.Color }).ToListAsync(cancellationToken)).ToDictionary(t => t.Id);
         var names = (await db.ImportTagMappings.Where(m => m.TagId != null && ids.Contains(m.TagId.Value) && !m.Ignored)

@@ -60,7 +60,8 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
   after the 5,000th, a status none has: the walk's bound), languages and categories (small fields), the coverage
   line, the fields; the run also reports how much of the imported links the first 500 plain tags and categories hold.
 - `--only <text>`: only the scenarios whose name contains it (a slow one measured with its plans, alone).
-- Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms).
+- Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms, a
+  figure asked once and kept 500 ms).
 - Every SQL command a query runs is captured (EF's diagnostic events) and explained with its parameters:
   PostgreSQL `EXPLAIN` (a `Seq Scan` on a big table fails), SQLite `EXPLAIN QUERY PLAN` (a bare `SCAN` of a big table
   fails; `SCAN … USING INDEX` is the keyset walk).

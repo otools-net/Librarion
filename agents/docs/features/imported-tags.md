@@ -71,7 +71,18 @@ axe on the page in both themes). Built in stage 6 chunk 9; the model and the imp
   (28.9 before, **over its 30 min budget**), unchanged re-imports 35 s and 2.6 min. The user kept the index; imports
   were made faster: Calibre 2M 25.4 min with the new files read in parallel
   ([stage 6 plan](../development/stage-6-curation-plan.md), [imports](imports.md#scale)).
-- The page's queries on the generated 2M catalog (`run --only imported`) and the coverage: to measure.
+- The page's queries on the generated 2M catalog (`run --only imported`, 2026-11-06), p95 PostgreSQL / SQLite: plain
+  tags first page 23 / 28 ms, the page after the 5,000th 25 / 27 ms, a status none has (the bounded walk) 57 / 140 ms
+  (SQLite over the list budget, recorded), languages 8 / 4 ms, categories 14 / 14 ms, the fields 46 / 5 ms; the
+  coverage line computed 245 / 184 ms against a budget of 500 ms for figures asked once and kept (`OnDemandBudget`,
+  set in this chunk), kept 0 ms.
+- What the benchmark found: four aggregates as joins read `TagCounts` whole on PostgreSQL (480 ms: now the tags through
+  the mappings' index and their counts by key, chunked; SQLite one join, as its long parameter lists took 2 s); a
+  `long` cursor against the `int` column made SQLite compare a cast, off the index (each chunk read from the top);
+  10 chunks a request took 225 ms (now 4: `MaxChunks`); an empty page asked `WHERE 0` of `Tags` (a scan to the plan check).
+- Coverage, the stage's exit criterion (the generator as it is, the user's answer): the first 500 plain tags hold
+  **59.1 %** of their 3.2M imported links (50k tags at Zipf 1.0), the first 500 categories (630) 95.4 %.
+- The coverage line is kept per tenant, library, field and source until a tag change (`AccessChanges`) or for 2 minutes.
 
 ## Known limits
 

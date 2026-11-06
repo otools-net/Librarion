@@ -130,6 +130,10 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   2026-11-06, PostgreSQL): INPX 1M 9.7 min, Calibre 2M 31.3 min (**over its 30 min budget**), unchanged re-imports
   35 s and 2.6 min; then a batch's new files read 8 at a time: **Calibre 2M 25.4 min**, unchanged 2.4 min
   ([imports](../features/imports.md#scale)).
+- The Imported tags page (stage 6 chunk 9, 2026-11-06): every list call within 100 ms on PostgreSQL (the bounded walk
+  140 ms on SQLite); its coverage line 245 / 184 ms, against a new on-demand budget of 500 ms, then kept; the whole run
+  on PostgreSQL within budget (`search: two common words` once 302 ms, 190 alone)
+  ([imported-tags](../features/imported-tags.md#scale-measured-2026-11-06-see-scale)).
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
