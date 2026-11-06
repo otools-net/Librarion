@@ -37,6 +37,8 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
   password `benchmark-password`) limited to each (D22's narrow allow-lists).
 - `TagCounts`: `BookCount` the direct links, `TotalCount` the tag with its parent and field once per book (as the
   importer keeps them, stage 6 4a), and `Libraries.BookCount`.
+- `ImportTagMappings`: one automatic FB2 mapping per plain tag, category, language, publisher and year, as an import
+  would have recorded them (stage 6 chunk 9; none for people and series).
 - Small-size tests: `CatalogGeneratorTests` (3,000 books, both providers).
 
 ## What `run` measures
@@ -54,7 +56,9 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
   (first and middle page), two such words, a two-letter prefix, a file name (one book), an author's last name, an
   author by field and by word with a title word, a category less a format, books outside any series; suggestions for
   two letters and after `author:`; facets (Refine) of the library, of those searches and of each filtered group's
-  library.
+  library. The Imported tags page (stage 6 chunk 9, `--only "imported"`): plain tags by books (first page, the page
+  after the 5,000th, a status none has: the walk's bound), languages and categories (small fields), the coverage
+  line, the fields; the run also reports how much of the imported links the first 500 plain tags and categories hold.
 - `--only <text>`: only the scenarios whose name contains it (a slow one measured with its plans, alone).
 - Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms).
 - Every SQL command a query runs is captured (EF's diagnostic events) and explained with its parameters:

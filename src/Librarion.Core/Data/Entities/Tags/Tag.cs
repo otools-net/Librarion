@@ -190,11 +190,20 @@ public sealed class ImportTagMapping
 
     public string NormalizedName { get; set; } = string.Empty;
 
+    /// <summary>The raw name as the importer first met it (trimmed), what the Imported tags page shows.</summary>
+    public string Name { get; set; } = string.Empty;
+
     /// <summary>The tag it maps to; null when <see cref="Ignored"/>.</summary>
     public int? TagId { get; set; }
     public Tag? Tag { get; set; }
 
     public bool Ignored { get; set; }
+
+    /// <summary>
+    /// A curator looked at it (kept, mapped or ignored on the Imported tags page, or merged): false while it is what the
+    /// importer wrote when it first met the name (stage 6 chunk 9).
+    /// </summary>
+    public bool Reviewed { get; set; }
 }
 
 /// <summary>
@@ -216,6 +225,11 @@ public enum MergeKind : byte
     Tag,
     /// <summary>A field merged into another: its values merged by name or moved, its key kept as an alias.</summary>
     Field,
+    /// <summary>
+    /// A tag's raw imported names ignored (stage 6 chunk 9): its mappings ignored, its imported links taken off and
+    /// logged. Source and target are the tag itself.
+    /// </summary>
+    Ignore,
 }
 
 /// <summary>

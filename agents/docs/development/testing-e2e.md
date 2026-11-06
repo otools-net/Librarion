@@ -52,3 +52,8 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
 - After a press that opens another page, wait for its address (`toHaveURL`) or scope the check to its component
   (`lib-book-page .chip`): a check the page left behind also passes (a tag chip in the folder's default tags line) let
   `goBack` run before the book opened, and it left the folder instead (`folders.spec.ts`, 2026-11-06).
+- A `page.goto` right after `scannedLibrary` cuts off the library page's own calls (`api/fields`, `api/books`, facets),
+  which WebKit reports as "access control" page errors: wait for a book of it and `networkidle` first
+  (`imported-tags.spec.ts`, 2026-11-06).
+- A tag change (merge, ignore, an undo) answers 202 with a run whenever any run of the tenant goes, and in a full run
+  the other devices' scans always do: assert what the list shows once it has followed the run, never the inline toast.

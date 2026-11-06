@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Librarion.Core.Data.Migrations.Sqlite
 {
     [DbContext(typeof(SqliteLibrarionDbContext))]
-    [Migration("20261106100412_Initial")]
+    [Migration("20261106123118_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -532,10 +532,18 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<bool>("Ignored")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Reviewed")
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Source")
                         .HasColumnType("INTEGER");
@@ -551,6 +559,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("FieldId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "FieldId", "TagId");
 
                     b.HasIndex("TenantId", "Source", "FieldId", "NormalizedName");
 
@@ -930,6 +940,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasKey("LibraryId", "TagId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("LibraryId", "BookCount", "TagId");
 
                     b.ToTable("TagCounts");
                 });

@@ -138,9 +138,18 @@ A session may end early: this list is the state of the work. Tick a chunk when i
          whether the books keep them; the badge (SFE's `default-tags-badge`) on folder rows and the library.
          **The user's answer (2026-11-06):** a folder holding default tags is kept (never pruned). **Built:**
          [default-tags](../features/default-tags.md).
-9. [ ] Administration › Catalog › Imported tags: raw names by source with book counts and their mapping, sorted by
+9. [x] Administration › Catalog › Imported tags: raw names by source with book counts and their mapping, sorted by
        count, bulk map / merge / ignore; the coverage shown ("the top 500 cover 93 % of imported links"); the
-       benchmark's generator makes raw imported names so the exit criterion can be measured.
+       benchmark's generator makes raw imported names so the exit criterion can be measured. **The user's answers
+       (2026-11-06):** the importer records each raw name it meets as an automatic mapping (source, field, name → the
+       tag it became) for plain tags and every field but people and series (those are curated by merges and chunk 14);
+       the page is per library, counts from `TagCounts.BookCount` of the mapped tag, paged by key on a new index
+       `TagCounts (LibraryId, BookCount, TagId)` (its import cost measured at 2M before keeping it); Ignore is logged
+       and undoable (the imported links it removed come back), Manual and Rule links untouched, the tag kept; the
+       coverage criterion is measured with today's generator and reported (estimated 75-80 %), not forced.
+       **Built:** [imported-tags](../features/imported-tags.md). Measured 2026-11-06 on PostgreSQL: INPX 1M 9.7 min
+       (9.1 before), Calibre 2M **31.3 min** (28.9 before, budget 30), unchanged re-imports 35 s and 2.6 min. **The
+       user's answer:** keep the index and make imports faster now (below), before the stage goes on.
 10. [ ] Covers (D-6.7): upload with Replace / Remove on the book page, Change cover style (template and palette
         picker with previews), Administration › Catalog › Cover styles (templates on / off, reassign as a run).
 11. [ ] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
@@ -174,7 +183,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 16. [ ] Docs, CHANGELOG, feature notes; budgets through the UI's calls on 2M; e2e for each flow on every device; axe AA
         on the new screens in both themes; close the stage (merge 0.7.0, this plan removed as stage 5's was).
 
-## Later: faster imports (asked by the user, 2026-11-06)
+## Now: faster imports (asked by the user, 2026-11-06; started after chunk 9 put Calibre 2M at 31.3 min)
 
 - Investigate whether imports can be made faster: Calibre 2M takes 28.9 min against its 30 min budget (chunk 8b,
   [scale](scale.md#measured)), so every addition to the import path eats the last minute. To look at: where the time

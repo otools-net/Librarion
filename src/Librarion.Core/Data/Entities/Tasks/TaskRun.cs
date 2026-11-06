@@ -22,6 +22,8 @@ public enum BackgroundTaskKind : byte
     TagCounts,
     /// <summary>Tags given to or taken from every book of a library's list (a search, a tag's page, the library), in batches.</summary>
     ScopeTags,
+    /// <summary>Imported names ignored (the Imported tags page): their tags' imported links taken off in batches.</summary>
+    TagIgnore,
 }
 
 public enum TaskTrigger : byte

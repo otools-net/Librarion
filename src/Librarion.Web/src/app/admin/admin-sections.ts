@@ -33,6 +33,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     { id: 'libraries', group: 'libraries', icon: 'library', subpages: [page('list', Rights.manageLibraries, Rights.manageTenants)] },
     { id: 'librarySettings', group: 'libraries', icon: 'sliders', subpages: [settingsPage('settings', 'library', Rights.librarySettings, Rights.manageTenants)] },
     { id: 'tags', group: 'catalog', icon: 'tag', subpages: [page('tags', Rights.manageTags), page('merges', Rights.manageTags)] },
+    { id: 'importedTags', group: 'catalog', icon: 'import', subpages: [page('names', Rights.importedTags), page('ignored', Rights.importedTags)] },
     { id: 'users', group: 'people', icon: 'users', subpages: [page('list', Rights.manageUsers, Rights.manageAllUsers)] },
     { id: 'groups', group: 'people', icon: 'key', subpages: [page('list', Rights.manageUsers, Rights.manageTenants)] },
     { id: 'tasks', group: 'server', icon: 'activity', subpages: [page('tasks', Rights.scan), page('schedules', Rights.scan), page('history', Rights.scan)] },

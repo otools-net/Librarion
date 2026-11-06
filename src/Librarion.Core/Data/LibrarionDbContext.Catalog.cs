@@ -217,17 +217,22 @@ public abstract partial class LibrarionDbContext
             entity.HasOne<Library>().WithMany().HasForeignKey(c => c.LibraryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Tag>().WithMany().HasForeignKey(c => c.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(c => c.TagId);
+            // A library's tags by books, walked by key from the most (the Imported tags page, ImportedTags).
+            entity.HasIndex(c => new { c.LibraryId, c.BookCount, c.TagId });
             Filter(entity, c => c.TenantId == CurrentTenantId);
         });
 
         modelBuilder.Entity<ImportTagMapping>(entity =>
         {
             entity.Property(m => m.NormalizedName).HasMaxLength(Tag.MaxNameLength);
+            entity.Property(m => m.Name).HasMaxLength(Tag.MaxNameLength);
             entity.HasOne<Tenant>().WithMany().HasForeignKey(m => m.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(m => m.Tag).WithMany().HasForeignKey(m => m.TagId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Tag>().WithMany().HasForeignKey(m => m.FieldId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(m => new { m.TenantId, m.Source, m.FieldId, m.NormalizedName });
             entity.HasIndex(m => m.TagId);
+            // A field's imported names, counted and listed whole when there are few (ImportedTags).
+            entity.HasIndex(m => new { m.TenantId, m.FieldId, m.TagId });
             Filter(entity, m => m.TenantId == CurrentTenantId);
         });
 

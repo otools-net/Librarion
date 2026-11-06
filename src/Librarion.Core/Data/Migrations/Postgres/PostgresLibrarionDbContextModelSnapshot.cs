@@ -548,10 +548,18 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<bool>("Ignored")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<bool>("Reviewed")
+                        .HasColumnType("boolean");
 
                     b.Property<byte>("Source")
                         .HasColumnType("smallint");
@@ -567,6 +575,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("FieldId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "FieldId", "TagId");
 
                     b.HasIndex("TenantId", "Source", "FieldId", "NormalizedName");
 
@@ -958,6 +968,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasKey("LibraryId", "TagId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("LibraryId", "BookCount", "TagId");
 
                     b.ToTable("TagCounts");
                 });

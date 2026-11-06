@@ -108,6 +108,11 @@ compared only within the key's group.
   (`merge.undone`), when the target is gone (`merge.targetGone`), while a later merge into or of the target stands
   (`merge.later`). A merge stopped half-way (a cancelled run) has `Completed` false: undo moves its links back only.
 - Above 10,000 links a merge, field merge or undo is a tenant run (kinds `TagMerge`, `FieldMerge`, `MergeUndo`).
+- A merge marks the import mappings it moves reviewed (they are a curator's choice now); its undo puts back the ones
+  that weren't. The Imported tags page (stage 6 chunk 9) maps several tags at once as one merge each, and its
+  **ignores** are logs too (kind `Ignore`, source = target = the tag, listed under Merges): undone without the
+  `merge.later` rule, while a later ignore of a merge's target blocks that merge's undo
+  ([imported-tags](imported-tags.md#changes)).
 
 Still planned here: **finding** duplicate tags and doing it from one page:
 

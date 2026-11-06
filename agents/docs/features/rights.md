@@ -23,7 +23,9 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   upgrade before 1.0).
 - **Curation rights** (stage 6, D-6.1 of [stage-6-curation-plan](../development/stage-6-curation-plan.md)), area
   `catalog`, all Write: `library.tag` (plain tags on books), `library.edit` (a book's metadata and cover),
-  `library.merge` (merge, split, undo, not a duplicate), `library.importedTags` (the mappings page),
+  `library.merge` (merge, split, undo, not a duplicate), `library.importedTags` (the mappings page: read per
+  library, changed only with it in every library of the tenant, mapped only with `tenant.tags` too:
+  [imported-tags](imported-tags.md)),
   `library.defaultTags` (library and folder default tags), `tenant.tags` (the tag and field vocabulary, per tenant:
   D9). The plan named them `tags.assign`, `books.edit`…; ids start with their scope (`EveryRightIsWellFormed`), so
   they were named by scope.

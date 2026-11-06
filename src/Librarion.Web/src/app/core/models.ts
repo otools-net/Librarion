@@ -502,7 +502,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;
@@ -657,7 +657,7 @@ export interface TagWork {
 /** A tag or field merge (`api/merges`), undone while nothing later stands in the way. */
 export interface MergeLogInfo {
     id: number;
-    kind: 'tag' | 'field';
+    kind: 'tag' | 'field' | 'ignore';
     created: string;
     sourceId: number;
     sourceName: string;
@@ -666,4 +666,66 @@ export interface MergeLogInfo {
     links: number;
     completed: boolean;
     undone: string | null;
+}
+
+/** Where an imported name came from (`ImportTagSourceKind`). */
+export type ImportSource = 'fb2' | 'epub' | 'mobi' | 'pdf' | 'comicInfo' | 'calibre' | 'inpx';
+export const IMPORT_SOURCES: readonly ImportSource[] = ['fb2', 'epub', 'mobi', 'pdf', 'comicInfo', 'calibre', 'inpx'];
+
+export type ImportedStatus = 'review' | 'reviewed' | 'all';
+
+/** What the caller may do on the Imported tags page (`library.importedTags`). */
+export interface ImportedContext {
+    /** The libraries whose page it may read. */
+    libraries: number[];
+    /** Keep and ignore: the right in every library of the tenant (the mappings are the tenant's). */
+    canChange: boolean;
+    /** Map onto another tag: also `tenant.tags`. */
+    canMap: boolean;
+}
+
+/** Plain tags (`key` null) or a field, with its tags that have imported names (`capped` past 10,000). */
+export interface ImportedField {
+    id: number | null;
+    key: string | null;
+    name: string;
+    builtIn: boolean;
+    tags: number;
+    capped: boolean;
+}
+
+export interface ImportedName {
+    name: string;
+    source: ImportSource;
+    reviewed: boolean;
+}
+
+/** A tag imports give: its books in the library (direct links) and its raw names. */
+export interface ImportedTag {
+    id: number;
+    name: string;
+    color: string | null;
+    books: number;
+    names: ImportedName[];
+    reviewed: boolean;
+}
+
+/** How much of the field's imported links its first `topCount` and its reviewed tags hold. */
+export interface ImportedSummary {
+    tags: number;
+    links: number;
+    topCount: number;
+    top: number;
+    reviewed: number;
+}
+
+/** An ignore that stands: the tag, its raw names, the imported links taken off. */
+export interface IgnoredTagInfo {
+    id: number;
+    created: string;
+    tagId: number;
+    tagName: string;
+    names: string[];
+    links: number;
+    completed: boolean;
 }

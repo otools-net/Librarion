@@ -6,6 +6,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Administration → Catalog → Imported tags** (with the Imported tags right): the tags and genres that books came
+  with, in one library by how many books have them, with the names and sources they came from and how much the first
+  500 cover. Tick some to **Keep** them as they are, **Map** them onto the right tag (a merge, undone under Tags →
+  Merges) or **Ignore** them (imports skip their names and the links imports gave them go; undone under Ignored).
+  Imports remember from now on every tag and genre name they meet, except people and series.
 - **Folders** in the navigation, for those with the new **Browse by folder** right (Administrators and Curators):
   the library's folders and ZIP files with how many files each holds, then the books of each, which can be selected
   and tagged as anywhere else.

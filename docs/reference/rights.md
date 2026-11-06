@@ -14,7 +14,7 @@ libraries; the others tenant-wide (Manage tags too: a tenant's libraries share i
 | Tag books | Catalog | yes | Administrators, Curators | give the library's books plain tags and take them away, one book, a selection or a whole search at a time |
 | Edit books | Catalog | yes | Administrators, Curators | change a book's title, authors, series and other fields, description, rating and cover; the changes are kept through later scans and imports |
 | Merge books | Catalog | yes | Administrators, Curators | merge duplicate books into one, split them again, undo a merge, mark books as not duplicates |
-| Imported tags | Catalog | yes | Administrators, Curators | map the tags and genres that came with imported books onto the tenant's tags, or ignore them |
+| Imported tags | Catalog | yes | Administrators, Curators | map the tags and genres that came with imported books onto the tenant's tags, or ignore them ([imported tags](../administration/imported-tags.md)); seen per library, changed only with it in every library of the tenant, mapped only with Manage tags too |
 | Default tags | Catalog | yes | Administrators, Curators | choose the tags the library and its folders give the books that come in |
 | Manage tags | Catalog | yes | Administrators, Curators | create, rename, merge and delete the tenant's tags and fields (authors, series and the others), tenant-wide |
 | Manage accounts and groups | Tenant | yes | Administrators | create accounts in the tenant, put them in groups, choose what each group may do |

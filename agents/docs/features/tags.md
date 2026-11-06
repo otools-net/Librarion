@@ -37,7 +37,7 @@ sort columns per batch), `Core/Merging/TagMerger.cs` (merges, undo: [merging](me
   then the tag (closure, counts, aliases, mappings by cascade), its children's closure rebuilt. Refused: built-in tags
   (`tag.builtIn`), a field with values (`field.notEmpty`: merge it), a tag a content filter names (`tag.inFilter`:
   deleting it would change who sees what). A deleted imported tag comes back with the next import of its books
-  (ignoring a raw name is the Imported tags page's job, chunk 9).
+  (ignoring a raw name is the Imported tags page's job: [imported-tags](imported-tags.md)).
 - `TagCounts` hold two counts per library of present books (not missing): `BookCount`, the tag's **direct** links
   (what search sizes a term by, what a delete or merge moves), and `TotalCount` (stage 6, 4a: the user asked
   2026-11-05), its books **with those of every tag under it**, each once (a field's row: its books with any value).
@@ -134,8 +134,9 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
 - **Re-import** recomputes only `Imported` links of the books it reads: adds new ones, removes those the source no
   longer has. `Manual` and `Rule` links are never touched. A user removing an imported tag from a book writes a
   **suppression** (book, tag) so the next import doesn't bring it back (SFE's rule: a tag taken off stays off).
-- Admin page **Imported tags**: raw names with book counts, their mapping, bulk map/merge/ignore, sorted by count
-  (curating the top few hundred covers most books).
+- Admin page **Imported tags** (built, stage 6 chunk 9: [imported-tags](imported-tags.md)): the importer records each
+  raw name it meets as an automatic mapping (not for people and series); the page lists a library's tags with such
+  names by books, kept, mapped (merged) or ignored (logged, undone).
 - Writing tags back into book files or Calibre: not planned.
 
 ## Tagging (as SFE)

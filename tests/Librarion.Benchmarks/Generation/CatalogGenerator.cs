@@ -112,6 +112,28 @@ public sealed class CatalogGenerator
         }
     }
 
+    public static readonly string[] MappingColumns = ["TenantId", "Source", "FieldId", "NormalizedName", "Name", "TagId", "Ignored", "Reviewed"];
+
+    /// <summary>
+    /// The raw names an import of these books would have recorded (stage 6 chunk 9): one automatic FB2 mapping per plain
+    /// tag, category, language, publisher and year (people and series get none), what the Imported tags page lists.
+    /// </summary>
+    public IEnumerable<object?[]> ImportTagMappings()
+    {
+        object?[] Row(int tagId, string name, int? field) => [_target.TenantId, (byte)ImportTagSourceKind.Fb2, field, TagNames.Normalize(name), name, tagId, false, false];
+
+        for (var i = 0; i < _shape.Categories; i++)
+            yield return Row(CategoryTag(i), Names.Category(i).Name, _target.Fields[BuiltInTag.Category]);
+        for (var i = 0; i < _shape.Languages; i++)
+            yield return Row(LanguageTag(i), Names.Languages[i], _target.Fields[BuiltInTag.Language]);
+        for (var i = 0; i < _shape.Publishers; i++)
+            yield return Row(PublisherTag(i), Names.Publisher(i), _target.Fields[BuiltInTag.Publisher]);
+        for (var i = 0; i < CatalogShape.Years; i++)
+            yield return Row(YearTag(i), (CatalogShape.FirstYear + i).ToString(CultureInfo.InvariantCulture), _target.Fields[BuiltInTag.Year]);
+        for (var i = 0; i < _shape.PlainTags; i++)
+            yield return Row(PlainTag(i), Names.PlainTag(i), null);
+    }
+
     public static readonly string[] ParentColumns = ["TenantId", "ChildId", "ParentId"];
 
     /// <summary>Subcategories under their genre (field values are under their field through <c>FieldId</c>, not here).</summary>

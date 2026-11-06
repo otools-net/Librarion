@@ -7,7 +7,8 @@ import {
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
-    BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput,
+    BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource,
 } from './models';
 
 /**
@@ -186,6 +187,22 @@ export class Api {
     mergeField = (key: string, target: string) => this.post<TagWork>(`api/fields/${encodeURIComponent(key)}/merge`, { target });
     merges = (before?: number) => this.get<MergeLogInfo[]>('api/merges', { before });
     undoMerge = (id: number) => this.post<TagWork>(`api/merges/${id}/undo`);
+
+    /** The Imported tags page (`library.importedTags`): a field's imported tags in a library by books, a page at a time. */
+    importedContext = () => this.get<ImportedContext>('api/imported-tags/context');
+    importedFields = () => this.get<ImportedField[]>('api/imported-tags/fields');
+    importedTags = (query: { library: number; field: string | null; source: ImportSource | null; status: ImportedStatus; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<ImportedTag>>('api/imported-tags', {
+            library: query.library, field: query.field ?? undefined, source: query.source ?? undefined, status: query.status, after: query.after ?? undefined, limit: query.limit,
+        });
+    importedSummary = (library: number, field: string | null, source: ImportSource | null) =>
+        this.get<ImportedSummary>('api/imported-tags/summary', { library, field: field ?? undefined, source: source ?? undefined });
+    reviewImported = (tagIds: number[], reviewed = true) => this.post<{ changed: number }>('api/imported-tags/review', { tagIds, reviewed });
+    /** Done, or a run when it touches many books or tags (`runId`). */
+    mapImported = (tagIds: number[], targetId: number) => this.post<TagWork>('api/imported-tags/map', { tagIds, targetId });
+    ignoreImported = (tagIds: number[]) => this.post<TagWork>('api/imported-tags/ignore', { tagIds });
+    ignoredTags = (before?: number) => this.get<IgnoredTagInfo[]>('api/imported-tags/ignored', { before });
+    undoIgnore = (id: number) => this.post<TagWork>(`api/imported-tags/ignored/${id}/undo`);
 
     /** The settings of a level; `owner`: the library (or another tenant); the user level is one's own preferences. */
     settings = (level: SettingLevel, owner?: number) =>

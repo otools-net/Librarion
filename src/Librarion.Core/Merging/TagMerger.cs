@@ -19,7 +19,7 @@ public sealed record MergeLogInfo(long Id, MergeKind Kind, DateTime Created, int
 /// moved is kept in a <see cref="MergeLog"/>, so an undo puts it back while no later merge of the target stands in the
 /// way. Past <see cref="TagService.InlineLinks"/> links it runs in the background.
 /// </summary>
-public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagService service, AccessChanges changes, TimeProvider time)
+public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagService service, AccessChanges changes, TimeProvider time)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -28,7 +28,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         string Name, string NormalizedName, string SortName, string? Shorthand, string? Color, bool IsCategory, bool IsHidden, int? DisambiguationParentId,
         int? FieldId, string? FieldKey, List<int> Parents, List<int> MovedAliases, int? AddedAlias, List<int> MovedChildren, List<int> DroppedChildren,
         List<int> Mappings, List<int> MovedFilters, List<FilterData> DroppedFilters, List<int> Disambiguated, List<int> KeyAliases,
-        List<int>? MovedValues = null, int? KeyAlias = null, List<int>? FieldMappings = null, List<int>? DefaultTags = null);
+        List<int>? MovedValues = null, int? KeyAlias = null, List<int>? FieldMappings = null, List<int>? DefaultTags = null, List<int>? Unreviewed = null);
 
     internal sealed record FilterData(int GroupId, bool Deny);
 
@@ -54,22 +54,12 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         MergeLog log;
         await using (var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken))
         {
-            var tags = await db.Tags.Where(t => t.Id == sourceId || t.Id == targetId).Select(t => new { t.Id, t.Name, t.FieldKey, t.BuiltIn }).ToListAsync(cancellationToken);
-            var source = tags.FirstOrDefault(t => t.Id == sourceId);
-            var target = tags.FirstOrDefault(t => t.Id == targetId);
-            if (source is null)
-                return AccessResult<TagWork>.Missing();
-            if (target is null || sourceId == targetId)
-                return AccessResult<TagWork>.Invalid("targetId", "target.unknown");
-            if (source.FieldKey is not null || target.FieldKey is not null)
-                return AccessResult<TagWork>.Invalid("targetId", "target.field");
-            if (source.BuiltIn is not null)
-                return AccessResult<TagWork>.Conflict("tag.builtIn");
-            if (await TagClosures.IsUnderAsync(db, targetId, sourceId, cancellationToken))
-                return AccessResult<TagWork>.Invalid("targetId", "target.under");
+            var (problem, sourceName, targetName) = await CheckAsync(db, sourceId, targetId, cancellationToken);
+            if (problem is not null)
+                return problem;
             // Its links move, and its children with every book under them (the totals above them).
             links = Math.Max(await TagService.LinksAsync(db, [sourceId], cancellationToken), await TagService.BooksUnderAsync(db, [sourceId], cancellationToken));
-            log = await NewLogAsync(db, tenantId, MergeKind.Tag, null, userId, sourceId, source.Name, targetId, target.Name, cancellationToken);
+            log = await NewLogAsync(db, tenantId, MergeKind.Tag, null, userId, sourceId, sourceName, targetId, targetName, cancellationToken);
         }
 
         if (service.InBackground(tenantId, links))
@@ -82,6 +72,26 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         var moved = await MergeTagAsync(tenantId, log.Id, sourceId, targetId, null, cancellationToken);
         changes.Changed();
         return AccessResult<TagWork>.Ok(new TagWork(null, log.Id, moved));
+    }
+
+    /// <summary>Why tag <paramref name="sourceId"/> can't merge into <paramref name="targetId"/> (null when it can), and their names.</summary>
+    private static async Task<(AccessResult<TagWork>? Problem, string Source, string Target)> CheckAsync(LibrarionDbContext db, int sourceId, int targetId,
+        CancellationToken cancellationToken)
+    {
+        var tags = await db.Tags.Where(t => t.Id == sourceId || t.Id == targetId).Select(t => new { t.Id, t.Name, t.FieldKey, t.BuiltIn }).ToListAsync(cancellationToken);
+        var source = tags.FirstOrDefault(t => t.Id == sourceId);
+        var target = tags.FirstOrDefault(t => t.Id == targetId);
+        if (source is null)
+            return (AccessResult<TagWork>.Missing(), "", "");
+        if (target is null || sourceId == targetId)
+            return (AccessResult<TagWork>.Invalid("targetId", "target.unknown"), "", "");
+        if (source.FieldKey is not null || target.FieldKey is not null)
+            return (AccessResult<TagWork>.Invalid("targetId", "target.field"), "", "");
+        if (source.BuiltIn is not null)
+            return (AccessResult<TagWork>.Conflict("tag.builtIn"), "", "");
+        if (await TagClosures.IsUnderAsync(db, targetId, sourceId, cancellationToken))
+            return (AccessResult<TagWork>.Invalid("targetId", "target.under"), "", "");
+        return (null, source.Name, target.Name);
     }
 
     /// <summary>
@@ -130,13 +140,14 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
     /// Undoes a merge: the source made again (its id when free), its links, names, mappings, filters and children back.
     /// Refused once undone, when the target is gone, or while a later merge into or of the target stands (undo that one first).
     /// </summary>
-    public async Task<AccessResult<TagWork>> UndoAsync(int tenantId, long logId, int? userId, CancellationToken cancellationToken = default)
+    /// <param name="kind">Only a log of this kind (another is not found).</param>
+    public async Task<AccessResult<TagWork>> UndoAsync(int tenantId, long logId, int? userId, CancellationToken cancellationToken = default, MergeKind? kind = null)
     {
         long links;
         await using (var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken))
         {
             var log = await db.MergeLogs.FirstOrDefaultAsync(l => l.Id == logId && l.ParentId == null, cancellationToken);
-            if (log is null)
+            if (log is null || kind is not null && log.Kind != kind)
                 return AccessResult<TagWork>.Missing();
             if (await BlockedAsync(db, log, cancellationToken) is { } problem)
                 return AccessResult<TagWork>.Conflict(problem);
@@ -176,6 +187,9 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
             return "merge.undone";
         if (!await db.Tags.AnyAsync(t => t.Id == log.TargetId, cancellationToken))
             return "merge.targetGone";
+        // An ignore only gives the tag its links back: what came to it later stays.
+        if (log.Kind == MergeKind.Ignore)
+            return null;
         // A later merge of the target, or into it, took links this one would move back.
         if (await db.MergeLogs.AnyAsync(l => l.Id > log.Id && l.ParentId == null && l.Undone == null && (l.TargetId == log.TargetId || l.SourceId == log.TargetId), cancellationToken))
             return "merge.later";
@@ -265,8 +279,11 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
             added = alias.Id;
         }
 
+        // Its raw names now go to the target: a curator's choice, no longer the importer's (the Imported tags page).
         var mappings = await db.ImportTagMappings.Where(m => m.TagId == sourceId).Select(m => m.Id).ToListAsync(cancellationToken);
-        await db.ImportTagMappings.Where(m => m.TagId == sourceId).ExecuteUpdateAsync(s => s.SetProperty(m => m.TagId, targetId), cancellationToken);
+        var unreviewed = await db.ImportTagMappings.Where(m => m.TagId == sourceId && !m.Reviewed).Select(m => m.Id).ToListAsync(cancellationToken);
+        await db.ImportTagMappings.Where(m => m.TagId == sourceId)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.TagId, targetId).SetProperty(m => m.Reviewed, true), cancellationToken);
 
         // Content filters: the target's own one for a group wins; the source's go to the target otherwise.
         var filters = await db.GroupTagFilters.Where(f => f.TagId == sourceId).Select(f => new { f.GroupId, f.Deny }).ToListAsync(cancellationToken);
@@ -299,7 +316,7 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         await db.Tags.Where(t => t.Id == sourceId).ExecuteDeleteAsync(cancellationToken);
         return new TagData(source.Name, source.NormalizedName, source.SortName, source.Shorthand, source.Color, source.IsCategory, source.IsHidden,
             source.DisambiguationParentId, source.FieldId, source.FieldKey, parents, aliases, added, movedChildren, already, mappings, movedFilters, droppedFilters,
-            disambiguated, keyAliases, DefaultTags: defaults);
+            disambiguated, keyAliases, DefaultTags: defaults, Unreviewed: unreviewed);
     }
 
     // ---- Field merge ----
@@ -385,15 +402,19 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         await using (var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken))
         {
             log = await db.MergeLogs.AsNoTracking().FirstAsync(l => l.Id == logId, cancellationToken);
-            data = log.Data is null ? null : JsonSerializer.Deserialize<TagData>(log.Data, Json);
+            data = log.Data is null || log.Kind == MergeKind.Ignore ? null : JsonSerializer.Deserialize<TagData>(log.Data, Json);
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            // A merge stopped half-way left its source: only its links come back.
+            // A merge stopped half-way left its source: only its links come back (an ignore never took its tag away).
             sourceId = log.Completed && data is not null ? await RemakeAsync(db, tenantId, log, data, fieldId, cancellationToken) : log.SourceId;
             await transaction.CommitAsync(cancellationToken);
         }
 
         long moved = 0;
-        if (log.Kind == MergeKind.Field && data is not null)
+        if (log.Kind == MergeKind.Ignore)
+        {
+            moved += await UndoIgnoreAsync(tenantId, log, progress, cancellationToken);
+        }
+        else if (log.Kind == MergeKind.Field && data is not null)
         {
             moved += await UndoFieldAsync(tenantId, log, data, sourceId, progress, cancellationToken);
         }
@@ -482,6 +503,8 @@ public sealed class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, TagServi
         if (data.AddedAlias is { } added)
             await db.TagAliases.Where(a => a.Id == added).ExecuteDeleteAsync(cancellationToken);
         await db.ImportTagMappings.Where(m => m.TagId == target && data.Mappings.Contains(m.Id)).ExecuteUpdateAsync(s => s.SetProperty(m => m.TagId, id), cancellationToken);
+        var unreviewed = data.Unreviewed ?? [];
+        await db.ImportTagMappings.Where(m => m.TagId == id && unreviewed.Contains(m.Id)).ExecuteUpdateAsync(s => s.SetProperty(m => m.Reviewed, false), cancellationToken);
         await db.GroupTagFilters.Where(f => f.TagId == target && data.MovedFilters.Contains(f.GroupId)).ExecuteUpdateAsync(s => s.SetProperty(f => f.TagId, id), cancellationToken);
         var groups = await db.Groups.Where(g => data.DroppedFilters.Select(f => f.GroupId).Contains(g.Id)).Select(g => g.Id).ToListAsync(cancellationToken);
         db.GroupTagFilters.AddRange(data.DroppedFilters.Where(f => groups.Contains(f.GroupId)).Select(f => new GroupTagFilter { GroupId = f.GroupId, TagId = id, Deny = f.Deny }));

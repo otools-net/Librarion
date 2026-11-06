@@ -9,22 +9,30 @@ namespace Librarion.Core.Import;
 /// (agents/docs/features/tags.md#imported-tags, metadata-tags.md#import): the source's mapping first, then a tag of
 /// that name or alias within the field, else a new tag (a field value under its field; a plain tag under the source's
 /// "Imported: …" category). One query per kind and field for the whole batch, never one per book; a bounded cache
-/// keeps the names seen lately (most books of an archive share their authors and genres).
+/// keeps the names seen lately (most books of an archive share their authors and genres). A name settled without a
+/// mapping gets one (<see cref="ImportTagMapping.Reviewed"/> false: what the Imported tags page lists, stage 6 chunk 9),
+/// except the people's and series' names (600k at 2M books, curated by merges instead).
 /// </summary>
 public sealed class ImportTagResolver
 {
     private const int MaxCached = 200_000;
     private static readonly HashSet<string> PersonFields = ["author", "translator", "editor", "illustrator"];
 
+    /// <summary>Fields whose raw names get no mapping row of their own (<see cref="Recorded"/>).</summary>
+    public static readonly IReadOnlySet<string> UnrecordedFields = new HashSet<string>(PersonFields) { "series" };
+
     private readonly int tenantId;
     private readonly Dictionary<string, int> fields;
     private readonly Dictionary<(ImportTagSourceKind Source, int? Field, string Name), int?> cache = [];
     private readonly Dictionary<ImportTagSourceKind, int> categories = [];
+    private readonly HashSet<int> unrecorded;
+    private readonly List<ImportTagMapping> recorded = [];
 
     private ImportTagResolver(int tenantId, Dictionary<string, int> fields)
     {
         this.tenantId = tenantId;
         this.fields = fields;
+        unrecorded = fields.Where(f => UnrecordedFields.Contains(f.Key)).Select(f => f.Value).ToHashSet();
     }
 
     public static async Task<ImportTagResolver> CreateAsync(LibrarionDbContext db, int tenantId, CancellationToken cancellationToken)
@@ -68,7 +76,7 @@ public sealed class ImportTagResolver
                 ? db.ImportTagMappings.Where(m => m.Source == source && m.FieldId == fieldId && normalized.Contains(m.NormalizedName))
                 : db.ImportTagMappings.Where(m => m.Source == source && m.FieldId == null && normalized.Contains(m.NormalizedName));
             foreach (var mapping in await mappings.Select(m => new { m.NormalizedName, m.TagId, m.Ignored }).ToListAsync(cancellationToken))
-                Settle((source, field, mapping.NormalizedName), mapping.Ignored ? null : mapping.TagId, pending);
+                Settle((source, field, mapping.NormalizedName), mapping.Ignored ? null : mapping.TagId, pending, record: false);
         }
 
         foreach (var group in pending.Keys.GroupBy(k => k.Field).ToList())
@@ -87,7 +95,7 @@ public sealed class ImportTagResolver
                 if (field is null && found.Count() > 1)
                     continue;
                 foreach (var key in group.Where(k => k.Name == found.Key))
-                    Settle(key, found.Min(t => t.Id), pending);
+                    Settle(key, found.Min(t => t.Id), pending, record: true);
             }
 
             var left = group.Where(pending.ContainsKey).Select(k => k.Name).Distinct().ToList();
@@ -98,11 +106,15 @@ public sealed class ImportTagResolver
                 .Where(a => a.FieldId == field).GroupBy(a => a.NormalizedName).Where(a => a.Count() == 1);
             foreach (var alias in aliases)
                 foreach (var key in group.Where(k => k.Name == alias.Key))
-                    Settle(key, alias.Single().TagId, pending);
+                    Settle(key, alias.Single().TagId, pending, record: true);
         }
 
         await CreateAsync(db, pending, cancellationToken);
+        await RecordAsync(db, cancellationToken);
     }
+
+    /// <summary>Whether a raw name of <paramref name="fieldId"/> (null: a plain tag) gets a mapping row.</summary>
+    private bool Recorded(int? fieldId) => fieldId is not { } id || !unrecorded.Contains(id);
 
     private (ImportTagSourceKind, int?, string)? Key(Name name)
     {
@@ -122,10 +134,26 @@ public sealed class ImportTagResolver
         return (name.Source, field, normalized);
     }
 
-    private void Settle((ImportTagSourceKind, int?, string) key, int? tagId, Dictionary<(ImportTagSourceKind, int?, string), Name> pending)
+    private void Settle((ImportTagSourceKind Source, int? Field, string Name) key, int? tagId, Dictionary<(ImportTagSourceKind, int?, string), Name> pending, bool record)
     {
-        if (pending.Remove(key))
-            cache[key] = tagId;
+        if (!pending.Remove(key, out var name))
+            return;
+        cache[key] = tagId;
+        if (record && tagId is { } id && Recorded(key.Field))
+            recorded.Add(Mapping(key, name, id));
+    }
+
+    private ImportTagMapping Mapping((ImportTagSourceKind Source, int? Field, string Name) key, Name name, int tagId) =>
+        new() { TenantId = tenantId, Source = key.Source, FieldId = key.Field, NormalizedName = key.Name, Name = Cut(name.Value.Trim()), TagId = tagId };
+
+    /// <summary>The mappings of the names settled without one, written together.</summary>
+    private async Task RecordAsync(LibrarionDbContext db, CancellationToken cancellationToken)
+    {
+        if (recorded.Count == 0)
+            return;
+        db.ImportTagMappings.AddRange(recorded);
+        await db.SaveChangesAsync(cancellationToken);
+        recorded.Clear();
     }
 
     /// <summary>New tags for what nothing matched: one per (field, name), whatever the sources that gave it.</summary>
@@ -163,8 +191,13 @@ public sealed class ImportTagResolver
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        foreach (var key in pending.Keys)
-            cache[key] = created[(key.Field, key.Name)].Id;
+        foreach (var (key, name) in pending)
+        {
+            var id = created[(key.Field, key.Name)].Id;
+            cache[key] = id;
+            if (Recorded(key.Field))
+                recorded.Add(Mapping(key, name, id));
+        }
     }
 
     /// <summary>The category new plain tags of a source go under ("Imported: FB2"), made on first need.</summary>

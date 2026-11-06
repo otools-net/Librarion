@@ -140,6 +140,7 @@ note rather than inventing a new one.
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
 | [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
+| [imported-tags](agents/docs/features/imported-tags.md) | the Imported tags page: raw names recorded by the importer, a library's tags by books (small fields whole, big ones walked by key), keep, map, ignore and its undo, rights | `Core/Tagging/ImportedTags.cs`, `Merging/TagMerger.Imported.cs`, `admin/imported-tags-section.ts` |
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
 | [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
 | [book-formats](agents/docs/features/book-formats.md) | one class per format (key, extensions, media type, metadata, cover), the registry, adding a format | `Core/Formats/` |

@@ -70,6 +70,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<BackgroundTasks>();
         services.AddSingleton<Librarion.Core.Tagging.TagService>();
         services.AddSingleton<Librarion.Core.Tagging.TagLists>();
+        services.AddSingleton<Librarion.Core.Tagging.ImportedTags>();
         services.AddSingleton<Librarion.Core.Tagging.TagPicker>();
         services.AddSingleton<Librarion.Core.Catalog.BookEditor>();
         services.AddSingleton<Librarion.Core.Tagging.BookTagger>();

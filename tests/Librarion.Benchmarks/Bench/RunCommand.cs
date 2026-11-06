@@ -6,6 +6,7 @@ using Librarion.Benchmarks.Data;
 using Librarion.Core.Access;
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
+using Librarion.Core.Tagging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -37,6 +38,7 @@ public static class RunCommand
         var books = services.GetRequiredService<BookQueries>();
         var tags = services.GetRequiredService<TagQueries>();
         var folders = services.GetRequiredService<FolderQueries>();
+        var imported = services.GetRequiredService<ImportedTags>();
         var suggestions = services.GetRequiredService<Librarion.Core.Search.SearchSuggestions>();
         var facets = services.GetRequiredService<Librarion.Core.Search.SearchFacets>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
@@ -52,6 +54,7 @@ public static class RunCommand
         string prolificName, middleName;
         List<int> sampleIds;
         int zipFolder, looseParent, looseFolder;
+        string importedCursor;
         await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
         {
             // The folder view (stage 6 chunk 8b): a ZIP of 100k entries, the folder of the thousand folders of loose files, one of those.
@@ -81,6 +84,10 @@ public static class RunCommand
             var middleValue = await db.Tags.Where(t => t.FieldId == authorField).OrderBy(t => t.SortName).ThenBy(t => t.Id).Skip(authorsTotal / 2)
                 .Select(t => new { t.SortName, t.Id }).FirstAsync(cancellationToken);
             middleValueCursor = new KeysetCursor(middleValue.SortName, null, middleValue.Id).Encode();
+            // The Imported tags page's deep page: the plain tag 5,000th by books.
+            var plainCount = await db.TagCounts.Where(c => c.LibraryId == libraryId && db.Tags.Any(t => t.Id == c.TagId && t.FieldId == null && t.FieldKey == null))
+                .OrderByDescending(c => c.BookCount).ThenByDescending(c => c.TagId).Skip(5000).Select(c => new { c.BookCount, c.TagId }).FirstAsync(cancellationToken);
+            importedCursor = new KeysetCursor(null, plainCount.BookCount, plainCount.TagId).Encode();
             var random = new Random(42);
             sampleIds = Enumerable.Range(0, iterations + 3).Select(_ => 1 + random.Next(bookCount)).ToList();
         }
@@ -129,6 +136,15 @@ public static class RunCommand
             ("books of a ZIP of 100k entries, by title", ListBudget, _ => List(open, new BookPageRequest(libraryId, FolderId: zipFolder))),
             ("books of a ZIP of 100k entries, by title, middle page", ListBudget, _ => List(open, new BookPageRequest(libraryId, After: titleCursor, FolderId: zipFolder))),
             ("books of a folder of loose files, by author", ListBudget, _ => List(open, new BookPageRequest(libraryId, BookSort.Author, FolderId: looseFolder))),
+            // The Imported tags page (stage 6 chunk 9): 50k plain tags walked by books from the most (a deep page, and a status
+            // none has: the walk's bound per request), a small field read whole, the coverage line.
+            ("imported tags: plain tags by books, first page", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: plain tags by books, deep page", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Review, importedCursor, 50, cancellationToken))!.Items.Count),
+            ("imported tags: plain tags none reviewed (bounded walk)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Reviewed, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: languages (a small field)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, "language", null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: categories (a small field)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, "category", null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: the coverage of plain tags", ListBudget, async _ => (await imported.SummaryAsync(tenant.Id, libraryId, null, null, cancellationToken))!.Tags),
+            ("imported tags: the fields", ListBudget, async _ => (await imported.FieldsAsync(tenant.Id, cancellationToken)).Count),
             // Search (agents/docs/features/search.md): each title word is on about 2 % of the books (the generator's word list),
             // a file name (the id) on one; author names reach books through the tag-name index.
             ("search: a word in many titles", SearchBudget, _ => List(open, new BookPageRequest(Query: "night"))),
@@ -196,6 +212,13 @@ public static class RunCommand
             report($"{(result.WithinBudget ? "ok  " : "SLOW")} {(scans.Count > 0 ? "SCAN" : "    ")} p50 {result.P50Ms,7:0.0} ms  p95 {result.P95Ms,7:0.0} ms  (budget {budget:0}) {rows,4} rows  {name}");
             foreach (var scan in scans.Distinct())
                 report($"        full scan: {scan}");
+        }
+
+        // The exit criterion of stage 6: how much of the imported links the first 500 tags hold (plain tags; categories).
+        foreach (var field in new string?[] { null, "category" })
+        {
+            var summary = (await imported.SummaryAsync(tenant.Id, libraryId, field, null, cancellationToken))!;
+            report($"imported {field ?? "plain tags"}: {summary.Tags:N0} tags, {summary.Links:N0} links, the first {summary.TopCount} hold {100.0 * summary.Top / Math.Max(1, summary.Links):0.0} %");
         }
 
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);

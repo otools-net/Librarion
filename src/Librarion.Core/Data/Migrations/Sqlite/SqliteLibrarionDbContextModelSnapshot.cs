@@ -529,10 +529,18 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<bool>("Ignored")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Reviewed")
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Source")
                         .HasColumnType("INTEGER");
@@ -548,6 +556,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("FieldId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "FieldId", "TagId");
 
                     b.HasIndex("TenantId", "Source", "FieldId", "NormalizedName");
 
@@ -927,6 +937,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasKey("LibraryId", "TagId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("LibraryId", "BookCount", "TagId");
 
                     b.ToTable("TagCounts");
                 });

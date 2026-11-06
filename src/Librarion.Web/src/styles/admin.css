@@ -932,3 +932,30 @@ a.row-main {
 .merge-row .row-main {
     cursor: default;
 }
+
+/* Administration › Catalog › Imported tags (imported-tags-section.ts): rows chosen by their boxes, the bar over the
+   list stays in reach while scrolling. */
+.imported-summary {
+    max-width: 720px;
+    margin: 0 0 var(--space-3);
+}
+
+.imported-bar {
+    position: sticky;
+    top: calc(var(--topbar-height) + var(--task-panel-h, 0px) + var(--space-2));
+    z-index: 2;
+    width: fit-content;
+    margin: 0 0 var(--space-2);
+}
+
+.row-check {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    margin: 10px 0;
+    accent-color: var(--accent);
+}
+
+.imported-rows .row.selected {
+    background: var(--accent-soft);
+}
