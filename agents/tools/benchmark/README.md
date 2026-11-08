@@ -93,6 +93,18 @@ dotnet $bench archive --provider sqlite --connection "Data Source=D:/Temp/librar
   rather than generating it (the disk writes ~10 MB/s).
 - Small-size test: `ArchiveBenchTests` (500 entries, both providers).
 
+## What `duplicates` measures (stage 6 chunk 11, [merging](../../docs/features/merging.md#stored-duplicate-groups-built-stage-6-chunk-11))
+
+```sh
+dotnet $bench duplicates --provider sqlite|postgres --connection "…" --work D:/Temp/librarion-bench
+```
+
+- On a generated catalog: the duplicate groups built whole (`DuplicateIndex.BuildAsync`, groups written into the
+  database), timed against 10 minutes at 2M books on PostgreSQL (SQLite recorded).
+- Then the generator's planted duplicates (book `id` and `id - 1`: the same file every 100th from 7, the same ISBN from
+  13, the same work every 50th from 21), the first 2,000 of each: every pair whose books do share the key in the
+  database must be in one group of its level, unless that key is noise (counted apart). Exit 1 otherwise.
+
 ## What `import` measures (stage 4, [imports](../../docs/features/imports.md#scale))
 
 ```sh

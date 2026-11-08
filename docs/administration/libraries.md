@@ -28,6 +28,11 @@ Scanning reads what changed in the folders: new books come in with their title, 
 metadata from the book itself (a book without a title is shown by its file name), changed ones are read again. An
 unchanged archive is skipped without being read.
 
+- A file inside an archive with exactly the same bytes as one already in the library becomes another copy of that
+  book, not a book of its own. The tenant setting **Same file twice: one book** turns this off.
+- At the end of each scan or import, the possible duplicate books it brought (the same file, identifier, or title and
+  author) are found for the whole tenant; the first one after an update finds them for every book, which takes longer.
+
 - **Scan now** (above the tabs) starts a scan (right **Scan**). While it runs, a panel under the top bar shows it on
   every page: "Scanning …", the time it has taken, the books found so far and the file being read, with **Cancel**
   (what it already read stays). When it ends the panel shows how it went until you close it. See also

@@ -26,6 +26,8 @@ public enum BackgroundTaskKind : byte
     TagIgnore,
     /// <summary>The books of a cover template turned off given one of the templates still on, in batches.</summary>
     CoverReassign,
+    /// <summary>The tenant's duplicate groups built whole again (Rebuild; a scan or import's end builds them when there are none).</summary>
+    DuplicateBuild,
 }
 
 public enum TaskTrigger : byte

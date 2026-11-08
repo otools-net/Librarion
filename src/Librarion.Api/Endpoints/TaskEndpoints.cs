@@ -173,7 +173,7 @@ public static class TaskEndpoints
         // Tag runs (deletes, merges, undos) belong to no library: those who manage tags follow them, those who manage
         // cover styles the reassignments (TenantKinds). Those who tag books follow the runs of their libraries too
         // (scope tagging), and cancel only those.
-        var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan, Rights.ManageTags, Rights.TagBooks, Rights.CoverStyles);
+        var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan, Rights.ManageTags, Rights.TagBooks, Rights.CoverStyles, Rights.MergeBooks);
 
         runs.MapGet("/running", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state
@@ -275,9 +275,16 @@ public static class TaskEndpoints
         BackgroundTaskKind.TagIgnore,
     ];
 
-    /// <summary>The tenant's runs (no library) the caller follows: tag runs with <c>tenant.tags</c>, cover reassignments with <c>tenant.coverStyles</c>.</summary>
+    /// <summary>
+    /// The tenant's runs (no library) the caller follows: tag runs with <c>tenant.tags</c>, cover reassignments with
+    /// <c>tenant.coverStyles</c>, duplicate builds with <c>library.merge</c> somewhere.
+    /// </summary>
     private static IReadOnlyCollection<BackgroundTaskKind> TenantKinds(AccessState state) =>
-        [.. state.Has(Rights.ManageTags) ? TagRuns : [], .. state.Has(Rights.CoverStyles) ? [BackgroundTaskKind.CoverReassign] : Array.Empty<BackgroundTaskKind>()];
+    [
+        .. state.Has(Rights.ManageTags) ? TagRuns : [],
+        .. state.Has(Rights.CoverStyles) ? [BackgroundTaskKind.CoverReassign] : Array.Empty<BackgroundTaskKind>(),
+        .. state.Has(Rights.MergeBooks) ? [BackgroundTaskKind.DuplicateBuild] : Array.Empty<BackgroundTaskKind>(),
+    ];
 
     /// <summary>A library's run is cancelled by those who may scan there; a scope tagging also by those who tag there.</summary>
     private static async Task<bool> MayCancelAsync(TaskRunInfo info, CurrentAccess current)

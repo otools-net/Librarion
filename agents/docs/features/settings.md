@@ -20,7 +20,8 @@ preferences on `account/account-page.ts`, `core/session.service.ts` (applies the
   session carries them too, so the client applies theme and density at sign-in.
 - Keys so far: `ui.theme` (system/light/dark), `ui.density` (compact/comfortable), `ui.language` (browser/en),
   `ui.pageSize` (20–200, 50); `library.keepMissingDays` (library level and above, 0–3650, 30:
-  [missing-books](missing-books.md)).
+  [missing-books](missing-books.md)); `import.mergeSameFiles` (tenant level and above, on/off, on: a scanned copy of a
+  file joins its book, [merging](merging.md#stored-duplicate-groups-built-stage-6-chunk-11)).
 - The theme toggle in the account menu changes only this browser (localStorage), not the account's preference.
 - A new setting: one line in the catalog, its texts, and where the client uses it; no migration (rows hold JSON).
 

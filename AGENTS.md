@@ -73,6 +73,9 @@ note rather than inventing a new one.
   stage or functionality of importance, green tests only (decided 2026-10-31). `edge` is pushed after each finished
   stage and merged into `main` with the version bump when a stage's exit criteria are met, without asking (the
   user's decision, 2026-11-01); tags only when the user asks.
+- **Long background runs:** a run in the background expected to take more than 10 minutes (benchmarks, full test or
+  e2e suites, big imports) gets a cron job showing its progress every 10 minutes, deleted when the run ends (the
+  user's rule, 2026-11-08; how: [commands](agents/docs/environment/commands.md#long-runs-in-the-background)).
 - **Agent tools:** put any reusable helper (scripts, generators, drivers) in `agents/tools/<job>/` with a `README.md`,
   never only in the scratchpad; work output goes to a temp folder, not the repo.
 

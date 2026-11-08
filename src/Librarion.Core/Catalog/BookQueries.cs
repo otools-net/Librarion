@@ -276,13 +276,13 @@ public sealed class BookQueries(TenantDb tenantDb)
     private const int MaxKeys = 20;
 
     /// <summary>Identifiers naming a record of one source, not a book: INPX numbers collide between collections.</summary>
-    private static readonly string[] SourceSchemes = ["inpx"];
+    internal static readonly string[] SourceSchemes = ["inpx"];
 
     /// <summary>
     /// Identifiers whose makers reuse them: an FB2's document id is copied from template to template by hand-made files,
     /// so a shared one counts only when the other book also has the same title or first author.
     /// </summary>
-    private static readonly string[] WeakSchemes = ["fb2-id"];
+    internal static readonly string[] WeakSchemes = ["fb2-id"];
 
     /// <summary>
     /// Other books the caller can see that may be this one (agents/docs/features/merging.md; read only until merging is
@@ -323,6 +323,17 @@ public sealed class BookQueries(TenantDb tenantDb)
         }
         if (book.WorkKey is { } work)
             Add(await GroupAsync(db.Books.Where(b => b.WorkKey == work && b.Id != id).Select(b => b.Id), cancellationToken), DuplicateReason.Work, null);
+        if (found.Count == 0)
+            return [];
+        // Marked by a user: this book unique, another unique, or the two not duplicates (stage 6 chunk 11).
+        var candidates = found.Keys.ToList();
+        var marks = await db.NotDuplicates.Where(n => (n.BookId == id && (n.OtherId == id || candidates.Contains(n.OtherId)))
+                || (n.OtherId == id && candidates.Contains(n.BookId)) || (candidates.Contains(n.BookId) && n.OtherId == n.BookId))
+            .Select(n => new { n.BookId, n.OtherId }).ToListAsync(cancellationToken);
+        if (marks.Any(m => m.BookId == id && m.OtherId == id))
+            return [];
+        foreach (var mark in marks)
+            found.Remove(mark.BookId == id ? mark.OtherId : mark.BookId);
         if (found.Count == 0)
             return [];
 

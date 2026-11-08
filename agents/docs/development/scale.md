@@ -134,6 +134,12 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   140 ms on SQLite); its coverage line 245 / 184 ms, against a new on-demand budget of 500 ms, then kept; the whole run
   on PostgreSQL within budget (`search: two common words` once 302 ms, 190 alone)
   ([imported-tags](../features/imported-tags.md#scale-measured-2026-11-06-see-scale)).
+- Stored duplicate groups (stage 6 chunk 11, 2026-11-08, `duplicates` command): the whole build at 2M **66.6 s on
+  PostgreSQL** (proposed budget 10 min), 92.3 s on SQLite; 96,946 groups; of the first 2,000 planted pairs of each
+  level every one sharing its key found (files 2,000, ISBNs 798, works 1,983; 17 works more under noise keys). Calibre
+  2M on PostgreSQL with the first build at its end (the user's answer: automatic): **27.1 min** (25.4 before; budget
+  30), unchanged re-import 2.6 min (2.4). The book page's possible duplicates within budget, no full scans.
+  Generation: 2M SQLite 5.6 min, PostgreSQL 8.6 min.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

@@ -269,6 +269,32 @@ public abstract partial class LibrarionDbContext
             Filter(entity, l => l.TenantId == CurrentTenantId);
         });
 
+        modelBuilder.Entity<DuplicateGroup>(entity =>
+        {
+            entity.Property(g => g.Key).HasMaxLength(DuplicateGroup.MaxKeyLength);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(g => new { g.TenantId, g.Level, g.KeyHash });
+            Filter(entity, g => g.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<DuplicateMember>(entity =>
+        {
+            entity.HasKey(m => new { m.GroupId, m.BookId });
+            entity.HasOne<DuplicateGroup>().WithMany(g => g.Members).HasForeignKey(m => m.GroupId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Book>().WithMany().HasForeignKey(m => m.BookId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(m => new { m.TenantId, m.BookId });
+            Filter(entity, m => m.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<NotDuplicate>(entity =>
+        {
+            entity.HasKey(n => new { n.BookId, n.OtherId });
+            entity.HasOne<Book>().WithMany().HasForeignKey(n => n.BookId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Book>().WithMany().HasForeignKey(n => n.OtherId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(n => new { n.TenantId, n.OtherId });
+            Filter(entity, n => n.TenantId == CurrentTenantId);
+        });
+
         modelBuilder.Entity<GroupTagFilter>(entity =>
         {
             entity.HasKey(f => new { f.GroupId, f.TagId });

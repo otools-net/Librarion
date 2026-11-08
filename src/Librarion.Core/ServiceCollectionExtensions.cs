@@ -63,6 +63,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(configuration.GetSection(Librarion.Core.Covers.CoverOptions.SectionName).Get<Librarion.Core.Covers.CoverOptions>() ?? new Librarion.Core.Covers.CoverOptions());
         services.AddSingleton<Librarion.Core.Covers.CoverService>();
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();
+        services.AddSingleton<Librarion.Core.Merging.DuplicateIndex>();
         services.AddSingleton<LibraryScanner>();
         services.AddSingleton<MissingBooks>();
         services.AddSingleton<Librarion.Core.Imports.CatalogImporter>();

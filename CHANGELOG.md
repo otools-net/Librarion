@@ -6,6 +6,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- Possible duplicate books are now found once for the whole catalog and kept up to date by every scan and import
+  (the first scan or import after this update finds them); a run in the background can find them again. Books marked
+  as different stay apart. The Duplicates page comes next.
+- **Same file twice: one book** (tenant setting, on by default): turned off, a scanned file with the same bytes as one
+  already in the library stays a book of its own, shown as a possible duplicate.
 - **Administration → Catalog → Cover styles** (with the new Manage cover styles right, Administrators and
   Curators): the drawn cover styles with a sample in every set of colors, each turned on or off for new books (one
   stays on). The books of a style turned off keep it until **Give its books another style**, a background run; a

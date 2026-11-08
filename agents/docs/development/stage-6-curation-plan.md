@@ -163,11 +163,16 @@ A session may end early: this list is the state of the work. Tick a chunk when i
     - 10b. [x] Administration › Catalog › Cover styles (`tenant.coverStyles`): templates on / off per tenant (new books
           get the ones on), previews, reassign a template's books as a background run. **Built:**
           [book-display](../features/book-display.md#cover-styles-built-stage-6-chunk-10b).
-11. [ ] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
+11. [x] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
         (resumable), groups kept by imports and edits, the noise cap, `NotDuplicates`; the same-file setting (Q4: on by default);
         benchmark: the build and the planted duplicates found at 2M within budget. **`fb2-id` is a weak key** (see
         [Found with real books](#found-with-real-books-2026-11-06)): the stored groups keep the on-demand rule (a shared
         FB2 id joins a group only with the same title or first author), never the id alone.
+        **The user's answers (2026-11-08):** groups are kept up to date **at the end of each scan or import** (one
+        set-based pass over the books it added or changed; a run that added very many books does the full build
+        instead), not inline per batch (estimated +2-3 min on Calibre 2M); the **first build starts automatically** at
+        the end of the next run when a tenant has none, and a Rebuild route starts it too. **Built:**
+        [merging](../features/merging.md#stored-duplicate-groups-built-stage-6-chunk-11).
 12. [ ] Administration › Catalog › Duplicates and Compare and merge: groups by level and size, compare side by side
         (stacked on phones), choices per single value, merge (files, links, identifiers move; the old id redirects in
         web, API and covers), Not a duplicate; the book page's panel gets the actions for `books.merge`.
@@ -241,7 +246,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 - [x] Cover upload, Change cover style, reassign a template's books.
 
 ### 6.3 Duplicates
-- [ ] Stored groups, the first build and its upkeep, Not a duplicate, the same-file setting.
+- [x] Stored groups, the first build and its upkeep, Not a duplicate (stored; its routes with 12), the same-file setting.
 - [ ] Duplicates page, compare and merge, bulk merge, undo and split.
 - [ ] Duplicate tag and field suggestions.
 

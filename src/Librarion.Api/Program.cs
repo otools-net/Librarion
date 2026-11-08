@@ -69,6 +69,7 @@ api.MapFolderEndpoints();
 api.MapTagEndpoints();
 api.MapImportedTagEndpoints();
 api.MapCoverEndpoints();
+api.MapDuplicateEndpoints();
 api.MapTaskEndpoints();
 api.MapUserEndpoints();
 api.MapGroupEndpoints();

@@ -24,8 +24,55 @@ client `app/curation/duplicates/`, the duplicates panel of `app/books/book-page`
 [foundation-plan](../development/foundation-plan.md) (decided 2026-10-31).
 
 Built (stage 5): the book page's **read-only** panel of possible duplicates, computed per book on demand (same file
-by size + CRC, same identifier, same work key; capped, no tables yet): [book-page](book-page.md). Compare, merge, Not a
-duplicate and the duplicate groups below are still planned.
+by size + CRC, same identifier, same work key; capped, no tables yet): [book-page](book-page.md). Built (stage 6 chunk
+11): the **stored duplicate groups**, their upkeep, `NotDuplicates` and the same-file setting
+([below](#stored-duplicate-groups-built-stage-6-chunk-11)). Compare, merge and the Duplicates page are still planned
+(chunks 12-13).
+
+## Stored duplicate groups (built, stage 6 chunk 11)
+
+Code: `Core/Merging/DuplicateIndex.cs` (`BuildAsync`, `RefreshAsync`, `CleanAsync`, `AfterRunAsync`, `TouchedBooks`),
+entities in `Data/Entities/Catalog/Duplicates.cs`, `Tenant.DuplicatesBuilt`, the hooks in `CatalogWriter` (`Touched`),
+`LibraryScanner`, `CatalogImporter`, `MissingBooks` and `TagLinks.SortColumnsAsync`; route `POST api/duplicates/build`
+(`Api/Endpoints/DuplicateEndpoints.cs`, `library.merge`); tests `DuplicateIndexTests` (both providers); benchmark
+`duplicates` ([benchmark](../../tools/benchmark/README.md)). The user's answers (2026-11-08) in the
+[stage 6 plan](../development/stage-6-curation-plan.md).
+
+- **Rows:** `DuplicateGroups` (level `File` / `Identifier` / `Work` = `DuplicateReason`, `Key`, `KeyHash` = XxHash64 of
+  level and key, indexed with the tenant; `Noise`; `BookCount`) and `DuplicateMembers (GroupId, BookId)` (index
+  `(TenantId, BookId)`; both foreign keys cascade, so a deleted book leaves its groups). Keys: `size:crc`,
+  `scheme:value` (`inpx` left out, as on the book page), the work key as a number.
+- **Noise:** a key shared by 50 books or more (`MaxGroup`, the book page's cap) is one row with `Noise` and no members;
+  the upkeep skips keys known as noise (no re-reading "Notes" by nobody at every scan). A noise key that shrinks stays
+  noise until a rebuild.
+- **Weak FB2 ids:** the books of an `fb2-id` (fewer than 50) make one group per shared `SortTitle` and one per shared
+  non-empty `SortAuthor` (deduplicated), all with the id as `Key`: never the id alone (the on-demand rule).
+- **Not duplicates:** `NotDuplicates (BookId, OtherId)`, `BookId < OtherId`, or `OtherId = BookId` for "this book is
+  unique". A unique book is left out of every group; a group whose every remaining pair is marked is not stored. The
+  book page's on-demand list leaves them out too. Routes to set them come with chunk 12.
+- **The build** (`BuildAsync`): the tenant's groups deleted, then each key walked on its own index in key order, pages
+  of 5,000 rows (`Books (TenantId, WorkKey)`, `BookFiles (TenantId, Size, Crc32)` with `Size >= last` so the range
+  starts there, `BookIdentifiers (TenantId, Scheme, Value)` per scheme); a page's last key is left for the next page
+  unless it fills the page (noise). Rows written through EF a page at a time. `Tenant.DuplicatesBuilt` is set at the
+  end only: a build stopped half-way is done again whole (simpler than a resumable cursor, at its measured time).
+- **Upkeep at the end of each run** (the user's answer: not per batch): `CatalogWriter.Touched` collects the books a
+  scan, import, root removal or missing-books removal added, read again, gave or took a file, or returned (past 50,000
+  only that there were many). Then `AfterRunAsync`: no groups yet, or too many books touched, and the run completed:
+  the whole build (the user's answer: the first build starts by itself); else `RefreshAsync` of the touched books
+  (their old groups' keys and their current keys, sharers read by one query per level and scheme, a thousand books at
+  a time) and, when books were deleted, `CleanAsync` (groups left under two members deleted, counts set again: reads
+  the groups, not the books). A run that stopped half-way refreshes what it touched; when it touched too many, the
+  tenant is marked unbuilt so the next run builds.
+- **Edits:** `TagLinks.SortColumnsAsync` (a book edited on its page, an author merged) refreshes the books whose work
+  key or first author moved, once the tenant is built.
+- **Same file at import** (Q4): `import.mergeSameFiles` (tenant level, `on` / `off`, default `on`); off, a scanned
+  copy is a book of its own (`CatalogWriter.MergeCopies`) and shows as a `File` group.
+- **Rebuild:** `POST api/duplicates/build` starts a tenant run `DuplicateBuild` (its `changed` counts the groups),
+  followed by those with `library.merge` somewhere (`TaskEndpoints.TenantKinds`).
+- **Measured** (2026-11-08, [scale](../development/scale.md#measured)): the whole build at 2M 66.6 s on PostgreSQL,
+  92.3 s on SQLite, 96,946 groups, every planted duplicate found; Calibre 2M with the first build at its end 27.1 min.
+- Merged books (`MergedIntoId`) are left out of the work key; their files and identifiers move with a merge
+  (chunk 12). Missing books stay in groups (hidden where they are shown, as everywhere).
 
 Big collections are full of the same book twice: the same file in two archives, an FB2 and an EPUB of one work, two
 scans with different titles or file names. Tags repeat too: `author:"Steven King"` and `author:"Stephen King"`,

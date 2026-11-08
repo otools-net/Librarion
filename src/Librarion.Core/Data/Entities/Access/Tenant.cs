@@ -25,6 +25,12 @@ public sealed class Tenant
     /// </summary>
     public int CoverTemplatesOff { get; set; }
 
+    /// <summary>
+    /// UTC, when the duplicate groups were last built whole (agents/docs/features/merging.md#stored-duplicate-groups);
+    /// null until then: the end of the next scan or import builds them.
+    /// </summary>
+    public DateTime? DuplicatesBuilt { get; set; }
+
     public List<Library> Libraries { get; set; } = [];
     public List<UserGroup> Groups { get; set; } = [];
     public List<TenantDisabledRight> DisabledRights { get; set; } = [];

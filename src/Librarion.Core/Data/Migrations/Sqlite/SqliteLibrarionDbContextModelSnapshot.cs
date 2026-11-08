@@ -382,6 +382,59 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("DefaultTags");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("KeyHash")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Noise")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Level", "KeyHash");
+
+                    b.ToTable("DuplicateGroups");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateMember", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "BookId");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("TenantId", "BookId");
+
+                    b.ToTable("DuplicateMembers");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
                 {
                     b.Property<int>("Id")
@@ -713,6 +766,29 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasKey("LogId", "BookId", "Source");
 
                     b.ToTable("MergeLogLinks");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.NotDuplicate", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OtherId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("BookId", "OtherId");
+
+                    b.HasIndex("OtherId");
+
+                    b.HasIndex("TenantId", "OtherId");
+
+                    b.ToTable("NotDuplicates");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.SecurityEvent", b =>
@@ -1088,6 +1164,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<bool>("Disabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("DuplicatesBuilt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1368,6 +1447,30 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateGroup", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateMember", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.DuplicateGroup", null)
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tag", "Field")
@@ -1537,6 +1640,21 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.NotDuplicate", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("OtherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tag", "Field")
@@ -1678,6 +1796,11 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Navigation("Properties");
 
                     b.Navigation("Tags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>

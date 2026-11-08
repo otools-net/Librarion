@@ -1,3 +1,4 @@
+using Librarion.Core.Merging;
 using System.IO.Hashing;
 using System.Text;
 using System.Text.Json;
@@ -18,7 +19,7 @@ namespace Librarion.Core.Imports;
 /// The same record again (its hash) is skipped without writing. Archives the import lists for the first time are
 /// written as done at its end, so a later scan skips them unchanged. Nothing is ever removed.
 /// </summary>
-public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
+public sealed class CatalogImporter(TenantDb tenantDb, DuplicateIndex duplicates, TimeProvider time)
 {
     public const int BatchSize = 1000;
 
@@ -35,6 +36,7 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
             ?? throw new InvalidOperationException($"Root {rootId} is not a root of library {libraryId}.");
         var run = new Run(db, root, new CatalogWriter(tenantId, libraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time), progress);
         using var source = open();
+        var completed = false;
         try
         {
             foreach (var batch in source.Read(run.Report, cancellationToken).Chunk(BatchSize))
@@ -45,10 +47,12 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
             }
 
             await run.FinishArchivesAsync(cancellationToken);
+            completed = true;
         }
         finally
         {
             await run.Writer.FlushCountsAsync(db, CancellationToken.None);
+            await duplicates.AfterRunAsync(tenantId, run.Writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return run.Result();

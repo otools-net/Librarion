@@ -29,7 +29,9 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
   never links a tag a merge is taking away. Listed (`running`, history, `api/tasks/{id}`) for those with
   `tenant.tags`; progress `changed` / `removed` count links, `current` names the tag. `CoverReassign` (chunk 10b) is
   one too, followed with `tenant.coverStyles` (`TaskEndpoints.TenantKinds`: which tenant runs a caller sees goes by
-  kind); its `changed` counts books.
+  kind); its `changed` counts books. `DuplicateBuild` (chunk 11) too, followed with `library.merge`; its `changed`
+  counts groups. Scans, imports, root and missing-books removals end with the duplicate groups' upkeep
+  ([merging](merging.md#stored-duplicate-groups-built-stage-6-chunk-11)).
 - `ScopeTags` (stage 6, chunk 7) is a run of a library (`StartLibraryAsync`): tags given to or taken from every book
   of a list. Those with `library.tag` there follow the library's runs too (the `tasks` routes accept it) and cancel
   only `ScopeTags` runs; scans stay theirs who scan ([tags](tags.md#tagging-many-books-built-stage-6-chunk-7)).

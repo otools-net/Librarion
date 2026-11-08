@@ -8,7 +8,7 @@ import { Icon, IconName } from './icon';
 
 const ICONS: Record<TaskRunInfo['task'], IconName> = {
     libraryScan: 'refresh', import: 'import', removeRoot: 'folder', removeMissing: 'missing', tagDelete: 'trash', tagMerge: 'tag', fieldMerge: 'category', mergeUndo: 'back', tagCounts: 'refresh', scopeTags: 'tag',
-    tagIgnore: 'hidden', coverReassign: 'image',
+    tagIgnore: 'hidden', coverReassign: 'image', duplicateBuild: 'copy',
 };
 
 /**

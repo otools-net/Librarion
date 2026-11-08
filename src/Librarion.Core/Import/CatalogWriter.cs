@@ -3,6 +3,7 @@ using Librarion.Core.Covers;
 using Librarion.Core.Covers.Generated;
 using Librarion.Core.Data;
 using Librarion.Core.Formats;
+using Librarion.Core.Merging;
 using Librarion.Core.Reading;
 using Librarion.Core.Tagging;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +47,15 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     private readonly TagAncestors ancestors = new();
     private int bookDelta;
 
+    /// <summary>The books whose duplicate keys this writer may have changed, for the end of the run (<see cref="DuplicateIndex.AfterRunAsync"/>).</summary>
+    public TouchedBooks Touched { get; } = new();
+
+    /// <summary>
+    /// A new file with the same bytes as one of the library becomes another file of that book (D19; the tenant setting
+    /// <c>import.mergeSameFiles</c>, on by default). Off: it is a book of its own, a duplicate of the same file.
+    /// </summary>
+    public bool MergeCopies { get; init; } = true;
+
     /// <summary>The tenant's cover templates turned off (stage 6 chunk 10b), read once before the first new book; null until then.</summary>
     private int? templatesOff;
 
@@ -69,7 +79,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             folders.Count(file.File.FolderId, 1);
         await DefaultsAsync(db, files.Select(f => f.File.FolderId), cancellationToken);
         templatesOff ??= await TemplatesOffAsync(db, cancellationToken);
-        var copies = await CopiesAsync(db, files, cancellationToken);
+        var copies = MergeCopies ? await CopiesAsync(db, files, cancellationToken) : new (int? BookId, int? Earlier)[files.Count];
         await resolver.ResolveAsync(db, files.Where((_, i) => copies[i] == default).SelectMany(f => Names(f.Metadata)), cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
         var books = new Book?[files.Count];
@@ -106,6 +116,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
 
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
+        Touched.Add(books.Where(b => b is not null).Select(b => b!.Id).Concat(copies.Where(c => c.BookId is not null).Select(c => c.BookId!.Value)));
         Added += added;
         Copies += files.Count - added;
         bookDelta += added;
@@ -260,6 +271,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             then?.Invoke(book);
         }
 
+        Touched.Add(changed.Select(c => c.BookId));
+
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
         if (edited.Count > 0)
@@ -351,6 +364,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             }
 
             db.ChangeTracker.Clear();
+            Touched.Add(made.Select(m => m.Book.Id));
             Added += fresh.Count;
             bookDelta += fresh.Count;
         }
@@ -384,6 +398,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     /// <see cref="Added"/> instead of counted as removed.</param>
     public async Task RemoveEmptyBooksAsync(LibrarionDbContext db, IReadOnlyCollection<int> bookIds, CancellationToken cancellationToken, bool undoAdd = false)
     {
+        // Called after files of these books went: those left lost a file key.
+        Touched.Add(bookIds);
         foreach (var chunk in bookIds.Distinct().Chunk(1000))
         {
             var empty = await db.Books.Where(b => chunk.Contains(b.Id) && !db.BookFiles.Any(f => f.BookId == b.Id))
@@ -395,6 +411,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             await CountAsync(db, counted, gone: true, cancellationToken);
             var ids = empty.Select(b => b.Id).ToList();
             await db.Books.Where(b => ids.Contains(b.Id)).ExecuteDeleteAsync(cancellationToken);
+            Touched.Shrunk = true;
             if (undoAdd)
                 Added -= empty.Count;
             else
@@ -441,6 +458,8 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                 continue;
             await CountAsync(db, back, gone: false, cancellationToken);
             await db.Books.Where(b => back.Contains(b.Id)).ExecuteUpdateAsync(s => s.SetProperty(b => b.MissingSince, (DateTime?)null), cancellationToken);
+            // A relinked file may have come back with other bytes.
+            Touched.Add(back);
             Returned += back.Count;
             bookDelta += back.Count;
         }

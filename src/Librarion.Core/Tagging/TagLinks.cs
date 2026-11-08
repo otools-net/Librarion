@@ -45,6 +45,7 @@ public static class TagLinks
         var fields = await db.Tags.Where(t => t.FieldKey == "author" || t.FieldKey == "series").Select(t => new { t.Id, t.FieldKey }).ToListAsync(cancellationToken);
         var author = fields.FirstOrDefault(f => f.FieldKey == "author")?.Id;
         var series = fields.FirstOrDefault(f => f.FieldKey == "series")?.Id;
+        var keysMoved = new List<int>();
         foreach (var chunk in books.Distinct().Chunk(1000))
         {
             var links = await db.BookTags.Where(l => chunk.Contains(l.BookId) && (l.Tag!.FieldId == author || l.Tag.FieldId == series))
@@ -67,7 +68,13 @@ public static class TagLinks
                 await db.Books.Where(b => b.Id == row.Id).ExecuteUpdateAsync(s => s
                     .SetProperty(b => b.SortAuthor, sortAuthor).SetProperty(b => b.SeriesId, seriesId).SetProperty(b => b.SeriesNumber, number)
                     .SetProperty(b => b.WorkKey, workKey), cancellationToken);
+                if (sortAuthor != row.SortAuthor || workKey != row.WorkKey)
+                    keysMoved.Add(row.Id);
             }
         }
+
+        // The work key and first author are duplicate keys (stage 6 chunk 11): their groups follow an edit or a merge.
+        if (keysMoved.Count > 0 && await Merging.DuplicateIndex.BuiltAsync(db, cancellationToken))
+            await Merging.DuplicateIndex.RefreshAsync(db, keysMoved, cancellationToken);
     }
 }

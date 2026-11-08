@@ -65,6 +65,9 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<BookTagSuppression> BookTagSuppressions => Set<BookTagSuppression>();
     public DbSet<MergeLog> MergeLogs => Set<MergeLog>();
     public DbSet<MergeLogLink> MergeLogLinks => Set<MergeLogLink>();
+    public DbSet<DuplicateGroup> DuplicateGroups => Set<DuplicateGroup>();
+    public DbSet<DuplicateMember> DuplicateMembers => Set<DuplicateMember>();
+    public DbSet<NotDuplicate> NotDuplicates => Set<NotDuplicate>();
     public DbSet<LibraryRoot> LibraryRoots => Set<LibraryRoot>();
     public DbSet<TaskRun> TaskRuns => Set<TaskRun>();
     public DbSet<TaskSchedule> TaskSchedules => Set<TaskSchedule>();
