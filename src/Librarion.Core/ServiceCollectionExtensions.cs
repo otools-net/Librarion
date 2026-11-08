@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         var dataOptions = configuration.GetSection(DataOptions.SectionName).Get<DataOptions>() ?? new DataOptions();
         services.AddSingleton(new Librarion.Core.Covers.CoverUploads(dataOptions.PathOf(contentRoot, "covers")));
         services.AddSingleton<Librarion.Core.Covers.CoverEditor>();
+        services.AddSingleton<Librarion.Core.Covers.TenantCoverStyles>();
         services.AddSingleton(configuration.GetSection(Librarion.Core.Covers.CoverOptions.SectionName).Get<Librarion.Core.Covers.CoverOptions>() ?? new Librarion.Core.Covers.CoverOptions());
         services.AddSingleton<Librarion.Core.Covers.CoverService>();
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();

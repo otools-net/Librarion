@@ -959,3 +959,54 @@ a.row-main {
 .imported-rows .row.selected {
     background: var(--accent-soft);
 }
+
+/* Administration › Catalog › Cover styles (cover-styles-section.ts): a panel per template, its samples in every palette
+   in a grid (four a row on a phone), a template turned off dimmed with its reassign button under it. */
+.cover-templates-intro {
+    max-width: 720px;
+    margin: 0 0 var(--space-3);
+}
+
+.cover-templates {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cover-template-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.cover-template-samples {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: var(--space-2);
+}
+
+.cover-template-samples img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+.cover-template.off .cover-template-samples {
+    opacity: 0.5;
+}
+
+.cover-template-off {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.cover-template-off .field-hint {
+    margin: 0;
+}

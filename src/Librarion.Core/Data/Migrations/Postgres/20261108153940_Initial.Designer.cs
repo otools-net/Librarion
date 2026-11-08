@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261106165755_Initial")]
+    [Migration("20261108153940_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -1118,6 +1118,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CoverTemplatesOff")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");

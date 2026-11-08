@@ -24,6 +24,8 @@ public enum BackgroundTaskKind : byte
     ScopeTags,
     /// <summary>Imported names ignored (the Imported tags page): their tags' imported links taken off in batches.</summary>
     TagIgnore,
+    /// <summary>The books of a cover template turned off given one of the templates still on, in batches.</summary>
+    CoverReassign,
 }
 
 public enum TaskTrigger : byte

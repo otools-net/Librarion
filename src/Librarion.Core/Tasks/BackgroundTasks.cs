@@ -63,9 +63,10 @@ public sealed class BackgroundTasks : IDisposable
     }
 
     /// <param name="libraryId">Null for a run over the whole tenant (a tag merge or delete).</param>
-    private sealed class Active(long id, int tenantId, int? libraryId, CancellationTokenSource cancel)
+    private sealed class Active(long id, int tenantId, int? libraryId, BackgroundTaskKind kind, CancellationTokenSource cancel)
     {
         public long Id => id;
+        public BackgroundTaskKind Kind => kind;
         public int TenantId => tenantId;
         public int? LibraryId => libraryId;
         public CancellationTokenSource Cancel => cancel;
@@ -161,7 +162,7 @@ public sealed class BackgroundTasks : IDisposable
                 return (raced, false);
             }
 
-            entry = new Active(run.Id, tenantId, libraryId, CancellationTokenSource.CreateLinkedTokenSource(stopping.Token));
+            entry = new Active(run.Id, tenantId, libraryId, kind, CancellationTokenSource.CreateLinkedTokenSource(stopping.Token));
             active[run.Id] = entry;
         }
 
@@ -261,13 +262,15 @@ public sealed class BackgroundTasks : IDisposable
     }
 
     /// <summary>
-    /// The runs going on (or waiting) in <paramref name="libraryIds"/>, and the tenant's own runs with
-    /// <paramref name="tenantRuns"/>, oldest first: what the progress panel follows. Asks the database only when something
-    /// runs in the tenant.
+    /// The runs going on (or waiting) in <paramref name="libraryIds"/>, and the tenant's own runs of
+    /// <paramref name="tenantKinds"/>, oldest first: what the progress panel follows. Asks the database only when
+    /// something runs in the tenant.
     /// </summary>
-    public async Task<IReadOnlyList<TaskRunInfo>> RunningAsync(int tenantId, IReadOnlyCollection<int> libraryIds, CancellationToken cancellationToken, bool tenantRuns = false)
+    public async Task<IReadOnlyList<TaskRunInfo>> RunningAsync(int tenantId, IReadOnlyCollection<int> libraryIds, CancellationToken cancellationToken,
+        IReadOnlyCollection<BackgroundTaskKind>? tenantKinds = null)
     {
-        var ids = active.Values.Where(a => a.TenantId == tenantId && (a.LibraryId is { } library ? libraryIds.Contains(library) : tenantRuns)).Select(a => a.Id).ToList();
+        var ids = active.Values.Where(a => a.TenantId == tenantId && (a.LibraryId is { } library ? libraryIds.Contains(library) : tenantKinds?.Contains(a.Kind) == true))
+            .Select(a => a.Id).ToList();
         if (ids.Count == 0)
             return [];
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
@@ -287,14 +290,15 @@ public sealed class BackgroundTasks : IDisposable
     }
 
     /// <summary>
-    /// The runs of <paramref name="libraryIds"/> (and the tenant's own with <paramref name="tenantRuns"/>), newest first,
+    /// The runs of <paramref name="libraryIds"/> (and the tenant's own of <paramref name="tenantKinds"/>), newest first,
     /// a page at a time by key (<paramref name="before"/>: the last id seen).
     /// </summary>
     public async Task<IReadOnlyList<TaskRunInfo>> HistoryAsync(int tenantId, IReadOnlyCollection<int> libraryIds, long? before, int limit, CancellationToken cancellationToken,
-        bool tenantRuns = false)
+        IReadOnlyCollection<BackgroundTaskKind>? tenantKinds = null)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
-        var query = db.TaskRuns.Where(r => r.LibraryId != null ? libraryIds.Contains(r.LibraryId.Value) : tenantRuns);
+        var kinds = tenantKinds ?? [];
+        var query = db.TaskRuns.Where(r => r.LibraryId != null ? libraryIds.Contains(r.LibraryId.Value) : kinds.Contains(r.Task));
         if (before is { } id)
             query = query.Where(r => r.Id < id);
         var rows = await query.OrderByDescending(r => r.Id).Take(Math.Clamp(limit, 1, 100)).ToListAsync(cancellationToken);

@@ -85,6 +85,26 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
         return await GeneratedAsync(template, variant, text, size, cancellationToken);
     }
 
+    /// <summary>
+    /// A template and palette drawn with a sample text (Cover styles' previews, stage 6 chunk 10b), at
+    /// <see cref="CoverSize.M"/>: made in memory, not cached (the text comes from the caller's language), at most
+    /// <see cref="CoverOptions.MaxParallel"/> at a time. Null for a style that doesn't exist.
+    /// </summary>
+    public async Task<byte[]?> SampleAsync(int template, int variant, CoverText text, CancellationToken cancellationToken = default)
+    {
+        if (template < 0 || template >= GeneratedCovers.Templates.Count || variant < 0 || variant >= GeneratedCovers.Palettes.Count)
+            return null;
+        await slots.WaitAsync(cancellationToken);
+        try
+        {
+            return await Task.Run(() => GeneratedCovers.Render(template, variant, text, CoverSize.M), cancellationToken);
+        }
+        finally
+        {
+            slots.Release();
+        }
+    }
+
     /// <summary>What a generated cover of the book says: its title (else its file's), first authors, series with number.</summary>
     private static async Task<CoverText> TextAsync(LibrarionDbContext db, int bookId, string? title, string? series, double? seriesNumber, string? fileName,
         CancellationToken cancellationToken)

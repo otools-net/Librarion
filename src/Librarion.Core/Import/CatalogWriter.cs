@@ -46,6 +46,9 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     private readonly TagAncestors ancestors = new();
     private int bookDelta;
 
+    /// <summary>The tenant's cover templates turned off (stage 6 chunk 10b), read once before the first new book; null until then.</summary>
+    private int? templatesOff;
+
     public int Added { get; private set; }
     public int Refreshed { get; private set; }
     public int Removed { get; private set; }
@@ -65,6 +68,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         foreach (var file in files)
             folders.Count(file.File.FolderId, 1);
         await DefaultsAsync(db, files.Select(f => f.File.FolderId), cancellationToken);
+        templatesOff ??= await TemplatesOffAsync(db, cancellationToken);
         var copies = await CopiesAsync(db, files, cancellationToken);
         await resolver.ResolveAsync(db, files.Where((_, i) => copies[i] == default).SelectMany(f => Names(f.Metadata)), cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
@@ -291,6 +295,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
                 folders.Count(file.FolderId, 1);
             using (StepTimes.Step("write: default tags"))
                 await DefaultsAsync(db, fresh.SelectMany(r => r.Files).Select(f => f.FolderId), cancellationToken);
+            templatesOff ??= await TemplatesOffAsync(db, cancellationToken);
             var planning = StepTimes.Step("write: books planned");
             // The books through EF (their ids come back), everything hanging on them in bulk: EF's per-row cost was
             // most of an import's time (agents/docs/features/imports.md#scale).
@@ -469,6 +474,9 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             await folders.ParentsAsync(db, folderIds, cancellationToken);
     }
 
+    private async Task<int> TemplatesOffAsync(LibrarionDbContext db, CancellationToken cancellationToken) =>
+        await db.Tenants.Where(t => t.Id == tenantId).Select(t => t.CoverTemplatesOff).FirstOrDefaultAsync(cancellationToken);
+
     /// <summary>The default tags of the library and of <paramref name="folderIds"/>' folders and those above them.</summary>
     private HashSet<int> DefaultsOf(IEnumerable<int> folderIds)
     {
@@ -623,7 +631,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
         // Every book gets its generated cover's design once (kept across re-reads: the same book keeps its look); the
         // cover inside the book is looked for on first view, and again after a re-read.
         if (book.GeneratedTemplate is null || book.GeneratedVariant is null)
-            (book.GeneratedTemplate, book.GeneratedVariant) = GeneratedCovers.Assign(book.WorkKey.Value);
+            (book.GeneratedTemplate, book.GeneratedVariant) = GeneratedCovers.Assign(book.WorkKey.Value, templatesOff ?? 0);
         // A cover a user chose (an upload, a style over the book's own) stays (stage 6 chunk 10).
         if (book.CoverSource is CoverSource.Book or CoverSource.Generated && !book.Edited.HasFlag(BookEdits.Cover))
         {

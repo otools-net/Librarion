@@ -8,7 +8,7 @@ import {
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
     BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
-    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates,
 } from './models';
 
 /**
@@ -20,6 +20,10 @@ export const coverUrl = (book: number, size: 's' | 'm' | 'l', version?: string |
     `api/books/${book}/cover/${size}${version ? `?v=${version}` : ''}`;
 
 /** A book drawn in a generated style, small: Change cover style's previews. */
+/** A template and palette drawn with a sample title and author (Cover styles, `tenant.coverStyles`), 240 px wide. */
+export const coverSampleUrl = (template: number, variant: number, title: string, author: string) =>
+    `api/covers/templates/${template}/preview/${variant}?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}`;
+
 export const coverPreviewUrl = (book: number, template: number, variant: number, version?: string | null) =>
     `api/books/${book}/cover/preview/${template}/${variant}${version ? `?v=${version}` : ''}`;
 
@@ -189,6 +193,10 @@ export class Api {
     coverStyle = (id: number, template: number, variant: number) => this.put<BookDetail>(`api/books/${id}/cover/style`, { template, variant });
     useOwnCover = (id: number) => this.delete<BookDetail>(`api/books/${id}/cover`);
     coverStyles = () => this.get<CoverStyles>('api/covers/styles');
+    coverTemplates = () => this.get<CoverTemplates>('api/covers/templates');
+    setCoverTemplate = (template: number, on: boolean) => this.put<CoverTemplates>(`api/covers/templates/${template}`, { on });
+    /** Starts the run giving a template turned off's books one of those on. */
+    reassignCoverTemplate = (template: number) => this.post<{ runId: number }>(`api/covers/templates/${template}/reassign`);
     updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);
     /** Done, or a run when it touches many books (`runId`). */
     deleteTag = (id: number) => this.delete<TagWork>(`api/tags/${id}`);

@@ -150,7 +150,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
        **Built:** [imported-tags](../features/imported-tags.md). Measured 2026-11-06 on PostgreSQL: INPX 1M 9.7 min
        (9.1 before), Calibre 2M **31.3 min** (28.9 before, budget 30), unchanged re-imports 35 s and 2.6 min. **The
        user's answer:** keep the index and make imports faster now (below), before the stage goes on.
-10. [ ] Covers (D-6.7): upload with Replace / Remove on the book page, Change cover style (template and palette
+10. [x] Covers (D-6.7): upload with Replace / Remove on the book page, Change cover style (template and palette
         picker with previews), Administration › Catalog › Cover styles (templates on / off, reassign as a run).
         **The user's answers (2026-11-06):** a new right `tenant.coverStyles` (Administrators and Curators) for Cover
         styles; uploads kept under a new data folder (`Librarion:Data:Directory`, default `data`), checked, decoded,
@@ -160,8 +160,9 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         Split:
     - 10a. [x] A book's cover on its page (`library.edit`): upload (Replace), remove, Change cover style with previews,
           "Use the book's cover"; imports leave a user's choice alone.
-    - 10b. [ ] Administration › Catalog › Cover styles (`tenant.coverStyles`): templates on / off per tenant (new books
-          get the ones on), previews, reassign a template's books as a background run.
+    - 10b. [x] Administration › Catalog › Cover styles (`tenant.coverStyles`): templates on / off per tenant (new books
+          get the ones on), previews, reassign a template's books as a background run. **Built:**
+          [book-display](../features/book-display.md#cover-styles-built-stage-6-chunk-10b).
 11. [ ] Duplicate detection (D-6.6): blocking keys stored at import and on edits, the first build as a background run
         (resumable), groups kept by imports and edits, the noise cap, `NotDuplicates`; the same-file setting (Q4: on by default);
         benchmark: the build and the planted duplicates found at 2M within budget. **`fb2-id` is a weak key** (see
@@ -237,7 +238,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 ### 6.2 Tagging and editing books
 - [ ] A book's tags and metadata on its page; edits kept through re-imports; suppressions.
 - [x] Selection, selection tagging, scope tagging (built, chunk 7); default tags of libraries and folders (chunk 8).
-- [ ] Cover upload, Change cover style, reassign a template's books.
+- [x] Cover upload, Change cover style, reassign a template's books.
 
 ### 6.3 Duplicates
 - [ ] Stored groups, the first build and its upkeep, Not a duplicate, the same-file setting.

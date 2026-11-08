@@ -14,14 +14,14 @@ const detail = (overrides: Partial<BookDetail> = {}): BookDetail => ({
 });
 
 describe('The cover editor', () => {
-    async function open(api: ApiMock, book = detail()) {
+    async function open(api: ApiMock, book = detail(), off: number[] = []) {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({ providers: testProviders(api) });
         api.libraries.mockResolvedValue([]);
         api.fields.mockResolvedValue([]);
         api.bookDuplicates.mockResolvedValue([]);
         api.book.mockResolvedValue(book);
-        api.coverStyles.mockResolvedValue({ templates: ['classic', 'typographic'], palettes: 3 });
+        api.coverStyles.mockResolvedValue({ templates: ['classic', 'typographic', 'geometric'], palettes: 3, off });
         TestBed.inject(SessionService).set(sessionInfo(['library.browse']));
         TestBed.inject(Router).resetConfig([{ path: 'books/:id', component: BookPage }]);
         const harness = await RouterTestingHarness.create();
@@ -53,13 +53,20 @@ describe('The cover editor', () => {
         expect([...harness.routeNativeElement!.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Cover')).toBe(false);
     });
 
+    it('offers the templates the tenant has on, and the book\'s own', async () => {
+        const { element } = await open(mockApi(), detail(), [1, 2]);
+
+        const rows = [...element.querySelectorAll('.cover-style-row')].map(r => r.getAttribute('aria-label'));
+        expect(rows).toEqual(['Classic', 'Typographic']);
+    });
+
     it('shows a preview of the book in every style and applies the one chosen', async () => {
         const api = mockApi();
         api.coverStyle.mockResolvedValue(detail({ coverSource: 'generated', coverVersion: 'v2', cover: { template: 1, variant: 0, chosen: true } }));
         const { element, stable } = await open(api);
 
         const previews = [...element.querySelectorAll<HTMLButtonElement>('.cover-style')];
-        expect(previews).toHaveLength(6);
+        expect(previews).toHaveLength(9);
         expect(previews[3].querySelector('img')!.getAttribute('src')).toBe('api/books/42/cover/preview/1/0?v=v1');
         expect(previews[3].getAttribute('aria-label')).toBe('Typographic, colors 1');
         expect(element.querySelector('[aria-pressed="true"]')).toBeNull();

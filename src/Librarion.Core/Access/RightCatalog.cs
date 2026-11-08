@@ -20,6 +20,7 @@ public static class Rights
     public const string ImportedTags = "library.importedTags";
     public const string DefaultTags = "library.defaultTags";
     public const string ManageTags = "tenant.tags";
+    public const string CoverStyles = "tenant.coverStyles";
     public const string ManageUsers = "tenant.users";
     public const string ManageLibraries = "tenant.libraries";
     public const string TenantSettings = "tenant.settings";
@@ -81,6 +82,7 @@ public static class RightCatalog
         new(Rights.ImportedTags, RightScope.Library, W, Curators, "catalog"),
         new(Rights.DefaultTags, RightScope.Library, W, Curators, "catalog"),
         new(Rights.ManageTags, RightScope.Tenant, W, Curators, "catalog"),
+        new(Rights.CoverStyles, RightScope.Tenant, W, Curators, "catalog"),
         new(Rights.ManageUsers, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.ManageLibraries, RightScope.Tenant, W, Administrators, "tenant"),
         new(Rights.TenantSettings, RightScope.Tenant, W, Administrators, "tenant"),

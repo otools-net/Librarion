@@ -17,6 +17,7 @@ libraries; the others tenant-wide (Manage tags too: a tenant's libraries share i
 | Imported tags | Catalog | yes | Administrators, Curators | map the tags and genres that came with imported books onto the tenant's tags, or ignore them ([imported tags](../administration/imported-tags.md)); seen per library, changed only with it in every library of the tenant, mapped only with Manage tags too |
 | Default tags | Catalog | yes | Administrators, Curators | choose the tags the library and its folders give the books that come in |
 | Manage tags | Catalog | yes | Administrators, Curators | create, rename, merge and delete the tenant's tags and fields (authors, series and the others), tenant-wide |
+| Manage cover styles | Catalog | yes | Administrators, Curators | turn the drawn cover styles on or off for new books and give the books of a style turned off another ([cover styles](../administration/cover-styles.md)), tenant-wide |
 | Manage accounts and groups | Tenant | yes | Administrators | create accounts in the tenant, put them in groups, choose what each group may do |
 | Manage libraries | Tenant | yes | Administrators | add, rename and delete the tenant's libraries |
 | Tenant settings | Tenant | yes | Administrators | change the defaults of the tenant's libraries and accounts |

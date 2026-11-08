@@ -27,7 +27,7 @@ public sealed class RightCatalogTests
         Assert.IsTrue(curators.All(r => r.DefaultGroups.Contains(BuiltInGroup.Administrators)), "Administrators get whatever curators get");
         Assert.IsTrue(RightCatalog.All.Where(r => r.DefaultGroups.Contains(BuiltInGroup.Users)).All(r => r.DefaultGroups.Contains(BuiltInGroup.Curators)),
             "Curators get whatever users get");
-        CollectionAssert.AreEquivalent(new[] { Rights.ManageTags, Rights.OwnPreferences, Rights.OwnPassword, Rights.SystemInfo },
+        CollectionAssert.AreEquivalent(new[] { Rights.ManageTags, Rights.CoverStyles, Rights.OwnPreferences, Rights.OwnPassword, Rights.SystemInfo },
             curators.Where(r => r.Scope == RightScope.Tenant).Select(r => r.Id).ToList(), "Curators hold no account, group, library or tenant settings right");
     }
 

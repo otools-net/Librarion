@@ -19,6 +19,12 @@ public sealed class Tenant
 
     public DateTime Created { get; set; }
 
+    /// <summary>
+    /// The generated cover templates turned off (bit <c>i</c> = template <c>i</c>, agents/docs/features/book-display.md):
+    /// new books get one of the others. At least one stays on.
+    /// </summary>
+    public int CoverTemplatesOff { get; set; }
+
     public List<Library> Libraries { get; set; } = [];
     public List<UserGroup> Groups { get; set; } = [];
     public List<TenantDisabledRight> DisabledRights { get; set; } = [];

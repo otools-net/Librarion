@@ -19,7 +19,7 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   `library.download`, `account.preferences`, `account.password`, `system.info`) and Curators (stage 6: the Users'
   rights and the catalog area's), given at tenant creation, then changed by hand. Built-in groups can't be deleted
   (`group.builtIn`). `RightCatalogTests` keeps Administrators ⊇ Curators ⊇ Users and Curators' tenant rights to
-  `tenant.tags` and the own-account / system ones. Tenants made before a new built-in group don't get it (no
+  `tenant.tags`, `tenant.coverStyles` and the own-account / system ones. Tenants made before a new built-in group don't get it (no
   upgrade before 1.0).
 - **Curation rights** (stage 6, D-6.1 of [stage-6-curation-plan](../development/stage-6-curation-plan.md)), area
   `catalog`, all Write: `library.tag` (plain tags on books), `library.edit` (a book's metadata and cover),
@@ -27,7 +27,7 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   library, changed only with it in every library of the tenant, mapped only with `tenant.tags` too:
   [imported-tags](imported-tags.md)),
   `library.defaultTags` (library and folder default tags), `tenant.tags` (the tag and field vocabulary, per tenant:
-  D9). The plan named them `tags.assign`, `books.edit`…; ids start with their scope (`EveryRightIsWellFormed`), so
+  D9), `tenant.coverStyles` (chunk 10b: Cover styles, [book-display](book-display.md#cover-styles-built-stage-6-chunk-10b)). The plan named them `tags.assign`, `books.edit`…; ids start with their scope (`EveryRightIsWellFormed`), so
   they were named by scope.
 - `library.folders` (stage 6 chunk 8b, Read, area `library`, Administrators and Curators): the folder view
   ([folders](folders.md)). Folder names and counts aren't narrowed by content filters (the user's answer,

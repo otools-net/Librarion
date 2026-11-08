@@ -41,18 +41,20 @@ const MAX_BYTES = 5 * 1024 * 1024;
                     <h3 class="cover-styles-title">{{ 'cover.styles' | t }}</h3>
                     @if (styles(); as styles) {
                         @for (template of styles.templates; track template; let t = $index) {
-                            <div class="cover-style-row" role="group" [attr.aria-label]="'cover.template.' + template | t">
-                                <span class="cover-style-name">{{ 'cover.template.' + template | t }}</span>
-                                <div class="cover-style-options">
-                                    @for (variant of palettes(); track variant) {
-                                        <button type="button" class="cover-style" [attr.aria-pressed]="isCurrent(t, variant)" [disabled]="busy()"
-                                                [attr.aria-label]="'cover.styleLabel' | t: { template: ('cover.template.' + template | t), palette: variant + 1 }"
-                                                (click)="style(t, variant)">
-                                            <img [src]="preview(t, variant)" alt="" width="80" height="120" loading="lazy" decoding="async">
-                                        </button>
-                                    }
+                            @if (offered(t)) {
+                                <div class="cover-style-row" role="group" [attr.aria-label]="'cover.template.' + template | t">
+                                    <span class="cover-style-name">{{ 'cover.template.' + template | t }}</span>
+                                    <div class="cover-style-options">
+                                        @for (variant of palettes(); track variant) {
+                                            <button type="button" class="cover-style" [attr.aria-pressed]="isCurrent(t, variant)" [disabled]="busy()"
+                                                    [attr.aria-label]="'cover.styleLabel' | t: { template: ('cover.template.' + template | t), palette: variant + 1 }"
+                                                    (click)="style(t, variant)">
+                                                <img [src]="preview(t, variant)" alt="" width="80" height="120" loading="lazy" decoding="async">
+                                            </button>
+                                        }
+                                    </div>
                                 </div>
-                            </div>
+                            }
                         }
                     }
                 </div>
@@ -90,6 +92,11 @@ export class CoverEditor implements OnInit {
 
     protected preview(template: number, variant: number): string {
         return coverPreviewUrl(this.book().id, template, variant, this.book().coverVersion);
+    }
+
+    /** A template the tenant has on, or the book's own (Cover styles, stage 6 chunk 10b). */
+    protected offered(template: number): boolean {
+        return !this.styles()?.off.includes(template) || this.book().cover?.template === template;
     }
 
     /** The style the book shows now: only when its cover is a generated one. */

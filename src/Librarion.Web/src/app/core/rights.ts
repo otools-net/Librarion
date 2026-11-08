@@ -14,6 +14,7 @@ export const Rights = {
     importedTags: 'library.importedTags',
     defaultTags: 'library.defaultTags',
     manageTags: 'tenant.tags',
+    coverStyles: 'tenant.coverStyles',
     manageUsers: 'tenant.users',
     manageLibraries: 'tenant.libraries',
     tenantSettings: 'tenant.settings',
@@ -30,7 +31,7 @@ export const Rights = {
 
 /** Any of these opens the administration. */
 export const ADMIN_RIGHTS: string[] = [
-    Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings, Rights.manageTags,
+    Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings, Rights.manageTags, Rights.coverStyles,
     Rights.manageTenants, Rights.manageAllUsers, Rights.serverSettings, Rights.serverSecurityLog,
 ];
 

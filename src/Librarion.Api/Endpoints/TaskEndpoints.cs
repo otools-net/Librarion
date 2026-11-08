@@ -170,16 +170,17 @@ public static class TaskEndpoints
             .WithName("DeleteLibrarySchedule")
             .WithSummary("Deletes a schedule.");
 
-        // Tag runs (deletes, merges, undos) belong to no library: those who manage tags follow them.
-        // Those who tag books follow the runs of their libraries too (scope tagging), and cancel only those.
-        var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan, Rights.ManageTags, Rights.TagBooks);
+        // Tag runs (deletes, merges, undos) belong to no library: those who manage tags follow them, those who manage
+        // cover styles the reassignments (TenantKinds). Those who tag books follow the runs of their libraries too
+        // (scope tagging), and cancel only those.
+        var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan, Rights.ManageTags, Rights.TagBooks, Rights.CoverStyles);
 
         runs.MapGet("/running", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state
-                    ? Results.Ok(await tasks.RunningAsync(tenantId, FollowedLibraries(state), context.RequestAborted, state.Has(Rights.ManageTags)))
+                    ? Results.Ok(await tasks.RunningAsync(tenantId, FollowedLibraries(state), context.RequestAborted, TenantKinds(state)))
                     : Results.NotFound())
             .WithName("ListRunningTasks")
-            .WithSummary("The runs going on (or waiting) in the libraries the caller may scan, and the tenant's tag runs for those who manage tags, with their progress: what the progress panel follows.");
+            .WithSummary("The runs going on (or waiting) in the libraries the caller may scan, and the tenant's tag runs for those who manage tags (cover reassignments for those who manage cover styles), with their progress: what the progress panel follows.");
 
         runs.MapGet("/overview", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks, TaskSchedules schedules) =>
             {
@@ -198,7 +199,7 @@ public static class TaskEndpoints
 
         runs.MapGet("/", async (long? before, int? limit, HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state
-                    ? Results.Ok(await tasks.HistoryAsync(tenantId, FollowedLibraries(state), before, limit ?? 20, context.RequestAborted, state.Has(Rights.ManageTags)))
+                    ? Results.Ok(await tasks.HistoryAsync(tenantId, FollowedLibraries(state), before, limit ?? 20, context.RequestAborted, TenantKinds(state)))
                     : Results.NotFound())
             .WithName("ListTasks")
             .WithSummary("The task runs of every library the caller may scan, newest first; `before` = the last id of the page before.");
@@ -268,6 +269,16 @@ public static class TaskEndpoints
     private static IReadOnlyCollection<int> FollowedLibraries(AccessState state) =>
         state.Access.LibrariesWith(Rights.Scan).Concat(state.Access.LibrariesWith(Rights.TagBooks)).ToHashSet();
 
+    private static readonly BackgroundTaskKind[] TagRuns =
+    [
+        BackgroundTaskKind.TagDelete, BackgroundTaskKind.TagMerge, BackgroundTaskKind.FieldMerge, BackgroundTaskKind.MergeUndo, BackgroundTaskKind.TagCounts,
+        BackgroundTaskKind.TagIgnore,
+    ];
+
+    /// <summary>The tenant's runs (no library) the caller follows: tag runs with <c>tenant.tags</c>, cover reassignments with <c>tenant.coverStyles</c>.</summary>
+    private static IReadOnlyCollection<BackgroundTaskKind> TenantKinds(AccessState state) =>
+        [.. state.Has(Rights.ManageTags) ? TagRuns : [], .. state.Has(Rights.CoverStyles) ? [BackgroundTaskKind.CoverReassign] : Array.Empty<BackgroundTaskKind>()];
+
     /// <summary>A library's run is cancelled by those who may scan there; a scope tagging also by those who tag there.</summary>
     private static async Task<bool> MayCancelAsync(TaskRunInfo info, CurrentAccess current)
     {
@@ -285,7 +296,7 @@ public static class TaskEndpoints
             return null;
         return info.LibraryId is { } library
             ? state.Access.HasIn(Rights.Scan, library) || state.Access.HasIn(Rights.TagBooks, library) ? info : null
-            : state.Has(Rights.ManageTags) ? info : null;
+            : TenantKinds(state).Contains(info.Task) ? info : null;
     }
 
     private static string Code(RootProblem problem) => problem switch

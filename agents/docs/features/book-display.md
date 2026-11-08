@@ -4,8 +4,9 @@ Built (stage 2): `Title` / `SortTitle`, the cover columns, `BookTitles` and `Fil
 Built (stage 3): `Core/Covers/` (`CoverExtractor` per format, `CoverImages` decode / resize / WebP, `CoverCache`,
 `CoverService`, `Generated/` fonts, layout, templates), route `GET api/books/{id}/cover/{s|m|l}` (`library.browse`),
 assignment at import (`CatalogWriter.Apply`); tests `CoverTests`. Built (stage 6 chunk 10a): upload, Change cover
-style, back to the book's own ([below](#a-books-cover-chosen-built-stage-6-chunk-10a)). Planned (10b): templates on /
-off per tenant. Reference for the behaviour (not the code:
+style, back to the book's own ([below](#a-books-cover-chosen-built-stage-6-chunk-10a)). Built (10b): Cover styles,
+templates on / off per tenant and a template's books reassigned ([below](#cover-styles-built-stage-6-chunk-10b)).
+Reference for the behaviour (not the code:
 GPL-3): calibre-web (`C:\workspace\calibre-web`: `cps/helper.py` `get_book_cover*`,
 `cps/tasks/thumbnail.py`, `cps/static/generic_cover.jpg`). Decision D15 in [foundation-plan](../development/foundation-plan.md).
 
@@ -135,6 +136,32 @@ Code: `Core/Covers/CoverEditor.cs`, `CoverUploads.cs`, `CoverImages.Remake`, `Co
   route, which then answered 404; the route checks the picture itself.
 - The client checks the 5 MB before sending. A sheet's host must call `open()` (an effect on `viewChild(Sheet)`, as
   `book-editor.ts`): jsdom finds elements in a closed `<dialog>`, so the spec checks the `open` attribute too.
+
+## Cover styles (built, stage 6 chunk 10b)
+
+Code: `Core/Covers/TenantCoverStyles.cs`, `GeneratedCovers.Assign(identity, off)` / `On`, `Tenant.CoverTemplatesOff`,
+`CatalogWriter` (reads it once per writer, before its first new book), `CoverService.SampleAsync`, routes in
+`CoverEndpoints`; client `admin/cover-styles-section.ts` (Administration › Catalog › Cover styles), styles at the end of
+`styles/admin.css`; tests `CoverStyleTests` (both providers), `admin/cover-styles.spec.ts`, e2e
+`specs/cover-styles.spec.ts`. Right `tenant.coverStyles` (Administrators and Curators, the user's answer 2026-11-06).
+
+- **Stored** as a bit mask on the tenant (`CoverTemplatesOff`, bit `i` = template `i` off; 0 = all on; room for 32
+  templates). At least one stays on (`coverStyle.lastOn`).
+- **Assignment** picks among the templates on: `on[mix % on.Count]`, the palette from `mix / on.Count`. With every
+  template on it is the old formula, so no book changes look when nothing is turned off (`CoverStyleTests` checks it).
+- **Turning off changes no book** (D15: stable). **Give its books another style** (only for a template off,
+  `coverStyle.on` otherwise): `POST api/covers/templates/{t}/reassign` starts a tenant run `CoverReassign`, which walks
+  `Books` by `Id` in batches of 1,000 (`Id > last AND GeneratedTemplate = t`, no extra index: the run reads at most the
+  whole table once by its key), skips books with `BookEdits.Cover` (a style chosen on the book's page stays), and gives
+  the rest `Assign(WorkKey, off)` by one `UPDATE` per new (template, palette) pair, moving `Updated` so the covers'
+  addresses change. No count is shown before it starts (it would be a scan of the catalog); the run reports how many
+  books changed. Not measured at 2M yet. As every tenant run, scans and imports of the tenant wait while it goes.
+- **Previews** draw a sample text sent by the client (its translated title and author, cut at 100 characters) at `M`
+  in memory, not cached: a caller's text never fills the cover cache.
+- The book page's Cover offers templates on, and the book's own (`GET api/covers/styles` has `off`); the API still
+  takes any template there (an explicit choice).
+- Routes: `GET api/covers/templates`, `PUT …/{t} {on}`, `POST …/{t}/reassign` (202 `{runId}`), `GET
+  …/{t}/preview/{v}?title&author`.
 
 ## Image library (D17)
 

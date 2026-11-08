@@ -6,6 +6,10 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Administration → Catalog → Cover styles** (with the new Manage cover styles right, Administrators and
+  Curators): the drawn cover styles with a sample in every set of colors, each turned on or off for new books (one
+  stays on). The books of a style turned off keep it until **Give its books another style**, a background run; a
+  style chosen on a book's page stays. A book's **Cover** offers only the styles turned on.
 - **Cover** on a book's page (for those who may edit books): upload a picture (JPEG, PNG or WebP, up to 5 MB), pick
   a drawn cover from previews of the book in every style and color set, or go back to the book's own cover. The
   choice stays through re-imports. Uploaded covers are kept in a new data folder (`Librarion:Data:Directory`,

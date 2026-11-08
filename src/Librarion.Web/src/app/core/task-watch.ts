@@ -32,7 +32,7 @@ export class TaskWatch {
     readonly running = signal<TaskRunInfo[]>([]);
     readonly ended = signal<TaskRunInfo[]>([]);
     // Tag runs (merges, deletes) belong to no library: those who manage tags follow them too.
-    private readonly enabled = computed(() => this.session.session()?.user != null && (this.session.can(Rights.scan) || this.session.can(Rights.manageTags) || this.session.can(Rights.tagBooks)));
+    private readonly enabled = computed(() => this.session.session()?.user != null && (this.session.can(Rights.scan) || this.session.can(Rights.manageTags) || this.session.can(Rights.tagBooks) || this.session.can(Rights.coverStyles)));
 
     private watchers = 0;
     private timer: ReturnType<typeof setTimeout> | null = null;

@@ -24,6 +24,8 @@ export function runDetail(i18n: I18n, run: TaskRunInfo): string {
         const progress = run.progress;
         if (!progress)
             return i18n.t('tasks.starting');
+        if (run.task === 'coverReassign')
+            return i18n.t('tasks.coverProgress', { books: progress.changed });
         if (TAG_TASKS.has(run.task))
             return i18n.t('tasks.tagProgress', { links: progress.changed + progress.removed, tag: progress.current ?? '' });
         return run.task === 'import'
@@ -33,7 +35,8 @@ export function runDetail(i18n: I18n, run: TaskRunInfo): string {
     const counts = run.counts;
     const parts = [
         counts && TAG_TASKS.has(run.task) && i18n.t('tasks.tagCounts', { links: counts.changed + counts.removed }),
-        counts && !TAG_TASKS.has(run.task) && (run.task === 'import'
+        counts && run.task === 'coverReassign' && i18n.t('tasks.coverCounts', { books: counts.changed }),
+        counts && !TAG_TASKS.has(run.task) && run.task !== 'coverReassign' && (run.task === 'import'
             ? i18n.t('tasks.importCounts', { added: counts.added, changed: counts.changed, unchanged: counts.unchanged, skipped: counts.skipped })
             : i18n.t('tasks.counts', { added: counts.added, changed: counts.changed, missing: counts.missing, returned: counts.returned, removed: counts.removed, unchanged: counts.unchanged })),
         run.summary,

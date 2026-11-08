@@ -161,6 +161,20 @@ export interface BookDetail {
 export interface CoverStyles {
     templates: string[];
     palettes: number;
+    /** The templates the tenant turned off (Cover styles): not offered, but for the book's own. */
+    off: number[];
+}
+
+/** A generated template on Cover styles (`api/covers/templates`): new books get those on. */
+export interface CoverTemplateInfo {
+    index: number;
+    name: string;
+    on: boolean;
+}
+
+export interface CoverTemplates {
+    templates: CoverTemplateInfo[];
+    palettes: number;
 }
 
 /** A tag a book's field is to have: by id, or by name (found in the field, else made). */
@@ -510,7 +524,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore' | 'coverReassign';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;

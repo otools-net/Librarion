@@ -10,13 +10,28 @@ namespace Librarion.Api.Endpoints;
 /// A book's cover chosen on its page (stage 6 chunk 10, agents/docs/features/book-display.md): an upload, a generated
 /// style, back to its own, each with <c>library.edit</c> in the book's library, answering the book as <c>GET
 /// api/books/{id}</c> does; the styles and their previews for the picker. A book the caller can't see is not found.
+/// Cover styles (stage 6 chunk 10b, <c>tenant.coverStyles</c>): the tenant's templates on or off, previews, and the books
+/// of a template turned off given another as a background run.
 /// </summary>
 public static class CoverEndpoints
 {
     public sealed record StyleInput(int Template, int Variant);
 
-    /// <summary>The generated styles: templates by index (their names, translated by the client) and how many palettes each has.</summary>
-    public sealed record CoverStyles(IReadOnlyList<string> Templates, int Palettes);
+    /// <summary>
+    /// The generated styles: templates by index (their names, translated by the client), how many palettes each has, and
+    /// the templates the tenant turned off (the book page offers those on, and the book's own).
+    /// </summary>
+    public sealed record CoverStyles(IReadOnlyList<string> Templates, int Palettes, IReadOnlyList<int> Off);
+
+    /// <summary>Cover styles: every template with whether it is on, and the number of palettes.</summary>
+    public sealed record CoverTemplates(IReadOnlyList<CoverTemplateInfo> Templates, int Palettes);
+
+    public sealed record TemplateInput(bool On);
+
+    public sealed record ReassignStarted(long RunId);
+
+    /// <summary>The longest sample text drawn by a preview.</summary>
+    private const int MaxSampleLength = 100;
 
     public static void MapCoverEndpoints(this IEndpointRouteBuilder api)
     {
@@ -78,11 +93,51 @@ public static class CoverEndpoints
             .WithName("PreviewCoverStyle")
             .WithSummary("The book drawn in a generated style, small (80 px wide): the previews of Change cover style.");
 
-        api.MapGet("/covers/styles", () => Results.Ok(new CoverStyles(GeneratedCovers.Templates.Select(t => t.Name).ToList(), GeneratedCovers.Palettes.Count)))
+        api.MapGet("/covers/styles", async (HttpContext context, CurrentAccess current, TenantCoverStyles styles) =>
+            {
+                var state = await current.GetAsync();
+                var off = GeneratedCovers.On(0).Except(GeneratedCovers.On(await styles.OffAsync(state.TenantId!.Value, context.RequestAborted))).ToList();
+                return Results.Ok(new CoverStyles(GeneratedCovers.Templates.Select(t => t.Name).ToList(), GeneratedCovers.Palettes.Count, off));
+            })
             .WithTags("Covers")
             .RequireRight(Rights.EditBooks)
             .WithName("ListCoverStyles")
-            .WithSummary("The generated cover styles: the templates by index and the number of palettes.");
+            .WithSummary("The generated cover styles: the templates by index, the number of palettes, the templates the tenant turned off.");
+
+        var templates = api.MapGroup("/covers/templates").WithTags("Covers").RequireRight(Rights.CoverStyles);
+
+        templates.MapGet("", async (HttpContext context, CurrentAccess current, TenantCoverStyles styles) =>
+                Results.Ok(new CoverTemplates(await styles.ListAsync((await current.GetAsync()).TenantId!.Value, context.RequestAborted), GeneratedCovers.Palettes.Count)))
+            .WithName("ListCoverTemplates")
+            .WithSummary("Cover styles: every generated template (index, name, whether new books get it) and the number of palettes.");
+
+        templates.MapPut("/{template:int}", async (int template, TemplateInput input, HttpContext context, CurrentAccess current, TenantCoverStyles styles) =>
+            {
+                var result = await styles.SetAsync((await current.GetAsync()).TenantId!.Value, template, input.On, context.RequestAborted);
+                return ApiResults.From(result, list => Results.Ok(new CoverTemplates(list, GeneratedCovers.Palettes.Count)));
+            })
+            .WithName("SetCoverTemplate")
+            .WithSummary("Turns a template on or off for new books (books keep theirs). Refused: `cover.style` (no such template), `coverStyle.lastOn` (one stays on).");
+
+        templates.MapPost("/{template:int}/reassign", async (int template, HttpContext context, CurrentAccess current, TenantCoverStyles styles) =>
+            {
+                var state = await current.GetAsync();
+                var result = await styles.ReassignAsync(state.TenantId!.Value, template, state.User!.Id, context.RequestAborted);
+                return ApiResults.From(result, run => Results.Accepted(null, new ReassignStarted(run)));
+            })
+            .WithName("ReassignCoverTemplate")
+            .WithSummary("Starts a background run giving the books of a template turned off one of those on (a style chosen on a book's page stays): 202 with the run's id. Refused: `coverStyle.on`.");
+
+        templates.MapGet("/{template:int}/preview/{variant:int}", async (int template, int variant, string? title, string? author, HttpContext context, CoverService service) =>
+            {
+                var text = new CoverText(Sample(title, "Title"), string.IsNullOrWhiteSpace(author) ? null : Sample(author, ""), null);
+                if (await service.SampleAsync(template, variant, text, context.RequestAborted) is not { } picture)
+                    return Results.NotFound();
+                context.Response.Headers.CacheControl = "private, max-age=86400";
+                return Results.File(picture, "image/webp");
+            })
+            .WithName("PreviewCoverTemplate")
+            .WithSummary($"A template and palette drawn with a sample `title` and `author` (at most {MaxSampleLength} characters each), 240 px wide: Cover styles' previews.");
     }
 
     /// <summary>The caller and the book when it may edit it; (state, null) when the book isn't there for it, (null, null) when it may not edit it.</summary>
@@ -103,6 +158,9 @@ public static class CoverEndpoints
         var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
         return Results.Ok(BookEndpoints.WithRights((await queries.GetAsync(state.TenantId!.Value, visibility, id, context.RequestAborted))!, state));
     }
+
+    private static string Sample(string? text, string fallback) =>
+        string.IsNullOrWhiteSpace(text) ? fallback : text.Trim() is var trimmed && trimmed.Length > MaxSampleLength ? trimmed[..MaxSampleLength] : trimmed;
 
     private static IResult Invalid(string code) => TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["cover"] = [code] });
 }
