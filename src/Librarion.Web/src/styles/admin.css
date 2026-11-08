@@ -1010,3 +1010,77 @@ a.row-main {
 .cover-template-off .field-hint {
     margin: 0;
 }
+
+/* Administration › Catalog › Duplicates (duplicates-section.ts): a card per group, its books in a row that wraps, the
+   actions under them. */
+.duplicate-groups {
+    display: grid;
+    gap: var(--space-3);
+    max-width: 960px;
+}
+
+.duplicate-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+}
+
+.duplicate-reason {
+    margin: 0;
+    color: var(--accent);
+    font-size: var(--text-sm);
+}
+
+.duplicate-books {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.duplicate-book {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--target);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.duplicate-book:hover .book-title {
+    color: var(--accent);
+}
+
+.duplicate-book .book-cover {
+    flex-shrink: 0;
+    width: 36px;
+    height: 54px;
+    border-radius: 4px;
+}
+
+.duplicate-book .book-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.duplicate-book .book-title {
+    -webkit-line-clamp: 2;
+}
+
+.duplicate-book .book-formats {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.duplicate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}

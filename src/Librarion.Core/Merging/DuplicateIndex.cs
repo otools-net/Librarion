@@ -172,6 +172,10 @@ public sealed class DuplicateIndex(TenantDb tenantDb, TimeProvider time)
             }
         }
 
+        // SQLite plans by statistics it only has once asked: without them the Duplicates page's member lookup walked the
+        // tenant's (TenantId, BookId) index instead of the key (850 ms at 2M). PostgreSQL's autovacuum keeps its own.
+        if (db.Database.IsSqlite())
+            await db.Database.ExecuteSqlRawAsync("ANALYZE \"DuplicateGroups\"; ANALYZE \"DuplicateMembers\";", cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
         await db.Tenants.Where(t => t.Id == tenantId).ExecuteUpdateAsync(s => s.SetProperty(t => t.DuplicatesBuilt, now), cancellationToken);
         return groups;

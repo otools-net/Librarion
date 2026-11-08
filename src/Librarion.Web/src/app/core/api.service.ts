@@ -8,7 +8,7 @@ import {
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
     BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
-    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates, DuplicatePage, BookMergeInput,
 } from './models';
 
 /**
@@ -160,6 +160,16 @@ export class Api {
     book = (id: number) => this.get<BookDetail>(`api/books/${id}`);
     /** Other books the session sees that may be this one, strongest reason first (at most 20). */
     bookDuplicates = (id: number) => this.get<BookDuplicate[]>(`api/books/${id}/duplicates`);
+    /** The Duplicates page: a library's groups, the biggest first (`library.merge`). */
+    duplicates = (library: number, level: string | null, after: string | null, limit = 20) =>
+        this.get<DuplicatePage>('api/duplicates', { library, level, after, limit });
+    duplicateContext = () => this.get<{ libraries: number[] }>('api/duplicates/context');
+    /** Merges books into `targetId`; answers the kept book. */
+    mergeBooks = (input: BookMergeInput) => this.post<BookDetail>('api/books/merge', input);
+    /** The books are not duplicates of each other. */
+    notDuplicates = (bookIds: number[]) => this.post<void>('api/duplicates/not', { bookIds });
+    /** Starts the run finding the duplicates again. */
+    buildDuplicates = () => this.post<{ runId: number }>('api/duplicates/build');
 
     fields = () => this.get<FieldInfo[]>('api/fields');
     /**

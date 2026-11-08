@@ -6,6 +6,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Administration → Catalog → Duplicates** (with the Merge books right): a library's possible duplicates, the biggest
+  groups first, with why (the same file, identifier, or title and author). **Compare and merge** shows the books side
+  by side (one under the other on a phone): keep one, choose which title, cover, description and rating it gets, and
+  the others' files, tags and identifiers move into it; their pages and links lead to the kept book. **Not
+  duplicates** sets books apart for good. **Find again** looks at every book again in the background. A book's
+  page offers the same for each possible duplicate.
 - Possible duplicate books are now found once for the whole catalog and kept up to date by every scan and import
   (the first scan or import after this update finds them); a run in the background can find them again. Books marked
   as different stay apart. The Duplicates page comes next.

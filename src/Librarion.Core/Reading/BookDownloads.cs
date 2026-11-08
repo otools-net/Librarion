@@ -41,6 +41,9 @@ public sealed class BookDownloads(TenantDb tenantDb)
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var visible = await BookQueries.VisibleAsync(db, visibility, null, cancellationToken);
         var found = await StoredAsync(db.BookFiles.Where(f => f.Id == fileId && f.BookId == bookId && visible.Any(b => b.Id == bookId)).Take(1), cancellationToken);
+        // A merged book's file is its kept book's now (stage 6 chunk 12): the old address still downloads it.
+        if (found.Count == 0 && await Merging.BookMerger.CurrentAsync(db, bookId, cancellationToken) is { } current && current != bookId)
+            found = await StoredAsync(db.BookFiles.Where(f => f.Id == fileId && f.BookId == current && visible.Any(b => b.Id == current)).Take(1), cancellationToken);
         return found.Count == 0 ? null : found[0].Target;
     }
 

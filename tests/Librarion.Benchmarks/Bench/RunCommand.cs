@@ -96,6 +96,11 @@ public static class RunCommand
         }
 
         var open = new BookVisibility(new Dictionary<int, IReadOnlyList<FilterProfile>> { [libraryId] = [new FilterProfile([], [])] });
+        // The Duplicates page (stage 6 chunk 12) on the groups the `duplicates` command built: a page deep in the list, found once.
+        var duplicates = services.GetRequiredService<Librarion.Core.Merging.DuplicateQueries>();
+        string? duplicatesCursor = null;
+        for (var i = 0; i < 20; i++)
+            duplicatesCursor = (await duplicates.ListAsync(tenant.Id, open, libraryId, null, duplicatesCursor, 100, cancellationToken)).Next ?? duplicatesCursor;
         var filtered = new List<(string Name, BookVisibility Visibility)>();
         foreach (var name in new[] { "filter-0", "filter-1", "filter-2" })
         {
@@ -139,6 +144,9 @@ public static class RunCommand
             ("books of a ZIP of 100k entries, by title", ListBudget, _ => List(open, new BookPageRequest(libraryId, FolderId: zipFolder))),
             ("books of a ZIP of 100k entries, by title, middle page", ListBudget, _ => List(open, new BookPageRequest(libraryId, After: titleCursor, FolderId: zipFolder))),
             ("books of a folder of loose files, by author", ListBudget, _ => List(open, new BookPageRequest(libraryId, BookSort.Author, FolderId: looseFolder))),
+            ("duplicates page: first page", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, null, null, 20, cancellationToken)).Items.Count),
+            ("duplicates page: deep page", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, null, duplicatesCursor, 20, cancellationToken)).Items.Count),
+            ("duplicates page: same identifier", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, Librarion.Core.Catalog.DuplicateReason.Identifier, null, 20, cancellationToken)).Items.Count),
             // The Imported tags page (stage 6 chunk 9): 50k plain tags walked by books from the most (a deep page, and a status
             // none has: the walk's bound per request), a small field read whole, the coverage line.
             ("imported tags: plain tags by books, first page", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),

@@ -410,6 +410,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "BookCount", "Id");
+
                     b.HasIndex("TenantId", "Level", "KeyHash");
 
                     b.ToTable("DuplicateGroups");

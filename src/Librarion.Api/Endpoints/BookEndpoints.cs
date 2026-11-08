@@ -281,6 +281,7 @@ public static class BookEndpoints
         CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId),
         CanTag = book.MergedIntoId is null && state.Access.HasIn(Rights.TagBooks, book.LibraryId),
         CanEdit = book.MergedIntoId is null && state.Access.HasIn(Rights.EditBooks, book.LibraryId),
+        CanMerge = book.MergedIntoId is null && state.Access.HasIn(Rights.MergeBooks, book.LibraryId),
     };
 
     /// <summary>The libraries where the caller may tag books.</summary>

@@ -26,8 +26,59 @@ client `app/curation/duplicates/`, the duplicates panel of `app/books/book-page`
 Built (stage 5): the book page's **read-only** panel of possible duplicates, computed per book on demand (same file
 by size + CRC, same identifier, same work key; capped, no tables yet): [book-page](book-page.md). Built (stage 6 chunk
 11): the **stored duplicate groups**, their upkeep, `NotDuplicates` and the same-file setting
-([below](#stored-duplicate-groups-built-stage-6-chunk-11)). Compare, merge and the Duplicates page are still planned
-(chunks 12-13).
+([below](#stored-duplicate-groups-built-stage-6-chunk-11)). Built (chunk 12): merging books, the Duplicates page, Not
+a duplicate ([below](#merging-books-built-stage-6-chunk-12)). Bulk merge, undo and split are still planned (chunk 13).
+
+## Merging books (built, stage 6 chunk 12)
+
+Code: `Core/Merging/BookMerger.cs`, `DuplicateQueries.cs`; routes in `Api/Endpoints/DuplicateEndpoints.cs`
+(`POST api/books/merge`, `GET api/duplicates`, `GET api/duplicates/context`, `POST api/duplicates/not`), `CanMerge` on
+`BookDetail`; client `books/book-compare.ts` (Compare and merge), `admin/duplicates-section.ts`, the book page's
+duplicate actions; styles at the end of `styles/book.css` and `styles/admin.css`; tests `BookMergeTests` (both
+providers), `books/book-compare.spec.ts`, `admin/duplicates.spec.ts`, e2e `specs/duplicates.spec.ts` (every device,
+axe on the page and the sheet in both themes).
+
+- **Rights:** `library.merge` in the books' library, on books the caller sees (content filters too); a merged or
+  missing book is not found.
+- **One library only** (`merge.library`): a book belongs to one library, and its files with it (downloads are checked
+  in the file's library). The compare sheet shows another library's book but can't include it.
+- **What moves** (`BookMerger.MergeAsync`, one transaction, books saved one source at a time): files; links (a tag
+  the kept book has stays as it is, the others move with their source, ordinals after the kept book's); identifiers
+  and properties it lacks; the sources' suppressions are dropped. Counts by delta (`TagLinks.SnapshotAsync` /
+  `CountAsync`), `Libraries.BookCount` minus the sources, sort columns and work key of the kept book, then the
+  duplicate groups of every book involved refreshed (no cleanup pass: the refresh recomputes every group they were in).
+- **Single values** (`titleFrom`, `descriptionFrom`, `ratingFrom`, `coverFrom`: a book among those merged, else
+  `merge.choice`): copied and marked edited so re-reads keep them. A cover from the books' files is looked for again
+  among all of the kept book's files (the best format wins, not necessarily the chosen book's); an upload or a style
+  is kept as the user's (`BookEdits.Cover`).
+- **Redirects:** a source gets `MergedIntoId`; `GET api/books/{id}` answers it (the client goes there), and the cover
+  and file routes follow it (`BookMerger.CurrentAsync`, at most 10 hops, asked only when the id isn't found as a
+  visible book: no cost for the others). Chains are followed, not rewritten (no index on `MergedIntoId` needed).
+- **Log:** one `MergeLog` per source, kind `Book` (source and target are books: every tag query leaves this kind out,
+  as tag and book ids would collide), `Data` = files, links (moved or dropped), identifiers, properties,
+  suppressions, and the kept book's values before: what chunk 13's undo needs.
+- **Re-imports:** a scan finds the moved files under the kept book; the Calibre importer already follows
+  `MergedIntoId` to match a source's records. A changed file re-reads the kept book's imported links from that file
+  only (manual and chosen values stay).
+
+### The Duplicates page
+
+- Administration › Catalog › Duplicates (`library.merge`): a library (those of `api/duplicates/context`), a reason
+  (all, same file, identifier, title and author), Find again (the rebuild run, asked first).
+- `DuplicateQueries.ListAsync`: groups not noise, the biggest first, by key on `DuplicateGroups (TenantId, BookCount,
+  Id)` (both descending, so one index direction; `BookCount >= 2` leaves noise out as a range: `NOT Noise` made
+  SQLite sort every group); a group shows with its members the caller sees in the
+  library, when there are two or more. At most 5 × 200 groups read a request; `next` is where it stopped (a short page
+  with `next` means more). `built` false before the first build. Groups of another library's same files never show
+  here (they can't be merged); the book page lists them.
+- A group lists its first 6 books as items (`ShownBooks`; "and N more") and every visible id (`BookIds`).
+  Measured at 2M ([scale](../development/scale.md#measured)): 44 ms p95 on PostgreSQL, 79 on SQLite.
+- A group's **Compare and merge** opens the sheet with its books; **Not duplicates** marks every pair (asked first).
+- The compare sheet: cards side by side (grid columns of at least 220 px, scrolled sideways), stacked under 640 px;
+  rows whose values differ marked (`accent-soft`); the kept book at first is the one with most metadata, else the
+  oldest; a radio for each single value that differs (only among the kept and included books).
+- The book page's panel: Compare and merge (this book and the candidate) and Not a duplicate, with `canMerge`; after a
+  merge into another book the page goes there.
 
 ## Stored duplicate groups (built, stage 6 chunk 11)
 

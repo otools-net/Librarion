@@ -40,7 +40,12 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
             })
             .FirstOrDefaultAsync(cancellationToken);
         if (book is null)
-            return null;
+        {
+            // A merged book's cover is its kept book's (stage 6 chunk 12): one more look, only for an id not found.
+            return await Merging.BookMerger.CurrentAsync(db, bookId, cancellationToken) is { } current && current != bookId
+                ? await GetAsync(tenantId, visibility, current, size, cancellationToken)
+                : null;
+        }
 
         if (book.CoverSource == CoverSource.Uploaded && book.CoverFile is { } upload && await UploadedAsync(upload, size, cancellationToken) is { } uploaded)
             return uploaded;

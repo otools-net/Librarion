@@ -6,12 +6,14 @@ import { Api, coverUrl, fileUrl } from '../core/api.service';
 import { errorText } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
+import { ToastService } from '../core/toast.service';
 import { BookDetail, BookDuplicate, BookFile, BookListItem, BookTag } from '../core/models';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from '../tags/field-catalog';
 import { BookEditor } from './book-editor';
 import { CoverEditor } from './cover-editor';
+import { BookCompare } from './book-compare';
 import { tagLink } from '../tags/tag-link';
 
 /** The book's tags of one field (or the plain tags, `field` null), in the order the server gave them. */
@@ -29,7 +31,7 @@ interface FieldGroup {
  */
 @Component({
     selector: 'lib-book-page',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor, CoverEditor],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor, CoverEditor, BookCompare],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'book-page' },
     template: `
@@ -175,6 +177,12 @@ interface FieldGroup {
                                             }
                                         </span>
                                     </a>
+                                    @if (book.canMerge) {
+                                        <div class="book-duplicate-actions">
+                                            <button type="button" class="button" [title]="'compare.openHint' | t" (click)="comparing.set([book.id, other.id])">{{ 'compare.open' | t }}</button>
+                                            <button type="button" class="button" [title]="'compare.notHint' | t" [disabled]="busy()" (click)="notDuplicate(other)">{{ 'compare.not' | t }}</button>
+                                        </div>
+                                    }
                                 </li>
                             }
                         </ul>
@@ -183,6 +191,9 @@ interface FieldGroup {
             </article>
             @if (editing()) {
                 <lib-book-editor [book]="book" (saved)="edited($event)" (closed)="editing.set(false)" />
+            }
+            @if (comparing(); as ids) {
+                <lib-book-compare [bookIds]="ids" (merged)="merged($event)" (closed)="comparing.set(null)" />
             }
             @if (coverEditing()) {
                 <lib-cover-editor [book]="book" (changed)="book$.set($event)" (closed)="coverEditing.set(false)" />
@@ -206,6 +217,7 @@ export class BookPage {
     protected readonly catalog = inject(FieldCatalog);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
+    private readonly toasts = inject(ToastService);
     private readonly location = inject(Location);
     private readonly libraries = inject(LibraryContext);
 
@@ -219,6 +231,9 @@ export class BookPage {
     protected readonly error = signal<string | null>(null);
     protected readonly editing = signal(false);
     protected readonly coverEditing = signal(false);
+    /** The books compared (this one and a possible duplicate), while Compare and merge is open. */
+    protected readonly comparing = signal<number[] | null>(null);
+    protected readonly busy = signal(false);
     protected readonly book$ = this.book;
     private requested = 0;
 
@@ -269,6 +284,29 @@ export class BookPage {
     protected edited(book: BookDetail): void {
         this.book.set(book);
         void this.api.bookDuplicates(book.id).then(duplicates => this.book()?.id === book.id && this.duplicates.set(duplicates), () => { });
+    }
+
+    /** Merged: this page shows the kept book (another one's when this one was merged into it). */
+    protected merged(book: BookDetail): void {
+        if (book.id !== this.book()?.id)
+            void this.router.navigate(['/books', book.id], { replaceUrl: true });
+        else
+            this.edited(book);
+    }
+
+    protected async notDuplicate(other: BookListItem): Promise<void> {
+        const book = this.book();
+        if (!book)
+            return;
+        this.busy.set(true);
+        try {
+            await this.api.notDuplicates([book.id, other.id]);
+            this.duplicates.update(list => list.filter(d => d.book.id !== other.id));
+        } catch (error) {
+            this.toasts.show(errorText(this.i18n, error));
+        } finally {
+            this.busy.set(false);
+        }
     }
 
     protected cover(id: number, size: 's' | 'l', version?: string | null): string {

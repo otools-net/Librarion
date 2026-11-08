@@ -1109,6 +1109,11 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_DuplicateGroups_TenantId_BookCount_Id",
+                table: "DuplicateGroups",
+                columns: new[] { "TenantId", "BookCount", "Id" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DuplicateGroups_TenantId_Level_KeyHash",
                 table: "DuplicateGroups",
                 columns: new[] { "TenantId", "Level", "KeyHash" });

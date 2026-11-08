@@ -140,6 +140,11 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   2M on PostgreSQL with the first build at its end (the user's answer: automatic): **27.1 min** (25.4 before; budget
   30), unchanged re-import 2.6 min (2.4). The book page's possible duplicates within budget, no full scans.
   Generation: 2M SQLite 5.6 min, PostgreSQL 8.6 min.
+- The Duplicates page (stage 6 chunk 12, 2026-11-08, `run --only duplicates`): first page 44 ms p95 on PostgreSQL
+  (79 on SQLite), a deep page 37 (29), same identifier 27 (30); the book page's possible duplicates 15 ms (5). First
+  measured 132 ms (1 s on SQLite): a page of the biggest groups read about a thousand books as list items (now the
+  first 6 of a group), `NOT Noise` made SQLite sort every group (now `BookCount >= 2` on `(TenantId, BookCount, Id)`),
+  and SQLite had no statistics for the new tables (the build ends with `ANALYZE` of them there).
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

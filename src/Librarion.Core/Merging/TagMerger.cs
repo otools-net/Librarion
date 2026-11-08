@@ -35,7 +35,7 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
     public async Task<IReadOnlyList<MergeLogInfo>> ListAsync(int tenantId, long? before, int limit, CancellationToken cancellationToken = default)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
-        var query = db.MergeLogs.Where(l => l.ParentId == null);
+        var query = db.MergeLogs.Where(l => l.ParentId == null && l.Kind != MergeKind.Book);
         if (before is { } id)
             query = query.Where(l => l.Id < id);
         return await query.OrderByDescending(l => l.Id).Take(Math.Clamp(limit, 1, 100))
@@ -146,7 +146,7 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
         long links;
         await using (var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken))
         {
-            var log = await db.MergeLogs.FirstOrDefaultAsync(l => l.Id == logId && l.ParentId == null, cancellationToken);
+            var log = await db.MergeLogs.FirstOrDefaultAsync(l => l.Id == logId && l.ParentId == null && l.Kind != MergeKind.Book, cancellationToken);
             if (log is null || kind is not null && log.Kind != kind)
                 return AccessResult<TagWork>.Missing();
             if (await BlockedAsync(db, log, cancellationToken) is { } problem)
@@ -191,7 +191,7 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
         if (log.Kind == MergeKind.Ignore)
             return null;
         // A later merge of the target, or into it, took links this one would move back.
-        if (await db.MergeLogs.AnyAsync(l => l.Id > log.Id && l.ParentId == null && l.Undone == null && (l.TargetId == log.TargetId || l.SourceId == log.TargetId), cancellationToken))
+        if (await db.MergeLogs.AnyAsync(l => l.Id > log.Id && l.ParentId == null && l.Kind != MergeKind.Book && l.Undone == null && (l.TargetId == log.TargetId || l.SourceId == log.TargetId), cancellationToken))
             return "merge.later";
         return null;
     }

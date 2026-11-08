@@ -48,7 +48,7 @@ public sealed record BookDetail(
     int Id, int LibraryId, string? Title, string? FileName, string? Description, byte? Rating, DateTime Added, CoverSource CoverSource,
     IReadOnlyList<BookTagItem> Tags, IReadOnlyList<BookFileItem> Files, IReadOnlyList<KeyValuePair<string, string>> Identifiers, int? MergedIntoId,
     IReadOnlyList<KeyValuePair<string, string>>? Properties = null, bool CanDownload = false, bool CanTag = false, bool CanEdit = false, string? CoverVersion = null,
-    BookCoverInfo? Cover = null);
+    BookCoverInfo? Cover = null, bool CanMerge = false);
 
 /// <summary>How a book's cover is chosen (stage 6 chunk 10): the generated style it has, and whether a user chose the cover (an upload or a style over its own).</summary>
 public sealed record BookCoverInfo(short Template, short Variant, bool Chosen);
@@ -175,6 +175,15 @@ public sealed class BookQueries(TenantDb tenantDb)
 
     /// <summary>The cover's version in its address: the book's last change.</summary>
     public static string CoverVersion(DateTime updated) => updated.Ticks.ToString("x", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Books as list items, by id (the caller checked they may be seen), in no order: one query each for all of them.</summary>
+    public static async Task<List<BookListItem>> ItemsOfAsync(LibrarionDbContext db, IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
+    {
+        var rows = await db.Books.Where(b => ids.Contains(b.Id))
+            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource, b.Updated))
+            .ToListAsync(cancellationToken);
+        return await ItemsAsync(db, rows, cancellationToken);
+    }
 
     /// <summary>The page's rows with their authors, series and formats: one query each for the whole page.</summary>
     private static async Task<List<BookListItem>> ItemsAsync(LibrarionDbContext db, IReadOnlyList<BookRow> rows, CancellationToken cancellationToken)

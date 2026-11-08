@@ -155,6 +155,37 @@ export interface BookDetail {
     coverVersion?: string | null;
     /** How its cover is chosen: the generated style it has, whether a user chose the cover (an upload, a style over its own). */
     cover?: { template: number; variant: number; chosen: boolean } | null;
+    /** May merge it with its duplicates (`library.merge` in its library). */
+    canMerge?: boolean;
+}
+
+/** A group of possible duplicates on the Duplicates page: its books the session sees in the library. */
+export interface DuplicateGroupItem {
+    id: number;
+    level: BookDuplicate['reason'];
+    /** The identifier's scheme, for an `identifier` group. */
+    scheme: string | null;
+    /** Its first books, to show (at most six). */
+    books: BookListItem[];
+    /** Every one of its books the session sees: compared, merged or set apart together. */
+    bookIds: number[];
+}
+
+export interface DuplicatePage {
+    items: DuplicateGroupItem[];
+    next: string | null;
+    /** The groups were built (else the next scan or import, or Find again, makes them). */
+    built: boolean;
+}
+
+/** Books merged into `targetId`; each value from the book named (the target when null). */
+export interface BookMergeInput {
+    targetId: number;
+    sourceIds: number[];
+    titleFrom?: number | null;
+    descriptionFrom?: number | null;
+    ratingFrom?: number | null;
+    coverFrom?: number | null;
 }
 
 /** The generated cover styles: template names by index, and how many palettes each has. */

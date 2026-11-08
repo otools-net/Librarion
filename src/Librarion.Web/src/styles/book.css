@@ -468,3 +468,124 @@
         width: 120px;
     }
 }
+
+/* ---------- Compare and merge (book-compare.ts) ---------- */
+
+/* The duplicate's actions under its row on the book page. */
+.book-duplicate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-1) 0 var(--space-2);
+}
+
+/* Cards side by side, scrolled sideways when many; one under the other on a phone. */
+.compare-books {
+    display: grid;
+    grid-auto-columns: minmax(220px, 1fr);
+    grid-auto-flow: column;
+    gap: var(--space-3);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+}
+
+.compare-book {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+}
+
+.compare-book.kept {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.compare-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.compare-pick,
+.compare-use {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--target);
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.compare-pick input,
+.compare-use input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.compare-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+}
+
+/* A value that differs between the books: the eye goes there first. */
+.compare-row.differs {
+    background: var(--accent-soft);
+}
+
+.compare-label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.compare-value {
+    display: flex;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+}
+
+.compare-title {
+    font-weight: 600;
+}
+
+.compare-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+}
+
+.compare-file {
+    font-size: var(--text-sm);
+}
+
+.compare-cover {
+    display: block;
+    width: 96px;
+}
+
+.compare-cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+@media (max-width: 640px) {
+    .compare-books {
+        grid-auto-columns: auto;
+        grid-auto-flow: row;
+        overflow-x: visible;
+    }
+}

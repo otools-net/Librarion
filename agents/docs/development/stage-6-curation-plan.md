@@ -173,9 +173,11 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         instead), not inline per batch (estimated +2-3 min on Calibre 2M); the **first build starts automatically** at
         the end of the next run when a tenant has none, and a Rebuild route starts it too. **Built:**
         [merging](../features/merging.md#stored-duplicate-groups-built-stage-6-chunk-11).
-12. [ ] Administration › Catalog › Duplicates and Compare and merge: groups by level and size, compare side by side
+12. [x] Administration › Catalog › Duplicates and Compare and merge: groups by level and size, compare side by side
         (stacked on phones), choices per single value, merge (files, links, identifiers move; the old id redirects in
-        web, API and covers), Not a duplicate; the book page's panel gets the actions for `books.merge`.
+        web, API and covers), Not a duplicate; the book page's panel gets the actions for `books.merge`. **Built:**
+        [merging](../features/merging.md#merging-books-built-stage-6-chunk-12); books of two libraries are not merged
+        (a file stays in its library).
 13. [ ] Bulk merge (a run over chosen groups, or every same-file group), undo and split (files into a new book, its
         metadata re-read from them).
 14. [ ] Duplicate tag and field suggestions: normalized names, name forms ("King, Stephen", "S. King"),

@@ -230,6 +230,11 @@ public enum MergeKind : byte
     /// logged. Source and target are the tag itself.
     /// </summary>
     Ignore,
+    /// <summary>
+    /// A book merged into another (stage 6 chunk 12): source and target are books, not tags (tag queries leave these
+    /// logs out); what moved and the kept book's values before are in <see cref="MergeLog.Data"/>.
+    /// </summary>
+    Book,
 }
 
 /// <summary>

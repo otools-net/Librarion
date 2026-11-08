@@ -274,6 +274,8 @@ public abstract partial class LibrarionDbContext
             entity.Property(g => g.Key).HasMaxLength(DuplicateGroup.MaxKeyLength);
             entity.HasOne<Tenant>().WithMany().HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(g => new { g.TenantId, g.Level, g.KeyHash });
+            // The Duplicates page: the biggest groups first, by key (DuplicateQueries).
+            entity.HasIndex(g => new { g.TenantId, g.BookCount, g.Id });
             Filter(entity, g => g.TenantId == CurrentTenantId);
         });
 

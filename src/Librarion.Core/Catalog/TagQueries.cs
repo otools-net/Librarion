@@ -125,7 +125,7 @@ public sealed class TagQueries(TenantDb tenantDb)
         for (var moves = 0; moves < MaxMoves; moves++)
         {
             var from = id;
-            var target = await db.MergeLogs.Where(l => l.SourceId == from && l.Completed && l.Undone == null).OrderByDescending(l => l.Id)
+            var target = await db.MergeLogs.Where(l => l.SourceId == from && l.Kind != MergeKind.Book && l.Completed && l.Undone == null).OrderByDescending(l => l.Id)
                 .Select(l => (int?)l.TargetId).FirstOrDefaultAsync(cancellationToken);
             if (target is null)
                 return null;

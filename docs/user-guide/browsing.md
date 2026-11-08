@@ -94,4 +94,5 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   again.
 - **Possible duplicates** lists other books you can see that may be the same one, with why: the same file (in
   another library), the same identifier, or the same title and author. An FB2 id counts only when the title or the
-  first author is also the same: hand-made FB2 files often copy it from one another. Merging them comes later.
+  first author is also the same: hand-made FB2 files often copy it from one another. With the right to merge books,
+  each has **Compare and merge** and **Not a duplicate** ([duplicates](../administration/duplicates.md)).
