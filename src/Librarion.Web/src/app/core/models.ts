@@ -178,6 +178,17 @@ export interface DuplicatePage {
     built: boolean;
 }
 
+/** A book merge (the Duplicates page's Merges): the kept book and the first names of those merged into it (`books` of them). */
+export interface BookMergeInfo {
+    id: number;
+    created: string;
+    targetId: number;
+    targetName: string;
+    sourceNames: string[];
+    books: number;
+    undone: string | null;
+}
+
 /** Books merged into `targetId`; each value from the book named (the target when null). */
 export interface BookMergeInput {
     targetId: number;
@@ -555,7 +566,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore' | 'coverReassign' | 'duplicateBuild';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore' | 'coverReassign' | 'duplicateBuild' | 'bookMerge';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;

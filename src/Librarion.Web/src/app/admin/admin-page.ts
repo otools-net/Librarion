@@ -199,7 +199,7 @@ import { UsersSection } from './users-section';
                                 @case ('tags') { <lib-tags-section [page]="subpage()!.id" /> }
                                 @case ('importedTags') { <lib-imported-tags-section [page]="subpage()!.id" /> }
                                 @case ('coverStyles') { <lib-cover-styles-section /> }
-                                @case ('duplicates') { <lib-duplicates-section /> }
+                                @case ('duplicates') { <lib-duplicates-section [page]="subpage()!.id" /> }
                                 @case ('users') { <lib-users-section /> }
                                 @case ('groups') { <lib-groups-section /> }
                                 @case ('tasks') { <lib-tasks-section [page]="subpage()!.id" /> }

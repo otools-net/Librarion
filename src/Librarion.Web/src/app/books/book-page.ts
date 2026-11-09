@@ -112,10 +112,22 @@ interface FieldGroup {
                 }
 
                 <section class="book-section" aria-labelledby="book-files">
-                    <h2 id="book-files">{{ 'book.files' | t }}</h2>
+                    <div class="book-section-head">
+                        <h2 id="book-files">{{ 'book.files' | t }}</h2>
+                        @if (canSplit() && !splitting()) {
+                            <button type="button" class="button" [title]="'book.splitHint' | t" (click)="startSplit()">{{ 'book.split' | t }}</button>
+                        }
+                    </div>
+                    @if (splitting()) {
+                        <p class="field-hint" id="book-split-hint">{{ 'book.splitIntro' | t }}</p>
+                    }
                     <ul class="book-files">
                         @for (file of book.files; track file.id) {
                             <li class="book-file" [class.missing]="file.missing">
+                                @if (splitting()) {
+                                    <input type="checkbox" class="book-file-check" [checked]="splitFiles().has(file.id)" (change)="chooseFile(file)"
+                                           [attr.aria-label]="'book.splitFile' | t: { name: file.name }" aria-describedby="book-split-hint">
+                                }
                                 <span class="badge">{{ file.format.toUpperCase() }}</span>
                                 <span class="book-file-text">
                                     <span class="book-file-name" [title]="file.name">{{ file.name }}</span>
@@ -138,6 +150,13 @@ interface FieldGroup {
                             </li>
                         }
                     </ul>
+                    @if (splitting()) {
+                        <div class="book-split-actions">
+                            <button type="button" class="button primary" [disabled]="busy() || !splitFiles().size || splitFiles().size === book.files.length"
+                                    (click)="split(book)">{{ 'book.splitAction' + (splitFiles().size === 1 ? '.one' : '') | t: { count: i18n.number(splitFiles().size) } }}</button>
+                            <button type="button" class="button" [disabled]="busy()" (click)="splitting.set(false)">{{ 'common.cancel' | t }}</button>
+                        </div>
+                    }
                     @if (!book.canDownload) {
                         <p class="book-note">{{ 'book.noDownload' | t }}</p>
                     }
@@ -234,6 +253,11 @@ export class BookPage {
     /** The books compared (this one and a possible duplicate), while Compare and merge is open. */
     protected readonly comparing = signal<number[] | null>(null);
     protected readonly busy = signal(false);
+    /** Split: files chosen to move out into a new book (stage 6 chunk 13). */
+    protected readonly splitting = signal(false);
+    protected readonly splitFiles = signal<ReadonlySet<number>>(new Set());
+    /** Split is offered with the merge right on a book of two files or more. */
+    protected readonly canSplit = computed(() => !!this.book()?.canMerge && (this.book()?.files.length ?? 0) >= 2);
     protected readonly book$ = this.book;
     private requested = 0;
 
@@ -292,6 +316,38 @@ export class BookPage {
             void this.router.navigate(['/books', book.id], { replaceUrl: true });
         else
             this.edited(book);
+    }
+
+    protected startSplit(): void {
+        this.splitFiles.set(new Set());
+        this.splitting.set(true);
+    }
+
+    protected chooseFile(file: BookFile): void {
+        this.splitFiles.update(chosen => {
+            const next = new Set(chosen);
+            if (!next.delete(file.id))
+                next.add(file.id);
+            return next;
+        });
+    }
+
+    /** The chosen files moved out: the new book's page opens (this one is a step back). */
+    protected async split(book: BookDetail): Promise<void> {
+        this.busy.set(true);
+        try {
+            const created = await this.api.splitBook(book.id, [...this.splitFiles()]);
+            this.splitting.set(false);
+            this.toasts.show(this.i18n.t('book.splitDone', { title: created ? created.title || created.fileName || '' : '' }));
+            if (created)
+                void this.router.navigate(['/books', created.id]);
+            else
+                await this.load();
+        } catch (error) {
+            this.toasts.show(errorText(this.i18n, error));
+        } finally {
+            this.busy.set(false);
+        }
     }
 
     protected async notDuplicate(other: BookListItem): Promise<void> {

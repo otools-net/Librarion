@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
@@ -66,6 +67,12 @@ public sealed class DuplicateIndex(TenantDb tenantDb, TimeProvider time)
     private sealed record Sharer(int BookId, string SortTitle = "", string SortAuthor = "");
 
     /// <summary>
+    /// One build or end-of-run upkeep of a tenant at a time: scans of several libraries ending together each found no
+    /// groups and built them all at once, every group written twice (found by the e2e run, 2026-11-09).
+    /// </summary>
+    private readonly ConcurrentDictionary<int, SemaphoreSlim> running = new();
+
+    /// <summary>
     /// The end of a scan, import or removal (the user's answer, 2026-11-08): the groups built whole when the tenant has
     /// none yet or the run touched many books (only after a run that completed; one stopped half-way leaves the tenant
     /// unbuilt then), else the touched books' keys refreshed and, when books were deleted, the groups left short cleaned.
@@ -74,12 +81,26 @@ public sealed class DuplicateIndex(TenantDb tenantDb, TimeProvider time)
     {
         if (!touched.Any)
             return;
+        var gate = running.GetOrAdd(tenantId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await AfterRunLockedAsync(tenantId, touched, completed, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task AfterRunLockedAsync(int tenantId, TouchedBooks touched, bool completed, CancellationToken cancellationToken)
+    {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var built = await db.Tenants.Where(t => t.Id == tenantId).Select(t => t.DuplicatesBuilt).FirstOrDefaultAsync(cancellationToken);
         if (built is null || touched.Overflowed)
         {
             if (completed)
-                await BuildAsync(tenantId, null, cancellationToken);
+                await BuildLockedAsync(tenantId, null, cancellationToken);
             else if (built is not null)
                 await db.Tenants.Where(t => t.Id == tenantId).ExecuteUpdateAsync(s => s.SetProperty(t => t.DuplicatesBuilt, (DateTime?)null), cancellationToken);
             return;
@@ -95,6 +116,20 @@ public sealed class DuplicateIndex(TenantDb tenantDb, TimeProvider time)
     /// their indexes. The tenant is marked built at the end only; how many groups (noise left out) it made.
     /// </summary>
     public async Task<int> BuildAsync(int tenantId, IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
+    {
+        var gate = running.GetOrAdd(tenantId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            return await BuildLockedAsync(tenantId, progress, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<int> BuildLockedAsync(int tenantId, IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         await db.Tenants.Where(t => t.Id == tenantId).ExecuteUpdateAsync(s => s.SetProperty(t => t.DuplicatesBuilt, (DateTime?)null), cancellationToken);

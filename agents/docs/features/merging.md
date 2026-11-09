@@ -27,7 +27,58 @@ Built (stage 5): the book page's **read-only** panel of possible duplicates, com
 by size + CRC, same identifier, same work key; capped, no tables yet): [book-page](book-page.md). Built (stage 6 chunk
 11): the **stored duplicate groups**, their upkeep, `NotDuplicates` and the same-file setting
 ([below](#stored-duplicate-groups-built-stage-6-chunk-11)). Built (chunk 12): merging books, the Duplicates page, Not
-a duplicate ([below](#merging-books-built-stage-6-chunk-12)). Bulk merge, undo and split are still planned (chunk 13).
+a duplicate ([below](#merging-books-built-stage-6-chunk-12)). Built (chunk 13): bulk merge, undo and split
+([below](#undo-bulk-merge-and-split-built-stage-6-chunk-13)).
+
+## Undo, bulk merge and split (built, stage 6 chunk 13)
+
+Code: `Core/Merging/BookMerger.Undo.cs` (`ListAsync`, `UndoAsync`, `KeptAsync`, `MergeGroupsAsync`),
+`Core/Merging/BookSplitter.cs`, `CatalogWriter.SplitAsync`; routes in `Api/Endpoints/DuplicateEndpoints.cs`
+(`POST api/duplicates/merge`, `GET api/duplicates/merges`, `POST api/duplicates/merges/{id}/undo`,
+`POST api/books/{id}/split`), all `library.merge`; client `admin/duplicates-section.ts` (checkboxes, Merge chosen /
+Merge all, the Merges sub-page), the book page's Split; tests `BookMergeUndoTests` (both providers),
+`admin/duplicates.spec.ts`, `books/book-page.spec.ts`, e2e `specs/duplicates.spec.ts`. The user's answers (2026-11-09)
+in the [stage 6 plan](../development/stage-6-curation-plan.md).
+
+- **One merge, one undo:** a merge writes a log per source, the first the parent of the others (`ParentId`); the
+  Merges list shows parents only, and undoing a child undoes its parent's whole merge. `BookMergeData` keeps, besides
+  what moved, the kept book's values before (`Target`) and after (`After`), and per identifier and property whether it
+  moved (the kept book lacked it) or was dropped.
+- **Undo** (`UndoAsync`, one transaction): each source gets back its files still on the kept book, all its links
+  (those it gave are taken off the kept book), identifiers and properties (those that moved taken off the kept book),
+  suppressions, and loses `MergedIntoId`. The kept book's title, description, rating and cover go back only when each
+  is still what the merge made it (a later edit wins); the cover is looked for again. Counts by delta,
+  `Libraries.BookCount` plus the sources, sort columns and work keys of every book, the groups refreshed.
+  Refused (409): `merge.undone`, `merge.targetGone`, `merge.later` while the kept book was merged into another since.
+  A later merge into the same kept book doesn't block (each undo takes back what it gave). A source none of whose
+  files is left on the kept book (removed, or split off since) stays merged.
+- **Bulk merge** (`MergeGroupsAsync`, a library run `BookMerge`): the chosen groups (at most 1,000) or every group of
+  a level, only `File` and `Identifier` (`BulkLevels`; the user's answer: title and author groups through Compare,
+  one at a time), walked by group id a hundred at a time. Per group: its members the caller sees in the library
+  (visibility taken when the run starts); fewer than two, or two marked not duplicates (or one unique): skipped; else
+  the kept book by `KeptAsync` (most tags, identifiers, files, title, description, rating; else the oldest: the
+  compare sheet's rule) and `MergeAsync` with no choices (the kept book's own values), a transaction each. A book an
+  earlier group took is left out. `changed` counts groups merged, `skipped` those left. Followed and cancelled by those
+  with `library.merge` in the library (`TaskEndpoints`).
+- **Split** (`BookSplitter`, `library.merge`): chosen files (some, not all) of a book into a new book of its library.
+  A book read from heads (`MetadataSource.Heads`): the new book read from the first moved file whose head says
+  something (`IMetadataReader` through `BookDownloads.Open`; a broken one is skipped, none: the file name). A book of a
+  Calibre / INPX import: a copy of its columns, links (every source), properties and suppressions, **no identifiers**
+  (the record's: a copied Calibre id or ISBN would group the two at once). The book split keeps its metadata (the
+  user's answer; undo is what takes a merge's tags back) and looks for its cover again. Default tags of the moved
+  files' folders are given; counts by delta through the writer. The two books are marked not duplicates.
+- **Upkeep race fixed:** scans of several libraries of one tenant ending together each found no groups and built them
+  all, writing every group twice (seen in the e2e run, five devices in one tenant). `DuplicateIndex` now runs one
+  build or end-of-run upkeep per tenant at a time (a semaphore per tenant); a unit test couldn't make the builds
+  overlap on the test databases, the e2e spec catches it. `RefreshAsync` called by merges, edits and Not duplicates
+  isn't behind it.
+- **Client gotcha (fixed):** the Duplicates page's effect read `waiting` (a plain field) before `watch.ended()`; while
+  `waiting` was null the effect read no signal and never ran again, so the list wasn't read again after Find again or a
+  bulk merge. Read the signal first.
+- **Not measured yet at 2M:** a bulk merge is a merge per group (a few dozen queries each); the benchmark of stage 6's
+  last chunk times one over the planted same-file groups. The Merges list walks `MergeLogs (TenantId, Id)` backwards
+  with a join on the kept book's library; tag merge lists walk the same index skipping book logs, so many book merges
+  slow the Tags › Merges list a little (to measure with it).
 
 ## Merging books (built, stage 6 chunk 12)
 
@@ -56,7 +107,7 @@ axe on the page and the sheet in both themes).
   visible book: no cost for the others). Chains are followed, not rewritten (no index on `MergedIntoId` needed).
 - **Log:** one `MergeLog` per source, kind `Book` (source and target are books: every tag query leaves this kind out,
   as tag and book ids would collide), `Data` = files, links (moved or dropped), identifiers, properties,
-  suppressions, and the kept book's values before: what chunk 13's undo needs.
+  suppressions, and the kept book's values before and after: what the undo needs (chunk 13, above).
 - **Re-imports:** a scan finds the moved files under the kept book; the Calibre importer already follows
   `MergedIntoId` to match a source's records. A changed file re-reads the kept book's imported links from that file
   only (manual and chosen values stay).
@@ -237,7 +288,7 @@ Still planned here: **finding** duplicate tags and doing it from one page:
 
 ## Rights
 
-`library.merge` (planned use) (Write: merge, split, undo, mark not duplicate), `tenant.tags` covers tag and field merges. Seeing
+`library.merge` (merge, bulk merge, split, undo, mark not duplicate), `tenant.tags` covers tag and field merges. Seeing
 duplicates and copies comes with browsing.
 
 ## Tests to have

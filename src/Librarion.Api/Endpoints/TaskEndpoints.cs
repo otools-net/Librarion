@@ -171,8 +171,8 @@ public static class TaskEndpoints
             .WithSummary("Deletes a schedule.");
 
         // Tag runs (deletes, merges, undos) belong to no library: those who manage tags follow them, those who manage
-        // cover styles the reassignments (TenantKinds). Those who tag books follow the runs of their libraries too
-        // (scope tagging), and cancel only those.
+        // cover styles the reassignments (TenantKinds). Those who tag or merge books follow the runs of their libraries
+        // too (scope tagging, bulk merges), and cancel only those.
         var runs = api.MapGroup("/tasks").WithTags("Tasks").RequireRight(Rights.Scan, Rights.ManageTags, Rights.TagBooks, Rights.CoverStyles, Rights.MergeBooks);
 
         runs.MapGet("/running", async (HttpContext context, CurrentAccess current, BackgroundTasks tasks) =>
@@ -265,9 +265,9 @@ public static class TaskEndpoints
 
     private static IReadOnlyCollection<int> ScannableLibraries(AccessState state) => state.Access.LibrariesWith(Rights.Scan).ToHashSet();
 
-    /// <summary>The libraries whose runs the caller follows: those it may scan or tag books in.</summary>
+    /// <summary>The libraries whose runs the caller follows: those it may scan, tag books or merge books in.</summary>
     private static IReadOnlyCollection<int> FollowedLibraries(AccessState state) =>
-        state.Access.LibrariesWith(Rights.Scan).Concat(state.Access.LibrariesWith(Rights.TagBooks)).ToHashSet();
+        state.Access.LibrariesWith(Rights.Scan).Concat(state.Access.LibrariesWith(Rights.TagBooks)).Concat(state.Access.LibrariesWith(Rights.MergeBooks)).ToHashSet();
 
     private static readonly BackgroundTaskKind[] TagRuns =
     [
@@ -286,12 +286,13 @@ public static class TaskEndpoints
         .. state.Has(Rights.MergeBooks) ? [BackgroundTaskKind.DuplicateBuild] : Array.Empty<BackgroundTaskKind>(),
     ];
 
-    /// <summary>A library's run is cancelled by those who may scan there; a scope tagging also by those who tag there.</summary>
+    /// <summary>A library's run is cancelled by those who may scan there; a scope tagging also by those who tag there, a bulk merge by those who merge there.</summary>
     private static async Task<bool> MayCancelAsync(TaskRunInfo info, CurrentAccess current)
     {
         var state = await current.GetAsync();
         return info.LibraryId is not { } library || state.Access.HasIn(Rights.Scan, library)
-            || info.Task == BackgroundTaskKind.ScopeTags && state.Access.HasIn(Rights.TagBooks, library);
+            || info.Task == BackgroundTaskKind.ScopeTags && state.Access.HasIn(Rights.TagBooks, library)
+            || info.Task == BackgroundTaskKind.BookMerge && state.Access.HasIn(Rights.MergeBooks, library);
     }
 
     private static IResult Invalid(string field, string code) => TypedResults.ValidationProblem(new Dictionary<string, string[]> { [field] = [code] });
@@ -302,7 +303,7 @@ public static class TaskEndpoints
         if (state.TenantId is not { } tenantId || await tasks.GetAsync(tenantId, run, context.RequestAborted) is not { } info)
             return null;
         return info.LibraryId is { } library
-            ? state.Access.HasIn(Rights.Scan, library) || state.Access.HasIn(Rights.TagBooks, library) ? info : null
+            ? state.Access.HasIn(Rights.Scan, library) || state.Access.HasIn(Rights.TagBooks, library) || state.Access.HasIn(Rights.MergeBooks, library) ? info : null
             : TenantKinds(state).Contains(info.Task) ? info : null;
     }
 

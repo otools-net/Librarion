@@ -19,22 +19,29 @@ public sealed record BookMergeInput(int TargetId, IReadOnlyList<int> SourceIds, 
 /// the single values chosen are copied and marked edited (re-reads keep them), counts move by delta, and each source
 /// becomes a redirect (<see cref="Book.MergedIntoId"/>: its addresses answer with the kept book). Books of one library
 /// only. Every source writes a <see cref="MergeLog"/> of kind <see cref="MergeKind.Book"/> with what moved and the kept
-/// book's values before, for the undo (chunk 13). The duplicate groups follow.
+/// book's values before and after (the first source's log the parent of the others), for the undo (chunk 13,
+/// <c>BookMerger.Undo.cs</c>). The duplicate groups follow.
 /// </summary>
-public sealed class BookMerger(TenantDb tenantDb, TimeProvider time)
+public sealed partial class BookMerger(TenantDb tenantDb, TimeProvider time)
 {
     /// <summary>The most books merged at once: a duplicate group's size.</summary>
     public const int MaxBooks = DuplicateIndex.MaxGroup;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    /// <summary>What a book merge moved, and what the kept book had before (<see cref="MergeLog.Data"/>).</summary>
+    /// <summary>
+    /// What a book merge moved, what the kept book had before (<see cref="Target"/>) and after (<see cref="After"/>: a
+    /// value the undo finds unchanged since goes back) (<see cref="MergeLog.Data"/>).
+    /// </summary>
     public sealed record BookMergeData(
-        IReadOnlyList<int> Files, IReadOnlyList<LinkData> Links, IReadOnlyList<KeyValuePair<string, string>> Identifiers,
-        IReadOnlyList<KeyValuePair<string, string>> Properties, IReadOnlyList<int> Suppressed, TargetData Target);
+        IReadOnlyList<int> Files, IReadOnlyList<LinkData> Links, IReadOnlyList<ValueData> Identifiers, IReadOnlyList<ValueData> Properties, IReadOnlyList<int> Suppressed,
+        TargetData Target, TargetData After);
 
     /// <param name="Moved">Given to the kept book; false when it had the tag already (dropped).</param>
     public sealed record LinkData(int TagId, TagSource Source, int? Ordinal, double? Number, bool Moved);
+
+    /// <summary>An identifier (scheme, value) or a property (name, value) of the source; <paramref name="Moved"/>: the kept book lacked it.</summary>
+    public sealed record ValueData(string Key, string Value, bool Moved);
 
     public sealed record TargetData(
         string? Title, string SortTitle, string SearchText, string? Description, byte? Rating, CoverSource CoverSource, string? CoverFile, CoverState CoverState,
@@ -70,10 +77,9 @@ public sealed class BookMerger(TenantDb tenantDb, TimeProvider time)
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var before = await TagLinks.SnapshotAsync(db, all, cancellationToken);
         var now = time.GetUtcNow().UtcDateTime;
-        var targetData = new TargetData(target.Title, target.SortTitle, target.SearchText, target.Description, target.Rating, target.CoverSource, target.CoverFile,
-            target.CoverState, target.GeneratedTemplate, target.GeneratedVariant, target.Edited);
+        var targetData = Values(target);
         var targetName = await NameAsync(db, target, cancellationToken);
-        var logs = new List<MergeLog>();
+        var moves = new List<(int SourceId, string SourceName, Func<TargetData, BookMergeData> Data, int Links)>();
 
         foreach (var sourceId in sources)
         {
@@ -96,15 +102,17 @@ public sealed class BookMerger(TenantDb tenantDb, TimeProvider time)
 
             var identifiers = await db.BookIdentifiers.Where(i => i.BookId == sourceId).Select(i => new { i.Scheme, i.Value }).ToListAsync(cancellationToken);
             var held = (await db.BookIdentifiers.Where(i => i.BookId == input.TargetId).Select(i => new { i.Scheme, i.Value }).ToListAsync(cancellationToken)).ToHashSet();
+            var givenIds = identifiers.Select(i => new ValueData(i.Scheme, i.Value, !held.Contains(i))).ToList();
             await db.BookIdentifiers.Where(i => i.BookId == sourceId).ExecuteDeleteAsync(cancellationToken);
-            db.BookIdentifiers.AddRange(identifiers.Where(i => !held.Contains(i))
-                .Select(i => new BookIdentifier { TenantId = tenantId, BookId = input.TargetId, Scheme = i.Scheme, Value = i.Value }));
+            db.BookIdentifiers.AddRange(givenIds.Where(i => i.Moved)
+                .Select(i => new BookIdentifier { TenantId = tenantId, BookId = input.TargetId, Scheme = i.Key, Value = i.Value }));
 
             var properties = await db.BookProperties.Where(p => p.BookId == sourceId).Select(p => new { p.Name, p.Value }).ToListAsync(cancellationToken);
             var names = (await db.BookProperties.Where(p => p.BookId == input.TargetId).Select(p => p.Name).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+            var givenProperties = properties.Select(p => new ValueData(p.Name, p.Value, !names.Contains(p.Name))).ToList();
             await db.BookProperties.Where(p => p.BookId == sourceId).ExecuteDeleteAsync(cancellationToken);
-            db.BookProperties.AddRange(properties.Where(p => !names.Contains(p.Name))
-                .Select(p => new BookProperty { TenantId = tenantId, BookId = input.TargetId, Name = p.Name, Value = p.Value }));
+            db.BookProperties.AddRange(givenProperties.Where(p => p.Moved)
+                .Select(p => new BookProperty { TenantId = tenantId, BookId = input.TargetId, Name = p.Key, Value = p.Value }));
 
             var suppressed = await db.BookTagSuppressions.Where(s => s.BookId == sourceId).Select(s => s.TagId).ToListAsync(cancellationToken);
             await db.BookTagSuppressions.Where(s => s.BookId == sourceId).ExecuteDeleteAsync(cancellationToken);
@@ -113,13 +121,7 @@ public sealed class BookMerger(TenantDb tenantDb, TimeProvider time)
             source.Updated = now;
             // Saved before the next source: its links and identifiers are checked against what the kept book has now.
             await db.SaveChangesAsync(cancellationToken);
-            var data = new BookMergeData(files, logged, identifiers.Select(i => KeyValuePair.Create(i.Scheme, i.Value)).ToList(),
-                properties.Select(p => KeyValuePair.Create(p.Name, p.Value)).ToList(), suppressed, targetData);
-            logs.Add(new MergeLog
-            {
-                TenantId = tenantId, Kind = MergeKind.Book, UserId = userId, Created = now, SourceId = sourceId, SourceName = sourceName, TargetId = input.TargetId,
-                TargetName = targetName, Links = logged.Count(l => l.Moved), Completed = true, Data = JsonSerializer.Serialize(data, Json),
-            });
+            moves.Add((sourceId, sourceName, after => new BookMergeData(files, logged, givenIds, givenProperties, suppressed, targetData, after), logged.Count(l => l.Moved)));
         }
 
         Choose(target, input.TitleFrom, books, (to, from) => { to.Title = from.Title; to.SortTitle = from.SortTitle; to.SearchText = from.SearchText; to.Edited |= BookEdits.Title; });
@@ -136,7 +138,24 @@ public sealed class BookMerger(TenantDb tenantDb, TimeProvider time)
             to.Edited = from.CoverSource is CoverSource.Uploaded or CoverSource.Generated ? to.Edited | BookEdits.Cover : to.Edited & ~BookEdits.Cover;
         });
         target.Updated = now;
-        db.MergeLogs.AddRange(logs);
+        // One log per source, the first the parent of the others: one undo puts the whole merge back.
+        var afterData = Values(target);
+        MergeLog? parent = null;
+        foreach (var move in moves)
+        {
+            var log = new MergeLog
+            {
+                TenantId = tenantId, Kind = MergeKind.Book, ParentId = parent?.Id, UserId = userId, Created = now, SourceId = move.SourceId, SourceName = move.SourceName,
+                TargetId = input.TargetId, TargetName = targetName, Links = move.Links, Completed = true, Data = JsonSerializer.Serialize(move.Data(afterData), Json),
+            };
+            db.MergeLogs.Add(log);
+            if (parent is null)
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                parent = log;
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         var after = await TagLinks.SnapshotAsync(db, all, cancellationToken);
@@ -171,6 +190,9 @@ public sealed class BookMerger(TenantDb tenantDb, TimeProvider time)
 
         return null;
     }
+
+    private static TargetData Values(Book book) => new(book.Title, book.SortTitle, book.SearchText, book.Description, book.Rating, book.CoverSource, book.CoverFile,
+        book.CoverState, book.GeneratedTemplate, book.GeneratedVariant, book.Edited);
 
     private static void Choose(Book target, int? from, IReadOnlyDictionary<int, Book> books, Action<Book, Book> copy)
     {

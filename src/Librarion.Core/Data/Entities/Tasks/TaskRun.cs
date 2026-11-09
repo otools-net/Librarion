@@ -28,6 +28,8 @@ public enum BackgroundTaskKind : byte
     CoverReassign,
     /// <summary>The tenant's duplicate groups built whole again (Rebuild; a scan or import's end builds them when there are none).</summary>
     DuplicateBuild,
+    /// <summary>Duplicate groups of a library merged in bulk (the same file, the same identifier), each with the default choices.</summary>
+    BookMerge,
 }
 
 public enum TaskTrigger : byte

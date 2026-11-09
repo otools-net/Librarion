@@ -32,6 +32,39 @@ setting **Same file twice: one book** is off): such copies never show here.
 - **Not duplicates** says the group's books are different: they are never suggested together again, also after later
   scans and imports.
 
+## Merging many at once
+
+Groups with **the same file** or **the same identifier** can be merged without comparing them one by one. Groups with
+the same title and author can't: they are often different editions, so they are merged one at a time with Compare and
+merge.
+
+- Tick the groups to merge and press **Merge N chosen**, or choose **Same file** or **Same identifier** under **Why**
+  and press **Merge all** for every group of that reason in the library.
+- The merge runs in the background (the progress panel shows it; it can be cancelled). Each group keeps its book with
+  the most details (tags, identifiers, files, title, description, rating; else the oldest), with that book's own title,
+  cover, description and rating.
+- A group with books marked as different is left as it is. When the run ends, the list is read again.
+
+## Merges: undo
+
+**Merges** (the second tab) lists the merges of the library, newest first: the books merged → the book kept, how many
+and when. **Undo** puts a whole merge back, after asking:
+
+- the merged books get back their files, tags, identifiers and pages, and their links lead to them again;
+- the kept book loses what they gave it, and gets back its own title, description, rating and cover, unless one of
+  them was changed since the merge (then your change stays);
+- a merge can't be undone while the kept book has itself been merged into another one since: undo that one first.
+
+## Split
+
+A book's page offers **Split…** (with the Merge books right, on a book with two files or more): tick the files that
+are another book and press **Split N files off**. They become a new book, and its page opens.
+
+- The new book is read from its files, as a scan would. A book that came from a Calibre or INPX import is copied
+  instead (its files don't carry the import's details), without its identifiers, which stay with the first book.
+- The book you split keeps its details: to take back what a merge gave it, undo the merge instead.
+- The two books are marked as different, so they aren't suggested as duplicates again.
+
 ## Compare and merge
 
 **Compare and merge** shows the books side by side (one under the other on a phone), with what differs marked.

@@ -66,6 +66,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Librarion.Core.Merging.DuplicateIndex>();
         services.AddSingleton<Librarion.Core.Merging.DuplicateQueries>();
         services.AddSingleton<Librarion.Core.Merging.BookMerger>();
+        services.AddSingleton<Librarion.Core.Merging.BookSplitter>();
         services.AddSingleton<LibraryScanner>();
         services.AddSingleton<MissingBooks>();
         services.AddSingleton<Librarion.Core.Imports.CatalogImporter>();

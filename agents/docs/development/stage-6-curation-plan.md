@@ -178,8 +178,15 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         web, API and covers), Not a duplicate; the book page's panel gets the actions for `books.merge`. **Built:**
         [merging](../features/merging.md#merging-books-built-stage-6-chunk-12); books of two libraries are not merged
         (a file stays in its library).
-13. [ ] Bulk merge (a run over chosen groups, or every same-file group), undo and split (files into a new book, its
-        metadata re-read from them).
+13. [x] Bulk merge (a run over chosen groups, or every same-file group), undo and split (files into a new book, its
+        metadata re-read from them). **The user's answers (2026-11-09):** bulk merge only for **same-file and
+        identifier** groups (title and author groups through Compare, one at a time): chosen groups or all of a level,
+        always a background run with the default choices (the book with most metadata kept, its own values); **one
+        undo is a whole merge** (every book of it, tied by a parent log), files, links, identifiers and properties
+        still on the kept book go back, its title, description, rating and cover only when unchanged since, blocked
+        only while the kept book was merged into another later; **split**: a book read from its files' heads gives a
+        new book read from the files moved, a book of a Calibre / INPX import a copy of its metadata; the book split
+        keeps its own. **Built:** [merging](../features/merging.md#undo-bulk-merge-and-split-built-stage-6-chunk-13).
 14. [ ] Duplicate tag and field suggestions: normalized names, name forms ("King, Stephen", "S. King"),
         transliteration, the same name in two fields; ranked by books; spelling distance on demand on a tag's or
         field's page, capped (D21); Not the same remembered; shown on the tag page and in the picker.
@@ -249,7 +256,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 
 ### 6.3 Duplicates
 - [x] Stored groups, the first build and its upkeep, Not a duplicate (stored; its routes with 12), the same-file setting.
-- [ ] Duplicates page, compare and merge, bulk merge, undo and split.
+- [x] Duplicates page, compare and merge, bulk merge, undo and split.
 - [ ] Duplicate tag and field suggestions.
 
 ### 6.4 Docs, tests, budgets

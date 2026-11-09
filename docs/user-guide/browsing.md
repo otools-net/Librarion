@@ -96,3 +96,5 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   another library), the same identifier, or the same title and author. An FB2 id counts only when the title or the
   first author is also the same: hand-made FB2 files often copy it from one another. With the right to merge books,
   each has **Compare and merge** and **Not a duplicate** ([duplicates](../administration/duplicates.md)).
+- **Split…** (with the right to merge books, on a book with two files or more) moves some of its files out into a
+  new book of their own, for a merge found wrong later ([duplicates](../administration/duplicates.md#split)).

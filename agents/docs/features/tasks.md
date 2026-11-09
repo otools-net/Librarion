@@ -35,6 +35,8 @@ Code: `src/Librarion.Core/Import/LibraryRoots.cs` (`LibraryOptions`, root checks
 - `ScopeTags` (stage 6, chunk 7) is a run of a library (`StartLibraryAsync`): tags given to or taken from every book
   of a list. Those with `library.tag` there follow the library's runs too (the `tasks` routes accept it) and cancel
   only `ScopeTags` runs; scans stay theirs who scan ([tags](tags.md#tagging-many-books-built-stage-6-chunk-7)).
+  `BookMerge` (chunk 13, a bulk merge of duplicate groups) the same way with `library.merge`; its `changed` counts
+  groups merged, `skipped` those left ([merging](merging.md#undo-bulk-merge-and-split-built-stage-6-chunk-13)).
 - Each run is a `TaskRuns` row written at start and completed at the end: outcome (`succeeded`, `failed`,
   `cancelled`, `interrupted`, `skipped`), counts as JSON (added, changed, removed, unchanged, archives read / skipped,
   unreadable entries, missing roots, the first 20 problems). A failure's summary says to look in the server log; the

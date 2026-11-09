@@ -8,7 +8,7 @@ import {
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
     BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
-    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates, DuplicatePage, BookMergeInput,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates, DuplicatePage, BookMergeInput, BookMergeInfo,
 } from './models';
 
 /**
@@ -170,6 +170,15 @@ export class Api {
     notDuplicates = (bookIds: number[]) => this.post<void>('api/duplicates/not', { bookIds });
     /** Starts the run finding the duplicates again. */
     buildDuplicates = () => this.post<{ runId: number }>('api/duplicates/build');
+    /** Starts a run merging groups in bulk: the chosen ones, else every group of `level` (`file`, `identifier`). */
+    mergeDuplicates = (library: number, groupIds: number[] | null, level: string | null) =>
+        this.post<{ runId: number }>('api/duplicates/merge', { library, groupIds, level });
+    /** A library's book merges, the newest first. */
+    bookMerges = (library: number, before?: number) => this.get<BookMergeInfo[]>('api/duplicates/merges', { library, before });
+    /** Undoes a book merge whole; answers how many books came back. */
+    undoBookMerge = (id: number) => this.post<{ books: number }>(`api/duplicates/merges/${id}/undo`);
+    /** Moves files of a book out into a new book; answers the new book. */
+    splitBook = (id: number, fileIds: number[]) => this.post<BookDetail>(`api/books/${id}/split`, { fileIds });
 
     fields = () => this.get<FieldInfo[]>('api/fields');
     /**

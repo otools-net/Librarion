@@ -123,6 +123,65 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     }
 
     /// <summary>
+    /// Files of <paramref name="original"/> moved out into a new book (a split, stage 6 chunk 13): its metadata read from
+    /// <paramref name="metadata"/> (the file name when null) as a new book's, or, with <paramref name="copy"/>, copied from
+    /// the original (a book of an import: its files don't carry the record), every link but no identifier (they are the
+    /// record's). The default tags of the files' folders are given; counts move. Answers the new book's id.
+    /// </summary>
+    public async Task<int> SplitAsync(LibrarionDbContext db, Book original, IReadOnlyList<BookFile> files, BookMetadata? metadata, bool copy, CancellationToken cancellationToken)
+    {
+        var folderIds = files.Select(f => f.FolderId).ToList();
+        await DefaultsAsync(db, folderIds, cancellationToken);
+        templatesOff ??= await TemplatesOffAsync(db, cancellationToken);
+        var now = time.GetUtcNow().UtcDateTime;
+        var path = files[0].Path;
+        var book = new Book { TenantId = tenantId, LibraryId = libraryId, Added = now, Updated = now };
+        List<BookTag> links;
+        if (copy)
+        {
+            book.Title = original.Title;
+            book.SortTitle = original.SortTitle;
+            book.SearchText = original.SearchText;
+            book.Description = original.Description;
+            book.Rating = original.Rating;
+            book.Edited = original.Edited;
+            book.MetadataSource = original.MetadataSource;
+            book.ImportHash = original.ImportHash;
+            book.CoverSource = original.CoverSource;
+            book.CoverFile = original.CoverFile;
+            book.GeneratedTemplate = original.GeneratedTemplate;
+            book.GeneratedVariant = original.GeneratedVariant;
+            book.WorkKey = original.WorkKey;
+            links = (await db.BookTags.Where(l => l.BookId == original.Id).Select(l => new { l.TagId, l.Source, l.Ordinal, l.Number }).ToListAsync(cancellationToken))
+                .Select(l => new BookTag { TenantId = tenantId, TagId = l.TagId, Source = l.Source, Ordinal = l.Ordinal, Number = l.Number }).ToList();
+            book.Properties.AddRange((await db.BookProperties.Where(p => p.BookId == original.Id).Select(p => new { p.Name, p.Value }).ToListAsync(cancellationToken))
+                .Select(p => new BookProperty { TenantId = tenantId, Name = p.Name, Value = p.Value }));
+        }
+        else
+        {
+            await resolver.ResolveAsync(db, Names(metadata), cancellationToken);
+            Apply(book, path, metadata, new HashSet<int>(), out links);
+        }
+
+        GiveDefaults(links, folderIds);
+        foreach (var link in links)
+            book.Tags.Add(link);
+        db.Books.Add(book);
+        await db.SaveChangesAsync(cancellationToken);
+        if (copy)
+            db.BookTagSuppressions.AddRange((await db.BookTagSuppressions.Where(s => s.BookId == original.Id).Select(s => s.TagId).ToListAsync(cancellationToken))
+                .Select(tagId => new BookTagSuppression { TenantId = tenantId, BookId = book.Id, TagId = tagId }));
+        var ids = files.Select(f => f.Id).ToList();
+        await db.BookFiles.Where(f => ids.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.BookId, book.Id), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        counts.Add(libraryId, [], links.Select(l => l.TagId));
+        Touched.Add([original.Id, book.Id]);
+        Added++;
+        bookDelta++;
+        return book.Id;
+    }
+
+    /// <summary>
     /// For each file, the book it is a copy of: one of the library's (<c>BookId</c>) or an earlier file of the batch
     /// (<c>Earlier</c>); default for a new book. Candidates share size and CRC-32 (the index
     /// <c>BookFiles (TenantId, Size, Crc32)</c>; zip entries give both for free), and only then are both hashed (SHA-256,

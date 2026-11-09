@@ -6,6 +6,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Duplicates: merge many, undo, split.** Groups with the same file or the same identifier can be ticked and
+  merged together, or all of one reason at once, in the background; each keeps its book with the most details. The
+  new **Merges** tab lists a library's merges, and **Undo** puts one back whole (the kept book's title, cover,
+  description and rating too, unless changed since). **Split…** on a book's page moves some of its files out into a
+  new book.
 - **Administration → Catalog → Duplicates** (with the Merge books right): a library's possible duplicates, the biggest
   groups first, with why (the same file, identifier, or title and author). **Compare and merge** shows the books side
   by side (one under the other on a phone): keep one, choose which title, cover, description and rating it gets, and
@@ -75,6 +80,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Fixed
 
+- The Duplicates page now shows the list again once **Find again** ends; possible duplicates could be listed twice
+  when scans of several libraries ended at the same time.
 - Possible duplicates no longer lists every book made by the same person as the same book: an FB2 file's maker (in
   its document info) can have an id of their own, which was read as the book's FB2 id. Read the library again to
   drop the wrong ids from books already there. A shared FB2 id now also needs the same title or the same first

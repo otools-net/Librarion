@@ -75,6 +75,9 @@ editor.
 - Loose files have no CRC at import, so two identical loose files are only found by identifier or work.
 - Books marked not duplicates are left out (stage 6 chunk 11); with `canMerge` each candidate has Compare and merge
   and Not a duplicate (chunk 12, [merging](merging.md#merging-books-built-stage-6-chunk-12)).
+- **Split** (chunk 13): with `canMerge` and two files or more, **Split…** beside the Files heading turns the list into
+  checkboxes; **Split N files off** (some, not all) makes them a new book and opens its page
+  ([merging](merging.md#undo-bulk-merge-and-split-built-stage-6-chunk-13)).
 
 ## Decisions (stage 5, confirmed by the user 2026-11-01)
 

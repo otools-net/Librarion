@@ -156,6 +156,39 @@ describe('The book page', () => {
         expect(element.querySelector('[role="alert"]')).toBeNull();
     });
 
+    it('splits chosen files off into a new book with the right, and opens it', async () => {
+        const api = bookApi();
+        api.book.mockImplementation(async (id: number) => id === 42 ? detail({ canMerge: true }) : detail({ id: 43, title: 'Guards (scan)', canMerge: true }));
+        api.splitBook.mockResolvedValue(detail({ id: 43, title: 'Guards (scan)' }));
+        const { router, element, harness } = await open('/books/42', api);
+        const buttons = () => [...element.querySelectorAll<HTMLButtonElement>('button')];
+
+        buttons().find(b => b.textContent?.trim() === 'Split…')!.click();
+        harness.detectChanges();
+        const action = () => buttons().find(b => b.textContent?.trim().startsWith('Split'))!;
+        expect(action().disabled).toBe(true);
+        const boxes = element.querySelectorAll<HTMLInputElement>('.book-file-check');
+        expect(boxes).toHaveLength(2);
+        boxes[1].click();
+        harness.detectChanges();
+        expect(action().textContent?.trim()).toBe('Split 1 file off');
+        action().click();
+        for (let i = 0; i < 4; i++) {
+            await settle();
+            harness.detectChanges();
+            await harness.fixture.whenStable();
+        }
+        expect(api.splitBook).toHaveBeenCalledWith(42, [8]);
+        expect(router.url).toBe('/books/43');
+    });
+
+    it('offers no split without the right or with one file', async () => {
+        const api = bookApi();
+        api.book.mockResolvedValue(detail({ canMerge: true, files: [detail().files[0]] }));
+        const { element } = await open('/books/42', api);
+        expect([...element.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Split…')).toBe(false);
+    });
+
     it('goes to the book a merged one lives in, replacing the address', async () => {
         const api = bookApi();
         api.book.mockImplementation(async (id: number) => id === 42 ? detail({ mergedIntoId: 99 }) : detail({ id: 99, title: 'Kept' }));
