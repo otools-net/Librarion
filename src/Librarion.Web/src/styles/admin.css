@@ -1084,3 +1084,12 @@ a.row-main {
     flex-wrap: wrap;
     gap: var(--space-2);
 }
+
+/* Possible duplicate tags (stage 6 chunk 14): a radio per tag, the one kept. */
+.tag-duplicate-tags {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}

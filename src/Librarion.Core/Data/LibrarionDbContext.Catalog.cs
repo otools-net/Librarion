@@ -157,6 +157,9 @@ public abstract partial class LibrarionDbContext
             // Lookups by name within a field (null: plain tags), and browse pages per field by sort name.
             entity.HasIndex(t => new { t.TenantId, t.FieldId, t.NormalizedName });
             entity.HasIndex(t => new { t.TenantId, t.FieldId, t.SortName, t.Id });
+            // Possible duplicate tags (stage 6 chunk 14): a field's tags walked and sought by their match keys.
+            entity.HasIndex(t => new { t.TenantId, t.FieldId, t.SoundKey });
+            entity.HasIndex(t => new { t.TenantId, t.FieldId, t.InitialsKey });
             entity.HasIndex(t => new { t.TenantId, t.FieldKey }).IsUnique();
             // The tag picker's shorthand match (TagPicker).
             entity.HasIndex(t => new { t.TenantId, t.Shorthand }).HasFilter("\"Shorthand\" IS NOT NULL");
@@ -293,6 +296,33 @@ public abstract partial class LibrarionDbContext
             entity.HasKey(n => new { n.BookId, n.OtherId });
             entity.HasOne<Book>().WithMany().HasForeignKey(n => n.BookId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Book>().WithMany().HasForeignKey(n => n.OtherId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(n => new { n.TenantId, n.OtherId });
+            Filter(entity, n => n.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<TagDuplicateGroup>(entity =>
+        {
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(g => new { g.TenantId, g.Field, g.Key });
+            // Possible duplicate tags of a field: the most books first, by key (TagDuplicateQueries).
+            entity.HasIndex(g => new { g.TenantId, g.Field, g.BookCount, g.Id });
+            Filter(entity, g => g.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<TagDuplicateMember>(entity =>
+        {
+            entity.HasKey(m => new { m.GroupId, m.TagId });
+            entity.HasOne<TagDuplicateGroup>().WithMany(g => g.Members).HasForeignKey(m => m.GroupId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Tag>().WithMany().HasForeignKey(m => m.TagId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(m => new { m.TenantId, m.TagId });
+            Filter(entity, m => m.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<NotSameTag>(entity =>
+        {
+            entity.HasKey(n => new { n.TagId, n.OtherId });
+            entity.HasOne<Tag>().WithMany().HasForeignKey(n => n.TagId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Tag>().WithMany().HasForeignKey(n => n.OtherId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(n => new { n.TenantId, n.OtherId });
             Filter(entity, n => n.TenantId == CurrentTenantId);
         });

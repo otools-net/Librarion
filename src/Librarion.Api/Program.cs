@@ -70,6 +70,7 @@ api.MapTagEndpoints();
 api.MapImportedTagEndpoints();
 api.MapCoverEndpoints();
 api.MapDuplicateEndpoints();
+api.MapTagDuplicateEndpoints();
 api.MapTaskEndpoints();
 api.MapUserEndpoints();
 api.MapGroupEndpoints();

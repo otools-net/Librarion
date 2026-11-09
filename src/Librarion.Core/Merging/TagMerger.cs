@@ -227,6 +227,8 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
             var data = await FinishTagAsync(db, tenantId, sourceId, targetId, cancellationToken);
             await db.MergeLogs.Where(l => l.Id == logId).ExecuteUpdateAsync(s => s.SetProperty(l => l.Completed, true)
                 .SetProperty(l => l.Data, JsonSerializer.Serialize(data, Json)), cancellationToken);
+            // The source left its groups (its rows went with it): the target's computed again.
+            await TagDuplicateIndex.RefreshAsync(db, [targetId], cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -381,6 +383,8 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
             data = data with { MovedValues = movedValues, KeyAlias = alias.Id, FieldMappings = fieldMappings };
             await db.MergeLogs.Where(l => l.Id == logId).ExecuteUpdateAsync(s => s.SetProperty(l => l.Completed, true)
                 .SetProperty(l => l.Links, moved).SetProperty(l => l.Data, JsonSerializer.Serialize(data, Json)), cancellationToken);
+            // The values moved under the target field leave the source field's groups and join its.
+            await TagDuplicateIndex.RefreshAsync(db, movedValues, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -444,6 +448,8 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
             var now = time.GetUtcNow().UtcDateTime;
             await db.MergeLogLinks.Where(l => l.LogId == logId).ExecuteDeleteAsync(cancellationToken);
             await db.MergeLogs.Where(l => l.Id == logId).ExecuteUpdateAsync(s => s.SetProperty(l => l.Undone, now), cancellationToken);
+            if (log.Kind == MergeKind.Tag)
+                await TagDuplicateIndex.RefreshAsync(db, [sourceId, log.TargetId], cancellationToken);
         }
 
         changes.Changed();
@@ -487,6 +493,7 @@ public sealed partial class TagMerger(TenantDb tenantDb, BackgroundTasks tasks, 
             tag.Id = log.SourceId;
         if (tag.FieldId is { } field && !await db.Tags.AnyAsync(t => t.Id == field, cancellationToken))
             tag.FieldId = null;
+        NameKeys.Apply(tag);
         db.Tags.Add(tag);
         await db.SaveChangesAsync(cancellationToken);
         var id = tag.Id;

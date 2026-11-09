@@ -29,8 +29,8 @@ public sealed record ScanResult(
 /// are bits, never a list of paths. A root that is missing is reported and left alone (an unplugged disk is not a
 /// deletion). Resumable: books are written as they are read, an archive is marked done only at its end.
 /// </summary>
-public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, DuplicateIndex duplicates, SettingsService settings, TimeProvider time,
-    ILogger<LibraryScanner> logger)
+public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, DuplicateIndex duplicates, TagDuplicateIndex tagDuplicates, SettingsService settings,
+    TimeProvider time, ILogger<LibraryScanner> logger)
 {
     public const int BatchSize = 1000;
     private const int MaxProblems = 100;
@@ -87,6 +87,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Du
             // Books already written keep their counts, also when the scan is cancelled or fails.
             await run.Writer.FlushCountsAsync(db, CancellationToken.None);
             await duplicates.AfterRunAsync(tenantId, run.Writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
+            await tagDuplicates.AfterRunAsync(tenantId, run.Writer.NewTags, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return run.Result();
@@ -114,6 +115,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Du
         {
             await run.Writer.FlushCountsAsync(db, CancellationToken.None);
             await duplicates.AfterRunAsync(tenantId, run.Writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
+            await tagDuplicates.AfterRunAsync(tenantId, run.Writer.NewTags, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return run.Result();

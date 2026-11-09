@@ -55,6 +55,26 @@ into *category*, `genre:horror` still finds the books.
 A merge touching more than 10,000 links runs in the background: the panel under the top bar shows how it goes, and
 **Administration → Background tasks → History** keeps it.
 
+## Possible duplicates
+
+**Possible duplicates** (a tab of Tags) lists tags of one field (authors first, or another field, or the plain tags)
+that may be the same, the groups with most books first:
+
+- **The same words**: the same name written in another order or with other punctuation, case or accents ("King,
+  Stephen" and "Stephen King"), or in Cyrillic or Greek letters spelled the same way.
+- **Sound alike**: names whose words sound alike ("Stephen" and "Steven", "Стивен Кинг" and "Stephen King",
+  "Stanislaw" and "Stanislav").
+- **A name and its initials**: "S. King" with "Stephen King".
+
+Tags of different fields are never suggested together: the same person as an author and a translator isn't a
+duplicate. Choose the tag to keep (at first the one with most books) and press **Merge into …**: each of the others is
+merged into it as described above, and each merge can be undone under Merges. **Not the same** says the tags are
+different: they aren't suggested together again. A tag's page also shows, to those who manage tags, the tags that may
+be the same as it.
+
+Possible duplicates are looked for at the end of every scan and import (the first one after an update looks at every
+tag), and when a tag is made, renamed or merged. **Find again** looks at every tag again in the background.
+
 ## Undoing a merge
 
 **Merges** lists the merges, newest first, with what went where, how many links moved and when. **Undo** puts the

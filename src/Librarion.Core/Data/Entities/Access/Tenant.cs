@@ -31,6 +31,9 @@ public sealed class Tenant
     /// </summary>
     public DateTime? DuplicatesBuilt { get; set; }
 
+    /// <summary>UTC, when the possible duplicate tags were last built whole (stage 6 chunk 14); null until then.</summary>
+    public DateTime? TagDuplicatesBuilt { get; set; }
+
     public List<Library> Libraries { get; set; } = [];
     public List<UserGroup> Groups { get; set; } = [];
     public List<TenantDisabledRight> DisabledRights { get; set; } = [];

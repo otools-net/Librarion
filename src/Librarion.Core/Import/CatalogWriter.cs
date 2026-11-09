@@ -48,7 +48,10 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
     private int bookDelta;
 
     /// <summary>The books whose duplicate keys this writer may have changed, for the end of the run (<see cref="DuplicateIndex.AfterRunAsync"/>).</summary>
-    public TouchedBooks Touched { get; } = new();
+    public TouchedIds Touched { get; } = new();
+
+    /// <summary>The tags made for the books this writer wrote.</summary>
+    public TouchedIds NewTags => resolver.Created;
 
     /// <summary>
     /// A new file with the same bytes as one of the library becomes another file of that book (D19; the tenant setting

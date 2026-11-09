@@ -105,6 +105,18 @@ dotnet $bench duplicates --provider sqlite|postgres --connection "…" --work D:
   13, the same work every 50th from 21), the first 2,000 of each: every pair whose books do share the key in the
   database must be in one group of its level, unless that key is noise (counted apart). Exit 1 otherwise.
 
+## What `tag-duplicates` measures (stage 6 chunk 14, [merging](../../docs/features/merging.md#possible-duplicate-tags-built-stage-6-chunk-14))
+
+```sh
+dotnet $bench tag-duplicates --provider sqlite|postgres --connection "…" --work D:/Temp/librarion-bench
+```
+
+- The possible duplicate tags built whole (`TagDuplicateIndex.BuildAsync`), timed (budget 10 minutes at 2M on
+  PostgreSQL), with the groups by level and the noise keys; the generator gives every tag its match keys.
+- Then the Possible duplicates page of the authors (the first page, then the pages after it as More walks them) and a
+  tag's look-alikes, 20 times each after 3 warm-ups: p95 against the list budget (100 ms), enforced on PostgreSQL.
+- A database generated before chunk 14 has no keys: generate it again.
+
 ## What `import` measures (stage 4, [imports](../../docs/features/imports.md#scale))
 
 ```sh

@@ -6,6 +6,10 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Tags → Possible duplicates** (with the Manage tags right): tags of one field that may be the same, with most books
+  first: the same words in another order or alphabet ("King, Stephen", "Кинг Стивен" spelled alike), names that sound
+  alike ("Steven" / "Stephen" / "Стивен"), or a name and its initials ("S. King"). Keep one and merge the others into
+  it, or say they are not the same. A tag's page shows its possible duplicates to those who manage tags.
 - **Duplicates: merge many, undo, split.** Groups with the same file or the same identifier can be ticked and
   merged together, or all of one reason at once, in the background; each keeps its book with the most details. The
   new **Merges** tab lists a library's merges, and **Undo** puts one back whole (the kept book's title, cover,

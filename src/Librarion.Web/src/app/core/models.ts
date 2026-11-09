@@ -566,7 +566,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore' | 'coverReassign' | 'duplicateBuild' | 'bookMerge';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore' | 'coverReassign' | 'duplicateBuild' | 'bookMerge' | 'tagDuplicateBuild';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;
@@ -712,6 +712,36 @@ export interface TagInput {
 }
 
 /** A change of books' links: done (`runId` null) or running in the background; `links` moved or removed. */
+/** A tag of a possible duplicates group: its books in every library (direct links). */
+export interface TagDuplicateTag {
+    id: number;
+    name: string;
+    books: number;
+}
+
+/** Why tags may be one: the same words, words that sound alike, a name and its initials. */
+export type TagDuplicateLevel = 'words' | 'sound' | 'initials';
+
+/** A group of possible duplicate tags of one field (Tags › Possible duplicates), the most books first. */
+export interface TagDuplicateItem {
+    id: number;
+    level: TagDuplicateLevel;
+    books: number;
+    tags: TagDuplicateTag[];
+}
+
+export interface TagDuplicatePage {
+    items: TagDuplicateItem[];
+    next: string | null;
+    built: boolean;
+}
+
+/** A tag that may be the same as the one shown (its page). */
+export interface TagLookAlike {
+    level: TagDuplicateLevel;
+    tag: TagDuplicateTag;
+}
+
 export interface TagWork {
     runId: number | null;
     logId: number | null;

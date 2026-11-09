@@ -131,7 +131,7 @@ public sealed class FolderTests
             rootId = await db.LibraryRoots.Select(r => r.Id).SingleAsync(Cancel);
         }
 
-        await new LibraryScanner(library.Service<TenantDb>(), new NoMetadataReader(), library.Service<Librarion.Core.Merging.DuplicateIndex>(),
+        await new LibraryScanner(library.Service<TenantDb>(), new NoMetadataReader(), library.Service<Librarion.Core.Merging.DuplicateIndex>(), library.Service<Librarion.Core.Merging.TagDuplicateIndex>(),
                 library.Service<Librarion.Core.Settings.SettingsService>(), TimeProvider.System, NullLogger<LibraryScanner>.Instance)
             .RemoveRootAsync(library.TenantId, rootId, null, Cancel);
         await using (var db = await library.DbAsync(Cancel))

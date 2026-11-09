@@ -28,6 +28,9 @@ public sealed class ImportTagResolver
     private readonly HashSet<int> unrecorded;
     private readonly List<ImportTagMapping> recorded = [];
 
+    /// <summary>The tags this resolver made, for the possible duplicate tags at the end of the run (<see cref="Merging.TagDuplicateIndex"/>).</summary>
+    public Merging.TouchedIds Created { get; } = new();
+
     private ImportTagResolver(int tenantId, Dictionary<string, int> fields)
     {
         this.tenantId = tenantId;
@@ -176,6 +179,7 @@ public sealed class ImportTagResolver
                 SortName = Cut(name.SortName?.Trim() is { Length: > 0 } sort ? sort : person ? TagNames.PersonSortName(display) : display),
                 FieldId = field,
             };
+            NameKeys.Apply(tag);
             db.Tags.Add(tag);
             db.TagClosure.Add(new TagClosure { TenantId = tenantId, Ancestor = tag, Descendant = tag });
             if (field is { } fieldId)
@@ -191,6 +195,7 @@ public sealed class ImportTagResolver
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        Created.Add(created.Values.Select(t => t.Id));
         foreach (var (key, name) in pending)
         {
             var id = created[(key.Field, key.Name)].Id;

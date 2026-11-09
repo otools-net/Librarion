@@ -10,10 +10,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Librarion.Core.Merging;
 
 /// <summary>
-/// The books a run may have changed the duplicate keys of (added, read again, given or losing a file, removed). Past
-/// <see cref="DuplicateIndex.RebuildAbove"/> only that there were many is kept: the groups are built whole instead.
+/// The books a run may have changed the duplicate keys of (added, read again, given or losing a file, removed), or the
+/// tags it made (<see cref="Import.ImportTagResolver.Created"/>). Past <see cref="DuplicateIndex.RebuildAbove"/> only
+/// that there were many is kept: the groups are built whole instead.
 /// </summary>
-public sealed class TouchedBooks
+public sealed class TouchedIds
 {
     private HashSet<int>? ids = [];
 
@@ -77,7 +78,7 @@ public sealed class DuplicateIndex(TenantDb tenantDb, TimeProvider time)
     /// none yet or the run touched many books (only after a run that completed; one stopped half-way leaves the tenant
     /// unbuilt then), else the touched books' keys refreshed and, when books were deleted, the groups left short cleaned.
     /// </summary>
-    public async Task AfterRunAsync(int tenantId, TouchedBooks touched, bool completed, CancellationToken cancellationToken)
+    public async Task AfterRunAsync(int tenantId, TouchedIds touched, bool completed, CancellationToken cancellationToken)
     {
         if (!touched.Any)
             return;
@@ -93,7 +94,7 @@ public sealed class DuplicateIndex(TenantDb tenantDb, TimeProvider time)
         }
     }
 
-    private async Task AfterRunLockedAsync(int tenantId, TouchedBooks touched, bool completed, CancellationToken cancellationToken)
+    private async Task AfterRunLockedAsync(int tenantId, TouchedIds touched, bool completed, CancellationToken cancellationToken)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var built = await db.Tenants.Where(t => t.Id == tenantId).Select(t => t.DuplicatesBuilt).FirstOrDefaultAsync(cancellationToken);

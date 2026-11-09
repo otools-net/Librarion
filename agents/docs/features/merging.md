@@ -133,7 +133,7 @@ axe on the page and the sheet in both themes).
 
 ## Stored duplicate groups (built, stage 6 chunk 11)
 
-Code: `Core/Merging/DuplicateIndex.cs` (`BuildAsync`, `RefreshAsync`, `CleanAsync`, `AfterRunAsync`, `TouchedBooks`),
+Code: `Core/Merging/DuplicateIndex.cs` (`BuildAsync`, `RefreshAsync`, `CleanAsync`, `AfterRunAsync`, `TouchedIds`),
 entities in `Data/Entities/Catalog/Duplicates.cs`, `Tenant.DuplicatesBuilt`, the hooks in `CatalogWriter` (`Touched`),
 `LibraryScanner`, `CatalogImporter`, `MissingBooks` and `TagLinks.SortColumnsAsync`; route `POST api/duplicates/build`
 (`Api/Endpoints/DuplicateEndpoints.cs`, `library.merge`); tests `DuplicateIndexTests` (both providers); benchmark
@@ -263,18 +263,49 @@ compared only within the key's group.
   `merge.later` rule, while a later ignore of a merge's target blocks that merge's undo
   ([imported-tags](imported-tags.md#changes)).
 
-Still planned here: **finding** duplicate tags and doing it from one page:
+### Possible duplicate tags (built, stage 6 chunk 14)
 
-- Suggestions per field (and among plain tags), by blocking keys on the normalized name: same name after NFKC,
-  case and spacing; transliteration (Стивен Кинг / Stephen King); name forms ("King, Stephen", "S. King", "King
-  Stephen"); same name in two fields (`genre:Horror` / `category:Horror`). Ranked by book count, so the merges that
-  fix most books come first.
-- **Spelling distance** ("Steven" / "Stephen") is **on demand only** (D21): on one tag's page or one field page,
-  capped, as the books' Similar level; no catalog-wide fuzzy pass over 650k values.
-- **Merge fields:** a whole field into another (`genre:` → `category:`): its values merged by name into the target
-  field's, the rest moved, the field becomes an alias key (`genre:` keeps working in search and in import mappings).
-- The tag page and the tag picker show "Possible duplicates" for a tag; **Not the same** is remembered as for books.
-- Undo through `MergeLog` like books.
+Code: `Core/Tagging/NameKeys.cs` (keys), `Core/Merging/TagDuplicateIndex.cs` (build, upkeep),
+`Core/Merging/TagDuplicateQueries.cs` (list, look-alikes, Not the same), entities in `Data/Entities/Tags/TagDuplicates.cs`,
+`Tag.SoundKey` / `Tag.InitialsKey` with indexes `Tags (TenantId, FieldId, SoundKey | InitialsKey)`,
+`Tenant.TagDuplicatesBuilt`; routes in `Api/Endpoints/TagDuplicateEndpoints.cs` (`GET api/tag-duplicates`,
+`POST api/tag-duplicates/build`, `POST api/tag-duplicates/not`, `GET api/tags/{id}/look-alikes`, all `tenant.tags`);
+client `admin/tag-duplicates-section.ts` (Tags › Possible duplicates), the tag page's "May be the same as"; tests
+`TagDuplicateTests` (both providers), `admin/tag-duplicates.spec.ts`, `tags/tags.spec.ts`, e2e
+`specs/tag-duplicates.spec.ts`; benchmark `tag-duplicates` ([benchmark](../../tools/benchmark/README.md)). The user's
+answers (2026-11-09) in the [stage 6 plan](../development/stage-6-curation-plan.md).
+
+- **Keys** (`NameKeys`, set with the name by `NameKeys.Apply` wherever a tag is made or renamed: the import's
+  resolver, `TagService`, an undone merge; the benchmark's generator too): the name's words (decomposed, accents off,
+  lower case, Cyrillic and Greek in Latin letters, split on anything but letters and digits); `SoundKey` = XxHash64
+  of the words' sounds sorted ("ph" "f" "w" → "v", "ck" "q" "c" → "k", "y" "j" → "i", an "h" after a letter dropped,
+  every vowel "a", runs of a letter one: "Stephen" = "Steven" = "Стивен", "Tolstoy" = "Толстой"); `InitialsKey` =
+  the surname's sound (before a comma, else the last word) and the first given name's initial. None on fields' own
+  rows and categories.
+- **Groups** (`TagDuplicateGroups`: `Field` = the field's tag id or 0 for plain tags, `Level`, `Key`, `Noise`,
+  `TagCount`, `BookCount`; `TagDuplicateMembers`): tags of one field sharing a key; never across fields (the user's
+  answer: a person in two roles isn't a duplicate). A sound group is `Words` when every name folds to the same words,
+  else `Sound`; an initials group is kept only with a name of initials only (`NameKeys.IsInitials`) and one written
+  out. 20 tags or more on a key (`MaxGroup`) = noise, kept without members, skipped until a rebuild. `BookCount` = the
+  members' direct links summed over libraries when written (what the page ranks by; stale until written again).
+- **Not the same:** `NotSameTags (TagId < OtherId)`; a group whose every pair is marked isn't stored.
+- **Build** (`BuildAsync`): per field (and plain tags) and per key kind, the tags walked in key order on their index,
+  pages of 5,000; a page's last key is read again in the next page unless it fills the page. The first one runs at the
+  end of the first scan or import (as the books'), and Find again starts a tenant run `TagDuplicateBuild`.
+- **Upkeep:** `ImportTagResolver.Created` (the tags a run made, past 50,000 only that there were many) refreshed at
+  the end of each scan or import (`AfterRunAsync`, one per tenant at a time; many = a whole build); `RefreshAsync` by
+  `TagService` on create and edit, a tag merge (the target), a field merge (the values moved) and an undone merge.
+  A merged or deleted tag's rows go with it (cascade); a group left with one tag is left out when read.
+- **Page:** `ListAsync` walks `TagDuplicateGroups (TenantId, Field, BookCount, Id)` by key from the most books
+  (`TagCount >= 2` leaves noise out as a range), 20 groups a page, at most 20 × 50 read a request. Merging is the tag
+  merge, one per other tag, into the one kept (the client calls `POST api/tags/{id}/merge`; a big one is a run).
+- **Look-alikes** of a tag (its page, for `tenant.tags`): the other members of its groups with the strongest reason;
+  in a sound group a name of the very same words says "the same words".
+- **Measured at 2M** (2026-11-09, [scale](../development/scale.md#measured)): the build 77 s on PostgreSQL, 86 s on
+  SQLite; the page 9 ms p95 (6 on SQLite), look-alikes 8 (1); Calibre 2M import 28.8 min (27.1 before; budget 30).
+- **Not done (the user's answers):** matching across fields (`genre:Horror` / `category:Horror`), spelling distance
+  (typos), the picker's "did you mean". The generator's names are syllables, so sound groups are many and partly noise
+  there; real catalogs to be watched.
 
 ## Scale
 

@@ -51,12 +51,14 @@ public sealed class CatalogGenerator
     public int FilterTag(int i) => PlainTag(_shape.PlainTags) + i;
     public int LastTagId => FilterTag(CatalogShape.FilterShares.Length) - 1;
 
-    public static readonly string[] TagColumns = ["Id", "TenantId", "Name", "NormalizedName", "SortName", "IsCategory", "IsHidden", "FieldId"];
+    public static readonly string[] TagColumns = ["Id", "TenantId", "Name", "NormalizedName", "SortName", "IsCategory", "IsHidden", "FieldId", "SoundKey", "InitialsKey"];
 
     public IEnumerable<object?[]> Tags()
     {
+        // The match keys of possible duplicate tags (stage 6 chunk 14), as NameKeys.Apply sets them: none on categories.
         object?[] Row(int id, string name, string sortName, int? field, bool category = false) =>
-            [id, _target.TenantId, name, TagNames.Normalize(name), sortName, category, false, field];
+            [id, _target.TenantId, name, TagNames.Normalize(name), sortName, category, false, field, category ? null : NameKeys.SoundKey(name),
+                category ? null : NameKeys.InitialsKey(name)];
 
         for (var i = 0; i < _shape.Authors; i++)
         {

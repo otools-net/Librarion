@@ -84,6 +84,7 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
             return problem;
         await db.SaveChangesAsync(cancellationToken);
         await TagClosures.AddAsync(db, tenantId, tag.Id, cancellationToken);
+        await Merging.TagDuplicateIndex.RefreshAsync(db, [tag.Id], cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         changes.Changed();
         return AccessResult<TagDefinition>.Ok((await DefinitionAsync(db, tag.Id, cancellationToken))!);
@@ -120,6 +121,7 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
             await db.Books.Where(b => b.SortAuthor == oldSort && linked.Contains(b.Id)).ExecuteUpdateAsync(s => s.SetProperty(b => b.SortAuthor, sort), cancellationToken);
         }
 
+        await Merging.TagDuplicateIndex.RefreshAsync(db, [tagId], cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         changes.Changed();
         if (recount is not null)
@@ -288,6 +290,7 @@ public sealed partial class TagService(TenantDb tenantDb, BackgroundTasks tasks,
         tag.Aliases.RemoveAll(a => aliases.All(n => n.Name != a.Name));
         foreach (var (aliasName, folded) in aliases.Where(n => tag.Aliases.All(a => a.Name != n.Name)))
             tag.Aliases.Add(new TagAlias { TenantId = tag.TenantId, Name = aliasName, NormalizedName = folded });
+        NameKeys.Apply(tag);
 
         if (tag.Id == 0)
         {

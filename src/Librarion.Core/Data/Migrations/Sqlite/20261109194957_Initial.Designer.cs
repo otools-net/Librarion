@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Librarion.Core.Data.Migrations.Sqlite
 {
     [DbContext(typeof(SqliteLibrarionDbContext))]
-    [Migration("20261108180926_Initial")]
+    [Migration("20261109194957_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -796,6 +796,29 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("NotDuplicates");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.NotSameTag", b =>
+                {
+                    b.Property<int>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OtherId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("TagId", "OtherId");
+
+                    b.HasIndex("OtherId");
+
+                    b.HasIndex("TenantId", "OtherId");
+
+                    b.ToTable("NotSameTags");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.SecurityEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -905,6 +928,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("InitialsKey")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsCategory")
                         .HasColumnType("INTEGER");
 
@@ -930,6 +956,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("SoundKey")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("INTEGER");
 
@@ -946,7 +975,11 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("TenantId", "Shorthand")
                         .HasFilter("\"Shorthand\" IS NOT NULL");
 
+                    b.HasIndex("TenantId", "FieldId", "InitialsKey");
+
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
+
+                    b.HasIndex("TenantId", "FieldId", "SoundKey");
 
                     b.HasIndex("TenantId", "FieldId", "SortName", "Id");
 
@@ -1029,6 +1062,62 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasIndex("LibraryId", "BookCount", "TagId");
 
                     b.ToTable("TagCounts");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Field")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Key")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Level")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Noise")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TagCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Field", "Key");
+
+                    b.HasIndex("TenantId", "Field", "BookCount", "Id");
+
+                    b.ToTable("TagDuplicateGroups");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateMember", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "TagId");
+
+                    b.ToTable("TagDuplicateMembers");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.TagParent", b =>
@@ -1180,6 +1269,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TagDuplicatesBuilt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -1660,6 +1752,21 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.NotSameTag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("OtherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tag", "Field")
@@ -1711,6 +1818,30 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasOne("Librarion.Core.Data.Library", null)
                         .WithMany()
                         .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateGroup", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateMember", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.TagDuplicateGroup", null)
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1811,6 +1942,11 @@ namespace Librarion.Core.Data.Migrations.Sqlite
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
                 {
                     b.Navigation("Aliases");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>

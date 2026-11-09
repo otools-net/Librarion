@@ -22,6 +22,7 @@ import { SecuritySection } from './security-section';
 import { SettingsSection } from './settings-section';
 import { SystemSection } from './system-section';
 import { TagsSection } from './tags-section';
+import { TagDuplicatesSection } from './tag-duplicates-section';
 import { ImportedTagsSection } from './imported-tags-section';
 import { CoverStylesSection } from './cover-styles-section';
 import { DuplicatesSection } from './duplicates-section';
@@ -40,7 +41,8 @@ import { UsersSection } from './users-section';
 @Component({
     selector: 'lib-admin-page',
     imports: [RouterLink, TranslatePipe, Icon, EmptyState, MarkedText, AccountSection, UsersSection, GroupsSection, LibrariesSection, TenantsSection,
-        SettingsSection, SecuritySection, SystemSection, LibraryPage, TasksSection, TagsSection, ImportedTagsSection, CoverStylesSection, DuplicatesSection],
+        SettingsSection, SecuritySection, SystemSection, LibraryPage, TasksSection, TagsSection, TagDuplicatesSection, ImportedTagsSection, CoverStylesSection,
+        DuplicatesSection],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'admin-page' },
     template: `
@@ -196,7 +198,13 @@ import { UsersSection } from './users-section';
                                 @case ('account') { <lib-account-section [page]="subpage()!.id" /> }
                                 @case ('libraries') { <lib-libraries-section /> }
                                 @case ('librarySettings') { <lib-settings-section level="library" /> }
-                                @case ('tags') { <lib-tags-section [page]="subpage()!.id" /> }
+                                @case ('tags') {
+                                    @if (subpage()!.id === 'duplicates') {
+                                        <lib-tag-duplicates-section />
+                                    } @else {
+                                        <lib-tags-section [page]="subpage()!.id" />
+                                    }
+                                }
                                 @case ('importedTags') { <lib-imported-tags-section [page]="subpage()!.id" /> }
                                 @case ('coverStyles') { <lib-cover-styles-section /> }
                                 @case ('duplicates') { <lib-duplicates-section [page]="subpage()!.id" /> }

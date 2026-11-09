@@ -8,7 +8,7 @@ import {
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
     BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
-    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates, DuplicatePage, BookMergeInput, BookMergeInfo,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates, DuplicatePage, BookMergeInput, BookMergeInfo, TagDuplicatePage, TagLookAlike,
 } from './models';
 
 /**
@@ -197,6 +197,15 @@ export class Api {
     /** The tag picker's suggestions: tags of `field` (null: plain tags) found by what is typed. */
     pickTags = (field: string | null, q: string, limit = 10) => this.get<PickedTags>('api/tags/pick', { field, q, limit });
     managedFields = () => this.get<ManagedFields>('api/tags/manage/fields');
+    /** Possible duplicate tags of a field (`field` null: plain tags), the most books first. */
+    tagDuplicates = (field: string | null, after: string | null, limit = 20) =>
+        this.get<TagDuplicatePage>('api/tag-duplicates', { field, after, limit });
+    /** Starts the run finding possible duplicate tags again. */
+    buildTagDuplicates = () => this.post<{ runId: number }>('api/tag-duplicates/build');
+    /** The tags are not the same as each other. */
+    notSameTags = (tagIds: number[]) => this.post<void>('api/tag-duplicates/not', { tagIds });
+    /** The tags that may be the same as this one. */
+    tagLookAlikes = (id: number) => this.get<TagLookAlike[]>(`api/tags/${id}/look-alikes`);
     managedTags = (field: string | null, query: { q?: string | null; after?: string | null; limit?: number } = {}) =>
         this.get<ManagedPage>('api/tags/manage', { field: field ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit });
     tagDefinition = (id: number) => this.get<TagDefinition>(`api/tags/${id}/definition`);

@@ -145,6 +145,14 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   measured 132 ms (1 s on SQLite): a page of the biggest groups read about a thousand books as list items (now the
   first 6 of a group), `NOT Noise` made SQLite sort every group (now `BookCount >= 2` on `(TenantId, BookCount, Id)`),
   and SQLite had no statistics for the new tables (the build ends with `ANALYZE` of them there).
+- Possible duplicate tags (stage 6 chunk 14, 2026-11-09, `tag-duplicates` command): the whole build at 2M over
+  660,749 keyed tags **77 s on PostgreSQL** (proposed budget 10 min), 86 s on SQLite; 190,421 groups (71,626 of the
+  same words, 118,795 sounding alike; the generator's syllable names collide a lot), 2,858 noise keys. The authors'
+  page 9 ms p95 on PostgreSQL (6 on SQLite), its following pages 10 (5), a tag's look-alikes 8 (1). SQLite first
+  measured 1.3 s: no statistics for the new tables (the build ends with `ANALYZE` of them there, as the books').
+  Calibre 2M on PostgreSQL with the keys and their two indexes and both first builds at its end: **28.8 min** (27.1
+  before; budget 30), unchanged re-import 2.6 min; making the new tags 359 s (316 profiled before). The margin left is
+  1.2 min: the plan's next import speed-up (new tags copied in bulk on PostgreSQL) is due before more import work.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

@@ -24,14 +24,14 @@ const tag = (overrides: Partial<TagDetail> = {}): TagDetail => ({
 });
 
 describe('Browsing by value', () => {
-    async function open(url: string, api: ApiMock) {
+    async function open(url: string, api: ApiMock, rights = ['library.browse']) {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({ providers: testProviders(api) });
         localStorage.clear();
         api.libraries.mockResolvedValue([{ id: 5, tenantId: 1, name: 'Discworld', created: '', bookCount: 120 }]);
         api.fields.mockResolvedValue(FIELDS);
         api.books.mockResolvedValue({ items: [], next: null });
-        TestBed.inject(SessionService).set(sessionInfo(['library.browse']));
+        TestBed.inject(SessionService).set(sessionInfo(rights));
         const router = TestBed.inject(Router);
         router.resetConfig([
             { path: 'fields', component: FieldsPage },
@@ -153,6 +153,21 @@ describe('Browsing by value', () => {
         expect(element.querySelector('.tag-related-more')).not.toBeNull();
         expect(api.books).toHaveBeenLastCalledWith(expect.objectContaining({ library: 5, tag: 21, sort: 'title' }));
         expect(element.querySelector('.empty')?.textContent).toContain('No books with it in this library.');
+    });
+
+    it('shows the tags that may be the same to those who manage tags, and asks nothing for the others', async () => {
+        const api = mockApi();
+        api.tag.mockResolvedValue(tag());
+        api.tagLookAlikes.mockResolvedValue([{ level: 'sound', tag: { id: 23, name: 'Терри Пратчетт', books: 4 } }]);
+        let { element } = await open('/author/21/Terry Pratchett', api);
+        expect(api.tagLookAlikes).not.toHaveBeenCalled();
+        expect(element.textContent).not.toContain('May be the same as');
+
+        ({ element } = await open('/author/21/Terry Pratchett', api, ['library.browse', 'tenant.tags']));
+        expect(api.tagLookAlikes).toHaveBeenCalledWith(21);
+        const chip = [...element.querySelectorAll<HTMLAnchorElement>('.tag-related .chip')].find(c => c.textContent === 'Терри Пратчетт')!;
+        expect(chip.getAttribute('href')).toBe('/author/23/%D0%A2%D0%B5%D1%80%D1%80%D0%B8%20%D0%9F%D1%80%D0%B0%D1%82%D1%87%D0%B5%D1%82%D1%82');
+        expect(chip.title).toBe('Sound alike');
     });
 
     it('lists a series by its numbers first', async () => {

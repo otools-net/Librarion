@@ -64,6 +64,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Librarion.Core.Covers.CoverService>();
         services.TryAddSingleton<IMetadataReader, Librarion.Core.Import.Metadata.MetadataReaders>();
         services.AddSingleton<Librarion.Core.Merging.DuplicateIndex>();
+        services.AddSingleton<Librarion.Core.Merging.TagDuplicateIndex>();
+        services.AddSingleton<Librarion.Core.Merging.TagDuplicateQueries>();
         services.AddSingleton<Librarion.Core.Merging.DuplicateQueries>();
         services.AddSingleton<Librarion.Core.Merging.BookMerger>();
         services.AddSingleton<Librarion.Core.Merging.BookSplitter>();

@@ -5,7 +5,9 @@ import { Api } from '../core/api.service';
 import { errorText } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
-import { BookSort, TagDetail, TagRef } from '../core/models';
+import { BookSort, TagDetail, TagLookAlike, TagRef } from '../core/models';
+import { Rights } from '../core/rights';
+import { SessionService } from '../core/session.service';
 import { BookList } from '../browse/book-list';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
@@ -56,6 +58,16 @@ const SERIES_SORTS: readonly BookSort[] = ['number', 'title', 'author', 'added']
                             }
                         </p>
                     }
+                    @if (lookAlikes().length) {
+                        <p class="tag-related">
+                            <span class="tag-related-label">{{ 'tag.lookAlikes' | t }}</span>
+                            @for (other of lookAlikes(); track other.tag.id) {
+                                <a class="chip" [routerLink]="link({ id: other.tag.id, name: other.tag.name, field: tag.field })"
+                                   [title]="'tagDuplicates.level.' + other.level | t">{{ other.tag.name }}</a>
+                            }
+                            <a class="tag-related-more" routerLink="/admin/tags/duplicates">{{ 'tag.lookAlikesManage' | t }}</a>
+                        </p>
+                    }
                 </lib-book-list>
             } @else if (librariesLoaded()) {
                 <h1>{{ name(tag) }}</h1>
@@ -83,6 +95,7 @@ export class TagPage {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly libraries = inject(LibraryContext);
+    private readonly session = inject(SessionService);
 
     protected readonly seriesSorts = SERIES_SORTS;
     protected readonly defaultSorts: readonly BookSort[] = ['title', 'author', 'added'];
@@ -94,6 +107,8 @@ export class TagPage {
     protected readonly missing = signal(false);
     protected readonly error = signal<string | null>(null);
     protected readonly series = computed(() => this.tag()?.field === 'series');
+    /** Tags that may be the same as this one (stage 6 chunk 14): asked only by those who manage tags. */
+    protected readonly lookAlikes = signal<TagLookAlike[]>([]);
     private requested = 0;
 
     constructor() {
@@ -140,6 +155,17 @@ export class TagPage {
         }
     }
 
+    private async loadLookAlikes(id: number): Promise<void> {
+        if (this.lookAlikes().length && this.tag()?.id !== id)
+            this.lookAlikes.set([]);
+        if (!this.session.can(Rights.manageTags))
+            return;
+        // Only a hint: a failure leaves it out.
+        const found = await this.api.tagLookAlikes(id).catch(() => []);
+        if (this.tag()?.id === id)
+            this.lookAlikes.set(found);
+    }
+
     protected async load(): Promise<void> {
         const asked = ++this.requested;
         const id = this.id();
@@ -158,6 +184,7 @@ export class TagPage {
                 return;
             this.tag.set(tag);
             await this.readable(tag);
+            void this.loadLookAlikes(tag.id);
         } catch (error) {
             if (asked !== this.requested)
                 return;

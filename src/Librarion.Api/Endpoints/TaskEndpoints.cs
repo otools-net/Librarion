@@ -272,7 +272,7 @@ public static class TaskEndpoints
     private static readonly BackgroundTaskKind[] TagRuns =
     [
         BackgroundTaskKind.TagDelete, BackgroundTaskKind.TagMerge, BackgroundTaskKind.FieldMerge, BackgroundTaskKind.MergeUndo, BackgroundTaskKind.TagCounts,
-        BackgroundTaskKind.TagIgnore,
+        BackgroundTaskKind.TagIgnore, BackgroundTaskKind.TagDuplicateBuild,
     ];
 
     /// <summary>

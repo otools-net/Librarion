@@ -187,9 +187,15 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         only while the kept book was merged into another later; **split**: a book read from its files' heads gives a
         new book read from the files moved, a book of a Calibre / INPX import a copy of its metadata; the book split
         keeps its own. **Built:** [merging](../features/merging.md#undo-bulk-merge-and-split-built-stage-6-chunk-13).
-14. [ ] Duplicate tag and field suggestions: normalized names, name forms ("King, Stephen", "S. King"),
+14. [x] Duplicate tag and field suggestions: normalized names, name forms ("King, Stephen", "S. King"),
         transliteration, the same name in two fields; ranked by books; spelling distance on demand on a tag's or
-        field's page, capped (D21); Not the same remembered; shown on the tag page and in the picker.
+        field's page, capped (D21); Not the same remembered; shown on the tag page and in the picker. **The user's
+        answers (2026-11-09):** **stored groups ranked by books** (match keys on each tag, groups built by a run and kept
+        at the end of imports and on edits, a Possible duplicates page per field, the groups fixing most books first);
+        matches by **same words** (order, punctuation, case, accents, Cyrillic / Greek letters), **sounds alike** and
+        **initials** ("S. King" with "Stephen King"); no matching across fields (people in two roles are not
+        duplicates); spelling distance **not now**. **Built:**
+        [merging](../features/merging.md#possible-duplicate-tags-built-stage-6-chunk-14).
 15. [ ] Search additions: `special:untagged`, `special:duplicates` (curators), `tag:"name (parent)"`.
 15a. [x] **Readable addresses for tag pages** (asked by the user 2026-11-05): a field value's page at
        `/<field key>/<id>/<name>` (`/author/1234/Stephen King`, `/series/88/The Dark Tower`, `/category/9/Horror`), a
@@ -257,7 +263,7 @@ A session may end early: this list is the state of the work. Tick a chunk when i
 ### 6.3 Duplicates
 - [x] Stored groups, the first build and its upkeep, Not a duplicate (stored; its routes with 12), the same-file setting.
 - [x] Duplicates page, compare and merge, bulk merge, undo and split.
-- [ ] Duplicate tag and field suggestions.
+- [x] Duplicate tag and field suggestions.
 
 ### 6.4 Docs, tests, budgets
 - [ ] User docs: `docs/user-guide/` (editing a book, tagging, selections), `docs/administration/` (Catalog: tags,

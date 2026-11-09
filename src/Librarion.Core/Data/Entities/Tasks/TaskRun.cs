@@ -30,6 +30,8 @@ public enum BackgroundTaskKind : byte
     DuplicateBuild,
     /// <summary>Duplicate groups of a library merged in bulk (the same file, the same identifier), each with the default choices.</summary>
     BookMerge,
+    /// <summary>The tenant's possible duplicate tags built whole again (Find again; a scan or import's end builds them when there are none).</summary>
+    TagDuplicateBuild,
 }
 
 public enum TaskTrigger : byte

@@ -44,6 +44,14 @@ public sealed class Tag
     public BuiltInTag? BuiltIn { get; set; }
 
     public List<TagAlias> Aliases { get; set; } = [];
+
+    /// <summary>
+    /// Match keys of the name (<see cref="Tagging.NameKeys"/>, stage 6 chunk 14): its words' sounds, and its surname with
+    /// the first initial; null on fields and categories. Set with the name (<see cref="Tagging.NameKeys.Apply"/>).
+    /// </summary>
+    public long? SoundKey { get; set; }
+
+    public long? InitialsKey { get; set; }
 }
 
 public enum BuiltInTag
