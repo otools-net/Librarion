@@ -26,6 +26,16 @@ public sealed class OpdsLinks(HttpContext context)
 
     public string TagBooks(int library, int tag, string? after = null) => $"{Library(library)}/tags/{tag}/books" + After(after);
 
+    /// <summary>The library's OpenSearch description (where reader apps learn the search address).</summary>
+    public string OpenSearch(int library) => Library(library) + "/opensearch.xml";
+
+    /// <summary>A search in the library; <paramref name="query"/> null gives the template, <c>{searchTerms}</c> left as it is.</summary>
+    public string Search(int library, string? query, string? after = null) =>
+        query is null ? Library(library) + "/search?q={searchTerms}" : Library(library) + "/search" + Query(("q", query), ("after", after));
+
+    /// <summary>The library the request's address names, if any (a feed's search links point there).</summary>
+    public int? CurrentLibrary { get; } = LibraryOf(context);
+
     public string File(int library, int book, int file) => $"{Library(library)}/books/{book}/files/{file}";
 
     /// <summary>A cover; <paramref name="version"/> changes with the book, so a reader app's cached picture isn't shown after an edit.</summary>

@@ -28,6 +28,8 @@ public sealed partial class OpdsFeed : IResult
     public const string ImageRel = "http://opds-spec.org/image";
     public const string ThumbnailRel = "http://opds-spec.org/image/thumbnail";
     public const string NewRel = "http://opds-spec.org/sort/new";
+    public const string OpenSearchType = "application/opensearchdescription+xml";
+    public const string OpenSearchNamespace = "http://a9.com/-/spec/opensearch/1.1/";
 
     /// <summary>The longest summary of a book entry (its description as plain text, cut at a word).</summary>
     public const int MaxSummary = 1000;
@@ -42,8 +44,12 @@ public sealed partial class OpdsFeed : IResult
         _xml = XmlWriter.Create(_buffer, new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = false });
     }
 
-    /// <summary>A feed with its head: id, title, now as its time, and its links (self, start, up, next).</summary>
-    public static OpdsFeed Start(string type, string id, string title, OpdsLinks links, string self, string? up = null, string? next = null)
+    /// <summary>
+    /// A feed with its head: id, title, now as its time, and its links (self, start, up, next, and the search of
+    /// <paramref name="library"/>, else of the library the address names; none across libraries, Q11).
+    /// </summary>
+    public static OpdsFeed Start(string type, string id, string title, OpdsLinks links, string self, string? up = null, string? next = null,
+        int? library = null)
     {
         var feed = new OpdsFeed(type);
         var xml = feed._xml;
@@ -63,6 +69,12 @@ public sealed partial class OpdsFeed : IResult
             feed.Link("up", up, NavigationType);
         if (next is not null)
             feed.Link("next", next, type);
+        if ((library ?? links.CurrentLibrary) is { } searched)
+        {
+            // Both forms: the description (the standard) and the template itself (apps that read only that).
+            feed.Link("search", links.OpenSearch(searched), OpenSearchType);
+            feed.Link("search", links.Search(searched, null), AcquisitionType);
+        }
         return feed;
     }
 
@@ -135,6 +147,36 @@ public sealed partial class OpdsFeed : IResult
         }
         _xml.WriteEndElement();
         return this;
+    }
+
+    /// <summary>
+    /// A library's OpenSearch 1.1 description: its name and the search address as a template (<c>{searchTerms}</c> in
+    /// the search language; no <c>{startPage}</c>: next pages come by key from the feed's next link).
+    /// </summary>
+    public static IResult OpenSearchDescription(string libraryName, OpdsLinks links, int library)
+    {
+        var buffer = new MemoryStream();
+        using (var xml = XmlWriter.Create(buffer, new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = false }))
+        {
+            xml.WriteStartDocument();
+            xml.WriteStartElement("OpenSearchDescription", OpenSearchNamespace);
+            // OpenSearch 1.1 limits: ShortName 16 characters, LongName 48.
+            xml.WriteElementString("ShortName", OpenSearchNamespace, libraryName.Length > 16 ? libraryName[..16] : libraryName);
+            xml.WriteElementString("LongName", OpenSearchNamespace, libraryName.Length > 48 ? libraryName[..48] : libraryName);
+            xml.WriteElementString("Description", OpenSearchNamespace, $"Search the books of {libraryName}.");
+            xml.WriteElementString("InputEncoding", OpenSearchNamespace, "UTF-8");
+            xml.WriteElementString("OutputEncoding", OpenSearchNamespace, "UTF-8");
+            foreach (var type in new[] { AcquisitionType, "application/atom+xml" })
+            {
+                xml.WriteStartElement("Url", OpenSearchNamespace);
+                xml.WriteAttributeString("type", type);
+                xml.WriteAttributeString("template", links.Search(library, null));
+                xml.WriteEndElement();
+            }
+            xml.WriteEndElement();
+            xml.WriteEndDocument();
+        }
+        return Results.Bytes(buffer.ToArray(), OpenSearchType + ";charset=utf-8");
     }
 
     public async Task ExecuteAsync(HttpContext httpContext)

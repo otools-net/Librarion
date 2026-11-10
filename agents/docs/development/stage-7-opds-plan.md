@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 7.
+**Next:** chunk 8.
 
 ## The user's answers (2026-11-10)
 
@@ -135,8 +135,10 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    category; values hidden by content filters left out (`TagQueries`' deny rule), counts from `TagCounts`.
    **Built:** first letters probed (any collation) with All, a tag with tags under it as a tree, merged tags
    redirected; [opds](../features/opds.md#built-stage-7-chunk-6-fields-and-tags).
-7. [ ] OpenSearch: the description document, the search feed through `BookQueries.ListAsync` (`q`, the search
-   language), paged by key; the search link in every feed.
+7. [x] OpenSearch: the description document, the search feed through `BookQueries.ListAsync` (`q`, the search
+   language), paged by key; the search link in every feed. **Built:** per library (`…/opensearch.xml`, `…/search`),
+   both the description and the template linked, a blank search empty;
+   [opds](../features/opds.md#built-stage-7-chunk-7-search).
 8. [ ] FB2 as `fb2.zip` on the fly; merged books redirect in feeds and downloads; path keys `/opds/k/<key>/…` (keys
    that allow them) with every link keeping the prefix and the key redacted from logs (a test reads the log).
 9. [ ] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,

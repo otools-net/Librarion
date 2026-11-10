@@ -36,6 +36,8 @@ public static partial class OpdsEndpoints
             BooksAsync(library, BookSort.Added, after, context, current, visibilities, books));
         library.MapGet("/titles", (int library, string? after, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries books) =>
             BooksAsync(library, BookSort.Title, after, context, current, visibilities, books));
+        library.MapGet("/opensearch.xml", OpenSearchAsync);
+        library.MapGet("/search", SearchAsync);
         library.MapGet("/books/{id:int}/files/{fileId:int}", DownloadAsync);
         library.MapGet("/books/{id:int}/cover/{size}", CoverAsync);
         MapBrowse(library);
@@ -54,6 +56,8 @@ public static partial class OpdsEndpoints
             : [];
         if (libraries.Count == 1)
             return LibraryFeed(libraries[0].Id, libraries[0].Name, links, links.Root, await tags.FieldsWithValuesAsync(state.TenantId!.Value, context.RequestAborted));
+
+        // A list of catalogs: no search across them (Q11); each library's feeds carry its own.
 
         var feed = OpdsFeed.Start(OpdsFeed.NavigationType, "urn:librarion:root", "Librarion", links, links.Root);
         foreach (var each in libraries)
@@ -79,7 +83,7 @@ public static partial class OpdsEndpoints
     /// </summary>
     private static OpdsFeed LibraryFeed(int library, string name, OpdsLinks links, string self, IReadOnlyList<FieldInfo> fields)
     {
-        var feed = OpdsFeed.Start(OpdsFeed.NavigationType, $"urn:librarion:library:{library}", name, links, self)
+        var feed = OpdsFeed.Start(OpdsFeed.NavigationType, $"urn:librarion:library:{library}", name, links, self, library: library)
             .Navigation($"urn:librarion:library:{library}:recent", "Recently added", links.Recent(library), OpdsFeed.AcquisitionType,
                 "The books added last, newest first.", OpdsFeed.NewRel)
             .Navigation($"urn:librarion:library:{library}:titles", "All books by title", links.Titles(library), OpdsFeed.AcquisitionType,
@@ -106,6 +110,45 @@ public static partial class OpdsEndpoints
             ? ($"urn:librarion:library:{library}:recent", "Recently added", links.Recent(library, after), page.Next is { } n ? links.Recent(library, n) : null)
             : ($"urn:librarion:library:{library}:titles", "All books by title", links.Titles(library, after), page.Next is { } m ? links.Titles(library, m) : null);
         var feed = OpdsFeed.Start(OpdsFeed.AcquisitionType, id, title, links, self, links.Library(library), next);
+        var canDownload = state.Access.HasIn(Rights.Download, library);
+        foreach (var book in page.Items)
+            feed.Book(book, extras.GetValueOrDefault(book.Id), links, canDownload);
+        return feed;
+    }
+
+    /// <summary>The library's OpenSearch description: where its search is, as a template.</summary>
+    private static async Task<IResult> OpenSearchAsync(int library, HttpContext context, CurrentAccess current, AccessService accounts)
+    {
+        var state = await current.GetAsync();
+        if (!Opens(state, library))
+            return Results.NotFound();
+        var name = (await accounts.ListLibrariesAsync(state.TenantId!.Value, context.RequestAborted)).FirstOrDefault(l => l.Id == library)?.Name;
+        return name is null ? Results.NotFound() : OpdsFeed.OpenSearchDescription(name, new OpdsLinks(context), library);
+    }
+
+    /// <summary>
+    /// A search in the library in the search language (as the app's search box: words, <c>author:</c>, <c>-</c>…), by
+    /// title, a page at a time by key; a blank search gives an empty feed, not every book.
+    /// </summary>
+    private static async Task<IResult> SearchAsync(int library, string? q, string? after, HttpContext context, CurrentAccess current,
+        BookVisibilities visibilities, BookQueries books)
+    {
+        var state = await current.GetAsync();
+        if (!Opens(state, library))
+            return Results.NotFound();
+        var tenantId = state.TenantId!.Value;
+        var links = new OpdsLinks(context);
+        var query = q?.Trim() ?? "";
+        var page = new Page<BookListItem>([], null);
+        if (query.Length > 0)
+        {
+            var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+            page = await books.ListAsync(tenantId, visibility, new BookPageRequest(library, BookSort.Title, after, PageSize, Query: query), context.RequestAborted);
+        }
+        var extras = await books.EntriesAsync(tenantId, page.Items.Select(b => b.Id).ToList(), context.RequestAborted);
+
+        var feed = OpdsFeed.Start(OpdsFeed.AcquisitionType, $"urn:librarion:library:{library}:search", $"Search: {query}", links,
+            links.Search(library, query, after), links.Library(library), page.Next is { } next ? links.Search(library, query, next) : null);
         var canDownload = state.Access.HasIn(Rights.Download, library);
         foreach (var book in page.Items)
             feed.Book(book, extras.GetValueOrDefault(book.Id), links, canDownload);

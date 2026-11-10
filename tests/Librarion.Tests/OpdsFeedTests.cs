@@ -264,6 +264,66 @@ public sealed class OpdsFeedTests
         Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
     }
 
+    /// <summary>
+    /// Every feed of a library links its OpenSearch description and the template; the description gives the template;
+    /// a search pages by key (the next page keeps the words), speaks the search language, and a blank one finds nothing.
+    /// </summary>
+    [TestMethod]
+    public async Task ALibraryIsSearchedPageByPage()
+    {
+        var books = Enumerable.Range(0, 52).Select(i => ($"Saga {i:00}.fb2", Fb2($"Saga {i:00}", "Ann Writer")))
+            .Append(("Dune.fb2", Fb2("Dune", "Frank Herbert"))).Append(("Saga Other.fb2", Fb2("Saga of the Other", "Frank Herbert"))).ToArray();
+        var (shelf, reader) = await StartAsync(books);
+        await using var _s = shelf;
+        using var _r = reader;
+        var library = $"/opds/l/{shelf.LibraryId}";
+        var template = $"{library}/search?q={{searchTerms}}";
+
+        foreach (var (url, kind) in new[] { ("/opds", "navigation"), (library, "navigation"), ($"{library}/titles", "acquisition"), ($"{library}/fields/author", "navigation") })
+        {
+            var searches = (await FeedAsync(reader, url, kind)).Root!.Elements(Atom + "link").Where(l => (string?)l.Attribute("rel") == "search").ToList();
+            CollectionAssert.AreEqual(new[] { $"{library}/opensearch.xml", template }, searches.Select(l => l.Attribute("href")!.Value).ToArray(), url);
+            CollectionAssert.AreEqual(new[] { OpdsFeed.OpenSearchType, OpdsFeed.AcquisitionType }, searches.Select(l => l.Attribute("type")!.Value).ToArray(), url);
+        }
+
+        using (var response = await reader.GetAsync($"{library}/opensearch.xml", Cancel))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.AreEqual(OpdsFeed.OpenSearchType, response.Content.Headers.ContentType?.MediaType);
+            var description = XDocument.Parse(await response.Content.ReadAsStringAsync(Cancel)).Root!;
+            XNamespace os = OpdsFeed.OpenSearchNamespace;
+            Assert.AreEqual(os + "OpenSearchDescription", description.Name);
+            Assert.AreEqual("Library", description.Element(os + "ShortName")!.Value);
+            var urls = description.Elements(os + "Url").ToList();
+            Assert.IsTrue(urls.All(u => u.Attribute("template")!.Value == template));
+            CollectionAssert.Contains(urls.Select(u => u.Attribute("type")!.Value).ToList(), OpdsFeed.AcquisitionType);
+        }
+
+        var first = (await FeedAsync(reader, $"{library}/search?q=saga", "acquisition")).Root!;
+        Assert.AreEqual($"{library}/search?q=saga", Href(first, "self"));
+        Assert.AreEqual(library, Href(first, "up"));
+        Assert.AreEqual("Search: saga", first.Element(Atom + "title")!.Value);
+        var next = Href(first, "next");
+        Assert.IsNotNull(next);
+        StringAssert.StartsWith(next, $"{library}/search?q=saga&after=");
+        var second = (await FeedAsync(reader, next, "acquisition")).Root!;
+        Assert.IsNull(Href(second, "next"));
+        var found = Entries(new XDocument(first)).Concat(Entries(new XDocument(second))).Select(Title).ToList();
+        Assert.HasCount(53, found);
+        CollectionAssert.AllItemsAreUnique(found);
+        CollectionAssert.DoesNotContain(found, "Dune");
+
+        var language = Entries(await FeedAsync(reader, $"{library}/search?q=" + Uri.EscapeDataString("author:\"Frank Herbert\" -dune"), "acquisition"))
+            .Select(Title).ToArray();
+        CollectionAssert.AreEqual(new[] { "Saga of the Other" }, language);
+
+        Assert.IsEmpty(Entries(await FeedAsync(reader, $"{library}/search?q=%20", "acquisition")).ToList());
+        using var other = await reader.GetAsync($"/opds/l/{shelf.LibraryId + 1000}/search?q=saga", Cancel);
+        Assert.AreEqual(HttpStatusCode.NotFound, other.StatusCode);
+        using var otherDescription = await reader.GetAsync($"/opds/l/{shelf.LibraryId + 1000}/opensearch.xml", Cancel);
+        Assert.AreEqual(HttpStatusCode.NotFound, otherDescription.StatusCode);
+    }
+
     [TestMethod]
     public async Task ASeriesComesByItsNumbers()
     {

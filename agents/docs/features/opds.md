@@ -63,7 +63,21 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
   numbered series are not in that order, as on the web), others by title; up = the field's values (or the tags).
   A merged tag's old address answers 301 to the tag it became (`TagQueries.MovedAsync`); a denied one 404.
 
+## Built (stage 7 chunk 7): search
+
+- **Per library**, never across libraries (Q11): `/opds/l/<library>/opensearch.xml` (OpenSearch 1.1, type
+  `application/opensearchdescription+xml`; ShortName cut to 16 characters; `Url` templates for the acquisition type
+  and plain `application/atom+xml`, both `…/search?q={searchTerms}`; no `{startPage}`: next pages by key).
+- **Every feed of a library** (and the root when it is the only library's catalog) has two `search` links: the
+  description and the template itself (typed acquisition), for apps that read only one form. `OpdsFeed.Start` takes
+  the library from the address (`OpdsLinks.CurrentLibrary`) or its `library` argument. The root listing several
+  libraries has none.
+- **The search feed** (`…/search?q=&after=`): `BookQueries.ListAsync` with `Query` (the search language, as the app's
+  search box; `SearchQuery` caps length and terms, never throws), by title, 50 a page, `next` keeps `q`. A blank `q`
+  answers an empty feed, not every book. Up = the library's catalog.
+- Test: `OpdsFeedTests.ALibraryIsSearchedPageByPage`.
+
 ## Planned (stage 7)
 
-- OpenSearch (7), `fb2.zip`, merged ids redirected, path keys
+- `fb2.zip`, merged ids redirected, path keys
   `/opds/k/<key>/…` (8), shelves (11).
