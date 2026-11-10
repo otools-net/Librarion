@@ -47,6 +47,9 @@ note rather than inventing a new one.
 - A plan (`agents/docs/development/*-plan.md`) is removed once its epic is finalized: move what stays true (decisions,
   gotchas, how it works) into the feature notes, then delete the plan, its line in the index and every link to it.
   Git history keeps it; work still left becomes a new, smaller plan or a bullet.
+- A stage plan is a checklist: a session continues with the chunk on its **Next:** line and ticks it when committed.
+- A feature decided to wait past 1.0 goes to
+  [next-version-plan](agents/docs/development/next-version-plan.md), not only into a feature note.
 
 ## Basic rules (details in the linked notes)
 
@@ -94,7 +97,9 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (6 done; 7, OPDS and API keys, next), budgets, risks | |
+| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (6 done; 7, OPDS and API keys, in progress), budgets, risks | |
+| [stage-7-opds-plan](agents/docs/development/stage-7-opds-plan.md) | **stage 7 checklist**: OPDS 1.2, API keys, shelves; decisions, chunks, the **Next:** chunk to continue with | |
+| [next-version-plan](agents/docs/development/next-version-plan.md) | open topics for after 1.0: features discussed but not built before the MVP | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
