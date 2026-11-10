@@ -29,6 +29,12 @@ public sealed partial class OpdsFeed : IResult
     public const string ThumbnailRel = "http://opds-spec.org/image/thumbnail";
     public const string NewRel = "http://opds-spec.org/sort/new";
     public const string OpenSearchType = "application/opensearchdescription+xml";
+
+    /// <summary>An FB2 in a ZIP, as OPDS catalogs of FB2 libraries name it (reader apps of those catalogs know it).</summary>
+    public const string Fb2ZipType = "application/fb2+zip";
+
+    /// <summary>Formats also offered zipped (FB2 is XML: a third or less of its size, and many apps ask for it so).</summary>
+    public static bool Zipped(string format) => format == "fb2";
     public const string OpenSearchNamespace = "http://a9.com/-/spec/opensearch/1.1/";
 
     /// <summary>The longest summary of a book entry (its description as plain text, cut at a word).</summary>
@@ -143,6 +149,16 @@ public sealed partial class OpdsFeed : IResult
                 _xml.WriteAttributeString("length", file.Size.ToString(CultureInfo.InvariantCulture));
                 _xml.WriteAttributeString("title", file.Format.ToUpperInvariant());
                 _xml.WriteEndElement();
+                if (Zipped(file.Format))
+                {
+                    // No length: the ZIP is made while it is sent.
+                    _xml.WriteStartElement("link", AtomNamespace);
+                    _xml.WriteAttributeString("rel", AcquisitionRel);
+                    _xml.WriteAttributeString("href", links.ZippedFile(book.LibraryId, book.Id, file.Id));
+                    _xml.WriteAttributeString("type", Fb2ZipType);
+                    _xml.WriteAttributeString("title", "FB2.ZIP");
+                    _xml.WriteEndElement();
+                }
             }
         }
         _xml.WriteEndElement();

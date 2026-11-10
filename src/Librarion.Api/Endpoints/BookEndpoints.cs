@@ -270,14 +270,7 @@ public static class BookEndpoints
     {
         var (content, problem) = BookDownloads.Open(target);
         if (content is null)
-        {
-            return problem switch
-            {
-                BookFileProblem.Gone => TypedResults.Problem("The file is no longer where the last scan found it.", statusCode: StatusCodes.Status410Gone, type: FileGoneType),
-                BookFileProblem.Changed => TypedResults.Problem("The file changed since the last scan: scan the library again.", statusCode: StatusCodes.Status409Conflict, type: FileChangedType),
-                _ => TypedResults.Problem("The archive can't give this file.", statusCode: StatusCodes.Status409Conflict, type: FileUnreadableType),
-            };
-        }
+            return FileProblem(problem);
 
         // A compressed entry is not seekable: its length is known all the same (the stream is held to it).
         if (!content.Seekable)
@@ -285,6 +278,14 @@ public static class BookEndpoints
         return Results.File(content.Stream, Librarion.Core.Formats.BookFormats.ContentType(target.Format), target.Name,
             target.Modified is { } modified ? new DateTimeOffset(modified, TimeSpan.Zero) : null, EntityTag(target), enableRangeProcessing: content.Seekable);
     }
+
+    /// <summary>Why a file can't be opened, as the answer: 410 gone, 409 changed or unreadable.</summary>
+    internal static IResult FileProblem(BookFileProblem? problem) => problem switch
+    {
+        BookFileProblem.Gone => TypedResults.Problem("The file is no longer where the last scan found it.", statusCode: StatusCodes.Status410Gone, type: FileGoneType),
+        BookFileProblem.Changed => TypedResults.Problem("The file changed since the last scan: scan the library again.", statusCode: StatusCodes.Status409Conflict, type: FileChangedType),
+        _ => TypedResults.Problem("The archive can't give this file.", statusCode: StatusCodes.Status409Conflict, type: FileUnreadableType),
+    };
 
     /// <summary>The CRC and size of an entry (the bytes themselves); size and time for a loose file whose CRC isn't known.</summary>
     private static Microsoft.Net.Http.Headers.EntityTagHeaderValue EntityTag(BookFileTarget target) =>

@@ -38,7 +38,10 @@ public static partial class OpdsEndpoints
             BooksAsync(library, BookSort.Title, after, context, current, visibilities, books));
         library.MapGet("/opensearch.xml", OpenSearchAsync);
         library.MapGet("/search", SearchAsync);
-        library.MapGet("/books/{id:int}/files/{fileId:int}", DownloadAsync);
+        library.MapGet("/books/{id:int}/files/{fileId:int}", (int library, int id, int fileId, HttpContext context, CurrentAccess current,
+            BookVisibilities visibilities, BookDownloads downloads) => DownloadAsync(library, id, fileId, zipped: false, context, current, visibilities, downloads));
+        library.MapGet("/books/{id:int}/files/{fileId:int}/zip", (int library, int id, int fileId, HttpContext context, CurrentAccess current,
+            BookVisibilities visibilities, BookDownloads downloads) => DownloadAsync(library, id, fileId, zipped: true, context, current, visibilities, downloads));
         library.MapGet("/books/{id:int}/cover/{size}", CoverAsync);
         MapBrowse(library);
 
@@ -155,16 +158,26 @@ public static partial class OpdsEndpoints
         return feed;
     }
 
-    private static async Task<IResult> DownloadAsync(int library, int id, int fileId, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
-        BookDownloads downloads)
+    /// <summary>
+    /// A file as it lies (Range, ETag), or an FB2 zipped while it is sent (<paramref name="zipped"/>; other formats
+    /// are not offered so: 404). A merged book's old address still gives the file (it is its kept book's now).
+    /// </summary>
+    private static async Task<IResult> DownloadAsync(int library, int id, int fileId, bool zipped, HttpContext context, CurrentAccess current,
+        BookVisibilities visibilities, BookDownloads downloads)
     {
         var state = await current.GetAsync();
         if (!Opens(state, library))
             return Results.NotFound();
         var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
-        if (await downloads.FindAsync(state.TenantId!.Value, visibility, id, fileId, context.RequestAborted) is not { } target || target.LibraryId != library)
+        if (await downloads.FindAsync(state.TenantId!.Value, visibility, id, fileId, context.RequestAborted) is not { } target || target.LibraryId != library
+            || (zipped && !OpdsFeed.Zipped(target.Format)))
             return Results.NotFound();
-        return state.Access.HasIn(Rights.Download, library) ? BookEndpoints.Download(context, target) : Results.Forbid();
+        if (!state.Access.HasIn(Rights.Download, library))
+            return Results.Forbid();
+        if (!zipped)
+            return BookEndpoints.Download(context, target);
+        var (content, problem) = BookDownloads.Open(target);
+        return content is null ? BookEndpoints.FileProblem(problem) : new ZippedDownload(content, target.Name, target.Modified);
     }
 
     private static async Task<IResult> CoverAsync(int library, int id, string size, HttpContext context, CurrentAccess current, BookVisibilities visibilities,

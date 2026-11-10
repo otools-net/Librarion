@@ -128,7 +128,7 @@ public sealed class OpdsFeedTests
         Assert.IsNotEmpty(entry.Elements(Atom + "category").ToList());
         Assert.AreEqual("Middle-earth #1\nA hobbit & a dragon.", entry.Element(Atom + "summary")!.Value);
         var links = entry.Elements(Atom + "link").ToList();
-        var acquisition = links.Single(l => (string?)l.Attribute("rel") == OpdsFeed.AcquisitionRel);
+        var acquisition = links.Single(l => (string?)l.Attribute("rel") == OpdsFeed.AcquisitionRel && (string?)l.Attribute("title") == "FB2");
         Assert.AreEqual("application/x-fictionbook+xml", (string?)acquisition.Attribute("type"));
         Assert.AreEqual("FB2", (string?)acquisition.Attribute("title"));
 
@@ -160,6 +160,78 @@ public sealed class OpdsFeedTests
         StringAssert.EndsWith(summary, "word…");
         Assert.IsLessThanOrEqualTo(OpdsFeed.MaxSummary + 20, summary.Length);
         Assert.AreEqual("", OpdsFeed.Summary(book with { Series = null }, " <br/> "));
+    }
+
+    /// <summary>
+    /// An FB2 is also offered as <c>fb2.zip</c>, zipped while sent (a loose one and one inside a ZIP): one entry, the
+    /// same bytes, the name with <c>.zip</c>; other formats have no such link and their address is not found.
+    /// </summary>
+    [TestMethod]
+    public async Task AnFb2IsAlsoOfferedZipped()
+    {
+        var (shelf, reader) = await StartAsync(("Loose.fb2", Fb2("Loose")), ("Other.txt", "Just text."));
+        await using var _s = shelf;
+        using var _r = reader;
+        shelf.Zip("Pack.zip", System.IO.Compression.CompressionLevel.Optimal, ("Inside.fb2", Fb2("Inside")));
+        await shelf.ScanAsync(Cancel);
+
+        var entries = Entries(await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/titles", "acquisition"));
+        foreach (var (title, name) in new[] { ("Loose", "Loose.fb2"), ("Inside", "Inside.fb2") })
+        {
+            var acquisitions = entries.Single(e => Title(e) == title).Elements(Atom + "link")
+                .Where(l => (string?)l.Attribute("rel") == OpdsFeed.AcquisitionRel).ToList();
+            var plain = acquisitions.Single(l => (string?)l.Attribute("title") == "FB2");
+            var zipped = acquisitions.Single(l => (string?)l.Attribute("title") == "FB2.ZIP");
+            Assert.AreEqual(OpdsFeed.Fb2ZipType, (string?)zipped.Attribute("type"));
+            Assert.IsNull(zipped.Attribute("length"));
+            Assert.AreEqual(plain.Attribute("href")!.Value + "/zip", zipped.Attribute("href")!.Value);
+
+            byte[] original;
+            using (var file = await reader.GetAsync(plain.Attribute("href")!.Value, Cancel))
+                original = await file.Content.ReadAsByteArrayAsync(Cancel);
+            using var response = await reader.GetAsync(zipped.Attribute("href")!.Value, Cancel);
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, title);
+            Assert.AreEqual(ZippedDownload.ContentType, response.Content.Headers.ContentType?.MediaType);
+            Assert.AreEqual(name + ".zip", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName);
+            using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(await response.Content.ReadAsByteArrayAsync(Cancel)));
+            var entry = zip.Entries.Single();
+            Assert.AreEqual(name, entry.FullName);
+            using var unzipped = new MemoryStream();
+            await using (var stream = await entry.OpenAsync(Cancel))
+                await stream.CopyToAsync(unzipped, Cancel);
+            CollectionAssert.AreEqual(original, unzipped.ToArray(), title);
+        }
+
+        var text = entries.Single(e => Title(e) == "Other").Elements(Atom + "link").Single(l => (string?)l.Attribute("rel") == OpdsFeed.AcquisitionRel);
+        using var notZipped = await reader.GetAsync(text.Attribute("href")!.Value + "/zip", Cancel);
+        Assert.AreEqual(HttpStatusCode.NotFound, notZipped.StatusCode);
+    }
+
+    /// <summary>A reader app holding a merged book's entry: its file and cover addresses still answer (they are the kept book's now).</summary>
+    [TestMethod]
+    public async Task AMergedBooksOldAddressesStillAnswer()
+    {
+        var (shelf, reader) = await StartAsync(("Dune.fb2", Fb2("Dune", "Frank Herbert")), ("Dune copy.fb2", Fb2("Dune (copy)", "Frank Herbert")));
+        await using var _s = shelf;
+        using var _r = reader;
+        var before = Entries(await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/titles", "acquisition"));
+        var (kept, merged) = (before.Single(e => Title(e) == "Dune"), before.Single(e => Title(e) == "Dune (copy)"));
+        static int IdOf(XElement entry) => int.Parse(entry.Element(Atom + "id")!.Value.Split(':')[^1], System.Globalization.CultureInfo.InvariantCulture);
+        var hrefs = merged.Elements(Atom + "link")
+            .Where(l => (string?)l.Attribute("rel") is OpdsFeed.AcquisitionRel or OpdsFeed.ThumbnailRel)
+            .Select(l => l.Attribute("href")!.Value).ToList();
+        Assert.HasCount(3, hrefs);
+
+        using (var response = await shelf.Admin.PostAsJsonAsync("/api/books/merge", new Librarion.Core.Merging.BookMergeInput(IdOf(kept), [IdOf(merged)]), Cancel))
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
+
+        var after = Entries(await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/titles", "acquisition"));
+        Assert.AreEqual("Dune", Title(after.Single()), "the merged book is no longer listed");
+        foreach (var href in hrefs)
+        {
+            using var response = await reader.GetAsync(href, Cancel);
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, href);
+        }
     }
 
     /// <summary>Without the download right the entries carry no file links and a file's address is refused; others' libraries are not there.</summary>

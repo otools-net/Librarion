@@ -29,7 +29,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   categories, series, description, cover and a download link per file; **authors, series, categories, languages and
   the other fields** and **tags**, by first letter when there are many (a series in its order, a tag with the tags
   under it). **Search** from the reader app's search box, in the same search language as the web app (`author:`,
-  `-` to leave out…), the results by title, 50 a page.
+  `-` to leave out…), the results by title, 50 a page. FB2 books can also be downloaded as **`fb2.zip`** (zipped as
+  they are sent, much smaller). A reader app still showing a book merged into another downloads its file and cover.
 
 ## 0.7.0
 

@@ -38,6 +38,9 @@ public sealed class OpdsLinks(HttpContext context)
 
     public string File(int library, int book, int file) => $"{Library(library)}/books/{book}/files/{file}";
 
+    /// <summary>A file zipped while it is sent (an FB2 as <c>fb2.zip</c>).</summary>
+    public string ZippedFile(int library, int book, int file) => File(library, book, file) + "/zip";
+
     /// <summary>A cover; <paramref name="version"/> changes with the book, so a reader app's cached picture isn't shown after an edit.</summary>
     public string Cover(int library, int book, string size, string? version) =>
         $"{Library(library)}/books/{book}/cover/{size}" + (version is null ? "" : "?v=" + Uri.EscapeDataString(version));

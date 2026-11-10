@@ -77,7 +77,21 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
   answers an empty feed, not every book. Up = the library's catalog.
 - Test: `OpdsFeedTests.ALibraryIsSearchedPageByPage`.
 
+## Built (stage 7 chunk 8a): `fb2.zip`, merged books
+
+- **FB2 also zipped:** beside an FB2's acquisition link, a second one (`…/files/<id>/zip`, type `application/fb2+zip`
+  as FB2 catalogs name it, title `FB2.ZIP`, no `length`). `ZippedDownload` zips while it sends: one entry with the
+  file's name, the answer `application/zip` named `<name>.zip`, no Range, no length; from a loose file or an archive
+  entry alike (`BookDownloads.Open`), problems (410 / 409) answered before anything is sent
+  (`BookEndpoints.FileProblem`). Other formats' `/zip` address is 404 (`OpdsFeed.Zipped`).
+- Gotcha: `ZipArchive` still writes synchronously in places (even through `CreateAsync` / `OpenAsync`), which the
+  response refuses (`AllowSynchronousIO` off): it writes into a buffer (`PendingStream`) sent on after each 64 KB
+  read, so memory stays about a chunk; no sync IO allowed.
+- **Merged books:** a reader app holding a merged book's entry still gets its file and cover from the old addresses
+  (`BookDownloads.FindAsync` and the cover lookup follow `BookMerger.CurrentAsync`); answered, not redirected (the
+  file id is the same); the merged book is no longer listed.
+- Tests: `OpdsFeedTests.AnFb2IsAlsoOfferedZipped`, `AMergedBooksOldAddressesStillAnswer`.
+
 ## Planned (stage 7)
 
-- `fb2.zip`, merged ids redirected, path keys
-  `/opds/k/<key>/…` (8), shelves (11).
+- Path keys `/opds/k/<key>/…` (8b), shelves (11).

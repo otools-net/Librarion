@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 8.
+**Next:** chunk 8b.
 
 ## The user's answers (2026-11-10)
 
@@ -139,8 +139,12 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    language), paged by key; the search link in every feed. **Built:** per library (`…/opensearch.xml`, `…/search`),
    both the description and the template linked, a blank search empty;
    [opds](../features/opds.md#built-stage-7-chunk-7-search).
-8. [ ] FB2 as `fb2.zip` on the fly; merged books redirect in feeds and downloads; path keys `/opds/k/<key>/…` (keys
-   that allow them) with every link keeping the prefix and the key redacted from logs (a test reads the log).
+8a. [x] FB2 as `fb2.zip` on the fly (an acquisition link beside the FB2's, zipped while sent: no Range, no length);
+    merged books' old download and cover addresses still answer through `/opds` (tests). **Built:** `ZippedDownload`
+    (buffered per chunk: `ZipArchive` writes synchronously), `application/fb2+zip`; merged addresses answered, not
+    redirected; [opds](../features/opds.md#built-stage-7-chunk-8a-fb2zip-merged-books).
+8b. [ ] Path keys `/opds/k/<key>/…` (keys that allow them, the tenant setting) with every link keeping the prefix and
+   the key redacted from logs (a test reads the log).
    **The key page tells how to use a key without the user name** (the user's request, 2026-11-10): in the panel
    showing a new key once, per scope: reader apps: the catalog address with the key in it (`…/opds/k/<key>`, with
    Copy) when the key allows the address, else the address with the user name and the key as the password; scripts:
