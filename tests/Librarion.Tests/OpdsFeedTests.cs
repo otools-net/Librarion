@@ -70,7 +70,7 @@ public sealed class OpdsFeedTests
         Assert.AreEqual("/opds", Href(one, "self"));
         Assert.AreEqual("/opds", Href(one, "start"));
         var entries = one.Elements(Atom + "entry").ToList();
-        CollectionAssert.AreEqual(new[] { "Recently added", "All books by title" }, entries.Select(e => e.Element(Atom + "title")!.Value).ToArray());
+        CollectionAssert.AreEqual(new[] { "Recently added", "All books by title" }, entries.Take(2).Select(e => e.Element(Atom + "title")!.Value).ToArray());
         Assert.AreEqual($"/opds/l/{shelf.LibraryId}/recent", Href(entries[0], OpdsFeed.NewRel));
         Assert.AreEqual($"/opds/l/{shelf.LibraryId}/titles", Href(entries[1], "subsection"));
 
@@ -224,6 +224,128 @@ public sealed class OpdsFeedTests
 
         Assert.AreEqual($"urn:librarion:library:{comics.Id}", root.Element(Atom + "id")!.Value, "the only library it may open");
         Assert.AreEqual(HttpStatusCode.NotFound, other.StatusCode);
+    }
+
+    // ---- Fields and tags (chunk 6) ----
+
+    private static string Title(XElement entry) => entry.Element(Atom + "title")!.Value;
+
+    private static List<XElement> Entries(XDocument feed) => feed.Root!.Elements(Atom + "entry").ToList();
+
+    /// <summary>The library's catalog lists its fields that hold values (by their names), then Tags; a field's few values come at once, each with its books.</summary>
+    [TestMethod]
+    public async Task FieldsWithValuesAreListedAndTheirValuesOpenTheirBooks()
+    {
+        var (shelf, reader) = await StartAsync(
+            ("a.fb2", Fb2("The Hobbit", "John Tolkien", "Middle-earth", 1)),
+            ("b.fb2", Fb2("The Silmarillion", "John Tolkien")),
+            ("c.fb2", Fb2("Dune", "Frank Herbert", lang: "fr")));
+        await using var _s = shelf;
+        using var _r = reader;
+
+        var catalog = await FeedAsync(reader, "/opds", "navigation");
+        var names = Entries(catalog).Select(Title).ToList();
+        foreach (var expected in new[] { "Authors", "Series", "Categories", "Languages", "Tags" })
+            CollectionAssert.Contains(names, expected);
+        CollectionAssert.DoesNotContain(names, "Translators", "an empty field is left out");
+
+        var authors = await FeedAsync(reader, Href(Entries(catalog).Single(e => Title(e) == "Authors"), "subsection")!, "navigation");
+        var tolkien = Entries(authors).Single(e => Title(e) == "John Tolkien");
+        Assert.AreEqual("2 books", tolkien.Element(Atom + "content")!.Value);
+        Assert.AreEqual($"/opds/l/{shelf.LibraryId}/fields/author", Href(authors.Root!, "self"));
+        Assert.AreEqual($"/opds/l/{shelf.LibraryId}", Href(authors.Root!, "up"));
+        var link = tolkien.Elements(Atom + "link").Single();
+        Assert.AreEqual(OpdsFeed.CatalogType, (string?)link.Attribute("type"));
+
+        var books = await FeedAsync(reader, link.Attribute("href")!.Value, "acquisition");
+        CollectionAssert.AreEqual(new[] { "The Hobbit", "The Silmarillion" }, Entries(books).Select(Title).ToArray());
+        Assert.AreEqual($"/opds/l/{shelf.LibraryId}/fields/author", Href(books.Root!, "up"));
+        using var missing = await reader.GetAsync($"/opds/l/{shelf.LibraryId}/fields/nothing", Cancel);
+        Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task ASeriesComesByItsNumbers()
+    {
+        var (shelf, reader) = await StartAsync(
+            ("3.fb2", Fb2("Third", series: "Saga", number: 3)),
+            ("1.fb2", Fb2("First", series: "Saga", number: 1)),
+            ("2.fb2", Fb2("Second", series: "Saga", number: 2)));
+        await using var _s = shelf;
+        using var _r = reader;
+
+        var series = await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/fields/series", "navigation");
+        var books = await FeedAsync(reader, Href(Entries(series).Single(), "subsection")!, "acquisition");
+
+        CollectionAssert.AreEqual(new[] { "First", "Second", "Third" }, Entries(books).Select(Title).ToArray());
+    }
+
+    /// <summary>
+    /// More values than a page: the field opens on the first letters they start with (any alphabet), each letter on its
+    /// values from there, next pages by key.
+    /// </summary>
+    [TestMethod]
+    public async Task ManyValuesOpenOnTheirFirstLetters()
+    {
+        var surnames = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".Select(c => $"{c}ster").Concat("БВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ".Select(c => $"{c}ов")).ToList();
+        var (shelf, reader) = await StartAsync(surnames.Select((name, i) => ($"{i}.fb2", Fb2($"Book {i}", $"Ann {name}"))).ToArray());
+        await using var _s = shelf;
+        using var _r = reader;
+
+        var letters = await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/fields/author", "navigation");
+        var titles = Entries(letters).Select(Title).ToList();
+        var fromB = await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/fields/author?from=%D0%91", "navigation");
+
+        CollectionAssert.IsSubsetOf(new[] { "A", "Z", "Б", "Я" }, titles);
+        Assert.AreEqual("A", titles[0]);
+        Assert.AreEqual($"/opds/l/{shelf.LibraryId}/fields/author?from=A", Href(Entries(letters)[0], "subsection"));
+        Assert.Contains("Бов", Title(Entries(fromB)[0]));
+        Assert.AreEqual($"/opds/l/{shelf.LibraryId}/fields/author", Href(fromB.Root!, "up"));
+        Assert.AreEqual("All", titles[^1]);
+        var all = await FeedAsync(reader, Href(Entries(letters)[^1], "subsection")!, "navigation");
+        Assert.HasCount(OpdsEndpoints.PageSize, Entries(all), "the whole list from its start, a page at a time");
+        Assert.IsNotNull(Href(all.Root!, "next"));
+    }
+
+    /// <summary>A tag with tags under it is a little tree: all its books (theirs too), then each tag under it; a merged tag's old address follows it.</summary>
+    [TestMethod]
+    public async Task ATagWithTagsUnderItIsATree()
+    {
+        var (shelf, reader) = await StartAsync(("a.fb2", Fb2("The Hobbit")), ("b.fb2", Fb2("Dune")));
+        await using var _s = shelf;
+        using var _r = reader;
+        var parent = await CreateTagAsync(shelf, new Librarion.Core.Tagging.TagInput("Speculative"));
+        var fairy = await CreateTagAsync(shelf, new Librarion.Core.Tagging.TagInput("Fairy", ParentIds: [parent]));
+        int hobbit;
+        await using (var db = await shelf.DbAsync(Cancel))
+            hobbit = (await db.Books.SingleAsync(b => b.Title == "The Hobbit", Cancel)).Id;
+        using (var tagged = await shelf.Admin.PostAsJsonAsync("/api/books/tags",
+                   new BookEndpoints.SelectionInput([hobbit], [new Librarion.Core.Catalog.BookTagEdit(fairy)]), ApiClients.Json, Cancel))
+            Assert.IsTrue(tagged.IsSuccessStatusCode, await tagged.Content.ReadAsStringAsync(Cancel));
+
+        var tree = await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/tags/{parent}", "navigation");
+        CollectionAssert.AreEqual(new[] { "All books: Speculative", "Fairy" }, Entries(tree).Select(Title).ToArray());
+        var all = await FeedAsync(reader, Href(Entries(tree)[0], "subsection")!, "acquisition");
+        CollectionAssert.AreEqual(new[] { "The Hobbit" }, Entries(all).Select(Title).ToArray());
+        var leaf = await FeedAsync(reader, Href(Entries(tree)[1], "subsection")!, "acquisition");
+        CollectionAssert.AreEqual(new[] { "The Hobbit" }, Entries(leaf).Select(Title).ToArray());
+        var plain = await FeedAsync(reader, $"/opds/l/{shelf.LibraryId}/tags", "navigation");
+        CollectionAssert.IsSubsetOf(new[] { "Fairy", "Speculative" }, Entries(plain).Select(Title).ToArray());
+
+        using (var merged = await shelf.Admin.PostAsJsonAsync($"/api/tags/{fairy}/merge", new TagEndpoints.MergeInput(parent), ApiClients.Json, Cancel))
+            Assert.IsTrue(merged.IsSuccessStatusCode, await merged.Content.ReadAsStringAsync(Cancel));
+        using var noRedirect = shelf.Factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        noRedirect.DefaultRequestHeaders.Authorization = reader.DefaultRequestHeaders.Authorization;
+        using var moved = await noRedirect.GetAsync($"/opds/l/{shelf.LibraryId}/tags/{fairy}", Cancel);
+        Assert.AreEqual(HttpStatusCode.MovedPermanently, moved.StatusCode);
+        Assert.AreEqual($"/opds/l/{shelf.LibraryId}/tags/{parent}", moved.Headers.Location?.OriginalString);
+    }
+
+    private async Task<int> CreateTagAsync(Shelf shelf, Librarion.Core.Tagging.TagInput input)
+    {
+        using var made = await shelf.Admin.PostAsJsonAsync("/api/tags", input, ApiClients.Json, Cancel);
+        Assert.IsTrue(made.IsSuccessStatusCode, await made.Content.ReadAsStringAsync(Cancel));
+        return (await made.Content.ReadFromJsonAsync<Librarion.Core.Tagging.TagDefinition>(ApiClients.Json, Cancel))!.Id;
     }
 
     private async Task<HttpClient> ReaderOfAsync(Shelf shelf)

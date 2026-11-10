@@ -29,7 +29,7 @@ public sealed record TagDetail(
 /// agents/docs/features/browse.md). With a library, values without a book there are skipped, a bounded number of rows
 /// read per request (<see cref="MaxScanned"/>): a sparse library's list comes in short pages, never in one long scan.
 /// </summary>
-public sealed class TagQueries(TenantDb tenantDb)
+public sealed class TagQueries(TenantDb tenantDb, TimeProvider time)
 {
     public const int MaxLimit = 200;
 
@@ -59,6 +59,75 @@ public sealed class TagQueries(TenantDb tenantDb)
             .ThenBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(f => new FieldInfo(f.Id, f.FieldKey!, f.Name, f.BuiltIn is not null))
             .ToList();
+    }
+
+    /// <summary>
+    /// The tenant's fields that hold at least one value (a reader app's catalog leaves out the empty ones): one seek per
+    /// field on the index (TenantId, FieldId, SortName), never a count.
+    /// </summary>
+    public async Task<IReadOnlyList<FieldInfo>> FieldsWithValuesAsync(int tenantId, CancellationToken cancellationToken = default)
+    {
+        var fields = await FieldsAsync(tenantId, cancellationToken);
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var kept = new List<FieldInfo>();
+        foreach (var field in fields)
+        {
+            if (await db.Tags.AnyAsync(t => t.FieldId == field.Id, cancellationToken))
+                kept.Add(field);
+        }
+        return kept;
+    }
+
+    /// <summary>
+    /// The letters a field's first-letter page offers, in this order: digits, Latin, Greek, Cyrillic. Names starting
+    /// otherwise (CJK, an accented capital where the database sorts by code point) are reached from the start of the list.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Initials =
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ".Select(c => c.ToString()).ToList();
+
+    /// <summary>How long a field's letters are kept: they change only when the first value of a new letter comes in.</summary>
+    public static readonly TimeSpan InitialsLifetime = TimeSpan.FromMinutes(10);
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(int Tenant, string Field), (DateTimeOffset Expires, IReadOnlyList<string> Letters)> _initials = new();
+
+    /// <summary>
+    /// The letters of <see cref="Initials"/> some value of a field (or plain tag, <paramref name="fieldKey"/> null) starts
+    /// with: for each, one seek on the index (TenantId, FieldId, SortName) for the first value at or after it, kept when
+    /// it starts with that letter. Right in any collation (PostgreSQL's libc one orders punctuation and U+FFFF unlike
+    /// SQLite's code points: a skip scan by "the next code point" stopped after Z there). Values of the whole tenant, so
+    /// a letter may hold none of a library's books. Kept <see cref="InitialsLifetime"/> per tenant and field.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> InitialsAsync(int tenantId, string? fieldKey, CancellationToken cancellationToken = default)
+    {
+        var cacheKey = (tenantId, fieldKey ?? "");
+        if (_initials.TryGetValue(cacheKey, out var cached) && cached.Expires > time.GetUtcNow())
+            return cached.Letters;
+
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        IQueryable<Tag> tags;
+        if (fieldKey is null)
+        {
+            tags = db.Tags.Where(t => t.FieldId == null && t.FieldKey == null);
+        }
+        else
+        {
+            var fieldId = await db.Tags.Where(t => t.FieldKey == fieldKey).Select(t => (int?)t.Id).FirstOrDefaultAsync(cancellationToken);
+            if (fieldId is null)
+                return [];
+            tags = db.Tags.Where(t => t.FieldId == fieldId);
+        }
+
+        var letters = new List<string>();
+        foreach (var letter in Initials)
+        {
+            var first = await tags.Where(t => string.Compare(t.SortName, letter) >= 0).OrderBy(t => t.SortName)
+                .Select(t => t.SortName).FirstOrDefaultAsync(cancellationToken);
+            if (first is { Length: > 0 } && string.Equals(first[..1], letter, StringComparison.OrdinalIgnoreCase))
+                letters.Add(letter);
+        }
+
+        _initials[cacheKey] = (time.GetUtcNow() + InitialsLifetime, letters);
+        return letters;
     }
 
     /// <summary>The values of the field <paramref name="fieldKey"/> by sort name.</summary>

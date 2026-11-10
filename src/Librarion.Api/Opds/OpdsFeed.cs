@@ -21,6 +21,9 @@ public sealed partial class OpdsFeed : IResult
     public const string NavigationType = "application/atom+xml;profile=opds-catalog;kind=navigation";
     public const string AcquisitionType = "application/atom+xml;profile=opds-catalog;kind=acquisition";
 
+    /// <summary>A link to a feed that is either kind (a tag's page: a tree or its books, known only once it is read).</summary>
+    public const string CatalogType = "application/atom+xml;profile=opds-catalog";
+
     public const string AcquisitionRel = "http://opds-spec.org/acquisition";
     public const string ImageRel = "http://opds-spec.org/image";
     public const string ThumbnailRel = "http://opds-spec.org/image/thumbnail";

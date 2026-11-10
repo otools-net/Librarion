@@ -1,7 +1,8 @@
 # OPDS feeds
 
-Code: `src/Librarion.Api/Opds/` (`OpdsEndpoints` routes, `OpdsFeed` the Atom writer, `OpdsLinks` every address,
-`OpdsAuthentication`), `Core/Catalog/BookQueries.EntriesAsync`. Tests: `OpdsTests`, `OpdsFeedTests`. Sign-in:
+Code: `src/Librarion.Api/Opds/` (`OpdsEndpoints` routes, `OpdsEndpoints.Browse` fields and tags, `OpdsFeed` the Atom
+writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQueries.EntriesAsync`,
+`TagQueries.FieldsWithValuesAsync` / `InitialsAsync`. Tests: `OpdsTests`, `OpdsFeedTests`. Sign-in:
 [opds-auth](opds-auth.md). Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.5–D-7.8).
 
 ## Built (stage 7 chunk 1)
@@ -40,7 +41,29 @@ Code: `src/Librarion.Api/Opds/` (`OpdsEndpoints` routes, `OpdsFeed` the Atom wri
   ETag, 410 / 409); a file of another library than the address's is 404; without `library.download` 403.
 - Feed texts ("Recently added"…) are English constants for now: reader apps show them as they are.
 
+## Built (stage 7 chunk 6): fields and tags
+
+- **The library's catalog** also lists each field that holds values (`TagQueries.FieldsWithValuesAsync`: one seek per
+  field, never a count; built-in fields by their English plural, `OpdsEndpoints.FieldNames`, custom ones by their
+  name), then **Tags** (the plain tags).
+- **A field** (`/opds/l/<library>/fields/<key>`) or **the tags** (`…/tags`): when its values fit one page (50), the
+  values at once; else its **first letters**, then **All** (the whole list from its start: `?from=` empty). A letter
+  opens `?from=<letter>`: the values from there on, by key (`TagQueries.ValuesAsync`), next pages `?after=`. Values
+  denied by the content filters are left out, values without a book in the library skipped, each with "N books"
+  (`TagCounts.TotalCount`) and a link typed `application/atom+xml;profile=opds-catalog` (no `kind`: a tag's page is a
+  tree or its books, known when it is read).
+- **First letters** (`TagQueries.InitialsAsync`): a fixed list (digits, Latin A–Z, Greek, Cyrillic incl. Ё) probed
+  one seek each (the first value at or after the letter, kept when it starts with it), kept 10 minutes per tenant
+  and field; names in other scripts through **All**. Found 2026-11-10: a skip scan stepping to "the next code point"
+  stopped after Z on PostgreSQL (libc `en_US.utf8` sorts `[` before letters and ignores U+FFFF): no letter
+  arithmetic in SQL comparisons, the probe is right in any collation.
+- **A tag** (`…/tags/<id>`): with tags under it, a navigation feed ("All books: <name>", then each tag under it, at
+  most `TagQueries.MaxChildren`); without, its books. `…/tags/<id>/books`: the books of it and the tags under it, a
+  **series by its numbers** (`BookSort.Number`; a series with no numbers at all by title; books without a number in a
+  numbered series are not in that order, as on the web), others by title; up = the field's values (or the tags).
+  A merged tag's old address answers 301 to the tag it became (`TagQueries.MovedAsync`); a denied one 404.
+
 ## Planned (stage 7)
 
-- Fields A–Z, tags by category (chunk 6), OpenSearch (7), `fb2.zip`, merged ids redirected, path keys
+- OpenSearch (7), `fb2.zip`, merged ids redirected, path keys
   `/opds/k/<key>/…` (8), shelves (11).

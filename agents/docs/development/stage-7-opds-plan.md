@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 6.
+**Next:** chunk 7.
 
 ## The user's answers (2026-11-10)
 
@@ -131,8 +131,10 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    All by title; acquisition through `BookDownloads` (Range, ETag), the right per library; cover links (D-7.8).
    **Built:** `OpdsFeed` (buffered per page, not streamed: a page is small), `OpdsLinks`, `BookQueries.EntriesAsync`,
    a server administrator's tenant from the library's address; [opds](../features/opds.md#built-stage-7-chunk-5-the-first-feeds).
-6. [ ] Fields and tags: each field A–Z → values → books (series by number), categories as a tree, plain tags by
+6. [x] Fields and tags: each field A–Z → values → books (series by number), categories as a tree, plain tags by
    category; values hidden by content filters left out (`TagQueries`' deny rule), counts from `TagCounts`.
+   **Built:** first letters probed (any collation) with All, a tag with tags under it as a tree, merged tags
+   redirected; [opds](../features/opds.md#built-stage-7-chunk-6-fields-and-tags).
 7. [ ] OpenSearch: the description document, the search feed through `BookQueries.ListAsync` (`q`, the search
    language), paged by key; the search link in every feed.
 8. [ ] FB2 as `fb2.zip` on the fly; merged books redirect in feeds and downloads; path keys `/opds/k/<key>/…` (keys
@@ -149,7 +151,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
 13. [ ] Validation: `agents/tools/opds-validate/` (offline RelaxNG check of OPDS 1.2 / Atom, with a README); every feed
     kind validated (in tests, or the tool over a running server in CI).
 14. [ ] Benchmark at 2M on both providers: OPDS scenarios in `tests/Librarion.Benchmarks/Bench/RunCommand.cs` (root,
-    Recent first and deep page, a field letter, a big author's books, a series by number, search, a shelf, a page's
+    Recent first and deep page, a field's first letters uncached (~90 seeks over 500k authors), a field letter, a big author's books, a series by number, search, a shelf, a page's
     entries with files) within the OPDS budget (150 ms p95), no full scan; Basic cold vs cached; idle memory.
 15. [ ] Docs and close: user docs (`docs/user-guide/` OPDS with KOReader, Moon+ and Thorium set up, API keys,
     shelves; `docs/reference/rights.md`), feature notes (`opds-auth`, `opds`, `shelves`, `rights`, `accounts`,
