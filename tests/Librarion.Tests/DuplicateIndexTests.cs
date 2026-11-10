@@ -34,7 +34,7 @@ public sealed class DuplicateIndexTests
     [TestMethod]
     public async Task TheFirstScanBuildsTheGroupsAndLaterScansKeepThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", isbn: "9780441172719", text: "one"));
         shelf.Write("dune (scan).fb2", Fb2("DUNE", "Frank Herbert", text: "two"));
         shelf.Write("Dune Messiah.fb2", Fb2("Dune Messiah", "Frank Herbert", isbn: "978-0-441-17271-9", text: "three"));
@@ -67,7 +67,7 @@ public sealed class DuplicateIndexTests
     [TestMethod]
     public async Task AKeySharedByManyBooksIsNoise()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         for (var i = 0; i < DuplicateIndex.MaxGroup; i++)
             shelf.Write($"notes-{i}.fb2", Fb2("Notes", "Some Body", text: $"n{i}"));
         shelf.Write("Kept.fb2", Fb2("Kept", "Ann Writer", text: "a"));
@@ -88,7 +88,7 @@ public sealed class DuplicateIndexTests
     [TestMethod]
     public async Task AnFb2IdGroupsOnlyBooksWithTheSameTitleOrFirstAuthor()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("The Hobbit", "John Tolkien", id: "template-id", text: "a"));
         shelf.Write("b.fb2", Fb2("The Hobbit", "J Tolkien", id: "template-id", text: "b"));
         shelf.Write("c.fb2", Fb2("Roadside Picnic", "Boris Strugatsky", id: "template-id", text: "c"));
@@ -103,7 +103,7 @@ public sealed class DuplicateIndexTests
     [TestMethod]
     public async Task BooksMarkedNotDuplicatesAreLeftOut()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("Twins", "Ann Writer", text: "1"));
         shelf.Write("two.fb2", Fb2("Twins", "Ann Writer", text: "2"));
         shelf.Write("three.fb2", Fb2("Twins", "Ann Writer", text: "3"));
@@ -125,7 +125,7 @@ public sealed class DuplicateIndexTests
     [TestMethod]
     public async Task TheSameFileIsABookOfItsOwnWhenTheSettingIsOff()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var text = Fb2("Copied", "Ann Writer", text: "the same bytes");
         shelf.Zip("a.zip", CompressionLevel.Optimal, ("copied.fb2", text));
         shelf.Zip("b.zip", CompressionLevel.Optimal, ("copied.fb2", text));
@@ -150,7 +150,7 @@ public sealed class DuplicateIndexTests
     [TestMethod]
     public async Task OnlyThoseWhoMergeBooksRebuild()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var groups = await shelf.Admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("reader", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Users).Id]), Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("curator", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Curators).Id]), Cancel);
@@ -167,20 +167,20 @@ public sealed class DuplicateIndexTests
     private static string G(string level, params int[] members) => $"{level}:{string.Join(',', members.Order())}";
 
     /// <summary>Every group as "Level:member,member" (members by id), noise left out.</summary>
-    private async Task<List<string>> GroupsAsync(Shelf shelf)
+    private async Task<List<string>> GroupsAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var groups = await db.DuplicateGroups.Where(g => !g.Noise).Select(g => new { g.Level, Members = g.Members.Select(m => m.BookId).ToList() }).ToListAsync(Cancel);
         return groups.Select(g => $"{g.Level}:{string.Join(',', g.Members.Order())}").ToList();
     }
 
-    private async Task<int> BookOfAsync(Shelf shelf, string path)
+    private async Task<int> BookOfAsync(TestLibrary shelf, string path)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.BookFiles.Where(f => f.Path == path).Select(f => f.BookId).SingleAsync(Cancel);
     }
 
-    private async Task<int> RootIdAsync(Shelf shelf)
+    private async Task<int> RootIdAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.LibraryRoots.Select(r => r.Id).SingleAsync(Cancel);

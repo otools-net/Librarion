@@ -28,20 +28,20 @@ public sealed class SpecialSearchTests
         <FictionBook><description><title-info><genre>sf</genre><author><first-name>{author.Split(' ')[0]}</first-name><last-name>{author.Split(' ')[^1]}</last-name></author><book-title>{title}</book-title>{(keywords is null ? "" : $"<keywords>{keywords}</keywords>")}<lang>en</lang></title-info></description><body><p>{title}</p></body></FictionBook>
         """;
 
-    private static async Task<string[]> FindAsync(Shelf shelf, string q, CancellationToken cancellationToken)
+    private static async Task<string[]> FindAsync(TestLibrary shelf, string q, CancellationToken cancellationToken)
     {
         var page = await shelf.Admin.GetAsync<Page<BookListItem>>($"/api/books?library={shelf.LibraryId}&limit=50&q={Uri.EscapeDataString(q)}", cancellationToken);
         return page.Items.Select(b => b.Title ?? b.FileName!).ToArray();
     }
 
-    private async Task PostAsync(Shelf shelf, string path, object body, CancellationToken cancellationToken)
+    private async Task PostAsync(TestLibrary shelf, string path, object body, CancellationToken cancellationToken)
     {
         using var response = await shelf.Admin.PostAsJsonAsync(path, body, cancellationToken);
         Assert.IsTrue(response.IsSuccessStatusCode, $"{path}: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync(cancellationToken)}");
     }
 
     /// <summary>Every book's flag agrees with its links: untagged exactly when it has no plain tag.</summary>
-    private async Task AgreesAsync(Shelf shelf, string when)
+    private async Task AgreesAsync(TestLibrary shelf, string when)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var wrong = await db.Books.Where(b => b.Untagged == db.BookTags.Any(l => l.BookId == b.Id && l.Tag!.FieldId == null && l.Tag.FieldKey == null))
@@ -52,7 +52,7 @@ public sealed class SpecialSearchTests
     [TestMethod]
     public async Task UntaggedFollowsEveryChangeOfPlainLinks()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("dune.fb2", Fb2("Dune", "Frank Herbert", "space, desert"));
         shelf.Write("solaris.fb2", Fb2("Solaris", "Stanislaw Lem"));
         shelf.Write("ubik.fb2", Fb2("Ubik", "Philip Dick"));
@@ -113,7 +113,7 @@ public sealed class SpecialSearchTests
     [TestMethod]
     public async Task UntaggedPagesTheSameFromTheIndexAndByTheFlag()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var titles = new[] { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India" };
         foreach (var (title, i) in titles.Select((t, i) => (t, i)))
             shelf.Write($"{title}.fb2", Fb2(title, "Some Author", i == 4 ? "kept" : null));
@@ -139,7 +139,7 @@ public sealed class SpecialSearchTests
         CollectionAssert.AreEqual(new[] { "Hotel", "India" }, await AllAsync("special:untagged"), "few: read from the index of the untagged books");
     }
 
-    private async Task<int[]> IdsAsync(Shelf shelf, params string[] titles)
+    private async Task<int[]> IdsAsync(TestLibrary shelf, params string[] titles)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Where(b => titles.Contains(b.Title!)).Select(b => b.Id).ToArrayAsync(Cancel);
@@ -148,7 +148,7 @@ public sealed class SpecialSearchTests
     [TestMethod]
     public async Task DuplicatesAreFoundOnlyWhereTheCallerMayMerge()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("dune.fb2", Fb2("Dune", "Frank Herbert"));
         shelf.Write("dune-again.fb2", Fb2("Dune", "Frank Herbert") + " ");
         shelf.Write("ubik.fb2", Fb2("Ubik", "Philip Dick"));
@@ -176,7 +176,7 @@ public sealed class SpecialSearchTests
     [TestMethod]
     public async Task ATagToldApartIsFoundByItsNameAndParent()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("bear.fb2", Fb2("Five Nights", "Scott Cawthon"));
         shelf.Write("singer.fb2", Fb2("Bohemian Rhapsody", "Freddie Mercury"));
         await shelf.ScanAsync(Cancel);

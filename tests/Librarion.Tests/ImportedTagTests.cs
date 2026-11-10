@@ -33,7 +33,7 @@ public sealed class ImportedTagTests
     [TestMethod]
     public async Task TheImporterRecordsRawNamesButNotPeopleOrSeries()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Space Opera, dragons"));
         shelf.Write("two.fb2", Fb2("Two", "space  opera"));
         await shelf.ScanAsync(Cancel);
@@ -57,7 +57,7 @@ public sealed class ImportedTagTests
     [DataRow(true, DisplayName = "walked by key")]
     public async Task ThePageListsTagsByBooksAPageAtATime(bool walk)
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Alpha, Beta, Gamma"));
         shelf.Write("two.fb2", Fb2("Two", "Alpha, Beta"));
         shelf.Write("three.fb2", Fb2("Three", "Alpha"));
@@ -97,7 +97,7 @@ public sealed class ImportedTagTests
     [TestMethod]
     public async Task KeepMapAndIgnoreHoldThroughAReRead()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Alpha, Beta, Junk"));
         shelf.Write("two.fb2", Fb2("Two", "Alpha, Junk"));
         await shelf.ScanAsync(Cancel);
@@ -143,7 +143,7 @@ public sealed class ImportedTagTests
     [TestMethod]
     public async Task AMergeReviewsTheNamesAndItsUndoDoesNot()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Alpha, Beta"));
         await shelf.ScanAsync(Cancel);
         var (alpha, beta) = (await TagIdAsync(shelf, "Alpha"), await TagIdAsync(shelf, "Beta"));
@@ -161,7 +161,7 @@ public sealed class ImportedTagTests
     [TestMethod]
     public async Task ManyTagsIgnoredInTheBackground()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Alpha, Beta"));
         shelf.Write("two.fb2", Fb2("Two", "Alpha"));
         await shelf.ScanAsync(Cancel);
@@ -183,7 +183,7 @@ public sealed class ImportedTagTests
     [TestMethod]
     public async Task OnlyCuratorsSeeAndChangeThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Alpha"));
         await shelf.ScanAsync(Cancel);
         var alpha = await TagIdAsync(shelf, "Alpha");
@@ -207,7 +207,7 @@ public sealed class ImportedTagTests
 
     // ---- Helpers ----
 
-    private async Task<List<ImportedTag>> ListAsync(Shelf shelf, string status) =>
+    private async Task<List<ImportedTag>> ListAsync(TestLibrary shelf, string status) =>
         (await shelf.Admin.GetAsync<Page<ImportedTag>>($"/api/imported-tags?library={shelf.LibraryId}&status={status}", Cancel)).Items.ToList();
 
     private async Task<TagWork> WorkAsync(HttpResponseMessage response)
@@ -219,26 +219,26 @@ public sealed class ImportedTagTests
         }
     }
 
-    private async Task<int> TagIdAsync(Shelf shelf, string name)
+    private async Task<int> TagIdAsync(TestLibrary shelf, string name)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Tags.Where(t => t.Name == name && t.FieldId == null).Select(t => t.Id).SingleAsync(Cancel);
     }
 
-    private async Task<bool> ReviewedAsync(Shelf shelf, string normalized)
+    private async Task<bool> ReviewedAsync(TestLibrary shelf, string normalized)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.ImportTagMappings.Where(m => m.NormalizedName == normalized && m.FieldId == null).Select(m => m.Reviewed).SingleAsync(Cancel);
     }
 
-    private async Task<int> CountAsync(Shelf shelf, int tagId)
+    private async Task<int> CountAsync(TestLibrary shelf, int tagId)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.TagCounts.Where(c => c.TagId == tagId).SumAsync(c => c.BookCount, Cancel);
     }
 
     /// <summary>A link put on a book by hand, its count with it.</summary>
-    private async Task LinkAsync(Shelf shelf, string title, int tagId)
+    private async Task LinkAsync(TestLibrary shelf, string title, int tagId)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var book = await db.Books.Where(b => b.Title == title).Select(b => b.Id).SingleAsync(Cancel);

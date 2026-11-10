@@ -32,7 +32,7 @@ public sealed class BookPageTests
     [TestMethod]
     public async Task ABookListsItsFilesWithTheirArchiveAndSaysWhetherTheCallerMayDownload()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert"));
         shelf.Zip("lib/fb2-000.zip", CompressionLevel.Optimal, ("sub/Children of Dune.fb2", Fb2("Children of Dune", "Frank Herbert")));
         await shelf.ScanAsync(Cancel);
@@ -62,7 +62,7 @@ public sealed class BookPageTests
     [TestMethod]
     public async Task PossibleDuplicatesShareAFileAnIdentifierOrTheWorkStrongestFirst()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", isbn: "978-0-441-17271-9", text: "first"));
         shelf.Write("dune (other scan).fb2", Fb2("DUNE", "Frank Herbert", text: "second"));
         shelf.Write("Dune Messiah.fb2", Fb2("Dune Messiah", "Frank Herbert", isbn: "9780441172719", text: "wrong ISBN"));
@@ -115,7 +115,7 @@ public sealed class BookPageTests
     public async Task AnFb2IdCountsOnlyWithTheSameTitleOrAuthor()
     {
         // FB2 ids are copied from template to template: a shared one alone is not the same book.
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", id: "copied-id"));
         shelf.Write("Dune Messiah.fb2", Fb2("Dune Messiah", "Frank Herbert", id: "copied-id"));
         shelf.Write("Dune by another.fb2", Fb2("Dune", "Brian Herbert", id: "copied-id"));
@@ -133,7 +133,7 @@ public sealed class BookPageTests
     [TestMethod]
     public async Task AKeySharedByTooManyBooksIsNoise()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         for (var i = 0; i <= BookQueries.MaxGroup; i++)
             shelf.Write($"notes-{i}.fb2", Fb2("Notes", text: $"page {i}"));
         shelf.Write("diary-1.fb2", Fb2("Diary", text: "one"));
@@ -155,7 +155,7 @@ public sealed class BookPageTests
         }
     }
 
-    private async Task<int> BookOfAsync(Shelf shelf, string path, int? library = null, bool? inArchive = null)
+    private async Task<int> BookOfAsync(TestLibrary shelf, string path, int? library = null, bool? inArchive = null)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.BookFiles.Where(f => f.Path == path && (library == null || f.LibraryId == library) && (inArchive == null || (f.ArchiveId != null) == inArchive))

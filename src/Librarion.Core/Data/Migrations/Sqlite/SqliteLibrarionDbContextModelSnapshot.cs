@@ -986,6 +986,69 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.ToTable("Settings");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.Shelf", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId", "TenantId");
+
+                    b.ToTable("Shelves");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.ShelfBook", b =>
+                {
+                    b.Property<int>("ShelfId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Added")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Position")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ShelfId", "BookId");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("ShelfId", "Added", "BookId");
+
+                    b.HasIndex("ShelfId", "Position", "BookId");
+
+                    b.ToTable("ShelfBooks");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
                 {
                     b.Property<int>("Id")
@@ -1871,6 +1934,36 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     b.HasOne("Librarion.Core.Data.Tag", null)
                         .WithMany()
                         .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Shelf", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.ShelfBook", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Shelf", null)
+                        .WithMany()
+                        .HasForeignKey("ShelfId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

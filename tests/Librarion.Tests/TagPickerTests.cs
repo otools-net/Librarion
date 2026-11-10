@@ -24,7 +24,7 @@ public sealed class TagPickerTests
     [TestMethod]
     public async Task ThePickerFindsTagsByNameOtherNameShorthandAndWords()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", ["Stephen King", "Stephen Baxter"], "Fantasy"));
         shelf.Write("two.fb2", Fb2("Two", ["Stephen King"], "Fantasy, Fantastic voyages"));
         await shelf.ScanAsync(Cancel);
@@ -57,6 +57,6 @@ public sealed class TagPickerTests
         Assert.AreEqual(HttpStatusCode.NotFound, unknown.StatusCode);
     }
 
-    private async Task<PickedTags> PickAsync(Shelf shelf, string? field, string q) =>
+    private async Task<PickedTags> PickAsync(TestLibrary shelf, string? field, string q) =>
         await shelf.Admin.GetAsync<PickedTags>($"/api/tags/pick?q={Uri.EscapeDataString(q)}{(field is null ? "" : $"&field={field}")}", Cancel);
 }

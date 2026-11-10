@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 9.
+**Next:** chunk 10.
 
 ## The user's answers (2026-11-10)
 
@@ -154,9 +154,11 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    **Built:** `OpdsPathKey` before an explicit `UseRouting`, `ApiKeys.VerifyAsync(inPath)`, the tenant setting
    `opds.pathKeys`, the logger factory redacting keys (`LogRedaction`; the hosting layer logs the address before any
    middleware), "How to use it" on the key page; [opds-auth](../features/opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).
-9. [ ] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,
+9. [x] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,
    rename, delete, add and remove books (one, a selection), order; lists by key under visibility; merges, undo and
-   split keep shelf rows right; routes behind `account.shelves`. Tests on both providers.
+   split keep shelf rows right; routes behind `account.shelves`. Tests on both providers. **Built:** caps 100 shelves /
+   10,000 books, spaced positions (`Gap` 1,024, renumbered when neighbours touch), stored counts, `BookMergeData.Shelves`;
+   the test helper `Shelf` renamed `TestLibrary`; [shelves](../features/shelves.md).
 10. [ ] Shelves UI: Add to shelf on the book page and in the selection bar, Shelves in the sidebar, a shelf's page
     (the book list as the library's, reorder, remove, rename, delete); phones; client specs, e2e on every device,
     axe in both themes.

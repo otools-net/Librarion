@@ -543,7 +543,7 @@ public sealed class BookQueries(TenantDb tenantDb)
         return b => tagged.Contains(b.Id);
     }
 
-    private static IQueryable<Book> Order(IQueryable<Book> books, BookSort sort, KeysetCursor? after)
+    internal static IQueryable<Book> Order(IQueryable<Book> books, BookSort sort, KeysetCursor? after)
     {
         switch (sort)
         {

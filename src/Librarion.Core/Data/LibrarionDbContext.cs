@@ -48,6 +48,8 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<ApiKeyLibrary> ApiKeyLibraries => Set<ApiKeyLibrary>();
+    public DbSet<Shelf> Shelves => Set<Shelf>();
+    public DbSet<ShelfBook> ShelfBooks => Set<ShelfBook>();
     public DbSet<Book> Books => Set<Book>();
     public DbSet<BookFile> BookFiles => Set<BookFile>();
     public DbSet<Archive> Archives => Set<Archive>();

@@ -43,6 +43,8 @@ Merge all, the Merges sub-page), the book page's Split; tests `BookMergeUndoTest
 `admin/duplicates.spec.ts`, `books/book-page.spec.ts`, e2e `specs/duplicates.spec.ts`. The user's answers (2026-11-09)
 are the rules below.
 
+- **Shelves** (stage 7 chunk 9): a merge moves shelf rows to the kept book (or drops a place where the shelf had it),
+  logged in `BookMergeData.Shelves`; undo puts them back; a split leaves them: [shelves](shelves.md).
 - **One merge, one undo:** a merge writes a log per source, the first the parent of the others (`ParentId`); the
   Merges list shows parents only, and undoing a child undoes its parent's whole merge. `BookMergeData` keeps, besides
   what moved, the kept book's values before (`Target`) and after (`After`), and per identifier and property whether it

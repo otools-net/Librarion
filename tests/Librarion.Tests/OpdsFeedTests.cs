@@ -35,9 +35,9 @@ public sealed class OpdsFeedTests
         """;
 
     /// <summary>A shelf with an account "reader" in Users and its reader app's client.</summary>
-    private async Task<(Shelf Shelf, HttpClient Reader)> StartAsync(params (string Path, string Text)[] books)
+    private async Task<(TestLibrary TestLibrary, HttpClient Reader)> StartAsync(params (string Path, string Text)[] books)
     {
-        var shelf = await Shelf.CreateAsync(Cancel);
+        var shelf = await TestLibrary.CreateAsync(Cancel);
         var groups = await shelf.Admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("reader", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Users).Id]), Cancel);
         foreach (var (path, text) in books)
@@ -238,7 +238,7 @@ public sealed class OpdsFeedTests
     [TestMethod]
     public async Task WhatTheAccountMayNotDoIsNotOffered()
     {
-        var shelf = await Shelf.CreateAsync(Cancel);
+        var shelf = await TestLibrary.CreateAsync(Cancel);
         await using var _s = shelf;
         await shelf.Factory.Services.GetRequiredService<AccessService>().UpdateTenantAsync(shelf.TenantId,
             new TenantInput("Home", DisabledRights: [Rights.Download]), Cancel);
@@ -260,7 +260,7 @@ public sealed class OpdsFeedTests
     [TestMethod]
     public async Task AServerAdministratorReachesAnyTenantsLibrary()
     {
-        var shelf = await Shelf.CreateAsync(Cancel);
+        var shelf = await TestLibrary.CreateAsync(Cancel);
         await using var _s = shelf;
         using (var made = await shelf.Admin.PostAsJsonAsync("/api/tenants", new TenantInput("Second", LibraryName: "Second books"), ApiClients.Json, Cancel))
             Assert.IsTrue(made.IsSuccessStatusCode, await made.Content.ReadAsStringAsync(Cancel));
@@ -281,7 +281,7 @@ public sealed class OpdsFeedTests
     [TestMethod]
     public async Task AKeyLimitedToALibrarySeesOnlyIt()
     {
-        var shelf = await Shelf.CreateAsync(Cancel);
+        var shelf = await TestLibrary.CreateAsync(Cancel);
         await using var _s = shelf;
         LibraryInfo comics;
         using (var made = await shelf.Admin.PostAsJsonAsync("/api/libraries", new LibraryInput("Comics"), ApiClients.Json, Cancel))
@@ -473,14 +473,14 @@ public sealed class OpdsFeedTests
         Assert.AreEqual($"/opds/l/{shelf.LibraryId}/tags/{parent}", moved.Headers.Location?.OriginalString);
     }
 
-    private async Task<int> CreateTagAsync(Shelf shelf, Librarion.Core.Tagging.TagInput input)
+    private async Task<int> CreateTagAsync(TestLibrary shelf, Librarion.Core.Tagging.TagInput input)
     {
         using var made = await shelf.Admin.PostAsJsonAsync("/api/tags", input, ApiClients.Json, Cancel);
         Assert.IsTrue(made.IsSuccessStatusCode, await made.Content.ReadAsStringAsync(Cancel));
         return (await made.Content.ReadFromJsonAsync<Librarion.Core.Tagging.TagDefinition>(ApiClients.Json, Cancel))!.Id;
     }
 
-    private async Task<HttpClient> ReaderOfAsync(Shelf shelf)
+    private async Task<HttpClient> ReaderOfAsync(TestLibrary shelf)
     {
         var groups = await shelf.Admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("reader", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Users).Id]), Cancel);

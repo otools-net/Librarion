@@ -46,7 +46,7 @@ public sealed class CoverStyleTests
     [TestMethod]
     public async Task NewBooksGetOnlyTemplatesOnAndOneStaysOn()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         foreach (var template in new[] { 0, 1, 2, 4 })
             await SetAsync(shelf.Admin, template, false);
 
@@ -73,7 +73,7 @@ public sealed class CoverStyleTests
     [TestMethod]
     public async Task AReassignGivesATemplatesBooksAnotherAndLeavesChosenStyles()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         for (var i = 0; i < 20; i++)
             shelf.Write($"b{i}.fb2", Fb2($"Book {i}"));
         await shelf.ScanAsync(Cancel);
@@ -107,7 +107,7 @@ public sealed class CoverStyleTests
     [TestMethod]
     public async Task PreviewsDrawASampleOfEachStyle()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
 
         using (var preview = SKBitmap.Decode(await shelf.Admin.GetByteArrayAsync("/api/covers/templates/2/preview/5?title=A%20title&author=Someone", Cancel)))
             Assert.AreEqual((240, 360), (preview.Width, preview.Height));
@@ -118,7 +118,7 @@ public sealed class CoverStyleTests
     [TestMethod]
     public async Task OnlyThoseWhoManageCoverStylesChangeThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var groups = await shelf.Admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("reader", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Users).Id]), Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("curator", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Curators).Id]), Cancel);
@@ -143,7 +143,7 @@ public sealed class CoverStyleTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
     }
 
-    private async Task<Dictionary<int, short>> TemplatesAsync(Shelf shelf)
+    private async Task<Dictionary<int, short>> TemplatesAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.ToDictionaryAsync(b => b.Id, b => b.GeneratedTemplate!.Value, Cancel);

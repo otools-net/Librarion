@@ -482,6 +482,7 @@ public sealed class CatalogWriter(int tenantId, int libraryId, ImportTagResolver
             var counted = empty.Where(b => !b.Missing).Select(b => b.Id).ToList();
             await CountAsync(db, counted, gone: true, cancellationToken);
             var ids = empty.Select(b => b.Id).ToList();
+            await Shelves.BooksLeavingAsync(db, db.ShelfBooks.Where(s => ids.Contains(s.BookId)), cancellationToken);
             await db.Books.Where(b => ids.Contains(b.Id)).ExecuteDeleteAsync(cancellationToken);
             Touched.Shrunk = true;
             if (undoAdd)

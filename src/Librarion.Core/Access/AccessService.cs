@@ -234,6 +234,8 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
         if (library is null)
             return false;
         await db.Settings.Where(s => s.Level == SettingLevel.Library && s.OwnerId == libraryId).ExecuteDeleteAsync(cancellationToken);
+        // Its books go with it (the database's cascade): the shelves holding some count them out first.
+        await Catalog.Shelves.BooksLeavingAsync(db, db.ShelfBooks.Where(s => db.Books.Any(b => b.Id == s.BookId && b.LibraryId == libraryId)), cancellationToken);
         db.Libraries.Remove(library);
         await db.SaveChangesAsync(cancellationToken);
         changes.Changed();

@@ -27,7 +27,7 @@ public sealed class MissingBooksTests
     public async Task ABookWhoseFileComesBackIsTheSameBookWithItsCuration()
     {
         await using var library = await ScannedLibrary.CreateAsync(Cancel);
-        var path = library.Write("Shelf/book.fb2", "the book");
+        var path = library.Write("TestLibrary/book.fb2", "the book");
         await library.ScanAsync(Cancel);
         int bookId, fileId, tagId;
         await using (var db = await library.DbAsync(Cancel))

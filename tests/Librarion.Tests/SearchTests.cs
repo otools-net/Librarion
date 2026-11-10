@@ -57,7 +57,7 @@ public sealed class SearchTests
     [TestMethod]
     public async Task EveryKindOfTermFindsItsBooks()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("hobbit.fb2", Fb2("The Hobbit", "John Tolkien", "Middle-earth", 1));
         shelf.Write("rings.fb2", Fb2("The Lord of the Rings", "John Tolkien", "Middle-earth", 2));
         shelf.Write("dune.fb2", Fb2("Dune", "Frank Herbert", genre: "sf"));
@@ -115,7 +115,7 @@ public sealed class SearchTests
     [TestMethod]
     public async Task FacetsCountTheMatchesAsTheirTermsFindThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("hobbit.fb2", Fb2("The Hobbit", "John Tolkien", "Middle-earth", 1));
         shelf.Write("rings.fb2", Fb2("The Lord of the Rings", "John Tolkien", "Middle-earth", 2));
         shelf.Write("dune.fb2", Fb2("Dune", "Frank Herbert", genre: "sf"));
@@ -202,7 +202,7 @@ public sealed class SearchTests
     [TestMethod]
     public async Task TheSearchBoxSuggestsFieldsThenNamesByUse()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("hobbit.fb2", Fb2("The Hobbit", "John Tolkien"));
         shelf.Write("rings.fb2", Fb2("The Lord of the Rings", "John Tolkien"));
         shelf.Write("cafe.fb2", Fb2("Café Society", "José Saramago"));

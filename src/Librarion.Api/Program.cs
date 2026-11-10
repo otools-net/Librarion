@@ -80,6 +80,7 @@ api.MapTagDuplicateEndpoints();
 api.MapTaskEndpoints();
 api.MapUserEndpoints();
 api.MapApiKeyEndpoints();
+api.MapShelfEndpoints();
 api.MapGroupEndpoints();
 api.MapSettingsEndpoints();
 api.MapSecurityEventEndpoints();

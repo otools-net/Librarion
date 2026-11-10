@@ -33,7 +33,7 @@ public sealed class BookMergeTests
     [TestMethod]
     public async Task AMergeMovesEverythingAndTheOldAddressesLeadToTheKeptBook()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", text: "one"));
         shelf.Write("dune (scan).fb2", Fb2("DUNE: the complete edition", "Frank Herbert", isbn: "9780441172719", text: "two", keywords: "classic"));
         await shelf.ScanAsync(Cancel);
@@ -78,7 +78,7 @@ public sealed class BookMergeTests
     [TestMethod]
     public async Task WrongMergesAreRefused()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("A", "Ann Writer", text: "a"));
         shelf.Write("b.fb2", Fb2("B", "Ann Writer", text: "b"));
         await shelf.ScanAsync(Cancel);
@@ -107,7 +107,7 @@ public sealed class BookMergeTests
     [TestMethod]
     public async Task OnlyThoseWhoMergeBooksMergeThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Twin", "Ann Writer", text: "a"));
         shelf.Write("b.fb2", Fb2("Twin", "Ann Writer", text: "b"));
         await shelf.ScanAsync(Cancel);
@@ -132,7 +132,7 @@ public sealed class BookMergeTests
     [TestMethod]
     public async Task TheDuplicatesPageListsGroupsByKeyAndNotDuplicatesLeaveIt()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         foreach (var (name, copies) in new[] { ("Alpha", 3), ("Beta", 2), ("Gamma", 2) })
             for (var i = 0; i < copies; i++)
                 shelf.Write($"{name}-{i}.fb2", Fb2(name, "Ann Writer", text: $"{name}{i}"));
@@ -161,20 +161,20 @@ public sealed class BookMergeTests
 
     // ---- Helpers ----
 
-    private async Task<int> BookOfAsync(Shelf shelf, string path)
+    private async Task<int> BookOfAsync(TestLibrary shelf, string path)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.BookFiles.Where(f => f.Path == path).Select(f => f.BookId).SingleAsync(Cancel);
     }
 
-    private async Task<int> LibraryCountAsync(Shelf shelf)
+    private async Task<int> LibraryCountAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Libraries.Where(l => l.Id == shelf.LibraryId).Select(l => l.BookCount).SingleAsync(Cancel);
     }
 
     /// <summary>A book in a second library of the tenant.</summary>
-    private async Task<int> OtherLibraryBookAsync(Shelf shelf)
+    private async Task<int> OtherLibraryBookAsync(TestLibrary shelf)
     {
         using var created = await shelf.Admin.PostAsJsonAsync("/api/libraries", new LibraryInput("Second"), ApiClients.Json, Cancel);
         var library = (await created.Content.ReadFromJsonAsync<LibraryInfo>(ApiClients.Json, Cancel))!;

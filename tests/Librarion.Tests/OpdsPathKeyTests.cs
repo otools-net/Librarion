@@ -35,9 +35,9 @@ public sealed class OpdsPathKeyTests
         </title-info></description><body><section><p>The text.</p></section></body></FictionBook>
         """;
 
-    private async Task<Shelf> ShelfAsync(Action<IServiceCollection>? services = null)
+    private async Task<TestLibrary> ShelfAsync(Action<IServiceCollection>? services = null)
     {
-        var shelf = await Shelf.CreateAsync(Cancel, services);
+        var shelf = await TestLibrary.CreateAsync(Cancel, services);
         var groups = await shelf.Admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("reader", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Users).Id]), Cancel);
         shelf.Write("The Hobbit.fb2", Book);
@@ -46,7 +46,7 @@ public sealed class OpdsPathKeyTests
     }
 
     /// <summary>A key of "reader", an account of the shelf's tenant (a server administrator's keys follow the server's settings).</summary>
-    private async Task<NewApiKey> KeyAsync(Shelf shelf, bool pathAllowed, params string[] scopes)
+    private async Task<NewApiKey> KeyAsync(TestLibrary shelf, bool pathAllowed, params string[] scopes)
     {
         using var web = await ApiClients.SignInAsync(shelf.Factory, "reader", ApiClients.Password, Cancel);
         using var created = await web.PostAsJsonAsync("/api/account/api-keys",
@@ -56,7 +56,7 @@ public sealed class OpdsPathKeyTests
     }
 
     /// <summary>A reader app with nothing but the address: no cookie, no header.</summary>
-    private static HttpClient Bare(Shelf shelf) => shelf.Factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
+    private static HttpClient Bare(TestLibrary shelf) => shelf.Factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
 
     [TestMethod]
     public async Task AKeyThatAllowsItOpensTheCatalogFromItsAddressAndEveryLinkKeepsIt()

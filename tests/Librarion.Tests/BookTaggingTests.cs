@@ -32,7 +32,7 @@ public sealed class BookTaggingTests
     [TestMethod]
     public async Task ASelectionShowsWhichTagsAllOrSomeHaveAndIsTagged()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Ann Writer", "Horror, Shared"));
         shelf.Write("two.fb2", Fb2("Two", "Ann Writer", "Shared"));
         shelf.Write("three.fb2", Fb2("Three", "Bob Other"));
@@ -66,7 +66,7 @@ public sealed class BookTaggingTests
     [TestMethod]
     public async Task AScopePastTheCapIsCountedAsAtLeastAndTaggedInTheBackground()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Dark tower", "Ann Writer", "Old"));
         shelf.Write("b.fb2", Fb2("Dark night", "Ann Writer", "Old"));
         shelf.Write("c.fb2", Fb2("Dark day", "Bob Other", "Old"));
@@ -97,7 +97,7 @@ public sealed class BookTaggingTests
     [TestMethod]
     public async Task AScopeIsCountedThenTaggedInlineOrInTheBackground()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Dark tower", "Ann Writer", "Old"));
         shelf.Write("b.fb2", Fb2("Dark night", "Ann Writer", "Old"));
         shelf.Write("c.fb2", Fb2("Light day", "Bob Other", "Old"));
@@ -134,7 +134,7 @@ public sealed class BookTaggingTests
     [TestMethod]
     public async Task TaggingManyNeedsTheRightAndChecksItsInput()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Ann Writer"));
         await shelf.ScanAsync(Cancel);
         var one = await BookIdAsync(shelf, "One");
@@ -168,26 +168,26 @@ public sealed class BookTaggingTests
 
     // ---- Helpers ----
 
-    private async Task<SelectionTags> StateAsync(Shelf shelf, int[] books)
+    private async Task<SelectionTags> StateAsync(TestLibrary shelf, int[] books)
     {
         using var response = await shelf.Admin.PostAsJsonAsync("/api/books/tags/state", new BookEndpoints.SelectionInput(books), Cancel);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
         return (await response.Content.ReadFromJsonAsync<SelectionTags>(ApiClients.Json, Cancel))!;
     }
 
-    private async Task<int> BookIdAsync(Shelf shelf, string title)
+    private async Task<int> BookIdAsync(TestLibrary shelf, string title)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Where(b => b.Title == title).Select(b => b.Id).SingleAsync(Cancel);
     }
 
-    private async Task<int> TagIdAsync(Shelf shelf, string name)
+    private async Task<int> TagIdAsync(TestLibrary shelf, string name)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Tags.Where(t => t.Name == name).Select(t => t.Id).SingleAsync(Cancel);
     }
 
-    private async Task<(int, int)> CountsAsync(Shelf shelf, int tagId)
+    private async Task<(int, int)> CountsAsync(TestLibrary shelf, int tagId)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var row = await db.TagCounts.SingleOrDefaultAsync(c => c.TagId == tagId && c.LibraryId == shelf.LibraryId, Cancel);
