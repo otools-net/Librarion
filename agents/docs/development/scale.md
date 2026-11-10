@@ -171,6 +171,33 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   passing them are the list (`BookSearch.ApplyAsync`). For every list it cost more than the walk ("an author by word
   and a title word" 116 → 287 ms), hence the bound (148 ms with it). The machine ran ~25 % slower than at stage 5
   during these runs (1.4 GB free with Docker): the untouched searches measured 94–139 ms where stage 5 had 103–131.
+- Stage 6 close (2026-11-10, 2M, warm, p95 in ms): every call of the UI's screens, now 87 scenarios, within budget on
+  both providers, no full scan. New ones:
+
+  | Query | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | tag manager: the fields / authors by name, first and middle / plain tags by name | 8 / 5 / 5 | 24 / 7–11 / 33 |
+  | tag manager: authors found by a last name / by two letters | 10 / 41 | 16 / 35 |
+  | picker: nothing typed (authors, categories) / two letters / a full name | 5 / 17 / 8 | 9–11 / 29 / 23 |
+  | picker: plain tags, two letters | 10 | 49 |
+  | Tag all's count: a 1 % tag / a common word / the library (budget 500, asked once) | 182 / 113 / 0.2 | 84 / 201 / 2 |
+
+  Found: the field chooser's count of plain tags took **186 ms on SQLite** (`FieldKey IS NULL` led it to the index
+  where every field value is; now counted on `FieldId` less the fields' rows: 3.5); the picker sent queries of empty
+  lists (`WHERE 0`, planned by SQLite as a scan; now skipped); **Tag all's count of a search timed out (30 s) on
+  PostgreSQL** (each book of the library tested against the search): now capped at 10,000 ("at least"), a search
+  sampled as facets are, a library seen whole from its stored count ([tags](../features/tags.md#tagging-many-books-built-stage-6-chunk-7)).
+- Curation runs at 2M (`curation` command, stage 6 close, background runs timed whole; no budget, D-6.4):
+
+  | Run | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | the most prolific author (36,735 links) merged into another / undone | 69 / 38 s | 77 / 79 s |
+  | a new tag given to the books of a 1 % tag / taken off | 14 / 9 s | 10 / 9 s |
+  | a new tag given to a common word's books (1,013,881: the word is in many tag names) / that tag deleted | 293 / 345 s | 417 / 171 s |
+
+- Stage 6 exit criterion "the top 500 raw tags cover > 90 % of imported links": with the generator's tags (50k plain
+  tags by Zipf 1.0) the first 500 plain tags hold **59.1 %**, the first 500 categories 95.4 %; reported, not forced
+  (the user's answer, chunk 9: [imported-tags](../features/imported-tags.md)); real catalogs to be measured.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

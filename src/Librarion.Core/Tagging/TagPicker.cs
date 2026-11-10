@@ -63,7 +63,8 @@ public sealed class TagPicker(TenantDb tenantDb)
                     .Select(a => new { a.TagId, a.Name, a.NormalizedName }).Take(MaxCandidates).ToListAsync(cancellationToken))
                 .TakeWhile(a => a.NormalizedName.StartsWith(normalized, StringComparison.Ordinal)).ToList();
             var aliased = aliases.Select(a => a.TagId).Distinct().ToList();
-            aliased = await inField.Where(t => aliased.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken);
+            if (aliased.Count > 0)
+                aliased = await inField.Where(t => aliased.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken);
             foreach (var alias in aliases.Where(a => aliased.Contains(a.TagId)))
                 aliasOf.TryAdd(alias.TagId, alias.Name);
 
@@ -77,7 +78,8 @@ public sealed class TagPicker(TenantDb tenantDb)
             {
                 var matched = await SearchIndexes.For(db).Tags(db, new SearchMatch(words, SearchText.Spelled(text), Phrase: false, Prefix: true))
                     .Take(MaxCandidates).ToListAsync(cancellationToken);
-                worded = await inField.Where(t => matched.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken);
+                if (matched.Count > 0)
+                    worded = await inField.Where(t => matched.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken);
             }
 
             ids = shorthand.Concat(named).Concat(aliased).Concat(worded).Distinct().ToList();
@@ -88,13 +90,17 @@ public sealed class TagPicker(TenantDb tenantDb)
 
         var denied = await TagQueries.DeniedAsync(db, null, visibility, cancellationToken);
         ids = ids.Where(id => !denied.Contains(id)).ToList();
+        if (ids.Count == 0)
+            return new PickedTags([], false);
         var rows = await db.Tags.Where(t => ids.Contains(t.Id))
             .Select(t => new { t.Id, t.Name, t.NormalizedName, t.SortName, t.Color, t.Shorthand, t.DisambiguationParentId })
             .ToListAsync(cancellationToken);
         var books = await db.TagCounts.Where(c => ids.Contains(c.TagId)).GroupBy(c => c.TagId).Select(g => new { g.Key, Books = g.Sum(c => (long)c.TotalCount) })
             .ToDictionaryAsync(c => c.Key, c => c.Books, cancellationToken);
         var parentIds = rows.Where(r => r.DisambiguationParentId is not null).Select(r => r.DisambiguationParentId!.Value).Distinct().ToList();
-        var parents = await db.Tags.Where(t => parentIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
+        // Each list read only when it holds ids: an empty one is a query of nothing (SQLite plans it as a scan).
+        var parents = parentIds.Count == 0 ? []
+            : await db.Tags.Where(t => parentIds.Contains(t.Id)).Select(t => new { t.Id, t.Name }).ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
 
         var typed = TagNames.Normalize(text);
         var exact = text.Length > 0 && rows.Any(r => r.NormalizedName == typed);

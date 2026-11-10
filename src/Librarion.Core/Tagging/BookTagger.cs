@@ -2,6 +2,7 @@ using Librarion.Core.Access;
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
 using Librarion.Core.Import;
+using Librarion.Core.Search;
 using Librarion.Core.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,9 @@ public sealed record TagChange(IReadOnlyList<BookTagEdit>? Add = null, IReadOnly
 /// <summary>Every book of a library's list: all of them, those with <paramref name="Tag"/> (a tag's page), those matching <paramref name="Query"/>.</summary>
 public sealed record BookScope(int Library, int? Tag = null, string? Query = null, int? Folder = null);
 
+/// <summary>How many books a scope holds, at most <see cref="BookTagger.MaxCounted"/>; <paramref name="Capped"/>: at least that many.</summary>
+public sealed record ScopeSize(long Books, bool Capped);
+
 /// <summary>
 /// Plain tags given to or taken from many books (stage 6, chunk 7; SFE's selection and scope tagging,
 /// agents/docs/features/tags.md): a selection (ids, at most <see cref="MaxSelection"/>) with how many of it have each
@@ -31,6 +35,17 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
 {
     public const int MaxSelection = 1000;
     public const int MaxChanges = 20;
+
+    /// <summary>
+    /// A scope's books are counted up to here, "at least" past it (the catalog's rule: exact counts only from stored
+    /// columns). Unbounded, a common word's matches took over 30 s at 2M books on PostgreSQL (stage 6 close): each book
+    /// of the library tested against the search. The same as <see cref="TagService.InlineLinks"/>: past it the change
+    /// runs in the background anyway.
+    /// </summary>
+    public const int MaxCounted = TagService.InlineLinks;
+
+    /// <summary><see cref="MaxCounted"/>; smaller in tests.</summary>
+    internal int Cap { get; set; } = MaxCounted;
 
     public async Task<SelectionTags> StateAsync(int tenantId, BookVisibility visibility, IReadOnlySet<int> taggable, IReadOnlyCollection<int> bookIds,
         CancellationToken cancellationToken = default)
@@ -67,12 +82,33 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
         return AccessResult<TagWork>.Ok(new TagWork(null, null, changed));
     }
 
-    /// <summary>How many books the scope holds for the caller (what the dialog asks to confirm).</summary>
-    public async Task<long> CountAsync(int tenantId, BookVisibility visibility, BookScope scope, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// How many books the scope holds for the caller (what the dialog asks to confirm), up to <see cref="MaxCounted"/>: a
+    /// search's matches sampled from its narrowest term as Refine's facets are (<see cref="BookSearch.SampleAsync"/>),
+    /// a library seen whole from its stored count, other scopes counted with a limit.
+    /// </summary>
+    public async Task<ScopeSize> CountAsync(int tenantId, BookVisibility visibility, BookScope scope, CancellationToken cancellationToken = default)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
-        return await (await BookQueries.ScopeAsync(db, visibility, scope.Library, scope.Tag, scope.Query, TagService.BatchSize, cancellationToken, scope.Folder))
-            .LongCountAsync(cancellationToken);
+        var whole = scope.Tag is null && scope.Folder is null && string.IsNullOrWhiteSpace(scope.Query);
+        if (whole && visibility.IsOpenIn(scope.Library))
+        {
+            // A library seen whole: its stored count, exact (as Refine's facets of it).
+            var stored = await db.Libraries.Where(l => l.Id == scope.Library).Select(l => (long?)l.BookCount).FirstOrDefaultAsync(cancellationToken);
+            return new ScopeSize(stored ?? 0, false);
+        }
+
+        var books = await BookQueries.ScopeAsync(db, visibility, scope.Library, scope.Tag, null, TagService.BatchSize, cancellationToken, scope.Folder);
+        if (string.IsNullOrWhiteSpace(scope.Query))
+        {
+            var counted = await books.Select(b => b.Id).Take(Cap + 1).CountAsync(cancellationToken);
+            return new ScopeSize(Math.Min(counted, Cap), counted > Cap);
+        }
+
+        var fields = await BookSearch.KeysAsync(db, cancellationToken);
+        var (matched, capped) = await BookSearch.SampleAsync(db, books, SearchQuery.Parse(scope.Query, fields.ContainsKey), fields, [scope.Library],
+            visibility.Merging, Cap, cancellationToken);
+        return new ScopeSize(matched.Count, capped);
     }
 
     /// <summary>Every book of the scope gets the change: inline, or a run of the library past the threshold (or behind another run).</summary>
@@ -85,9 +121,10 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
             return problem;
         if (resolved.Add.Count + resolved.Remove.Count == 0)
             return AccessResult<TagWork>.Ok(new TagWork(null, null, 0));
-        var books = await CountAsync(tenantId, visibility, scope, cancellationToken);
-        var links = books * (resolved.Add.Count + resolved.Remove.Count);
-        if (tags.InBackground(tenantId, links))
+        var size = await CountAsync(tenantId, visibility, scope, cancellationToken);
+        var links = size.Books * (resolved.Add.Count + resolved.Remove.Count);
+        // Past the count's cap the books are more than inline changes allow, whatever the number of tags.
+        if (tags.InBackground(tenantId, size.Capped ? long.MaxValue : links))
         {
             var run = await tasks.StartLibraryAsync(tenantId, scope.Library, BackgroundTaskKind.ScopeTags, userId,
                 async (progress, cancel) => new ScanResult(0, await WalkAsync(tenantId, visibility, scope, resolved, progress, cancel), 0, 0, 0, 0, 0, [], []),

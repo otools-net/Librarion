@@ -213,7 +213,7 @@ export class Api {
     selectionTags = (books: number[]) => this.post<SelectionTags>('api/books/tags/state', { books });
     tagSelection = (books: number[], change: TagChangeInput) => this.post<TagWork>('api/books/tags', { books, ...change });
     countScope = (scope: BookScope) =>
-        this.get<{ books: number }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q, folder: scope.folder ?? undefined });
+        this.get<{ books: number; capped: boolean }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q, folder: scope.folder ?? undefined });
     tagScope = (scope: BookScope, change: TagChangeInput) => this.post<TagWork>('api/books/scope/tags', { ...scope, ...change });
     editBook = (id: number, edit: BookEdit) => this.put<BookDetail>(`api/books/${id}`, edit);
     /** A book's cover (`library.edit`): a picture uploaded (its type is the body's), a generated style, back to its own. */

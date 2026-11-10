@@ -70,7 +70,7 @@ axe on the page in both themes). Built in stage 6 chunk 9; the model and the imp
 - Imports with the new index and the mapping rows (PostgreSQL): INPX 1M 9.7 min (9.1 before), Calibre 2M 31.3 min
   (28.9 before, **over its 30 min budget**), unchanged re-imports 35 s and 2.6 min. The user kept the index; imports
   were made faster: Calibre 2M 25.4 min with the new files read in parallel
-  ([stage 6 plan](../development/stage-6-curation-plan.md), [imports](imports.md#scale)).
+  ([imports](imports.md#scale)).
 - The page's queries on the generated 2M catalog (`run --only imported`, 2026-11-06), p95 PostgreSQL / SQLite: plain
   tags first page 23 / 28 ms, the page after the 5,000th 25 / 27 ms, a status none has (the bounded walk) 57 / 140 ms
   (SQLite over the list budget, recorded), languages 8 / 4 ms, categories 14 / 14 ms, the fields 46 / 5 ms; the

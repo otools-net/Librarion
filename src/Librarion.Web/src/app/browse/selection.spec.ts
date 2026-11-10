@@ -126,9 +126,20 @@ describe('Selecting and tagging books', () => {
         expect(element.querySelector('lib-selection-tags')).toBeNull();
     });
 
+    it('says "at least" when the list has more books than the server counts', async () => {
+        const api = mockApi();
+        api.countScope.mockResolvedValue({ books: 10000, capped: true });
+        const { element, stable, button } = await render(api);
+        button('Tag all').click();
+        await stable();
+
+        expect(element.querySelector('.scope-count')?.textContent).toBe('This list has at least 10,000 books.');
+        expect(element.querySelector<HTMLButtonElement>('button[form="scope-tags-form"]')!.textContent?.trim()).toBe('Apply to every book of the list');
+    });
+
     it('tags every book of the list: counted first, confirmed with the count, a big change followed in the panel', async () => {
         const api = mockApi();
-        api.countScope.mockResolvedValue({ books: 12345 });
+        api.countScope.mockResolvedValue({ books: 1234, capped: false });
         api.tagScope.mockRejectedValueOnce(new ApiError(400, 'x', { add: ['tags.tooMany'] })).mockResolvedValue({ runId: 77, logId: null, links: 12345 });
         const { element, stable, button } = await render(api);
         api.pickTags.mockResolvedValue({ items: [{ id: 9, name: 'Old', color: null, field: null, shorthand: null, alias: null, parent: null, books: 3 }], exact: true });
@@ -137,9 +148,9 @@ describe('Selecting and tagging books', () => {
         await stable();
 
         expect(api.countScope).toHaveBeenCalledWith({ library: 5, tag: null, q: null, folder: null });
-        expect(element.querySelector('.scope-count')?.textContent).toBe('This list has 12,345 books.');
+        expect(element.querySelector('.scope-count')?.textContent).toBe('This list has 1,234 books.');
         const apply = element.querySelector<HTMLButtonElement>('button[form="scope-tags-form"]')!;
-        expect(apply.textContent?.trim()).toBe('Apply to 12,345 books');
+        expect(apply.textContent?.trim()).toBe('Apply to 1,234 books');
         expect(apply.disabled).toBe(true);
 
         const remove = element.querySelector<HTMLInputElement>('#scope-tag-remove')!;

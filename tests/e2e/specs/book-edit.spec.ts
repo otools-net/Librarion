@@ -1,12 +1,14 @@
 // Editing a book on its page, on every device (stage 6, chunk 6): the title changed, the authors reordered (dragged by
 // the handle with a mouse, Move up on a phone), a tag made by name with the picker; saved, the page shows it, and it
-// stays after a reload.
+// stays after a reload. The phone layout of the editor is checked, and axe audits it in both themes once per run.
 import fs from 'node:fs';
 import path from 'node:path';
 import { uniqueName } from '../fixtures/accounts';
+import { audit } from '../fixtures/axe';
+import { expectFitsScreen, expectTapTargets } from '../fixtures/layout';
 import { scannedLibrary } from '../fixtures/library';
 import { press } from '../fixtures/press';
-import { expect, test } from '../fixtures/test';
+import { expect, isPhoneWidth, test } from '../fixtures/test';
 
 function twoAuthors(title: string, first: string, second: string): Buffer {
     const author = (name: string) => `<author><first-name>${name.split(' ')[0]}</first-name><last-name>${name.split(' ')[1]}</last-name></author>`;
@@ -32,6 +34,16 @@ test.describe('@browse', () => {
         await press(page.getByRole('button', { name: 'Edit', exact: true }), isMobile);
         const editor = page.getByRole('dialog', { name: 'Edit the book' });
         await expect(editor).toBeVisible();
+        if (isPhoneWidth(page)) {
+            await expectFitsScreen(page);
+            await expectTapTargets(page, '[role=dialog]');
+        }
+        if (testInfo.project.name === 'android') {
+            await page.emulateMedia({ colorScheme: 'light' });
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+            await audit(page, 'the book editor (light)');
+            await page.emulateMedia({ colorScheme: 'dark' });
+        }
 
         await editor.getByLabel('Title', { exact: true }).fill('The Omens');
         const authors = editor.locator('ol[data-field="author"] .book-edit-value');

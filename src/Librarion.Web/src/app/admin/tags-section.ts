@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Api } from '../core/api.service';
 import { errorText, valueOf } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
@@ -152,9 +152,21 @@ export class TagsSection implements OnInit {
 
     private timer: ReturnType<typeof setTimeout> | null = null;
     private asked = 0;
+    /** The runs this page started (a merge, an undo, a delete in the background): the list is read again when one ends. */
+    private readonly waiting = new Set<number>();
 
     protected readonly valueOf = valueOf;
     protected readonly moment = formatMoment;
+
+    constructor() {
+        effect(() => {
+            const done = this.watch.ended().filter(run => this.waiting.has(run.id));
+            if (!done.length)
+                return;
+            done.forEach(run => this.waiting.delete(run.id));
+            untracked(() => void (this.page() === 'merges' ? this.loadMerges(false) : Promise.all([this.loadFields(), this.load(false)])));
+        });
+    }
 
     async ngOnInit(): Promise<void> {
         if (this.page() === 'merges') {
@@ -309,6 +321,7 @@ export class TagsSection implements OnInit {
 
     private report(work: TagWork, done: string): void {
         if (work.runId !== null) {
+            this.waiting.add(work.runId);
             this.watch.follow(work.runId);
             this.toasts.show(this.i18n.t('tagAdmin.running', { count: this.i18n.number(work.links) }));
         } else {

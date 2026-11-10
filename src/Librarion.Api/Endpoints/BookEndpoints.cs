@@ -94,7 +94,8 @@ public static class BookEndpoints
                 if (!state.Access.HasIn(Rights.TagBooks, library) || folder is not null && !state.Access.HasIn(Rights.Folders, library))
                     return Results.NotFound();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
-                return Results.Ok(new ScopeCount(await tagger.CountAsync(state.TenantId!.Value, visibility, new BookScope(library, tag, q, folder), context.RequestAborted)));
+                var size = await tagger.CountAsync(state.TenantId!.Value, visibility, new BookScope(library, tag, q, folder), context.RequestAborted);
+                return Results.Ok(new ScopeCount(size.Books, size.Capped));
             })
             .RequireRight(Rights.TagBooks)
             .WithName("CountScope")
@@ -292,5 +293,6 @@ public static class BookEndpoints
     public sealed record ScopeInput(int Library, int? Tag = null, string? Q = null, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null,
         int? Folder = null);
 
-    public sealed record ScopeCount(long Books);
+    /// <param name="Capped">At least <paramref name="Books"/>: counted up to <see cref="BookTagger.MaxCounted"/>.</param>
+    public sealed record ScopeCount(long Books, bool Capped);
 }

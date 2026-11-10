@@ -1,13 +1,16 @@
 // Selecting books and tagging them, on every device (stage 6, chunk 7): two books selected (Ctrl-click with a mouse; a
 // long press then a tap on a phone), a tag made and given to both from the selection bar; then Tag all gives another
-// tag to every book of the list after counting them. The books' pages show the tags.
+// tag to every book of the list after counting them. The books' pages show the tags. The phone layout of the bar and
+// the dialogs is checked, and axe audits them in light colors once per run (dark: a11y.spec.ts).
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Locator } from '@playwright/test';
 import { uniqueName } from '../fixtures/accounts';
+import { audit } from '../fixtures/axe';
+import { expectFitsScreen, expectTapTargets } from '../fixtures/layout';
 import { scannedLibrary } from '../fixtures/library';
 import { press } from '../fixtures/press';
-import { expect, test } from '../fixtures/test';
+import { expect, isPhoneWidth, test } from '../fixtures/test';
 import { fb2 } from '../fixtures/zip';
 
 const headers = { 'X-Librarion-Request': '1' };
@@ -46,12 +49,26 @@ test.describe('@browse', () => {
         await expect(page).not.toHaveURL(/\/books\//);
         const bar = page.getByRole('region', { name: 'Selected books' });
         await expect(bar.getByRole('status')).toHaveText('2 selected');
+        if (isPhoneWidth(page)) {
+            await expectFitsScreen(page);
+            await expectTapTargets(page, '.selection-bar');
+        }
+        const light = testInfo.project.name === 'android';
+        if (light) {
+            await page.emulateMedia({ colorScheme: 'light' });
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+            await audit(page, 'a selection (light)');
+        }
 
         await press(bar.getByRole('button', { name: 'Tags' }), isMobile);
         const dialog = page.getByRole('dialog', { name: 'Tags of 2 books' });
         await dialog.getByRole('combobox', { name: 'Add a tag' }).fill(picked);
         await press(dialog.getByRole('option', { name: `Create “${picked}”` }), isMobile);
         await expect(dialog.getByRole('checkbox', { name: `${picked}: all of them have it` })).toBeChecked();
+        if (isPhoneWidth(page))
+            await expectFitsScreen(page);
+        if (light)
+            await audit(page, 'the tags of a selection (light)');
         await press(dialog.getByRole('button', { name: 'Save' }), isMobile);
         await expect(page.getByRole('status').filter({ hasText: 'Tags saved.' })).toBeVisible();
         await expect(bar).toHaveCount(0);
@@ -60,6 +77,12 @@ test.describe('@browse', () => {
         await press(page.getByRole('button', { name: 'Tag all' }), isMobile);
         const scope = page.getByRole('dialog', { name: 'Tag every book of the list' });
         await expect(scope).toContainText('This list has 3 books.');
+        if (isPhoneWidth(page))
+            await expectFitsScreen(page);
+        if (light) {
+            await audit(page, 'tag all (light)');
+            await page.emulateMedia({ colorScheme: 'dark' });
+        }
         await scope.getByRole('combobox', { name: 'Add a tag to give' }).fill(all);
         await press(scope.getByRole('option', { name: `Create “${all}”` }), isMobile);
         await press(scope.getByRole('button', { name: 'Apply to 3 books' }), isMobile);

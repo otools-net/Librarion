@@ -57,3 +57,7 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
   (`imported-tags.spec.ts`, 2026-11-06).
 - A tag change (merge, ignore, an undo) answers 202 with a run whenever any run of the tenant goes, and in a full run
   the other devices' scans always do: assert what the list shows once it has followed the run, never the inline toast.
+- Known flake (stage 6 close, 2026-11-10): `search.spec.ts` "the top bar finds books…" once on android in a full run,
+  an author suggestion without its `.suggestion-count` (the count is left out when the suggestion is asked before
+  the library is known to the box); 46 of 46 green on `--repeat-each 3` alone. Look at the box's library first if it
+  comes back.

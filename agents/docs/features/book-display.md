@@ -112,8 +112,7 @@ the book** (decided 2026-10-31).
 Code: `Core/Covers/CoverEditor.cs`, `CoverUploads.cs`, `CoverImages.Remake`, `CoverService` (uploads, previews),
 `Api/Endpoints/CoverEndpoints.cs`; client `books/cover-editor.ts` (the book page's **Cover**), styles at the end of
 `styles/book.css`; tests `CoverEditTests` (both providers), `books/cover-editor.spec.ts`, e2e `specs/covers.spec.ts`
-(every device, axe on the sheet in both themes). The user's answers (2026-11-06) in the
-[stage 6 plan](../development/stage-6-curation-plan.md).
+(every device, axe on the sheet in both themes). The user's answers (2026-11-06) are the rules above.
 
 - Routes (`library.edit` in the book's library; a book the caller can't see is not found): `PUT api/books/{id}/cover`
   (the picture as the body), `PUT …/cover/style {template, variant}`, `DELETE …/cover` (back to its own),

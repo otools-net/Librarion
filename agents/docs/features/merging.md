@@ -2,7 +2,9 @@
 
 Built (stage 2): `Books.MergedIntoId`, `WorkKey`, the `(TenantId, Size, Crc32)` file index and `BookIdentifiers`
 ([catalog](catalog.md)). Built (stage 3): **identical files at import** (`CatalogWriter.CopiesAsync`, tests in
-`LibraryScannerTests`), below. The rest of detection and merging is planned.
+`LibraryScannerTests`), below. Built (stage 6): stored groups, the Duplicates page, compare and merge, bulk merge, undo
+and split, possible duplicate tags (sections below). Not built: the Similar level (edit distance, on demand: D21) and
+the curators' badge on grids.
 
 ## Identical files at import (built)
 
@@ -14,12 +16,13 @@ Built (stage 2): `Books.MergedIntoId`, `WorkKey`, the `(TenantId, Size, Crc32)` 
 - Same library only: a book belongs to one library, and download rights are checked in the file's library.
 - Loose files have no CRC at import, so they are not matched yet (hashing every loose file would read whole books).
 - A removed copy leaves the book with its other files; a changed copy re-reads the book's metadata from that file.
-- Always on for now: the tenant setting to turn it off, and undo / split, come with stage 6. `ScanResult.Added`
+- On by default; the tenant setting (stage 6 chunk 11) turns it off; split (chunk 13) takes a copy out again. `ScanResult.Added`
   counts books; `CatalogWriter.Copies` the files that joined a book.
 
-Code (planned): `src/Librarion.Core/Merging/` (`DuplicateFinder`, `BlockingKeys`, `BookMerger`, `BookSplitter`,
-`TagDuplicateFinder`, `MergeLog`), entities `DuplicateGroups`, `DuplicateMembers`, `NotDuplicates`, `MergeLog`;
-client `app/curation/duplicates/`, the duplicates panel of `app/books/book-page`. Builds on [tags](tags.md) (tag merge),
+Code: `src/Librarion.Core/Merging/` (`DuplicateIndex`, `DuplicateQueries`, `BookMerger` with `.Undo`, `BookSplitter`,
+`TagMerger`, `TagDuplicateIndex`, `TagDuplicateQueries`), entities `DuplicateGroups`, `DuplicateMembers`,
+`NotDuplicates`, `MergeLogs`, `TagDuplicateGroups`; client `app/admin/duplicates-section.ts`,
+`tag-duplicates-section.ts`, `app/books/book-compare.ts`, the duplicates panel of `app/books/book-page.ts`. Builds on [tags](tags.md) (tag merge),
 [metadata-tags](metadata-tags.md) (fields) and [archives](archives.md) (file identity). Decision D19 in
 [foundation-plan](../development/foundation-plan.md) (decided 2026-10-31).
 
@@ -38,7 +41,7 @@ Code: `Core/Merging/BookMerger.Undo.cs` (`ListAsync`, `UndoAsync`, `KeptAsync`, 
 `POST api/books/{id}/split`), all `library.merge`; client `admin/duplicates-section.ts` (checkboxes, Merge chosen /
 Merge all, the Merges sub-page), the book page's Split; tests `BookMergeUndoTests` (both providers),
 `admin/duplicates.spec.ts`, `books/book-page.spec.ts`, e2e `specs/duplicates.spec.ts`. The user's answers (2026-11-09)
-in the [stage 6 plan](../development/stage-6-curation-plan.md).
+are the rules below.
 
 - **One merge, one undo:** a merge writes a log per source, the first the parent of the others (`ParentId`); the
   Merges list shows parents only, and undoing a child undoes its parent's whole merge. `BookMergeData` keeps, besides
@@ -137,8 +140,8 @@ Code: `Core/Merging/DuplicateIndex.cs` (`BuildAsync`, `RefreshAsync`, `CleanAsyn
 entities in `Data/Entities/Catalog/Duplicates.cs`, `Tenant.DuplicatesBuilt`, the hooks in `CatalogWriter` (`Touched`),
 `LibraryScanner`, `CatalogImporter`, `MissingBooks` and `TagLinks.SortColumnsAsync`; route `POST api/duplicates/build`
 (`Api/Endpoints/DuplicateEndpoints.cs`, `library.merge`); tests `DuplicateIndexTests` (both providers); benchmark
-`duplicates` ([benchmark](../../tools/benchmark/README.md)). The user's answers (2026-11-08) in the
-[stage 6 plan](../development/stage-6-curation-plan.md).
+`duplicates` ([benchmark](../../tools/benchmark/README.md)). The user's answers (2026-11-08) are
+marked below.
 
 - **Rows:** `DuplicateGroups` (level `File` / `Identifier` / `Work` = `DuplicateReason`, `Key`, `KeyHash` = XxHash64 of
   level and key, indexed with the tenant; `Noise`; `BookCount`) and `DuplicateMembers (GroupId, BookId)` (index
@@ -227,7 +230,8 @@ compared only within the key's group.
   per single value (title, cover, description, rating), which side wins; multi-value fields and tags are unioned
   (sources kept, duplicates dropped).
 - **Merge:** files, links, identifiers, shelves, reading progress (latest position per user and format), download
-  history and ratings move to the kept book; the other becomes a **redirect** (`Books.MergedIntoId`): its URLs, OPDS
+  history and ratings move to the kept book (built for files, links, identifiers and properties; the others when
+  their stages build them); the other becomes a **redirect** (`Books.MergedIntoId`): its URLs, OPDS
   ids and API calls answer with the kept book, so reader apps' links keep working.
 - **Bulk:** the duplicates page merges selected groups, or every "same file" group, as a background task in batches
   with progress, using the default choices.
@@ -274,7 +278,7 @@ Code: `Core/Tagging/NameKeys.cs` (keys), `Core/Merging/TagDuplicateIndex.cs` (bu
 client `admin/tag-duplicates-section.ts` (Tags › Possible duplicates), the tag page's "May be the same as"; tests
 `TagDuplicateTests` (both providers), `admin/tag-duplicates.spec.ts`, `tags/tags.spec.ts`, e2e
 `specs/tag-duplicates.spec.ts`; benchmark `tag-duplicates` ([benchmark](../../tools/benchmark/README.md)). The user's
-answers (2026-11-09) in the [stage 6 plan](../development/stage-6-curation-plan.md).
+answers (2026-11-09) are marked below.
 
 - **Keys** (`NameKeys`, set with the name by `NameKeys.Apply` wherever a tag is made or renamed: the import's
   resolver, `TagService`, an undone merge; the benchmark's generator too): the name's words (decomposed, accents off,

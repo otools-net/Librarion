@@ -32,7 +32,7 @@ interface Chosen {
             } @else {
                 <form id="scope-tags-form" class="selection-tags" novalidate (submit)="apply($event)">
                     @if (count() !== null) {
-                        <p class="scope-count">{{ (count() === 1 ? 'tagAll.count.one' : 'tagAll.count') | t: { count: i18n.number(count()!) } }}</p>
+                        <p class="scope-count">{{ (capped() ? 'tagAll.count.atLeast' : count() === 1 ? 'tagAll.count.one' : 'tagAll.count') | t: { count: i18n.number(count()!) } }}</p>
                     }
                     <fieldset class="field">
                         <legend class="field-label">{{ 'tagAll.add' | t }}</legend>
@@ -77,7 +77,7 @@ interface Chosen {
             <div sheetFooter class="sheet-actions">
                 <button type="button" class="button" [title]="'common.cancelHint' | t" (click)="sheet()?.close()">{{ 'common.cancel' | t }}</button>
                 <button type="submit" form="scope-tags-form" class="button primary" [disabled]="busy() || !ready()">
-                    {{ (count() === 1 ? 'tagAll.confirm.one' : 'tagAll.confirm') | t: { count: i18n.number(count() ?? 0) } }}
+                    {{ (capped() ? 'tagAll.confirm.atLeast' : count() === 1 ? 'tagAll.confirm.one' : 'tagAll.confirm') | t: { count: i18n.number(count() ?? 0) } }}
                 </button>
             </div>
         </lib-sheet>
@@ -96,6 +96,8 @@ export class ScopeTags implements OnInit {
 
     protected readonly sheet = viewChild(Sheet);
     protected readonly count = signal<number | null>(null);
+    /** Counted up to the server's cap: at least `count` books. */
+    protected readonly capped = signal(false);
     protected readonly adding = signal<Chosen[]>([]);
     protected readonly removing = signal<Chosen[]>([]);
     protected readonly busy = signal(false);
@@ -109,7 +111,9 @@ export class ScopeTags implements OnInit {
 
     async ngOnInit(): Promise<void> {
         try {
-            this.count.set((await this.api.countScope(this.scope())).books);
+            const counted = await this.api.countScope(this.scope());
+            this.capped.set(counted.capped);
+            this.count.set(counted.books);
         } catch (error) {
             this.error.set(errorText(this.i18n, error));
         }
@@ -142,7 +146,7 @@ export class ScopeTags implements OnInit {
             });
             if (work.runId !== null) {
                 this.tasks.follow(work.runId);
-                this.toasts.show(this.i18n.t('tagAll.running', { count: this.i18n.number(this.count()!) }));
+                this.toasts.show(this.i18n.t(this.capped() ? 'tagAll.running.atLeast' : 'tagAll.running', { count: this.i18n.number(this.count()!) }));
             } else {
                 this.toasts.show(this.i18n.t('tagAll.done', { count: this.i18n.number(work.links) }));
             }

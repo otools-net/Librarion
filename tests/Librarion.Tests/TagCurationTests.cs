@@ -330,6 +330,9 @@ public sealed class TagCurationTests
         Assert.AreEqual("author", fields.Fields[0].Key, "built-in fields first, in their order");
         Assert.AreEqual(2, fields.Fields.Single(f => f.Key == "author").Values);
         Assert.IsGreaterThanOrEqualTo(6, fields.PlainTags, "Alpha, Beta, Gamma, Delta, Meta Tags, Archived and the import category");
+        await using (var db = await shelf.DbAsync(Cancel))
+            Assert.AreEqual(await db.Tags.CountAsync(t => t.FieldId == null && t.FieldKey == null, Cancel), fields.PlainTags,
+                "exactly the plain tags: counted on FieldId with the fields' own rows taken off");
         CollectionAssert.AreEqual(new[] { "Alpha", "Archived" }, first.Items.Select(t => t.Name).ToList(), "tags without books too, by sort name");
         Assert.AreEqual(1, first.Items[0].Children);
         Assert.AreEqual(1, first.Items[0].Books);

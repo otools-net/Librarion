@@ -63,8 +63,14 @@ switch (command)
         var result = await TagDuplicatesCommand.RunAsync(target, work, Console.WriteLine, cancel.Token);
         return result.WithinBudget ? 0 : 1;
     }
+    case "curation":
+    {
+        var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
+        var result = await CurationCommand.RunAsync(target, work, Console.WriteLine, cancel.Token);
+        return result.WithinBudget ? 0 : 1;
+    }
     default:
-        Console.Error.WriteLine("Commands: generate, run, archive, import, duplicates, tag-duplicates (see agents/tools/benchmark/README.md)");
+        Console.Error.WriteLine("Commands: generate, run, archive, import, duplicates, tag-duplicates, curation (see agents/tools/benchmark/README.md)");
         return 2;
 }
 

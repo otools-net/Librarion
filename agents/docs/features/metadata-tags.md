@@ -6,10 +6,13 @@ metadata readers ([metadata-readers](metadata-readers.md)) hand `(field, value, 
 `ImportTagResolver`, which finds or makes the value under its field (people's sort names kept), and `CatalogWriter`
 links it (`Source = Imported`, the first author and series copied to the book's sort columns). Built (stage 5): the
 browse pages per field and the tag pages ([browse](browse.md#fields-and-tags)). Search is built
-([search](search.md)); the field editing UI is planned.
+([search](search.md)). Built (stage 6): fields managed and merged in the tag manager ([tags](tags.md)), a book's
+fields edited on its page with author order and series numbers
+([book-page](book-page.md#editing-a-book-built-stage-6-chunk-6-d-63)).
 
-Code (planned): `src/Librarion.Core/Tagging/` (`TagFields`, `FieldTagResolver`, `BuiltInFields`), the metadata
-readers in `Core/Import/` hand `(field, value)` pairs to it; search syntax in `Core/Search/`. Builds on the tag model
+Code: `src/Librarion.Core/Tagging/BuiltInTags.cs` (the fields per tenant), `Core/Import/ImportTagResolver.cs` (the
+readers' `(field, value)` pairs found or made), `Core/Catalog/BookEditor.cs` (edits), `Core/Merging/TagMerger.cs`
+(field merges); search syntax in `Core/Search/`. Builds on the tag model
 in [tags](tags.md) (SFE/TagStudio). Decision D18 in [foundation-plan](../development/foundation-plan.md) (decided
 2026-10-31).
 
@@ -100,9 +103,10 @@ separate `Authors`, `Series` or `Publishers` tables.
 
 - Chips grouped by field on the book page (`Authors`, `Series`, `Categories`…; field names translated for built-ins,
   as stored for others); a chip opens the value's books. Cards: title, first author.
-- Editing (stage 6, `library.edit` for fields, `library.tag` for plain tags): the tag picker scoped to a field,
+- Editing (built, stage 6: `library.edit` for fields, `library.tag` for plain tags): the tag picker scoped to a field,
   author order by drag, series number in place; new values typed in create them under the field.
-- Tag manager: fields listed as categories with counts; the big ones paged and searched, never loaded whole.
+- Tag manager (built, stage 6): fields listed as categories with counts; the big ones paged and searched, never loaded
+  whole.
 
 ## Tests to have
 

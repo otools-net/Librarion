@@ -24,7 +24,7 @@ If you may tag books in the library (Curators and Administrators may), you can g
   tags: a tick means all of them have it, a dash some of them. Tick a tag to give it to all, clear it to take it from
   all, leave a dash as it is, or add a tag (type its name; **Create** makes a new one). Up to 1,000 books at a time.
 - **Tag all** (next to Sort) does it for every book of the list on screen: the whole library, an author's or a tag's
-  books, or a search's results. It says how many books that is first; choose the tags to give and to take away, then
+  books, or a search's results. It says how many books that is first ("at least 10,000" for a longer list); choose the tags to give and to take away, then
   **Apply**. A big change runs in the background, shown in the panel under the top bar.
 - A tag you take away stays away when the library is scanned or imported again.
 

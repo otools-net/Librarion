@@ -64,6 +64,37 @@ public sealed class BookTaggingTests
     }
 
     [TestMethod]
+    public async Task AScopePastTheCapIsCountedAsAtLeastAndTaggedInTheBackground()
+    {
+        await using var shelf = await Shelf.CreateAsync(Cancel);
+        shelf.Write("a.fb2", Fb2("Dark tower", "Ann Writer", "Old"));
+        shelf.Write("b.fb2", Fb2("Dark night", "Ann Writer", "Old"));
+        shelf.Write("c.fb2", Fb2("Dark day", "Bob Other", "Old"));
+        await shelf.ScanAsync(Cancel);
+        shelf.Factory.Services.GetRequiredService<BookTagger>().Cap = 2;
+
+        // The library seen whole: its stored count, exact.
+        var library = await shelf.Admin.GetAsync<BookEndpoints.ScopeCount>($"/api/books/scope?library={shelf.LibraryId}", Cancel);
+        Assert.AreEqual((3L, false), (library.Books, library.Capped));
+
+        // Otherwise at most the cap read (a tag's books with a limit, a search sampled from its narrowest term): "at least 2".
+        foreach (var query in new[] { $"&tag={await TagIdAsync(shelf, "Old")}", "&q=dark" })
+        {
+            var count = await shelf.Admin.GetAsync<BookEndpoints.ScopeCount>($"/api/books/scope?library={shelf.LibraryId}{query}", Cancel);
+            Assert.AreEqual(2, count.Books, query);
+            Assert.IsTrue(count.Capped, query);
+        }
+
+        // Past the cap the change runs in the background, even with one tag on few books, and reaches every book.
+        using var started = await shelf.Admin.PostAsJsonAsync("/api/books/scope/tags",
+            new BookEndpoints.ScopeInput(shelf.LibraryId, Q: "dark", Add: [new BookTagEdit(Name: "Shelved")]), Cancel);
+        Assert.AreEqual(HttpStatusCode.Accepted, started.StatusCode);
+        var run = await WaitAsync(shelf.Admin, (await started.Content.ReadFromJsonAsync<TagWork>(ApiClients.Json, Cancel))!.RunId!.Value);
+        Assert.AreEqual(TaskOutcome.Succeeded, run.Outcome);
+        Assert.AreEqual((3, 3), await CountsAsync(shelf, await TagIdAsync(shelf, "Shelved")));
+    }
+
+    [TestMethod]
     public async Task AScopeIsCountedThenTaggedInlineOrInTheBackground()
     {
         await using var shelf = await Shelf.CreateAsync(Cancel);
@@ -77,6 +108,7 @@ public sealed class BookTaggingTests
         Assert.AreEqual(2, (await shelf.Admin.GetAsync<BookEndpoints.ScopeCount>($"/api/books/scope?library={shelf.LibraryId}&q=dark", Cancel)).Books);
         Assert.AreEqual(2, (await shelf.Admin.GetAsync<BookEndpoints.ScopeCount>($"/api/books/scope?library={shelf.LibraryId}&tag={author}", Cancel)).Books);
         Assert.AreEqual(3, (await shelf.Admin.GetAsync<BookEndpoints.ScopeCount>($"/api/books/scope?library={shelf.LibraryId}", Cancel)).Books);
+        Assert.IsFalse((await shelf.Admin.GetAsync<BookEndpoints.ScopeCount>($"/api/books/scope?library={shelf.LibraryId}", Cancel)).Capped);
 
         // A search's books, inline.
         using var inline = await shelf.Admin.PostAsJsonAsync("/api/books/scope/tags",

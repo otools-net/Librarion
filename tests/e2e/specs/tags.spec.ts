@@ -1,9 +1,12 @@
 // The tag manager on every device (Administration › Catalog › Tags, stage 6): the administrator makes two tags, puts
 // one under the other, merges one into the other after the dialog says what moves, and undoes the merge under Merges.
-// The run's devices share a server: every name is the test's own and the lists are searched for it.
+// The run's devices share a server: every name is the test's own and the lists are searched for it. The phone layout
+// of the list, the editor and the merge dialog is checked; axe audits the merge dialog in both themes once per run.
 import { uniqueName } from '../fixtures/accounts';
+import { audit } from '../fixtures/axe';
+import { expectFitsScreen, expectTapTargets } from '../fixtures/layout';
 import { press } from '../fixtures/press';
-import { expect, test } from '../fixtures/test';
+import { expect, isPhoneWidth, test } from '../fixtures/test';
 
 test.describe('@tags', () => {
     test('tags are made, put under one another, merged and the merge undone @desktop', async ({ page, isMobile }, testInfo) => {
@@ -29,12 +32,20 @@ test.describe('@tags', () => {
         await editor.getByRole('combobox', { name: 'Put it under a tag' }).fill(parent);
         await press(editor.getByRole('option').filter({ hasText: parent }), isMobile);
         await expect(editor.locator('.tag-chips')).toContainText(parent);
+        if (isPhoneWidth(page)) {
+            await expectFitsScreen(page);
+            await expectTapTargets(page, '[role=dialog]');
+        }
         await editor.getByLabel('Other names').fill(`${child} alias`);
         await press(editor.getByRole('button', { name: 'Save' }), isMobile);
         await expect(editor).toBeHidden();
 
         await find.fill(parent);
         await expect(list.getByRole('listitem').filter({ hasText: parent }).first()).toContainText('1 tags under it');
+        if (isPhoneWidth(page)) {
+            await expectFitsScreen(page);
+            await expectTapTargets(page, 'lib-tags-section');
+        }
 
         // The child merged into the parent: the dialog says what moves before the button.
         await find.fill(child);
@@ -54,6 +65,15 @@ test.describe('@tags', () => {
             await into.press('Enter');
         }
         await expect(merge).toContainText(`becomes another name of ${parent}`);
+        if (isPhoneWidth(page))
+            await expectFitsScreen(page);
+        if (testInfo.project.name === 'android') {
+            await audit(page, 'tag merge (dark)');
+            await page.emulateMedia({ colorScheme: 'light' });
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+            await audit(page, 'tag merge (light)');
+            await page.emulateMedia({ colorScheme: 'dark' });
+        }
         await press(merge.getByRole('button', { name: 'Merge', exact: true }), isMobile);
         await expect(page.getByRole('status').filter({ hasText: 'Merged.' })).toBeVisible();
         await expect(list.getByRole('button', { name: child })).toHaveCount(0);

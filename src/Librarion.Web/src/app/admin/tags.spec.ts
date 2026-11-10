@@ -138,6 +138,12 @@ describe('TagsSection', () => {
         expect(api.deleteTag).toHaveBeenCalledWith(7);
         expect(follow).toHaveBeenCalledWith(51);
         expect(toast).toHaveBeenCalledWith(expect.stringContaining('Runs in the background'));
+
+        // The run ends: the list is read again (read at once, the run had not changed it yet).
+        const asked = api.managedTags.mock.calls.length;
+        TestBed.inject(TaskWatch).ended.set([{ id: 51 } as never]);
+        await stable();
+        expect(api.managedTags.mock.calls.length).toBe(asked + 1);
     });
 
     it('merges a tag into one found by name, saying what moves first', async () => {

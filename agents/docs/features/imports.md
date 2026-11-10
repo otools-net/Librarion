@@ -128,6 +128,9 @@ What it took (each found by the benchmark):
   time goes is printed by the benchmark's `import` (`StepTimes`, off otherwise).
 - Calibre's own indexes on its link tables (`books_authors_link_bidx`…) are what makes reading by book fast; a
   database without them (the first generated one) reads each link table whole per batch (2.4 min per 100k books).
+- Next to try when the import path needs room again (Calibre 2M profiled 2026-11-06, in this order): the tag counts
+  flushed every few batches instead of each (`counts: tags` 245 s), the links' `COPY` overlapped with reading the next
+  batch (`links inserted` 336 s). Measure each on both providers before keeping it.
 
 ## Limits, later
 

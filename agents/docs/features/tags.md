@@ -4,10 +4,15 @@ Tables built (stage 2): `Tags`, `TagAliases`, `TagParents`, `TagClosure`, `BookT
 ([catalog](catalog.md)). Built (stage 3): imported tags at scan time (`Core/Import/ImportTagResolver`,
 `ImportTagMappings`; tests `LibraryScannerTests`): a source's mapping first, then a tag of that name or alias, else a
 new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. Built
-(stage 6, chunks 2-3): the tag service and merges; (chunk 4) the tag manager, below. Tagging books in the UI is planned.
+(stage 6): the tag service and merges (chunks 2-3), the tag manager (4), parents' totals (4a), the picker (5), tags
+edited on a book's page (6, [book-page](book-page.md)), tagging a selection or a scope (7), default tags (8c,
+[default-tags](default-tags.md)), the Imported tags page (9, [imported-tags](imported-tags.md)), possible duplicate
+tags (14, [merging](merging.md#possible-duplicate-tags-built-stage-6-chunk-14)), `tag:"name (parent)"` (15).
 
-Code (planned): `src/Librarion.Core/Tagging/` (`TagService`, `TagGraph`, `TagClosure`, `ImportedTags`, `ScopeTagger`,
-`BookTagRows`, `BuiltInTags`), entities in `Data/Entities/Tags/`; client `src/app/tags/`. Ported from SFE
+Code: `src/Librarion.Core/Tagging/` (`TagService`, `TagClosures`, `TagLinks`, `TagCountChanges`, `TagLists`,
+`TagPicker`, `BookTagger`, `DefaultTags`, `ImportedTags`, `PlainTags`, `NameKeys`, `BuiltInTags`), merges in
+`Core/Merging/TagMerger*.cs`, entities in `Data/Entities/Tags/`; client `app/admin/tags-section.ts`, `tag-editor.ts`,
+`tag-merge.ts`, `shared/tag-picker.ts`, `app/tags/` (tag pages). Ported from SFE
 (`agents/docs/features/tags.md`, `scope-tagging.md`, `default-tags.md` there; model from
 https://github.com/TagStudioDev/TagStudio), extended for tags that arrive with imported books.
 
@@ -161,17 +166,20 @@ bar and both dialogs.
   has `library.tag`; Missing when none is. `state` answers per plain tag how many of them have it: the dialog shows a
   three-state box (all, some = left alone, none), cycling all → none → some (only when some had it at first) → all;
   Save sends only the rows that changed (`add` the ones now all, `remove` the ones now none).
-- **Scope** (`library` + `tag` and / or `q`, as the list on screen): counted first (`LongCountAsync` of the scope
-  query), confirmed as "Apply to N books"; links = books × changed tags decide inline or a **library run** of kind
+- **Scope** (`library` + `tag` and / or `q`, as the list on screen): counted first, up to `BookTagger.MaxCounted`
+  (10,000, the inline threshold): a library seen whole from `Libraries.BookCount` (exact), a search sampled from its
+  narrowest term as Refine's facets are (`BookSearch.SampleAsync`), a tag or folder with a limit; past it `capped`
+  and the dialog says "at least N" and "Apply to every book of the list", and the change always runs in the
+  background. Confirmed as "Apply to N books"; links = books × changed tags decide inline or a **library run** of kind
   `ScopeTags` (`BackgroundTasks.StartLibraryAsync`: waits for the library's scan and for tenant tag runs). Walked by
   `Id > last` in batches of 1,000 with the scope asked again each time, so taking off the very tag the scope is about
   still reaches every book (`BookTaggingTests`).
 - Runs: holders of `library.tag` follow their libraries' runs (`api/tasks/running`, history, a run) and may cancel a
   `ScopeTags` run there, not a scan ([tasks](tasks.md)); the client's `TaskWatch` polls with that right too.
-- Known costs, to measure at 2M in chunk 16: the count reads the whole scope (a library of 2M with the content
-  filters, or a search with a million matches: seconds), and each batch of a search scope asks the search again with
-  `Id > last` (a big search walked to its end may read its matches many times). Both only on an explicit, confirmed
-  action, never per page view.
+- Measured at 2M (stage 6 close, [scale](../development/scale.md#measured)): the count unbounded took **over 30 s**
+  on PostgreSQL for a word on 2 % of the titles (each book tested against the search; a timeout), hence the cap; now
+  200 ms (100 on SQLite). The walk of a search scope asks the search again per batch with `Id > last`: a background
+  run, timed by the benchmark's `curation`.
 - **Default tags** of a library and of its folders (inherited by sub-folders), given once when a book enters the
   catalog or moves in, as `Rule` links: built in stage 6 chunk 8c, [default-tags](default-tags.md).
 

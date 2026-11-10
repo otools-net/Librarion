@@ -42,6 +42,9 @@ public static class RunCommand
         var tags = services.GetRequiredService<TagQueries>();
         var folders = services.GetRequiredService<FolderQueries>();
         var imported = services.GetRequiredService<ImportedTags>();
+        var managed = services.GetRequiredService<TagLists>();
+        var picker = services.GetRequiredService<TagPicker>();
+        var tagger = services.GetRequiredService<BookTagger>();
         var suggestions = services.GetRequiredService<Librarion.Core.Search.SearchSuggestions>();
         var facets = services.GetRequiredService<Librarion.Core.Search.SearchFacets>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
@@ -56,7 +59,7 @@ public static class RunCommand
         int middleAddedId;
         string prolificName, middleName;
         List<int> sampleIds;
-        int zipFolder, looseParent, looseFolder;
+        int zipFolder, looseParent, looseFolder, filterTag;
         string importedCursor;
         await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
         {
@@ -64,6 +67,7 @@ public static class RunCommand
             zipFolder = await db.Folders.Where(f => f.ArchiveId != null).OrderByDescending(f => f.FileCount).Select(f => f.Id).FirstAsync(cancellationToken);
             looseParent = await db.Folders.Where(f => f.Path == "books").Select(f => f.Id).SingleAsync(cancellationToken);
             looseFolder = await db.Folders.Where(f => f.Path == "books/500").Select(f => f.Id).SingleAsync(cancellationToken);
+            filterTag = await db.Tags.Where(t => t.Name == "filter 1%").Select(t => t.Id).SingleAsync(cancellationToken);
             var library = await db.Libraries.SingleAsync(cancellationToken);
             libraryId = library.Id;
             bookCount = library.BookCount;
@@ -149,6 +153,23 @@ public static class RunCommand
             ("duplicates page: first page", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, null, null, 20, cancellationToken)).Items.Count),
             ("duplicates page: deep page", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, null, duplicatesCursor, 20, cancellationToken)).Items.Count),
             ("duplicates page: same identifier", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, Librarion.Core.Catalog.DuplicateReason.Identifier, null, 20, cancellationToken)).Items.Count),
+            // Administration › Catalog › Tags (stage 6 chunk 4) and the tag picker (chunk 5): a field's values by name, never
+            // loaded whole; found by prefix and by word; the picker's prefix on names, other names and shorthands.
+            ("tag manager: the fields", ListBudget, async _ => (await managed.FieldsAsync(tenant.Id, cancellationToken)).Fields.Count),
+            ("tag manager: authors by name, first page", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", null, null, 100, cancellationToken))!.Items.Count),
+            ("tag manager: authors by name, middle page", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", null, middleValueCursor, 100, cancellationToken))!.Items.Count),
+            ("tag manager: plain tags by name, first page", ListBudget, async _ => (await managed.ListAsync(tenant.Id, null, null, null, 100, cancellationToken))!.Items.Count),
+            ("tag manager: authors found by a last name", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", prolificName.Split(' ')[^1], null, 100, cancellationToken))!.Items.Count),
+            ("tag manager: authors found by two letters", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", middleName[..2], null, 100, cancellationToken))!.Items.Count),
+            ("picker: authors, nothing typed", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "author", null, 10, open, cancellationToken))!.Items.Count),
+            ("picker: authors, two letters", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "author", middleName[..2], 10, open, cancellationToken))!.Items.Count),
+            ("picker: authors, a full name", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "author", middleName, 10, open, cancellationToken))!.Items.Count),
+            ("picker: plain tags, two letters", ListBudget, async _ => (await picker.FindAsync(tenant.Id, null, "ma", 10, open, cancellationToken))!.Items.Count),
+            ("picker: categories, nothing typed", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "category", null, 10, open, cancellationToken))!.Items.Count),
+            // Tag all (stage 6 chunk 7): the dialog counts the list's books when it opens (asked once: OnDemandBudget).
+            ("tag all: the books of a 1 % tag counted", OnDemandBudget, async _ => (int)(await tagger.CountAsync(tenant.Id, open, new BookScope(libraryId, Tag: filterTag), cancellationToken)).Books),
+            ("tag all: a word in many titles counted", OnDemandBudget, async _ => (int)(await tagger.CountAsync(tenant.Id, open, new BookScope(libraryId, Query: "night"), cancellationToken)).Books),
+            ("tag all: the library counted", OnDemandBudget, async _ => (int)(await tagger.CountAsync(tenant.Id, open, new BookScope(libraryId), cancellationToken)).Books),
             // The Imported tags page (stage 6 chunk 9): 50k plain tags walked by books from the most (a deep page, and a status
             // none has: the walk's bound per request), a small field read whole, the coverage line.
             ("imported tags: plain tags by books, first page", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),

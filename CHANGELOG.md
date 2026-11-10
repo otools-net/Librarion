@@ -92,6 +92,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Fixed
 
+- Administration → Catalog → Tags now shows the list again once a merge, undo or delete that ran in the background
+  ends (it showed the list from before the change until reloaded).
+- **Tag all** on a big search no longer fails in a large library (counting every match took longer than the server
+  waits): a list of more than 10,000 books is shown as "at least 10,000" and tagged in the background.
+- The tag manager opens faster on SQLite with many tags (its count of plain tags read every field's values: 190 ms at
+  2M books, now 4).
 - The Duplicates page now shows the list again once **Find again** ends; possible duplicates could be listed twice
   when scans of several libraries ended at the same time.
 - Possible duplicates no longer lists every book made by the same person as the same book: an FB2 file's maker (in

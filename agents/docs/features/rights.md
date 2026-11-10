@@ -21,7 +21,7 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   (`group.builtIn`). `RightCatalogTests` keeps Administrators ⊇ Curators ⊇ Users and Curators' tenant rights to
   `tenant.tags`, `tenant.coverStyles` and the own-account / system ones. Tenants made before a new built-in group don't get it (no
   upgrade before 1.0).
-- **Curation rights** (stage 6, D-6.1 of [stage-6-curation-plan](../development/stage-6-curation-plan.md)), area
+- **Curation rights** (stage 6, confirmed by the user 2026-11-05), area
   `catalog`, all Write: `library.tag` (plain tags on books), `library.edit` (a book's metadata and cover),
   `library.merge` (merge, split, undo, not a duplicate), `library.importedTags` (the mappings page: read per
   library, changed only with it in every library of the tenant, mapped only with `tenant.tags` too:

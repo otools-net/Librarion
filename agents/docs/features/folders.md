@@ -7,7 +7,7 @@ Code: `Folder` and `BookFile.FolderId` (`Data/Entities/Catalog/Book.cs`, configu
 `styles/browse.css`); the benchmark's `CatalogGenerator.Folders` and its folder scenarios. Tests: `FolderTests`
 (counts against a recount after each step), `FolderRouteTests`, `InpxImportTests`, `folders.spec.ts` (client), e2e
 `specs/folders.spec.ts` (every device, layout, axe in both themes). Built in stage 6, chunks 8a (folders) and 8b (the
-view), for folder default tags (8c): [stage 6 plan](../development/stage-6-curation-plan.md).
+view), for folder default tags (8c, [default-tags](default-tags.md)).
 
 ## Model (the user's answers, 2026-11-06)
 

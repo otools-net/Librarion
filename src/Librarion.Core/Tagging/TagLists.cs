@@ -43,10 +43,13 @@ public sealed class TagLists(TenantDb tenantDb)
         {
             var id = row.Id;
             var values = await db.Tags.Where(t => t.FieldId == id).Take(MaxCounted + 1).CountAsync(cancellationToken);
-            fields.Add(new ManagedField(row.Id, row.FieldKey!, row.Name, row.BuiltIn is not null, row.Color, row.IsHidden, Math.Min(values, MaxCounted), values > MaxCounted));
+            fields.Add(new ManagedField(row.Id, row.FieldKey!, row.Name, row.BuiltIn is not null, row.Color, row.IsHidden, Math.Min(values, MaxCounted),
+                values > MaxCounted));
         }
 
-        var plain = await db.Tags.Where(t => t.FieldId == null && t.FieldKey == null).Take(MaxCounted + 1).CountAsync(cancellationToken);
+        // Plain tags are the tags without a field besides the fields' own rows: counted on FieldId's index alone (with
+        // FieldKey IS NULL too, SQLite took FieldKey's index, where every field value is, and read 600k rows at 2M).
+        var plain = await db.Tags.Where(t => t.FieldId == null).Take(MaxCounted + 1 + rows.Count).CountAsync(cancellationToken) - rows.Count;
         return new ManagedFields(fields, Math.Min(plain, MaxCounted), plain > MaxCounted);
     }
 

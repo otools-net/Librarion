@@ -5,8 +5,7 @@ remove, the walk over a folder's books), `CatalogWriter` (`DefaultsAsync`, `Give
 on relinks), `Folders.PruneAsync` (keeps folders holding one), `TagMerger` (carries them, undo brings them back), routes
 in `Api/Endpoints/FolderEndpoints.cs`; client `app/folders/default-tags.ts` (the dialog), the defaults line and row
 badges in `app/folders/folder-page.ts`, icon `tag-auto`. Tests: `DefaultTagTests` (both providers),
-`folders.spec.ts` (client), e2e `specs/folders.spec.ts` (every device, axe on the dialog). Built in stage 6 chunk 8c
-([plan](../development/stage-6-curation-plan.md)); a port of SFE's folder default tags
+`folders.spec.ts` (client), e2e `specs/folders.spec.ts` (every device, axe on the dialog). Built in stage 6 chunk 8c; a port of SFE's folder default tags
 (`C:\workspace\SimpleFileExplorer\agents\docs\features\default-tags.md`).
 
 ## Decisions
