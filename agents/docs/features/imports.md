@@ -104,7 +104,7 @@ Measured 2026-11-01 (`import` command, [benchmark](../../tools/benchmark/README.
 
 | Source | Import | Unchanged re-import | Budget |
 |---|---|---|---|
-| Calibre, 2M books (one EPUB each, 500k authors) | 27.1 min (1,232 a second); 25.4 min (1,312) on 2026-11-06 | 2.6 min; 2.4 min | 30 min / 5 min |
+| Calibre, 2M books (one EPUB each, 500k authors) | 24.5 min (1,362 a second) on 2026-11-10; 28.8 min before new tags were copied | 2.5 min | 30 min / 5 min |
 | INPX, 1M records (100 zips, 1 % deleted) | 8.9 min (1,845 a second) | 38 s | 15 min / 5 min |
 | SQLite, 100k: Calibre / INPX | 92 s / 75 s | 15 s / 10 s | recorded |
 
@@ -113,6 +113,10 @@ What it took (each found by the benchmark):
   (`BulkRows.ReserveIdsAsync`) and books, files, links, identifiers and properties copied (`BulkRows.InsertAsync`,
   binary `COPY`; SQLite: one prepared insert per row in a transaction). EF's per-row cost was 80 % of the time
   (580 → 1,566 records a second on PostgreSQL).
+- New tags past EF too (`ImportTagResolver.SaveAsync`): on PostgreSQL their ids come from the `Tags` sequence and the
+  tags, their closure rows and plain tags' parents are copied in one transaction; SQLite keeps EF. The raw names'
+  mappings are copied on both. Calibre 2M makes ~600k tags: "tag names" 359 → 165 s, the import 28.8 → 24.5 min
+  (2026-11-10).
 - `TagCounts` moved by one upsert per 1000 tags (`BulkRows.AddCountsAsync`), not a row per tag through EF: with 500k
   authors nearly every author of a batch is a different tag, and the per-row updates made 2M books take over an hour.
   Scans use the same flush.

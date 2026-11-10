@@ -149,13 +149,14 @@ public sealed class ImportTagResolver
     private ImportTagMapping Mapping((ImportTagSourceKind Source, int? Field, string Name) key, Name name, int tagId) =>
         new() { TenantId = tenantId, Source = key.Source, FieldId = key.Field, NormalizedName = key.Name, Name = Cut(name.Value.Trim()), TagId = tagId };
 
-    /// <summary>The mappings of the names settled without one, written together.</summary>
+    /// <summary>The mappings of the names settled without one, copied together (nothing reads their ids back).</summary>
     private async Task RecordAsync(LibrarionDbContext db, CancellationToken cancellationToken)
     {
         if (recorded.Count == 0)
             return;
-        db.ImportTagMappings.AddRange(recorded);
-        await db.SaveChangesAsync(cancellationToken);
+        await BulkRows.InsertAsync(db, "ImportTagMappings", ["TenantId", "Source", "FieldId", "NormalizedName", "Name", "TagId", "Ignored", "Reviewed"],
+            recorded.Select(m => new object?[] { m.TenantId, (byte)m.Source, m.FieldId, m.NormalizedName, m.Name, m.TagId, m.Ignored, m.Reviewed }).ToList(),
+            cancellationToken);
         recorded.Clear();
     }
 
@@ -165,6 +166,8 @@ public sealed class ImportTagResolver
         if (pending.Count == 0)
             return;
         var created = new Dictionary<(int? Field, string Name), Tag>();
+        // A plain tag's category ("Imported: FB2"); a field value's parent is its field (closure only).
+        var categoryOf = new Dictionary<Tag, int>();
         foreach (var ((source, field, normalized), name) in pending)
         {
             if (created.ContainsKey((field, normalized)))
@@ -180,21 +183,12 @@ public sealed class ImportTagResolver
                 FieldId = field,
             };
             NameKeys.Apply(tag);
-            db.Tags.Add(tag);
-            db.TagClosure.Add(new TagClosure { TenantId = tenantId, Ancestor = tag, Descendant = tag });
-            if (field is { } fieldId)
-                db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = fieldId, Descendant = tag, Depth = 1 });
-            else
-            {
-                var category = await CategoryAsync(db, source, cancellationToken);
-                db.TagParents.Add(new TagParent { TenantId = tenantId, Child = tag, ParentId = category });
-                db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = category, Descendant = tag, Depth = 1 });
-            }
-
+            if (field is null)
+                categoryOf[tag] = await CategoryAsync(db, source, cancellationToken);
             created[(field, normalized)] = tag;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(db, created.Values, categoryOf, cancellationToken);
         Created.Add(created.Values.Select(t => t.Id));
         foreach (var (key, name) in pending)
         {
@@ -202,6 +196,62 @@ public sealed class ImportTagResolver
             cache[key] = id;
             if (Recorded(key.Field))
                 recorded.Add(Mapping(key, name, id));
+        }
+    }
+
+    private static readonly string[] TagColumns = ["Id", "TenantId", "Name", "NormalizedName", "SortName", "IsCategory", "IsHidden", "FieldId", "SoundKey", "InitialsKey"];
+
+    /// <summary>
+    /// New tags with their closure rows (itself, and its field or category above it) and a plain tag's parent. On
+    /// PostgreSQL the ids come from the table's sequence and the rows are copied in one transaction (EF's per-row cost
+    /// was most of the time of the 600k new tags of a Calibre 2M import: agents/docs/features/imports.md#scale); on SQLite
+    /// through EF, whose ids come from the insert.
+    /// </summary>
+    private async Task SaveAsync(LibrarionDbContext db, IReadOnlyCollection<Tag> tags, Dictionary<Tag, int> categoryOf, CancellationToken cancellationToken)
+    {
+        if (await BulkRows.ReserveIdsAsync(db, "Tags", tags.Count, cancellationToken) is not { } reserved)
+        {
+            foreach (var tag in tags)
+            {
+                db.Tags.Add(tag);
+                db.TagClosure.Add(new TagClosure { TenantId = tenantId, Ancestor = tag, Descendant = tag });
+                if (categoryOf.TryGetValue(tag, out var category))
+                {
+                    db.TagParents.Add(new TagParent { TenantId = tenantId, Child = tag, ParentId = category });
+                    db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = category, Descendant = tag, Depth = 1 });
+                }
+                else
+                    db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = tag.FieldId!.Value, Descendant = tag, Depth = 1 });
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var i = 0;
+        foreach (var tag in tags)
+            tag.Id = checked((int)reserved[i++]);
+        var own = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
+        try
+        {
+            await BulkRows.InsertAsync(db, "Tags", TagColumns,
+                tags.Select(t => new object?[] { t.Id, t.TenantId, t.Name, t.NormalizedName, t.SortName, t.IsCategory, t.IsHidden, t.FieldId, t.SoundKey, t.InitialsKey }).ToList(),
+                cancellationToken);
+            await BulkRows.InsertAsync(db, "TagClosure", ["TenantId", "AncestorId", "DescendantId", "Depth"],
+                tags.SelectMany(t => new[]
+                {
+                    new object?[] { tenantId, t.Id, t.Id, 0 },
+                    [tenantId, categoryOf.TryGetValue(t, out var category) ? category : t.FieldId!.Value, t.Id, 1],
+                }).ToList(), cancellationToken);
+            await BulkRows.InsertAsync(db, "TagParents", ["TenantId", "ChildId", "ParentId"],
+                categoryOf.Select(c => new object?[] { tenantId, c.Key.Id, c.Value }).ToList(), cancellationToken);
+            if (own is not null)
+                await own.CommitAsync(cancellationToken);
+        }
+        finally
+        {
+            if (own is not null)
+                await own.DisposeAsync();
         }
     }
 

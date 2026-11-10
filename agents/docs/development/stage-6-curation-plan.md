@@ -228,8 +228,10 @@ A session may end early: this list is the state of the work. Tick a chunk when i
   copied 166 s.
 - **Done:** a batch's new loose files read 8 at a time (`CatalogImporter.Run.Stat`): matching 433 → 90 s, **Calibre 2M
   25.4 min** (1,312 a second), unchanged re-import 2.4 min. INPX reads ZIP directories, not files: unchanged.
-- **Still to try, in this order:** new tags copied in bulk on PostgreSQL (ids from the sequence, as books), the tag
-  counts flushed every few batches instead of each, the links' `COPY` overlapped with reading the next batch.
+- **Done (2026-11-10):** new tags copied in bulk on PostgreSQL (ids from the sequence, as books; closure, parents and
+  mappings copied too): tag names 359 → 165 s, **Calibre 2M 24.5 min** (28.8 after chunk 14), unchanged re-import 2.5 min.
+- **Still to try, in this order:** the tag counts flushed every few batches instead of each (`counts: tags` 245 s),
+  the links' `COPY` overlapped with reading the next batch (`links inserted` 336 s).
 
 ## Found with real books (2026-11-06)
 
