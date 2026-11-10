@@ -141,6 +141,11 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    [opds](../features/opds.md#built-stage-7-chunk-7-search).
 8. [ ] FB2 as `fb2.zip` on the fly; merged books redirect in feeds and downloads; path keys `/opds/k/<key>/…` (keys
    that allow them) with every link keeping the prefix and the key redacted from logs (a test reads the log).
+   **The key page tells how to use a key without the user name** (the user's request, 2026-11-10): in the panel
+   showing a new key once, per scope: reader apps: the catalog address with the key in it (`…/opds/k/<key>`, with
+   Copy) when the key allows the address, else the address with the user name and the key as the password; scripts:
+   `Authorization: Bearer <key>` / `X-Api-Key: <key>`; user docs (account › API keys) and the client spec / e2e
+   updated. Whether a key as the Basic password with an empty user name is accepted: asked when the chunk starts.
 9. [ ] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,
    rename, delete, add and remove books (one, a selection), order; lists by key under visibility; merges, undo and
    split keep shelf rows right; routes behind `account.shelves`. Tests on both providers.
