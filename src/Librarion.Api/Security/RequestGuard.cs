@@ -9,7 +9,7 @@ namespace Librarion.Api.Security;
 /// <item>a request changing something must carry <see cref="Header"/>: a page of another site cannot add it without the
 /// browser asking this server first (CORS), which never agrees, so it can't act with a visitor's cookie;</item>
 /// <item>until the first server administrator exists, only the setup and the session answer (503
-/// <see cref="SetupRequiredType"/>).</item>
+/// <see cref="SetupRequiredType"/>); the reader apps' feeds (<c>/opds</c>) too.</item>
 /// </list>
 /// </summary>
 public sealed class RequestGuard(RequestDelegate next)
@@ -21,7 +21,7 @@ public sealed class RequestGuard(RequestDelegate next)
     {
         var path = context.Request.Path;
         var api = path.StartsWithSegments("/api");
-        if (!api && !path.StartsWithSegments("/openapi"))
+        if (!api && !path.StartsWithSegments("/openapi") && !path.StartsWithSegments(Opds.OpdsEndpoints.Prefix))
         {
             await next(context);
             return;

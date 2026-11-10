@@ -12,7 +12,7 @@ dotnet msbuild src/Librarion.Api/Librarion.Api.csproj -getProperty:Version   # c
 ```
 
 - Migrations (two per change): [database](../development/database.md).
-- `npm start` proxies `/api` and `/openapi` to `:5090` (`proxy.conf.json`): run the Api alongside.
+- `npm start` proxies `/api`, `/openapi` and `/opds` to `:5090` (`proxy.conf.json`): run the Api alongside.
 - Build mechanics and errors: [build](build.md).
 
 ## Long runs in the background

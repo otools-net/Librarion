@@ -157,4 +157,5 @@ note rather than inventing a new one.
 | [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: stored groups and their upkeep, the Duplicates page, compare and merge, redirects, Not a duplicate; undo and split (planned) | `Core/Merging/` |
 | [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
 | [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |
-| [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |
+| [opds](agents/docs/features/opds.md) | the OPDS catalog for reader apps: the `/opds` group, its 404 and setup rules, feeds (planned) | `Api/Opds/` |
+| [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: the `Opds` scheme (never the cookie); Basic, API keys, key-in-URL (planned) | `Api/Opds/`, `Api/Security/` |

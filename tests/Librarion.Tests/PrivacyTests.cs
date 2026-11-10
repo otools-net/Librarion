@@ -30,6 +30,7 @@ public sealed partial class PrivacyTests
                      {
                          "/api/session", "/api/system/info", "/openapi/v1.json", "/api/tenants", "/api/users", "/api/groups", "/api/rights",
                          "/api/libraries", "/api/settings?level=server", "/api/me/preferences", "/api/security-events?all=true", "/", "/some/client/route",
+                         "/opds", "/opds/nothing-here",
                      })
                 using (await client.GetAsync(path, TestContext.CancellationToken)) { }
         }

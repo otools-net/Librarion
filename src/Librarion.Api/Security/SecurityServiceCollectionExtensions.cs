@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Librarion.Core.Access;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -48,7 +49,9 @@ public static class SecurityServiceCollectionExtensions
                     return Task.CompletedTask;
                 };
                 options.Events.OnValidatePrincipal = LibrarionSession.ValidateAsync;
-            });
+            })
+            // Reader apps on /opds: Basic or API keys, never the cookie (Opds/OpdsAuthentication.cs).
+            .AddScheme<AuthenticationSchemeOptions, Librarion.Api.Opds.OpdsAuthenticationHandler>(Librarion.Api.Opds.OpdsAuthenticationHandler.Scheme, null);
 
         services.AddAuthorization();
         services.AddSingleton<IAuthorizationPolicyProvider, RightPolicyProvider>();

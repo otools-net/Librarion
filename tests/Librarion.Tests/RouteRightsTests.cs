@@ -10,7 +10,7 @@ namespace Librarion.Tests;
 public sealed class RouteRightsTests
 {
     /// <summary>
-    /// Every route of the API and of its document names the right(s) it needs, or says it is anonymous
+    /// Every route of the API, of its document and of the reader apps' feeds names the right(s) it needs, or says it is anonymous
     /// (agents/docs/features/rights.md). Stage 1 adds: every named right is in the catalog.
     /// </summary>
     [TestMethod]
@@ -22,7 +22,8 @@ public sealed class RouteRightsTests
 
         var routes = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>()
             .Where(e => e.RoutePattern.RawText?.TrimStart('/') is { } path
-                        && (path.StartsWith("api/", StringComparison.Ordinal) || path.StartsWith("openapi", StringComparison.Ordinal)))
+                        && (path.StartsWith("api/", StringComparison.Ordinal) || path.StartsWith("openapi", StringComparison.Ordinal)
+                            || path.StartsWith("opds", StringComparison.Ordinal)))
             .ToList();
         var unnamed = routes
             .Where(e => e.Metadata.GetMetadata<RightMetadata>() is null && e.Metadata.GetMetadata<IAllowAnonymous>() is null)

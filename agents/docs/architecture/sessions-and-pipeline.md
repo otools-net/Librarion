@@ -2,7 +2,8 @@
 
 Code: `src/Librarion.Api/Program.cs`, `Security/` (`SecurityHeaders`, `RequestGuard`), `ClientPage.cs`. Sessions:
 `Security/LibrarionSession.cs` (cookie), `CurrentAccess.cs`, `RightMetadata.cs` (`RequireRight`), `SignInThrottle.cs`;
-Basic / API keys for OPDS come in stage 7 ([opds-auth](../features/opds-auth.md)).
+Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([opds-auth](../features/opds-auth.md),
+[opds](../features/opds.md)).
 
 - **Order:** `UseForwardedHeaders` (loopback proxies) → `SecurityHeaders` (first, so errors carry them too) →
   exception handler, status code pages → `RequestGuard` → authorization → `/openapi`, static files
@@ -23,6 +24,12 @@ Basic / API keys for OPDS come in stage 7 ([opds-auth](../features/opds-auth.md)
   `api/setup` and `api/session`) → `UseRateLimiter` (`sign-in` policy per address) → `UseAuthorization`.
 - **Session cookie** `librarion.session-<port>` (SFE's per-port names): user id, security stamp, tenant; stamp checked
   on every request (`LibrarionSession.ValidateAsync`); keys in `Librarion:Security:KeysDirectory` (`data/keys`).
+- **`/opds` (stage 7):** its own group after `/api`, routes naming the `Opds` authentication scheme only
+  (`AuthorizeAttribute.AuthenticationSchemes` on the group): the authorization middleware then replaces the request's
+  user with that scheme's result, so the cookie read by `UseAuthentication` is never seen there, and a missing user is
+  challenged with `WWW-Authenticate: Basic`. `RequestGuard`'s setup 503 covers it; its own `{**path}` fallback (404,
+  file-like addresses too); `opds` excluded from `ClientPage`'s `{key}/{id}/{name}` route; `EveryRouteNamesARight`
+  covers it.
 - `builder.WebHost.UseStaticWebAssets()` in Program.cs: `dotnet run` without a launch profile runs as Production and
   otherwise warned "Static Web Assets are not enabled" and couldn't serve the built client.
 - `appsettings.json` `Urls` (5090) wins over `ASPNETCORE_URLS`: pass `--urls` to run on another port.

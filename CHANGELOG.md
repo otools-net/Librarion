@@ -2,6 +2,14 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## Unreleased
+
+### Added
+
+- New rights, given to every built-in group: **Reader apps (OPDS)** (per library, for the coming OPDS catalog at
+  `/opds`), **Own API keys** and **Own shelves**. Reader apps sign in with a password or an API key; the web app's
+  sign-in never opens the catalog. The catalog itself comes in the next changes.
+
 ## 0.7.0
 
 ### Added

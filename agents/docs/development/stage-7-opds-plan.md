@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 1.
+**Next:** chunk 2.
 
 ## The user's answers (2026-11-10)
 
@@ -97,10 +97,13 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
 0. [x] The user confirms D-7.1–D-7.10 (or changes them); this plan updated. **Built:** answers Q5–Q12
    (2026-11-10): JPEG everywhere (chunk 4a added), keys on `/api` scoped, no default expiry, path keys opt-in, shelves
    in their own order, the root a list of libraries.
-1. [ ] Rights and the `/opds` frame: `library.opds`, `account.apiKeys`, `account.shelves` (`RightCatalog`, default
+1. [x] Rights and the `/opds` frame: `library.opds`, `account.apiKeys`, `account.shelves` (`RightCatalog`, default
    groups, texts, `core/rights.ts`, `docs/reference/rights.md`); the `/opds` route group, its 404 fallback, the
    `ClientPage` exclusion, the setup 503; `EveryRouteNamesARight` (`RouteRightsTests`) and
    `TheServerMakesNoOutboundRequests` (`PrivacyTests`) cover `/opds`; a placeholder root feed behind the right.
+   **Built:** the `Opds` scheme named by the group (the cookie never the user there), [opds](../features/opds.md),
+   [opds-auth](../features/opds-auth.md), [sessions-and-pipeline](../architecture/sessions-and-pipeline.md); the dev
+   proxy forwards `/opds`.
 2. [ ] Basic with a password: an authentication handler for `/opds` setting the cookie's claims (user id, stamp), so
    `CurrentAccess` works unchanged; the verification cache (D-7.4) through `SignInService`; throttle, lockout, 401
    with `WWW-Authenticate: Basic realm="Librarion"`, rate limit per user, security events. Tests: right and wrong

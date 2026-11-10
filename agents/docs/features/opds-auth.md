@@ -1,6 +1,17 @@
-# OPDS and API authentication (planned)
+# OPDS and API authentication
 
-Code (planned): `src/Librarion.Api/Security/` (`BasicAuthentication`, `ApiKeyAuthentication`), `src/Librarion.Core/Access/ApiKeys`.
+Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme); planned: Basic checks, API keys in
+`src/Librarion.Core/Access/ApiKeys`. Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.2–D-7.5). Feeds:
+[opds](opds.md).
+
+## Built (stage 7 chunk 1)
+
+- `/opds` routes authenticate with the `Opds` scheme only (`OpdsAuthenticationHandler`): the cookie is never their
+  user, even when sent (`TheFeedsAskForBasicAndNeverTakeTheCookie`). No credentials: 401 with
+  `WWW-Authenticate: Basic realm="Librarion", charset="UTF-8"`. It finds nobody yet: Basic passwords come in chunk 2,
+  keys in chunk 3.
+- Rights (stage 7, Users and up): `library.opds` (the feeds of a library), `account.apiKeys` (own keys),
+  `account.shelves` (own shelves): [rights](rights.md).
 
 ## Ways in
 
