@@ -4,7 +4,7 @@ Roadmap: [foundation-plan](foundation-plan.md) (D6, D7, D15, D22). Goal: **reade
 API key**, browse, search and download from catalogs of 2M books within the OPDS budget; users keep **personal
 shelves**, also as feeds. Version stays on `edge`; the merge into `main` makes it `0.8.0`.
 
-Written 2026-11-10. The user's answers below; decisions D-7.1–D-7.10 to confirm in chunk 0.
+Written 2026-11-10. Decisions D-7.1–D-7.10 confirmed by the user's answers (2026-11-10), below.
 
 Feature notes this stage builds (their "planned" parts become built): [opds-auth](../features/opds-auth.md),
 [rights](../features/rights.md), [accounts](../features/accounts.md), [book-display](../features/book-display.md)
@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 0.
+**Next:** chunk 1.
 
 ## The user's answers (2026-11-10)
 
@@ -35,8 +35,20 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   the [next-version plan](next-version-plan.md).
 - **Q3 OPDS 2.0:** the last chunk, optional; skipped if the stage runs long.
 - **Q4 Rights:** a right for OPDS and one for API keys, both given to Users (so also Curators and Administrators).
+- **Q5 Covers (D-7.8): JPEG everywhere**, not only for OPDS: thumbnails, generated covers and uploads are encoded and
+  served as JPEG in the web app too (chunk 4a).
+- **Q6 Covers uploaded before:** not in production, ignored: no conversion of the `.webp` uploads already stored
+  (they may break; uploaded again) and the old `.webp` thumbnails are left in the cache folder.
+- **Q7 Keys on `/api` (D-7.2):** yes, scoped (`Bearer` / `X-Api-Key`); Basic only on `/opds`.
+- **Q8 Key expiry (D-7.3):** an optional date, none by default.
+- **Q9 Path keys (D-7.5):** opt-in per key ("Can be used in the address"); a tenant setting can switch them off.
+- **Q10 Shelf order (D-7.9):** the shelf's own order (drag; also the feed's order), and its page sortable by title,
+  author or date added.
+- **Q11 OPDS root (D-7.5):** a list of libraries (each its own catalog), the catalog itself when there is one; no
+  catalog across libraries.
+- **Q12:** D-7.1, D-7.4, D-7.6, D-7.7 and D-7.10 confirmed as written.
 
-## Decisions for this stage (to confirm in chunk 0)
+## Decisions for this stage (confirmed 2026-11-10)
 
 - **D-7.1 Rights:** `library.opds` (Read, area `library`: feeds; downloads by OPDS also need `library.download`,
   books `library.browse`, in that library), `account.apiKeys` (Write: one's own keys), `account.shelves` (Write: one's
@@ -48,7 +60,8 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   subset of libraries.
 - **D-7.3 Keys:** `lib_<id>_<secret>` (160+ bits of secret), stored as the id + SHA-256 of the secret, compared in
   fixed time (`PasswordHashing.SameSecret`), shown once. Per key: name, scopes, libraries, path allowed, expiry,
-  created, last used + address (written at most once a minute per key), revoked. A new security stamp or a disabled
+  created, last used + address (written at most once a minute per key), revoked. Expiry optional, none by default
+  (Q8). A new security stamp or a disabled
   account ends them at once. `ApiKeys` has the tenant query filter (and a row in `NoQueryCrossesTenants`), migrations
   for both providers.
 - **D-7.4 Basic cost:** a successful password check cached in memory 5 minutes, keyed by the user, a keyed hash of the
@@ -57,7 +70,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   `ApiKeyRevoked`, failed OPDS sign-ins (never a secret).
 - **D-7.5 Addresses:** `/opds` = the root (one library: its catalog; several: a list of them);
   `/opds/l/<library>/…` per library (ids are global: the tenant follows, also for server administrators);
-  `/opds/k/<key>/…` path keys for keys that allow it, every link of the feed keeping the prefix, the key redacted
+  `/opds/k/<key>/…` path keys for keys that allow it (opt-in per key; a tenant setting switches them off), every link of the feed keeping the prefix, the key redacted
   from logs. `opds` excluded from `ClientPage`'s `{key}/{id}/{name}` route and an `/opds` 404 fallback as `/api` has;
   `RequestGuard`'s setup 503 covers `/opds`.
 - **D-7.6 Feeds (OPDS 1.2):** root, Recent (`BookSort.Added`), All by title, each field (authors, series, categories as
@@ -68,10 +81,12 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
 - **D-7.7 Entries:** id `urn:librarion:book:<id>`, title (file-name fallback, D15), authors, series and number,
   language, categories, summary (cut), `updated`; an acquisition link per file with its media type
   (`BookFormats.ContentType`); FB2 also as `fb2.zip`, zipped on the fly (streamed, no Range); merged ids redirect.
-- **D-7.8 Covers as JPEG for OPDS:** covers are WebP today, which many reader apps (older Moon+, PocketBook, Kobo)
-  don't decode; OPDS image links serve JPEG (`l` as the image, `m` as the thumbnail), cached beside the WebP ones by
-  `CoverService`, made on first request only.
-- **D-7.9 Shelves:** personal (per user, in the user's tenant), a name, books in an order (position, added); a book
+- **D-7.8 Covers as JPEG everywhere (Q5):** covers are WebP today, which many reader apps (older Moon+, PocketBook,
+  Kobo) don't decode; every cover becomes JPEG: `CoverImages` encodes JPEG, `CoverCache` names `.jpg`, uploads are
+  stored as `.jpg`, generated covers too, the routes answer `image/jpeg`. OPDS image links: `l` as the image, `m` as
+  the thumbnail. Nothing converted up front (Q6).
+- **D-7.9 Shelves:** personal (per user, in the user's tenant), a name, books in their own order (position, added;
+  Q10), the shelf's page also sortable by title, author or date added; a book
   shows in a shelf only while the user may see it (`BookVisibility`); merges move shelf rows and their undo moves them
   back. Shared / public shelves: [next-version plan](next-version-plan.md).
 - **D-7.10 Validation:** feeds checked against the OPDS 1.2 / Atom RelaxNG schemas by an offline tool in
@@ -79,7 +94,9 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
 
 ## Todo (one chunk per session; commit it, then ask before the next)
 
-0. [ ] The user confirms D-7.1–D-7.10 (or changes them); this plan updated.
+0. [x] The user confirms D-7.1–D-7.10 (or changes them); this plan updated. **Built:** answers Q5–Q12
+   (2026-11-10): JPEG everywhere (chunk 4a added), keys on `/api` scoped, no default expiry, path keys opt-in, shelves
+   in their own order, the root a list of libraries.
 1. [ ] Rights and the `/opds` frame: `library.opds`, `account.apiKeys`, `account.shelves` (`RightCatalog`, default
    groups, texts, `core/rights.ts`, `docs/reference/rights.md`); the `/opds` route group, its 404 fallback, the
    `ClientPage` exclusion, the setup 503; `EveryRouteNamesARight` (`RouteRightsTests`) and
@@ -95,9 +112,14 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
 4. [ ] API keys UI: My account › API keys (create: name, scopes, libraries, path key, expiry; the key shown once with
    Copy; list with last used; revoke, asking first); Administration › Users: a user's keys, revoke; phones; client
    specs, e2e on every device, axe in both themes.
+4a. [ ] Covers as JPEG everywhere (D-7.8, Q5–Q6): `CoverImages` (thumbnails, `Remake`), `GeneratedCovers`,
+    `CoverCache` (`.jpg`), `CoverUploads` (`.jpg`), the cover routes in `BookEndpoints` / `CoverEndpoints`
+    (`image/jpeg`, OpenAPI summaries); quality chosen against size (measured on sample covers); tests (a JPEG comes
+    back at every size, hostile images still refused); notes [book-display](../features/book-display.md), user docs
+    if they name WebP.
 5. [ ] Feed writer and first feeds: a streaming OPDS / Atom writer (`XmlWriter`), navigation and acquisition feeds,
    links (start, up, self, next, search), book entries (D-7.7) with batched files; root and library list, Recent,
-   All by title; acquisition through `BookDownloads` (Range, ETag), the right per library; covers as JPEG (D-7.8).
+   All by title; acquisition through `BookDownloads` (Range, ETag), the right per library; cover links (D-7.8).
 6. [ ] Fields and tags: each field A–Z → values → books (series by number), categories as a tree, plain tags by
    category; values hidden by content filters left out (`TagQueries`' deny rule), counts from `TagCounts`.
 7. [ ] OpenSearch: the description document, the search feed through `BookQueries.ListAsync` (`q`, the search
