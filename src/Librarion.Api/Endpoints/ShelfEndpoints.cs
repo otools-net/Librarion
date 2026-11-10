@@ -28,7 +28,7 @@ public static class ShelfEndpoints
                     ? Results.Ok(await store.ListAsync(tenantId, state.User!.Id, context.RequestAborted))
                     : Results.Ok(Array.Empty<ShelfInfo>()))
             .WithName("ListShelves")
-            .WithSummary($"The signed-in account's shelves in its tenant, by name, with their counts of books (at most {Shelves.MaxShelves}).");
+            .WithSummary("The signed-in account's shelves in its tenant, by name, with their counts of books (at most the setting `shelves.maxPerAccount`, 100 by default).");
 
         shelves.MapPost("/", async (ShelfInput input, HttpContext context, CurrentAccess current, Shelves store) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state

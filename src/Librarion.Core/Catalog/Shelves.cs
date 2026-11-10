@@ -24,15 +24,13 @@ public sealed record ShelfAdded(ShelfInfo Shelf, int Added, int Already);
 
 /// <summary>
 /// Personal shelves (agents/docs/features/shelves.md, D-7.9): an account's own named lists of books, in the tenant
-/// they were made in; only the owner reaches them (another's shelf is not found). A shelf holds at most
+/// they were made in, at most the tenant's setting <c>shelves.maxPerAccount</c> each; only the owner reaches them (another's shelf is not found). A shelf holds at most
 /// <see cref="MaxBooks"/> books in its own order (spaced positions: a move writes one row, the whole shelf renumbered
 /// only when two neighbours touch), listed by key in that order, by title, author or date added, always only the
 /// books the owner may see now. Merges move shelf rows to the kept book and their undo moves them back (<c>BookMerger</c>).
 /// </summary>
-public sealed class Shelves(TenantDb tenantDb, TimeProvider time)
+public sealed class Shelves(TenantDb tenantDb, Settings.SettingsService settings, TimeProvider time)
 {
-    /// <summary>Shelves an account may hold in a tenant (listed whole, never paged).</summary>
-    public const int MaxShelves = 100;
 
     /// <summary>Books a shelf may hold: what a renumbering or a sort by title reads at most.</summary>
     public const int MaxBooks = 10_000;
@@ -59,7 +57,7 @@ public sealed class Shelves(TenantDb tenantDb, TimeProvider time)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var names = await db.Shelves.Where(s => s.UserId == userId).Select(s => s.Name).ToListAsync(cancellationToken);
-        if (names.Count >= MaxShelves)
+        if (names.Count >= await MaxShelvesAsync(tenantId, cancellationToken))
             return AccessResult<ShelfInfo>.Invalid("name", "shelf.tooMany");
         if (Problem(name, names) is { } problem)
             return AccessResult<ShelfInfo>.Invalid("name", problem);
@@ -275,6 +273,16 @@ public sealed class Shelves(TenantDb tenantDb, TimeProvider time)
         var counts = await leaving.GroupBy(s => s.ShelfId).Select(g => new { ShelfId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
         foreach (var count in counts)
             await db.Shelves.Where(s => s.Id == count.ShelfId).ExecuteUpdateAsync(s => s.SetProperty(x => x.BookCount, x => x.BookCount - count.Count), cancellationToken);
+    }
+
+    /// <summary>The tenant's <see cref="Settings.SettingCatalog.MaxShelves"/> (the server's when the tenant sets none).</summary>
+    public async Task<int> MaxShelvesAsync(int tenantId, CancellationToken cancellationToken = default)
+    {
+        var states = await settings.GetAsync(new Settings.SettingOwner(SettingLevel.Tenant, tenantId), tenantId, cancellationToken);
+        return states?.FirstOrDefault(s => s.Key == Settings.SettingCatalog.MaxShelves)?.Value is { ValueKind: System.Text.Json.JsonValueKind.Number } value
+               && value.TryGetInt32(out var max)
+            ? max
+            : 100;
     }
 
     private static string? Problem(string? name, IReadOnlyList<string> others)

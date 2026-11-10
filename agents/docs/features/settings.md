@@ -23,7 +23,8 @@ preferences on `account/account-page.ts`, `core/session.service.ts` (applies the
   [missing-books](missing-books.md)); `import.mergeSameFiles` (tenant level and above, on/off, on: a scanned copy of a
   file joins its book, [merging](merging.md#stored-duplicate-groups-built-stage-6-chunk-11)); `opds.pathKeys`
   (tenant level and above, on/off, on: keys that allow it work in the catalog's address,
-  [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address); section `readerApps`).
+  [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address); section `readerApps`); `shelves.maxPerAccount`
+  (tenant level and above, 1–1,000, 100: [shelves](shelves.md); section `shelves`).
 - The theme toggle in the account menu changes only this browser (localStorage), not the account's preference.
 - A new setting: one line in the catalog, its texts, and where the client uses it; no migration (rows hold JSON).
 

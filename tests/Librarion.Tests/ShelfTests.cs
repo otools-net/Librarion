@@ -75,6 +75,32 @@ public sealed class ShelfTests
         Assert.AreEqual(HttpStatusCode.NoContent, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
     }
 
+    /// <summary>How many shelves an account may make is the tenant's setting (else the server's, 100 by default).</summary>
+    [TestMethod]
+    public async Task TheSettingCapsTheShelvesOfAnAccount()
+    {
+        await using var library = await LibraryAsync("Dune");
+        var settings = library.Factory.Services.GetRequiredService<Librarion.Core.Settings.SettingsService>();
+        async Task SetAsync(Librarion.Core.Settings.SettingOwner owner, int? scope, string? value) => Assert.AreEqual(AccessStatus.Ok, (await settings.SaveAsync(owner, scope,
+            new Librarion.Core.Settings.SettingChanges(new() { [Librarion.Core.Settings.SettingCatalog.MaxShelves] = value is null ? null : System.Text.Json.JsonDocument.Parse(value).RootElement }), Cancel)).Status);
+        var shelves = library.Factory.Services.GetRequiredService<Shelves>();
+        Assert.AreEqual(100, await shelves.MaxShelvesAsync(library.TenantId, Cancel));
+
+        await SetAsync(new(SettingLevel.Server, 0), null, "3");
+        await SetAsync(new(SettingLevel.Tenant, library.TenantId), library.TenantId, "2");
+        await CreateAsync(library.Admin, "One");
+        await CreateAsync(library.Admin, "Two");
+        using (var refused = await library.Admin.PostAsJsonAsync("/api/shelves", new ShelfEndpoints.ShelfInput("Three"), ApiClients.Json, Cancel))
+        {
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
+            StringAssert.Contains(await refused.Content.ReadAsStringAsync(Cancel), "shelf.tooMany");
+        }
+
+        await SetAsync(new(SettingLevel.Tenant, library.TenantId), library.TenantId, null);
+        await CreateAsync(library.Admin, "Three");
+        Assert.AreEqual(3, await shelves.MaxShelvesAsync(library.TenantId, Cancel), "the server's when the tenant sets none");
+    }
+
     [TestMethod]
     public async Task ShelvesAreMadeNamedRenamedAndDeleted()
     {

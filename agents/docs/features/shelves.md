@@ -11,7 +11,9 @@ plan](../development/stage-7-opds-plan.md) (D-7.9, the user's Q1 and Q10). Right
   administrator's in the tenant it works in), with the tenant filter on both tables. Only its owner reaches it:
   another account's shelf answers 404 everywhere (read, add, rename…). Names are its own among the owner's shelves
   (case not counted: `shelf.nameTaken`), 1–100 characters.
-- **Caps** (cost bounds, D-7.9): `Shelves.MaxShelves` 100 per account and tenant (listed whole, never paged);
+- **Caps** (cost bounds, D-7.9): shelves per account and tenant = the setting `shelves.maxPerAccount` (server, then
+  tenant, never the account; default 100, 1–1,000 since the list of shelves is never paged; the user's answer,
+  2026-11-10; lowering it removes no shelf, only refuses new ones: `shelf.tooMany`, `Shelves.MaxShelvesAsync`);
   `MaxBooks` 10,000 per shelf (`shelf.full`); add or remove at most `BookTagger.MaxSelection` (1,000) at once.
 - **Order:** `ShelfBook.Position` (long), spaced by `Shelves.Gap` (1,024). Books go on after the last, a selection in
   the order given; one already there stays where it is (`ShelfAdded.Already`). A move (`PUT …/books/{id}/position`,

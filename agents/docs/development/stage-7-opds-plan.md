@@ -156,8 +156,8 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    middleware), "How to use it" on the key page; [opds-auth](../features/opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).
 9. [x] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,
    rename, delete, add and remove books (one, a selection), order; lists by key under visibility; merges, undo and
-   split keep shelf rows right; routes behind `account.shelves`. Tests on both providers. **Built:** caps 100 shelves /
-   10,000 books, spaced positions (`Gap` 1,024, renumbered when neighbours touch), stored counts, `BookMergeData.Shelves`;
+   split keep shelf rows right; routes behind `account.shelves`. Tests on both providers. **Built:** caps: shelves per account the
+   setting `shelves.maxPerAccount` (100, the user's answer 2026-11-10), 10,000 books a shelf, spaced positions (`Gap` 1,024, renumbered when neighbours touch), stored counts, `BookMergeData.Shelves`;
    the test helper `Shelf` renamed `TestLibrary`; [shelves](../features/shelves.md).
 10. [ ] Shelves UI: Add to shelf on the book page and in the selection bar, Shelves in the sidebar, a shelf's page
     (the book list as the library's, reorder, remove, rename, delete); phones; client specs, e2e on every device,

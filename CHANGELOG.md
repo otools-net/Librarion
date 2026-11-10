@@ -32,7 +32,7 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   `-` to leave out…), the results by title, 50 a page. FB2 books can also be downloaded as **`fb2.zip`** (zipped as
   they are sent, much smaller). A reader app still showing a book merged into another downloads its file and cover.
 - **Shelves** (through the API for now; the pages come next): personal lists of books (`api/shelves`), up to 100 per
-  account, 10,000 books each, in their own order (or by title, author, date added), showing only the books the
+  account (the setting **Shelves per account**, server or tenant, 1 to 1,000), 10,000 books each, in their own order (or by title, author, date added), showing only the books the
   account may see. A merged book's places on shelves go to the book it was merged into, and back on undo.
 - **API keys in the address:** a key made with **Can be used in the address** opens the catalog from
   `…/opds/k/<key>` alone, for reader apps that can't sign in; every link of the catalog keeps it. Under a new key,
