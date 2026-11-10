@@ -71,6 +71,7 @@ devices: `"Urls": "http://0.0.0.0:5090"`.
 | `Librarion:Security:LockoutMinutes` | 15 | how long it waits |
 | `Librarion:Security:AccountLockoutFailures` | 20 | wrong passwords in a row, from anywhere, before the account itself is locked (0: never) |
 | `Librarion:Security:SignInsPerMinute` | 20 | sign-in attempts per address and minute |
+| `Librarion:Security:OpdsRequestsPerMinute` | 600 | requests per minute of one reader app's account (or address without one) on the OPDS catalog, covers and downloads included; more answer 429 |
 | `Librarion:Security:SessionDays` | 30 | how long "keep me signed in" lasts without use |
 | `Librarion:Security:KeysDirectory` | `data/keys` | the keys signing sessions; keep them, or everyone is signed out |
 | `Librarion:Security:RequireHttps` | `false` | marks the session cookie secure (the server is only reached over https) |

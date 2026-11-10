@@ -9,6 +9,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - New rights, given to every built-in group: **Reader apps (OPDS)** (per library, for the coming OPDS catalog at
   `/opds`), **Own API keys** and **Own shelves**. Reader apps sign in with a password or an API key; the web app's
   sign-in never opens the catalog. The catalog itself comes in the next changes.
+- Reader apps sign in to `/opds` with the account's name and password (Basic). Wrong passwords count as on the sign-in
+  page (five from one address and that address waits) and appear in the security log. Each account's reader apps may
+  make `Librarion:Security:OpdsRequestsPerMinute` (600) requests a minute.
 
 ## 0.7.0
 

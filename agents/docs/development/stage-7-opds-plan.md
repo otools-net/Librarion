@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 2.
+**Next:** chunk 3.
 
 ## The user's answers (2026-11-10)
 
@@ -67,7 +67,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
 - **D-7.4 Basic cost:** a successful password check cached in memory 5 minutes, keyed by the user, a keyed hash of the
   secret and the security stamp; a failure never cached. Failures go through `SignInThrottle` and the account
   lockout as on the web sign-in; a rate limit per user on feeds and downloads. Security events `ApiKeyCreated`,
-  `ApiKeyRevoked`, failed OPDS sign-ins (never a secret).
+  `ApiKeyRevoked`, failed OPDS sign-ins (`SignInFailed` / `LockedOut` with the detail `opds`; never a secret).
 - **D-7.5 Addresses:** `/opds` = the root (one library: its catalog; several: a list of them);
   `/opds/l/<library>/…` per library (ids are global: the tenant follows, also for server administrators);
   `/opds/k/<key>/…` path keys for keys that allow it (opt-in per key; a tenant setting switches them off), every link of the feed keeping the prefix, the key redacted
@@ -104,10 +104,12 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    **Built:** the `Opds` scheme named by the group (the cookie never the user there), [opds](../features/opds.md),
    [opds-auth](../features/opds-auth.md), [sessions-and-pipeline](../architecture/sessions-and-pipeline.md); the dev
    proxy forwards `/opds`.
-2. [ ] Basic with a password: an authentication handler for `/opds` setting the cookie's claims (user id, stamp), so
+2. [x] Basic with a password: an authentication handler for `/opds` setting the cookie's claims (user id, stamp), so
    `CurrentAccess` works unchanged; the verification cache (D-7.4) through `SignInService`; throttle, lockout, 401
    with `WWW-Authenticate: Basic realm="Librarion"`, rate limit per user, security events. Tests: right and wrong
    password, locked and disabled account, cache dropped on a password change, the cookie refused on `/opds`.
+   **Built:** `BasicVerificationCache`, the `opds` rate limit (`OpdsRequestsPerMinute`, 600);
+   [opds-auth](../features/opds-auth.md#built-stage-7-chunk-2-basic-with-the-password).
 3. [ ] API keys in Core: `ApiKeys` (both migrations, tenant filter), create, list, revoke, expire; scopes and
    libraries narrowing `EffectiveAccess`; a key as the Basic secret on `/opds`, `Bearer` and `X-Api-Key` on `/api`
    (D-7.2), last used, security events; routes `api/account/api-keys` (own, `account.apiKeys`) and a user's keys for

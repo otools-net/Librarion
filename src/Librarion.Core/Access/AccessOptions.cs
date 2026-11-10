@@ -19,6 +19,9 @@ public sealed class SecurityOptions
     /// <summary>Sign-in attempts per address and minute (all names together).</summary>
     public int SignInsPerMinute { get; set; } = 20;
 
+    /// <summary>Requests per minute of one reader app's account (or address) on the OPDS feeds, covers and downloads included.</summary>
+    public int OpdsRequestsPerMinute { get; set; } = 600;
+
     public int MinimumPasswordLength { get; set; } = 8;
 
     /// <summary>Where the keys signing the session cookies are kept (relative to the application's folder).</summary>

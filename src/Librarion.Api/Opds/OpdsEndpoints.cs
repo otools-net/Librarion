@@ -21,6 +21,7 @@ public static class OpdsEndpoints
     {
         var opds = app.MapGroup(Prefix)
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OpdsAuthenticationHandler.Scheme })
+            .RequireRateLimiting(SecurityServiceCollectionExtensions.OpdsRateLimit)
             .ExcludeFromDescription();
 
         opds.MapGet("", Root).RequireRight(Rights.Opds);

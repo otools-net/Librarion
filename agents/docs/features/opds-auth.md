@@ -8,10 +8,27 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme); planne
 
 - `/opds` routes authenticate with the `Opds` scheme only (`OpdsAuthenticationHandler`): the cookie is never their
   user, even when sent (`TheFeedsAskForBasicAndNeverTakeTheCookie`). No credentials: 401 with
-  `WWW-Authenticate: Basic realm="Librarion", charset="UTF-8"`. It finds nobody yet: Basic passwords come in chunk 2,
-  keys in chunk 3.
+  `WWW-Authenticate: Basic realm="Librarion", charset="UTF-8"`.
 - Rights (stage 7, Users and up): `library.opds` (the feeds of a library), `account.apiKeys` (own keys),
   `account.shelves` (own shelves): [rights](rights.md).
+
+## Built (stage 7 chunk 2): Basic with the password
+
+- `OpdsAuthenticationHandler` reads `Authorization: Basic` (UTF-8; the name ends at the first colon, user names have
+  none), checks it with `SignInService` (local directory, account lockout), and gives the cookie's claims (id, name,
+  stamp), so `CurrentAccess` and `RequireRight` work as in the app. No tenant claim: a server administrator works in
+  the first tenant until feeds name a library (chunk 5).
+- **`BasicVerificationCache`** (singleton, memory): a success remembered 5 minutes by the upper-cased name and an HMAC
+  of the password (key made per process); each hit checks the account's current stamp and state
+  (`GetSessionUserAsync`, cached by `AccessChanges`), so a new password or a disabled account ends it at once. At most
+  10,000 entries. Failures never remembered.
+- Failures: `SignInThrottle` per name and address (5 → the address waits 15 min, even with the right password),
+  the security log (`SignInFailed` / `LockedOut`, detail `opds`), 401 with the challenge again. Successes are not logged
+  (every request of a reader app signs in).
+- **Rate limit** `opds` on the whole group: `Librarion:Security:OpdsRequestsPerMinute` (600) per Basic name (read from
+  the header, before authorization), else per address; 429 beyond.
+- Tests: `OpdsTests` (right password and case of the name, wrong ones throttled and logged, new password and disabled
+  account, the right disabled → 403, malformed headers, the rate limit).
 
 ## Ways in
 
