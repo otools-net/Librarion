@@ -1093,3 +1093,23 @@ a.row-main {
     padding: 0;
     border: 0;
 }
+
+/* API keys (account/api-keys.ts): the key shown once in full, ended keys dimmed. */
+.api-key-text {
+    width: 100%;
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-sm, 0.875rem);
+}
+
+.api-key-ended .row-title,
+.api-key-ended .row-meta {
+    color: var(--text-muted);
+}
+
+.user-api-keys {
+    margin-top: var(--space-4);
+}
+
+.user-api-keys h3 {
+    margin: 0 0 var(--space-2);
+}

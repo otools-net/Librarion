@@ -3,7 +3,7 @@
 - [Installation](installation.md): running Librarion.
 - [First start](first-start.md): the setup code, the first administrator, getting back in.
 - [Configuration](configuration.md): the database, the address, setup, security, rights.
-- [Signing in and your account](user-guide/account.md): password, preferences.
+- [Signing in and your account](user-guide/account.md): password, preferences, API keys for reader apps and scripts.
 - [Finding your way around](user-guide/finding-your-way.md): the top bar, libraries, menus, messages.
 - [Browsing the library](user-guide/browsing.md): covers or list, order, scrolling; selecting and tagging books; authors, series, tags and other fields; folders and their default tags; a book's page, its downloads, editing it and its cover.
 - [Searching](user-guide/searching.md): words, phrases, fields and tags, leaving out, suggestions.

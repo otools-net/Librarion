@@ -2,8 +2,8 @@
 
 Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic), `BasicVerificationCache.cs`;
 `Api/Security/ApiKeyAuthentication.cs` (`ApiKeySignIn`, the `ApiKey` scheme), `CurrentAccess.cs` (narrowing);
-`Core/Access/ApiKeys.cs`, `Core/Data/Entities/Access/ApiKey.cs`; `Api/Endpoints/ApiKeyEndpoints.cs`. Tests: `OpdsTests`,
-`ApiKeyTests`. Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.2–D-7.5). Feeds:
+`Core/Access/ApiKeys.cs`, `Core/Data/Entities/Access/ApiKey.cs`; `Api/Endpoints/ApiKeyEndpoints.cs`; client
+`account/api-keys.ts`. Tests: `OpdsTests`, `ApiKeyTests`, `api-keys.spec.ts` (client and e2e). Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.2–D-7.5). Feeds:
 [opds](opds.md).
 
 ## Built (stage 7 chunk 1)
@@ -56,6 +56,22 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic),
 - **Failures:** throttled per Basic name, else **per key id** (a stale key left in a reader app locks out itself, not
   the other keys used from that address), logged `SignInFailed` / `LockedOut` with the detail `api key`; never the key.
   Security events `ApiKeyCreated` (name and scopes) and `ApiKeyRevoked` (name; "of <user>" by an administrator).
+
+## Built (stage 7 chunk 4): the pages
+
+- `ApiKeys` component (`account/api-keys.ts`), two modes: **own** (My account › API keys, sub-page `apiKeys`,
+  `account.apiKeys`): the new-key form (name, used for, libraries when the session has several, ends on, "can be used
+  in the address" only with the `opds` scope), the key shown once in a read-only field with **Copy** (the clipboard,
+  else selected with a toast: plain http on another computer has no clipboard), the catalog address
+  (`new URL('opds', document.baseURI)`, so a proxy's folder too) and the user name; **an account's** (`userId`, inside
+  the account editor of Administration › Users): list and revoke only, made anew per account opened (`@for` over the
+  id).
+- Rows: name, scopes, libraries (names from `LibraryContext`, `#id` for one the viewer doesn't see), "in the address",
+  made / last used and from where / ends or ended / revoked; ended keys dimmed with a badge instead of Revoke.
+  Revoke asks first.
+- "Ends on" is a date: the end of that day in the browser's zone, sent as UTC.
+- e2e `api-keys.spec.ts` on every device: make a key, the reader app's Basic with it (200), Done, revoke (401); axe in
+  both themes on android.
 
 ## Ways in
 

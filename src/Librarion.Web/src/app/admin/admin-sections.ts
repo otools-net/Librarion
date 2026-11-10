@@ -29,7 +29,7 @@ const page = (id: string, ...rights: string[]): AdminSubpage => ({ id, rights })
 const settingsPage = (id: string, settings: SettingLevel, ...rights: string[]): AdminSubpage => ({ id, rights, settings });
 
 export const ADMIN_SECTIONS: AdminSection[] = [
-    { id: 'account', group: 'account', icon: 'user', subpages: [settingsPage('preferences', 'user', Rights.ownPreferences), page('password', Rights.ownPassword)] },
+    { id: 'account', group: 'account', icon: 'user', subpages: [settingsPage('preferences', 'user', Rights.ownPreferences), page('password', Rights.ownPassword), page('apiKeys', Rights.apiKeys)] },
     { id: 'libraries', group: 'libraries', icon: 'library', subpages: [page('list', Rights.manageLibraries, Rights.manageTenants)] },
     { id: 'librarySettings', group: 'libraries', icon: 'sliders', subpages: [settingsPage('settings', 'library', Rights.librarySettings, Rights.manageTenants)] },
     { id: 'tags', group: 'catalog', icon: 'tag', subpages: [page('tags', Rights.manageTags), page('duplicates', Rights.manageTags), page('merges', Rights.manageTags)] },

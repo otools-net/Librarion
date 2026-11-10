@@ -8,6 +8,7 @@ import { SessionService } from '../core/session.service';
 import { ToastService } from '../core/toast.service';
 import { ConfirmService } from '../shared/confirm';
 import { EmptyState } from '../shared/placeholders';
+import { ApiKeys } from '../account/api-keys';
 
 /** What the editor holds: a new account (`id` null) or one being changed. */
 interface UserDraft {
@@ -27,7 +28,7 @@ interface UserDraft {
  */
 @Component({
     selector: 'lib-users-section',
-    imports: [TranslatePipe, EmptyState],
+    imports: [TranslatePipe, EmptyState, ApiKeys],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="toolbar">
@@ -100,6 +101,13 @@ interface UserDraft {
                         <button type="button" class="button danger" [title]="'users.deleteHint' | t" [disabled]="busy()" (click)="remove(draft)">{{ 'common.delete' | t }}</button>
                     }
                 </div>
+                <!-- The account's API keys (list and revoke); made anew for each account opened. -->
+                @for (id of draft.id === null ? [] : [draft.id]; track id) {
+                    <section class="user-api-keys" [attr.aria-label]="'users.apiKeys' | t">
+                        <h3>{{ 'users.apiKeys' | t }}</h3>
+                        <lib-api-keys [userId]="id" />
+                    </section>
+                }
             </form>
         }
 

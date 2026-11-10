@@ -25,6 +25,13 @@ signs it out everywhere. **Unlock** clears a lock left by too many wrong passwor
 The tenant always keeps at least one administrator: a change that would leave its Administrators group without an
 enabled member is refused.
 
+## API keys
+
+An account's page also lists its [API keys](../user-guide/account.md#api-keys): what each is for, when it was last
+used and from where. **Revoke** ends one at once (a lost phone, a key shared by mistake). Keys are made by the account
+itself on its own page; a new password or disabling the account ends all of them. Making and revoking keys is in the
+[security log](security-log.md).
+
 ## Server administrators
 
 Server administrators see **Server administrators** above the list: ticked, the list shows them instead of the

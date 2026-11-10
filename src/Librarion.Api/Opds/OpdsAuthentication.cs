@@ -28,7 +28,7 @@ public sealed class OpdsAuthenticationHandler(
     SecurityLog log)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public const string Scheme = "Opds";
+    public const string SchemeName = "Opds";
 
     /// <summary>The challenge every 401 of the feeds carries.</summary>
     public const string Challenge = "Basic realm=\"Librarion\", charset=\"UTF-8\"";
@@ -39,12 +39,12 @@ public sealed class OpdsAuthenticationHandler(
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (ApiKeySignIn.HasKeyHeader(Request))
-            return await ApiKeySignIn.AuthenticateAsync(Context, Scheme, ApiKeySignIn.ReadKeyHeader(Request));
+            return await ApiKeySignIn.AuthenticateAsync(Context, SchemeName, ApiKeySignIn.ReadKeyHeader(Request));
         if (ReadBasic(Request) is not var (userName, password))
             return AuthenticateResult.NoResult();
         // An API key as the password (what most reader apps can send): the name must be its owner's.
         if (ApiKeys.LooksLikeKey(password))
-            return await ApiKeySignIn.AuthenticateAsync(Context, Scheme, password, userName);
+            return await ApiKeySignIn.AuthenticateAsync(Context, SchemeName, password, userName);
 
         var address = Context.Address();
         if (throttle.LockedUntil(userName, address) is not null)
@@ -88,7 +88,7 @@ public sealed class OpdsAuthenticationHandler(
             new(ClaimTypes.Name, user.UserName),
             new(LibrarionSession.StampClaim, user.SecurityStamp),
         ];
-        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme)), Scheme));
+        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName)), SchemeName));
     }
 
     /// <summary>The name and secret of <c>Authorization: Basic</c> (UTF-8, as the challenge asks); null when absent or malformed.</summary>

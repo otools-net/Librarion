@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
+    ApiKeyInfo, ApiKeyInput, NewApiKey, BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
@@ -126,6 +126,12 @@ export class Api {
     createUser = (input: UserInput) => this.post<UserInfo>('api/users', input);
     updateUser = (id: number, input: UserInput) => this.put<UserInfo>(`api/users/${id}`, input);
     deleteUser = (id: number) => this.delete<void>(`api/users/${id}`);
+
+    apiKeys = () => this.get<ApiKeyInfo[]>('api/account/api-keys');
+    createApiKey = (input: ApiKeyInput) => this.post<NewApiKey>('api/account/api-keys', input);
+    revokeApiKey = (id: number) => this.delete<ApiKeyInfo>(`api/account/api-keys/${id}`);
+    userApiKeys = (userId: number) => this.get<ApiKeyInfo[]>(`api/users/${userId}/api-keys`);
+    revokeUserApiKey = (userId: number, id: number) => this.delete<ApiKeyInfo>(`api/users/${userId}/api-keys/${id}`);
 
     rights = () => this.get<RightInfo[]>('api/rights');
     groups = () => this.get<GroupInfo[]>('api/groups');

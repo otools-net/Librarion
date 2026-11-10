@@ -20,7 +20,7 @@ public static class OpdsEndpoints
     public static void MapOpdsEndpoints(this IEndpointRouteBuilder app)
     {
         var opds = app.MapGroup(Prefix)
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OpdsAuthenticationHandler.Scheme })
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OpdsAuthenticationHandler.SchemeName })
             .RequireRateLimiting(SecurityServiceCollectionExtensions.OpdsRateLimit)
             .ExcludeFromDescription();
 

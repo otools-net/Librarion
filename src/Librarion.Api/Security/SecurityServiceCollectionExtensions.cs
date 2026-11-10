@@ -36,8 +36,8 @@ public static class SecurityServiceCollectionExtensions
         // A request naming an API key is the key's, whatever cookie it carries (no CSRF through a key); others the cookie's.
         services.AddAuthentication(DefaultScheme)
             .AddPolicyScheme(DefaultScheme, null, options => options.ForwardDefaultSelector = context =>
-                ApiKeySignIn.HasKeyHeader(context.Request) ? ApiKeyAuthenticationHandler.Scheme : CookieAuthenticationDefaults.AuthenticationScheme)
-            .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.Scheme, null)
+                ApiKeySignIn.HasKeyHeader(context.Request) ? ApiKeyAuthenticationHandler.SchemeName : CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null)
             .AddCookie(options =>
             {
                 options.Cookie.Name = LibrarionSession.CookieName;
@@ -62,7 +62,7 @@ public static class SecurityServiceCollectionExtensions
                 options.Events.OnValidatePrincipal = LibrarionSession.ValidateAsync;
             })
             // Reader apps on /opds: Basic or API keys, never the cookie (Opds/OpdsAuthentication.cs).
-            .AddScheme<AuthenticationSchemeOptions, Librarion.Api.Opds.OpdsAuthenticationHandler>(Librarion.Api.Opds.OpdsAuthenticationHandler.Scheme, null);
+            .AddScheme<AuthenticationSchemeOptions, Librarion.Api.Opds.OpdsAuthenticationHandler>(Librarion.Api.Opds.OpdsAuthenticationHandler.SchemeName, null);
 
         services.AddAuthorization();
         services.AddSingleton<IAuthorizationPolicyProvider, RightPolicyProvider>();

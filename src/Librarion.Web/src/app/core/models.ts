@@ -419,6 +419,41 @@ export interface LibraryInfo {
     bookCount?: number;
 }
 
+/** What an API key may be used for: the feeds, reading the API, everything in the API. */
+export type ApiKeyScope = 'opds' | 'api:read' | 'api:write';
+
+export const API_KEY_SCOPES: ApiKeyScope[] = ['opds', 'api:read', 'api:write'];
+
+/** An API key as listed (never its secret). */
+export interface ApiKeyInfo {
+    id: number;
+    name: string;
+    scopes: ApiKeyScope[];
+    /** The libraries it is limited to; empty = every library its account may reach. */
+    libraryIds: number[];
+    pathAllowed: boolean;
+    created: string;
+    expires: string | null;
+    revoked: string | null;
+    lastUsed: string | null;
+    lastAddress: string | null;
+}
+
+export interface ApiKeyInput {
+    name: string;
+    scopes: ApiKeyScope[];
+    libraryIds: number[];
+    pathAllowed: boolean;
+    /** UTC; null = until revoked. */
+    expires: string | null;
+}
+
+/** A key just made: its whole text, shown this once. */
+export interface NewApiKey {
+    info: ApiKeyInfo;
+    key: string;
+}
+
 export interface UserInfo {
     id: number;
     tenantId: number | null;

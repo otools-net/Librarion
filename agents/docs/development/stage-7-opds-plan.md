@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 4.
+**Next:** chunk 4a.
 
 ## The user's answers (2026-11-10)
 
@@ -116,9 +116,10 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    `tenant.users`. Tests on both providers (scopes narrow, revoked / expired / new stamp → 401).
    **Built:** a policy scheme choosing key or cookie, narrowing in `CurrentAccess`, keys can't manage keys, the
    throttle per key id; [opds-auth](../features/opds-auth.md#built-stage-7-chunk-3-api-keys).
-4. [ ] API keys UI: My account › API keys (create: name, scopes, libraries, path key, expiry; the key shown once with
+4. [x] API keys UI: My account › API keys (create: name, scopes, libraries, path key, expiry; the key shown once with
    Copy; list with last used; revoke, asking first); Administration › Users: a user's keys, revoke; phones; client
-   specs, e2e on every device, axe in both themes.
+   specs, e2e on every device, axe in both themes. **Built:** one `ApiKeys` component, own and an account's;
+   [opds-auth](../features/opds-auth.md#built-stage-7-chunk-4-the-pages), user docs (account, administration › accounts).
 4a. [ ] Covers as JPEG everywhere (D-7.8, Q5–Q6): `CoverImages` (thumbnails, `Remake`), `GeneratedCovers`,
     `CoverCache` (`.jpg`), `CoverUploads` (`.jpg`), the cover routes in `BookEndpoints` / `CoverEndpoints`
     (`image/jpeg`, OpenAPI summaries); quality chosen against size (measured on sample covers); tests (a JPEG comes

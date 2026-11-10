@@ -86,11 +86,11 @@ public static class ApiKeySignIn
 public sealed class ApiKeyAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public const string Scheme = "ApiKey";
+    public const string SchemeName = "ApiKey";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
         ApiKeySignIn.ReadKeyHeader(Request) is { Length: > 0 } key
-            ? ApiKeySignIn.AuthenticateAsync(Context, Scheme, key)
+            ? ApiKeySignIn.AuthenticateAsync(Context, SchemeName, key)
             : Task.FromResult(AuthenticateResult.Fail("No key."));
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
