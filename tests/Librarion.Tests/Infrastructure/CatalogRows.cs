@@ -30,10 +30,11 @@ public static class CatalogRows
 
         var root = new LibraryRoot { TenantId = tenantId, LibraryId = library.Id, Path = $"/books/{tenantId}", Created = now };
         var archive = new Archive { TenantId = tenantId, LibraryId = library.Id, Root = root, Path = "books.zip", PathKey = 1, Size = 100, Modified = now };
+        var folder = new Folder { TenantId = tenantId, LibraryId = library.Id, Root = root, Name = "books.zip", Path = "books.zip", PathKey = 1 };
         var book = new Book
         {
             TenantId = tenantId, LibraryId = library.Id, Title = "It", SortTitle = "it", SearchText = "it", SortAuthor = "King, Stephen", Added = now, Updated = now,
-            Files = [new BookFile { TenantId = tenantId, LibraryId = library.Id, Archive = archive, Path = "it.fb2", PathKey = 2, Format = "fb2", Size = 10, Crc32 = 0xFFFFFFFF }],
+            Files = [new BookFile { TenantId = tenantId, LibraryId = library.Id, Archive = archive, Folder = folder, Path = "it.fb2", PathKey = 2, Format = "fb2", Size = 10, Crc32 = 0xFFFFFFFF }],
             Identifiers = [new BookIdentifier { TenantId = tenantId, Scheme = "isbn", Value = "9780450411434" }],
         };
         book.Tags.Add(new BookTag { TenantId = tenantId, Tag = author, Ordinal = 0 });

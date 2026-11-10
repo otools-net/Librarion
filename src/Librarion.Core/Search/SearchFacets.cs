@@ -50,7 +50,8 @@ public sealed class SearchFacets(TenantDb tenantDb)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var fields = await BookSearch.FieldsAsync(db, cancellationToken);
-        var search = SearchQuery.Parse(query, fields.ContainsKey);
+        var keys = await BookSearch.KeysAsync(db, cancellationToken);
+        var search = SearchQuery.Parse(query, keys.ContainsKey);
         if (search.IsEmpty && visibility.IsOpenIn(libraryId))
             return await CountedAsync(db, libraryId, fields, cancellationToken);
 
@@ -72,7 +73,7 @@ public sealed class SearchFacets(TenantDb tenantDb)
         }
         else
         {
-            (books, capped) = await BookSearch.SampleAsync(db, visible, search, fields, [libraryId], cap, cancellationToken);
+            (books, capped) = await BookSearch.SampleAsync(db, visible, search, keys, [libraryId], visibility.Merging, cap, cancellationToken);
         }
 
         if (books.Count == 0)
@@ -173,9 +174,10 @@ public sealed class SearchFacets(TenantDb tenantDb)
                 .Take(MaxValuesRead + 1).ToListAsync(cancellationToken);
             if (ids.Count == 0 || ids.Count > MaxValuesRead)
                 continue;
-            var counts = await db.TagCounts.Where(c => c.LibraryId == libraryId && EF.Parameter(ids).Contains(c.TagId) && c.BookCount > 0)
-                .OrderByDescending(c => c.BookCount).ThenBy(c => c.TagId).Take(MaxValues)
-                .Select(c => new Counted(c.TagId, field, c.BookCount))
+            // Totals: a category with its subcategories' books, each once, as a search's books are counted.
+            var counts = await db.TagCounts.Where(c => c.LibraryId == libraryId && EF.Parameter(ids).Contains(c.TagId) && c.TotalCount > 0)
+                .OrderByDescending(c => c.TotalCount).ThenBy(c => c.TagId).Take(MaxValues)
+                .Select(c => new Counted(c.TagId, field, c.TotalCount))
                 .ToListAsync(cancellationToken);
             if (counts.Count > 0)
                 top[fieldId] = counts;
@@ -190,13 +192,26 @@ public sealed class SearchFacets(TenantDb tenantDb)
         CancellationToken cancellationToken)
     {
         var ids = top.Values.SelectMany(v => v).Select(v => v.TagId).ToList();
-        var names = await db.Tags.Where(t => ids.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
+        var names = await ShownNamesAsync(db, ids, cancellationToken);
         var keys = fields.ToDictionary(f => f.Value, f => f.Key);
         return top.Where(t => t.Key == 0 || keys.ContainsKey(t.Key)).Select(t =>
         {
             var field = t.Key == 0 ? "tag" : keys[t.Key];
             return new Facet(field, t.Value.Select(v => new FacetValue(v.TagId, names[v.TagId], Term(field, names[v.TagId]), v.Count)).ToList());
         }).ToList();
+    }
+
+    /// <summary>
+    /// The names tags are shown and searched by: their own, with a disambiguation parent's after it ("Freddy (FNAF)"), so
+    /// the term finds that tag only (<c>tag:"name (parent)"</c>, stage 6 chunk 15). One query by key for a page of tags.
+    /// </summary>
+    internal static async Task<Dictionary<int, string>> ShownNamesAsync(LibrarionDbContext db, IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
+    {
+        var list = ids.Distinct().ToList();
+        var rows = await db.Tags.Where(t => list.Contains(t.Id))
+            .Select(t => new { t.Id, t.Name, Parent = db.Tags.Where(p => p.Id == t.DisambiguationParentId).Select(p => p.Name).FirstOrDefault() })
+            .ToListAsync(cancellationToken);
+        return rows.ToDictionary(r => r.Id, r => r.Parent is null ? r.Name : $"{r.Name} ({r.Parent})");
     }
 
     /// <summary>The term finding a value's books: <c>author:"Stephen King"</c>, <c>tag:"Favourites"</c>.</summary>

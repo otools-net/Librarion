@@ -234,6 +234,34 @@
     color: var(--danger);
 }
 
+/* Split (stage 6 chunk 13): a button beside the heading, a box per file, the actions under the list. */
+.book-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.book-section-head h2 {
+    margin: 0;
+}
+
+.book-file-check {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin: 0;
+}
+
+.book-split-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
 /* ---------- Possible duplicates ---------- */
 
 .book-duplicates {
@@ -312,5 +340,280 @@
 
     .book-duplicate .book-formats {
         display: none;
+    }
+}
+
+/* The book editor (stage 6, books/book-editor.ts): a field's values one per row, with a handle to drag, Move up /
+   down and Remove; a series' number in place; plain tags as chips (tags.css). */
+.book-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.book-edit-values {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    list-style: none;
+}
+
+.book-edit-value {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 44px;
+    padding: 0 var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.book-edit-value.dragging {
+    background: var(--surface-2);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.book-edit-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 44px;
+    color: var(--text-muted);
+    cursor: grab;
+    touch-action: none;
+}
+
+.book-edit-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.book-edit-number {
+    width: 5.5em;
+}
+
+.book-edit-field {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* A book's cover chosen (cover-editor.ts): the cover now beside the choices, a row of previews per drawn style. */
+.cover-editor {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-4);
+}
+
+.cover-editor-now {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.cover-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+/* The file box is the label's: the button is what shows, the input stays reachable to the keyboard. */
+.cover-upload {
+    position: relative;
+}
+
+.cover-upload input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.cover-upload:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.cover-styles-title {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--text-md);
+}
+
+.cover-style-row {
+    margin: 0 0 var(--space-3);
+}
+
+.cover-style-name {
+    display: block;
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.cover-style-options {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: 2px;
+}
+
+.cover-style {
+    flex: none;
+    width: 56px;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    cursor: pointer;
+}
+
+.cover-style img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+}
+
+.cover-style[aria-pressed="true"] {
+    border-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+    .cover-editor {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cover-editor-now .book-page-cover {
+        width: 120px;
+    }
+}
+
+/* ---------- Compare and merge (book-compare.ts) ---------- */
+
+/* The duplicate's actions under its row on the book page. */
+.book-duplicate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-1) 0 var(--space-2);
+}
+
+/* Cards side by side, scrolled sideways when many; one under the other on a phone. */
+.compare-books {
+    display: grid;
+    grid-auto-columns: minmax(220px, 1fr);
+    grid-auto-flow: column;
+    gap: var(--space-3);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+}
+
+.compare-book {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+}
+
+.compare-book.kept {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.compare-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.compare-pick,
+.compare-use {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--target);
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.compare-pick input,
+.compare-use input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.compare-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+}
+
+/* A value that differs between the books: the eye goes there first. */
+.compare-row.differs {
+    background: var(--accent-soft);
+}
+
+.compare-label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.compare-value {
+    display: flex;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+}
+
+.compare-title {
+    font-weight: 600;
+}
+
+.compare-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+}
+
+.compare-file {
+    font-size: var(--text-sm);
+}
+
+.compare-cover {
+    display: block;
+    width: 96px;
+}
+
+.compare-cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+@media (max-width: 640px) {
+    .compare-books {
+        grid-auto-columns: auto;
+        grid-auto-flow: row;
+        overflow-x: visible;
     }
 }

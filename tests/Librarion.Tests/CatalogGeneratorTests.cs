@@ -55,9 +55,16 @@ public sealed class CatalogGeneratorTests
         Assert.IsGreaterThan(30, perAuthor.Max(), "A prolific author");
         Assert.IsGreaterThan(perAuthor.Count / 10, perAuthor.Count(n => n == 1), "Many authors with one book");
 
-        // Counts: the field counts each book with an author once, whatever the number of its authors.
+        // Counts: the field's total counts each book with an author once, whatever the number of its authors; it has no
+        // links of its own. An author's direct count is its links.
         var withAuthor = await db.Books.CountAsync(b => db.BookTags.Any(l => l.BookId == b.Id && l.Tag!.FieldId == authorField), Cancel);
-        Assert.AreEqual(withAuthor, await db.TagCounts.Where(c => c.TagId == authorField).Select(c => c.BookCount).SingleAsync(Cancel));
+        var field = await db.TagCounts.SingleAsync(c => c.TagId == authorField, Cancel);
+        Assert.AreEqual(withAuthor, field.TotalCount);
+        Assert.AreEqual(0, field.BookCount);
+        var author = await db.BookTags.Where(l => l.Tag!.FieldId == authorField).GroupBy(l => l.TagId).Select(g => new { g.Key, Links = g.Count() }).FirstAsync(Cancel);
+        var authorCount = await db.TagCounts.SingleAsync(c => c.TagId == author.Key, Cancel);
+        Assert.AreEqual(author.Links, authorCount.BookCount);
+        Assert.AreEqual(author.Links, authorCount.TotalCount);
 
         // Planted duplicates of each kind.
         Assert.IsGreaterThanOrEqualTo(Books / 50, await db.Books.GroupBy(b => b.WorkKey).CountAsync(g => g.Count() > 1, Cancel), "Same work");

@@ -35,11 +35,16 @@ const SUGGEST_DELAY = 150;
                 @for (item of items(); track item.insert; let i = $index) {
                     <li [id]="'search-option-' + i" role="option" [attr.aria-selected]="i === active()" [class.active]="i === active()"
                         (mousedown)="$event.preventDefault()" (click)="choose(item)">
-                        <svg [libIcon]="catalog.icon(item.kind === 'field' ? item.name : item.field)"></svg>
-                        @if (item.kind === 'field') {
+                        @if (item.kind === 'special') {
+                            <svg [libIcon]="item.name === 'duplicates' ? 'copy' : 'tag'"></svg>
+                            <span class="suggestion-name">{{ 'search.special.' + item.name | t }}</span>
+                            <span class="suggestion-kind">{{ item.insert }}</span>
+                        } @else if (item.kind === 'field') {
+                            <svg [libIcon]="catalog.icon(item.name)"></svg>
                             <span class="suggestion-name">{{ catalog.one(item.name) }}</span>
                             <span class="suggestion-kind">{{ item.insert }}</span>
                         } @else {
+                            <svg [libIcon]="catalog.icon(item.field)"></svg>
                             <span class="suggestion-name">{{ catalog.value(item.field, item.name) }}</span>
                             <span class="suggestion-kind">{{ item.field ? catalog.one(item.field) : ('tags.one' | t) }}</span>
                             @if (item.bookCount != null) {
@@ -124,9 +129,9 @@ export class SearchBox {
         }
     }
 
-    /** The suggestion in place of the term being typed; a value ends the term, a field waits for its value. */
+    /** The suggestion in place of the term being typed; a value or a special term ends the term, a field waits for its value. */
     protected choose(item: SearchSuggestion): void {
-        const text = this.text().slice(0, this.from) + item.insert + (item.kind === 'value' ? ' ' : '');
+        const text = this.text().slice(0, this.from) + item.insert + (item.kind === 'field' ? '' : ' ');
         this.text.set(text);
         const box = this.box().nativeElement;
         box.value = text;

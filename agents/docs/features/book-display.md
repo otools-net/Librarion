@@ -3,8 +3,10 @@
 Built (stage 2): `Title` / `SortTitle`, the cover columns, `BookTitles` and `FileTitles` ([catalog](catalog.md)).
 Built (stage 3): `Core/Covers/` (`CoverExtractor` per format, `CoverImages` decode / resize / WebP, `CoverCache`,
 `CoverService`, `Generated/` fonts, layout, templates), route `GET api/books/{id}/cover/{s|m|l}` (`library.browse`),
-assignment at import (`CatalogWriter.Apply`); tests `CoverTests`. Planned: client `app/books/book-card`,
-`book-cover`; templates on / off per tenant; "change cover style". Reference for the behaviour (not the code:
+assignment at import (`CatalogWriter.Apply`); tests `CoverTests`. Built (stage 6 chunk 10a): upload, Change cover
+style, back to the book's own ([below](#a-books-cover-chosen-built-stage-6-chunk-10a)). Built (10b): Cover styles,
+templates on / off per tenant and a template's books reassigned ([below](#cover-styles-built-stage-6-chunk-10b)).
+Reference for the behaviour (not the code:
 GPL-3): calibre-web (`C:\workspace\calibre-web`: `cps/helper.py` `get_book_cover*`,
 `cps/tasks/thumbnail.py`, `cps/static/generic_cover.jpg`). Decision D15 in [foundation-plan](../development/foundation-plan.md).
 
@@ -22,7 +24,7 @@ Every list, grid, search result, book page and OPDS entry shows a book the same 
   name, normalised for sorting: case-folded, leading articles per language moved, digits padded). The UI shows
   `Title ?? FileTitle` and marks a file-name title subtly (italic, hint "title from the file name") so curators see what
   metadata is missing; search matches both.
-- An edited title (stage 6+, `metadata.edit`) wins over both and survives re-imports (same rule as tags' link
+- An edited title (stage 6+, `library.edit`) wins over both and survives re-imports (same rule as tags' link
   sources: imported values are recomputed, edited ones kept).
 
 ## Cover
@@ -59,7 +61,7 @@ the book** (decided 2026-10-31).
   columns per row: free at 2M books. The image is rendered on first view and cached with the thumbnails like any cover
   (cache key: template, variant, title, authors, series, size), so it changes when the metadata changes.
 - **Stable:** turning a template off doesn't reassign existing books unless the administrator asks ("reassign books of
-  this template", a background task in batches); a book page offers **Change cover style** (`metadata.edit`) to pick
+  this template", a background task in batches); a book page offers **Change cover style** (`library.edit`) to pick
   another template/variant, kept across re-imports. A real cover found later (re-import, upload) replaces the
   generated one; removing it falls back to the assigned template.
 - Covers' sources: `Book` (extracted), `Calibre`, `Uploaded` (stage 6+), `Generated`; `Books.CoverState` (unknown /
@@ -104,6 +106,61 @@ the book** (decided 2026-10-31).
   between characters at any size); the last line ends with an ellipsis. Characters no bundled font has are dropped.
   A new script: its font in `Covers/Fonts/` and its ranges in `CoverFonts.Scripts`.
 - `LIBRARION_COVER_SAMPLES=<folder>` makes `CoverTests` write PNGs of every template for a look by eye.
+
+## A book's cover chosen (built, stage 6 chunk 10a)
+
+Code: `Core/Covers/CoverEditor.cs`, `CoverUploads.cs`, `CoverImages.Remake`, `CoverService` (uploads, previews),
+`Api/Endpoints/CoverEndpoints.cs`; client `books/cover-editor.ts` (the book page's **Cover**), styles at the end of
+`styles/book.css`; tests `CoverEditTests` (both providers), `books/cover-editor.spec.ts`, e2e `specs/covers.spec.ts`
+(every device, axe on the sheet in both themes). The user's answers (2026-11-06) are the rules above.
+
+- Routes (`library.edit` in the book's library; a book the caller can't see is not found): `PUT api/books/{id}/cover`
+  (the picture as the body), `PUT …/cover/style {template, variant}`, `DELETE …/cover` (back to its own),
+  `GET …/cover/preview/{template}/{variant}` (the book drawn small, cached as any generated cover), `GET
+  api/covers/styles` (template names, palette count). Each change answers the book as `GET api/books/{id}`.
+- **Upload:** at most 5 MB (`cover.tooBig`), JPEG, PNG or WebP within the extraction's limits (`cover.invalid`: other
+  formats, too many pixels, sides past 16,384, aspect past 4:1), decoded and made again at most 1,200 px wide as WebP
+  (quality 85): nothing a stranger sent is kept as it was. Stored by content hash in the data folder,
+  `covers/<tenant>/ab/<hash>.webp` (`Librarion:Data:Directory`, [config-files](../architecture/config-files.md)), so
+  one picture on several books is one file; `Books.CoverFile` keeps the path (a filtered index finds its other users
+  before the file is deleted). Served through the cover cache as `u:<hash>` at every size.
+- **Style:** a template and palette (the book's `GeneratedTemplate` / `GeneratedVariant`) with `CoverSource =
+  Generated`, over an upload or the book's own cover (the user's answer).
+- **Kept through imports:** a choice sets `BookEdits.Cover`; `CatalogWriter.Apply` and `SourceCover` leave the cover's
+  source alone while it is set. `Book.Updated` moves with each change, so the cover's address (`?v=`) does too.
+- **Back to its own:** the flag cleared, an upload let go (its file deleted when no other book uses it), the source as
+  an import would set it: Calibre for a Calibre book, the book's files when a format has covers, else its generated
+  style (kept as chosen); `CoverState` unknown, so it is looked for again.
+- The `.Accepts(...)` content-type metadata was left off the upload route: it filtered other types out before the
+  route, which then answered 404; the route checks the picture itself.
+- The client checks the 5 MB before sending. A sheet's host must call `open()` (an effect on `viewChild(Sheet)`, as
+  `book-editor.ts`): jsdom finds elements in a closed `<dialog>`, so the spec checks the `open` attribute too.
+
+## Cover styles (built, stage 6 chunk 10b)
+
+Code: `Core/Covers/TenantCoverStyles.cs`, `GeneratedCovers.Assign(identity, off)` / `On`, `Tenant.CoverTemplatesOff`,
+`CatalogWriter` (reads it once per writer, before its first new book), `CoverService.SampleAsync`, routes in
+`CoverEndpoints`; client `admin/cover-styles-section.ts` (Administration › Catalog › Cover styles), styles at the end of
+`styles/admin.css`; tests `CoverStyleTests` (both providers), `admin/cover-styles.spec.ts`, e2e
+`specs/cover-styles.spec.ts`. Right `tenant.coverStyles` (Administrators and Curators, the user's answer 2026-11-06).
+
+- **Stored** as a bit mask on the tenant (`CoverTemplatesOff`, bit `i` = template `i` off; 0 = all on; room for 32
+  templates). At least one stays on (`coverStyle.lastOn`).
+- **Assignment** picks among the templates on: `on[mix % on.Count]`, the palette from `mix / on.Count`. With every
+  template on it is the old formula, so no book changes look when nothing is turned off (`CoverStyleTests` checks it).
+- **Turning off changes no book** (D15: stable). **Give its books another style** (only for a template off,
+  `coverStyle.on` otherwise): `POST api/covers/templates/{t}/reassign` starts a tenant run `CoverReassign`, which walks
+  `Books` by `Id` in batches of 1,000 (`Id > last AND GeneratedTemplate = t`, no extra index: the run reads at most the
+  whole table once by its key), skips books with `BookEdits.Cover` (a style chosen on the book's page stays), and gives
+  the rest `Assign(WorkKey, off)` by one `UPDATE` per new (template, palette) pair, moving `Updated` so the covers'
+  addresses change. No count is shown before it starts (it would be a scan of the catalog); the run reports how many
+  books changed. Not measured at 2M yet. As every tenant run, scans and imports of the tenant wait while it goes.
+- **Previews** draw a sample text sent by the client (its translated title and author, cut at 100 characters) at `M`
+  in memory, not cached: a caller's text never fills the cover cache.
+- The book page's Cover offers templates on, and the book's own (`GET api/covers/styles` has `off`); the API still
+  takes any template there (an explicit choice).
+- Routes: `GET api/covers/templates`, `PUT …/{t} {on}`, `POST …/{t}/reassign` (202 `{runId}`), `GET
+  …/{t}/preview/{v}?title&author`.
 
 ## Image library (D17)
 

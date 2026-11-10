@@ -73,6 +73,9 @@ note rather than inventing a new one.
   stage or functionality of importance, green tests only (decided 2026-10-31). `edge` is pushed after each finished
   stage and merged into `main` with the version bump when a stage's exit criteria are met, without asking (the
   user's decision, 2026-11-01); tags only when the user asks.
+- **Long background runs:** a run in the background expected to take more than 10 minutes (benchmarks, full test or
+  e2e suites, big imports) gets a cron job showing its progress every 10 minutes, deleted when the run ends (the
+  user's rule, 2026-11-08; how: [commands](agents/docs/environment/commands.md#long-runs-in-the-background)).
 - **Agent tools:** put any reusable helper (scripts, generators, drivers) in `agents/tools/<job>/` with a `README.md`,
   never only in the scratchpad; work output goes to a temp folder, not the repo.
 
@@ -91,7 +94,7 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–9, budgets, risks | |
+| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (6 done; 7, OPDS and API keys, next), budgets, risks | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
 | [frontend](agents/docs/development/frontend.md) | responsive and compact UI, phones, touch, Angular conventions | `src/Librarion.Web/` |
@@ -134,16 +137,19 @@ note rather than inventing a new one.
 | [catalog](agents/docs/features/catalog.md) | books, files, identifiers, tag tables, sort indexes, visibility, keyset pages, tag joins by size, catalog routes, known limits | `Core/Data/Entities/Catalog/`, `Core/Catalog/`, `Api/Endpoints/BookEndpoints.cs` |
 | [tasks](agents/docs/features/tasks.md) | library roots (who adds which folder), scans and root removals as background runs, run history, schedules | `Core/Import/LibraryRoots.cs`, `Core/Tasks/`, `Api/Endpoints/TaskEndpoints.cs` |
 | [task-progress](agents/docs/features/task-progress.md) | the progress panel under the top bar and Administration › Background tasks (cards, schedules, history across libraries) | `core/task-watch.ts`, `shared/task-panel.ts`, `admin/tasks-section.ts` |
+| [folders](agents/docs/features/folders.md) | the folders books are in (roots, directories, ZIPs and directories inside them): every file in one, stored counts, the folder view (`library.folders`) | `Core/Import/Folders.cs`, `Core/Catalog/FolderQueries.cs`, `app/folders/` |
+| [default-tags](agents/docs/features/default-tags.md) | default tags of a library and its folders: given as rule links to books that come in or move in, "also those there", removal | `Core/Tagging/DefaultTags.cs`, `CatalogWriter`, `app/folders/default-tags.ts` |
 | [archives](agents/docs/features/archives.md) | books inside ZIP containers (100k+ entries): indexing without unpacking, reading in place, extract cache (planned) | `Core/Containers/`, `Core/Import/`, `Core/Reading/` |
-| [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates (planned) | `Core/Catalog/`, `Core/Covers/` |
+| [book-display](agents/docs/features/book-display.md) | cover + title of every book, file-name fallback, extracted covers and thumbnails, generated cover templates, a cover uploaded or styled on the book page, the data folder, Cover styles (templates on / off, reassign) | `Core/Catalog/`, `Core/Covers/` |
 | [reader](agents/docs/features/reader.md) | the in-app e-reader: formats, viewers, sandboxing, preferences, progress, KOReader sync (planned) | `app/reader/`, `Core/Reading/` |
+| [imported-tags](agents/docs/features/imported-tags.md) | the Imported tags page: raw names recorded by the importer, a library's tags by books (small fields whole, big ones walked by key), keep, map, ignore and its undo, rights | `Core/Tagging/ImportedTags.cs`, `Merging/TagMerger.Imported.cs`, `admin/imported-tags-section.ts` |
 | [tags](agents/docs/features/tags.md) | tag model (SFE/TagStudio), imported tags and mappings, scope and default tags (planned) | `Core/Tagging/` |
 | [metadata-tags](agents/docs/features/metadata-tags.md) | metadata as `field:value` tags: authors, series, categories, publishers, languages, custom fields; import, search, browse (planned) | `Core/Tagging/`, `Core/Import/` |
 | [book-formats](agents/docs/features/book-formats.md) | one class per format (key, extensions, media type, metadata, cover), the registry, adding a format | `Core/Formats/` |
 | [metadata-readers](agents/docs/features/metadata-readers.md) | FB2, EPUB, CBZ, MOBI, PDF heads: what each gives, limits, safe XML, the reader-loop gotcha | `Core/Import/Metadata/` |
 | [imports](agents/docs/features/imports.md) | imports from other sources (Calibre `metadata.db`, INPX): pipeline, matching, who owns metadata, the route, Calibre mapping | `Core/Imports/`, `CatalogWriter` |
 | [missing-books](agents/docs/features/missing-books.md) | books whose files are gone: kept, found again (same place or moved), removed only when a user accepts (SFE missing files) | `Core/Import/MissingBooks.cs`, `LibraryScanner` |
-| [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: detection, book-page panel, compare and merge, undo and split (planned) | `Core/Merging/` |
+| [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: stored groups and their upkeep, the Duplicates page, compare and merge, redirects, Not a duplicate; undo and split (planned) | `Core/Merging/` |
 | [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
 | [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: Basic, API keys, key-in-URL (planned) | `Api/Security/` |

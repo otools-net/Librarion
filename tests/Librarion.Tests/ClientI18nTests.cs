@@ -86,11 +86,13 @@ public sealed partial class ClientI18nTests
         wanted.AddRange(Enum.GetNames<SettingLevel>().Select(level => $"settingLevel.{Camel(level)}"));
         wanted.AddRange(Enum.GetNames<BuiltInGroup>().Select(group => $"group.{Camel(group)}"));
         wanted.AddRange(Enum.GetNames<SecurityEventKind>().Select(kind => $"securityEvent.{Camel(kind)}"));
+        wanted.AddRange(Enum.GetNames<BackgroundTaskKind>().Select(kind => $"task.{Camel(kind)}"));
         wanted.AddRange(Librarion.Core.Tagging.BuiltInTags.Fields.Values.SelectMany(key => new[] { $"fields.name.{key}", $"fields.one.{key}" }));
         wanted.AddRange(new[] { SessionEndpoints.SignInFailedType, SessionEndpoints.LockedOutType, RequestGuard.SetupRequiredType }.Select(type => $"error.{type}"));
 
         var named = RightCatalog.All.Select(r => r.Id).Concat(SettingCatalog.All.Select(s => s.Key)).ToHashSet(StringComparer.Ordinal);
-        foreach (var source in new[] { "Access/AccessService.cs", "Access/SetupService.cs", "Access/AccountRecovery.cs", "Settings/SettingsService.cs", "Settings/SettingCatalog.cs" })
+        foreach (var source in new[] { "Access/AccessService.cs", "Access/SetupService.cs", "Access/AccountRecovery.cs", "Settings/SettingsService.cs", "Settings/SettingCatalog.cs",
+                     "Tagging/TagService.cs", "Merging/TagMerger.cs", "Catalog/BookEditor.cs", "Tagging/BookTagger.cs" })
         {
             var text = File.ReadAllText(RepositoryFiles.PathOf("src/Librarion.Core/" + source));
             wanted.AddRange(ErrorCode().Matches(text).Select(m => m.Groups[1].Value).Where(code => !named.Contains(code)).Select(code => $"error.{code}"));

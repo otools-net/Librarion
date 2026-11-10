@@ -16,7 +16,7 @@ public abstract class BulkWriter : IAsyncDisposable
         ["Books", "BookFiles", "Archives", "BookIdentifiers", "Tags", "TagAliases", "TagParents", "TagClosure", "BookTags", "TagCounts"];
 
     /// <summary>Tables with a generated <c>Id</c> the generator fills itself.</summary>
-    protected static readonly string[] IdentityTables = ["Books", "BookFiles", "Archives", "Tags", "TagAliases", "Groups"];
+    protected static readonly string[] IdentityTables = ["Books", "BookFiles", "Archives", "Folders", "Tags", "TagAliases", "Groups"];
 
     public static BulkWriter Open(string provider, string connectionString) => provider switch
     {

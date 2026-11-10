@@ -4,6 +4,7 @@ using Librarion.Core.Catalog;
 using Librarion.Core.Covers;
 using Librarion.Core.Reading;
 using Librarion.Core.Search;
+using Librarion.Core.Tagging;
 
 namespace Librarion.Api.Endpoints;
 
@@ -17,29 +18,102 @@ public static class BookEndpoints
     {
         var books = api.MapGroup("/books").WithTags("Books").RequireRight(Rights.Browse);
 
-        books.MapGet("/", async (int? library, string? sort, string? after, int? limit, int? tag, string? q, HttpContext context, CurrentAccess current,
+        books.MapGet("/", async (int? library, string? sort, string? after, int? limit, int? tag, string? q, int? folder, HttpContext context, CurrentAccess current,
                 BookVisibilities visibilities, BookQueries queries) =>
             {
                 var state = await current.GetAsync();
+                // A folder's books need the folder view's right in its library (named: a folder is of one library).
+                if (folder is not null && (library is not { } inLibrary || !state.Access.HasIn(Rights.Folders, inLibrary)))
+                    return Results.NotFound();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 return TypedResults.Ok(await queries.ListAsync(state.TenantId!.Value, visibility,
-                    new BookPageRequest(library, Enum.TryParse<BookSort>(sort, ignoreCase: true, out var order) ? order : BookSort.Title, after, limit ?? 50, tag, q),
+                    new BookPageRequest(library, Enum.TryParse<BookSort>(sort, ignoreCase: true, out var order) ? order : BookSort.Title, after, limit ?? 50, tag, q, folder),
                     context.RequestAborted));
             })
             .WithName("ListBooks")
             .WithSummary("Books the caller may browse, a page at a time by key.")
-            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `q` = a search (words, \"phrases\", `author:\"Stephen King\"`, `author:`, `tag:`, `format:epub`, `title:`, `-` to leave out, `*` for a prefix; books with a hidden tag left out unless it is named); `limit` up to 200.");
+            .WithDescription("`sort` = `title` (default), `author`, `added` (newest first) or `number` (with `tag`: by the number on the link, a series' order); `after` = the `next` of the page before; `tag` = only books with this tag or a descendant (a field value's page); `q` = a search (words, \"phrases\", `author:\"Stephen King\"`, `author:`, `tag:`, `format:epub`, `title:`, `-` to leave out, `*` for a prefix; books with a hidden tag left out unless it is named); `folder` (with `library`, and `library.folders` there) = only books with a file directly in that folder; `limit` up to 200.");
 
         books.MapGet("/{id:int}", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {
                 var state = await current.GetAsync();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 return await queries.GetAsync(state.TenantId!.Value, visibility, id, context.RequestAborted) is { } book
-                    ? Results.Ok(book with { CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId) })
+                    ? Results.Ok(WithRights(book, state))
                     : Results.NotFound();
             })
             .WithName("GetBook")
-            .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book; `canDownload` when the caller may download its files.");
+            .WithSummary("One book: its tags by field, files and identifiers; `mergedIntoId` when it now lives in another book; `canDownload` when the caller may download its files, `canTag` / `canEdit` when it may change its tags / its metadata.");
+
+        books.MapPut("/{id:int}", async (int id, BookEdit edit, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries,
+                BookEditor editor) =>
+            {
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                if (await queries.GetAsync(state.TenantId!.Value, visibility, id, context.RequestAborted) is not { MergedIntoId: null } book)
+                    return Results.NotFound();
+                var metadata = edit.Columns is not null || edit.Fields?.Any(f => f.Field is not null) == true;
+                var plain = edit.Fields?.Any(f => f.Field is null) == true;
+                if (metadata && !state.Access.HasIn(Rights.EditBooks, book.LibraryId) || plain && !state.Access.HasIn(Rights.TagBooks, book.LibraryId))
+                    return Results.Forbid();
+                var saved = await editor.SaveAsync(state.TenantId.Value, id, edit, context.RequestAborted);
+                if (saved.Status != AccessStatus.Ok)
+                    return ApiResults.From(saved);
+                return Results.Ok(WithRights((await queries.GetAsync(state.TenantId.Value, visibility, id, context.RequestAborted))!, state));
+            })
+            .RequireRight(Rights.TagBooks, Rights.EditBooks)
+            .WithName("EditBook")
+            .WithSummary("Changes a book: `columns` (title, description, rating 0-10, 0 none) need `library.edit`, as do `fields` of a field; `fields` with `field` null (plain tags) need `library.tag`. Each field's tags are set whole, in order (authors), by `id` or by `name` (found in the field, else made); what is set stays through re-imports, a tag taken off stays off. Answers the book as `GET` does.");
+
+        // Plain tags on many books (library.tag in their libraries): a selection, or every book of a list (a scope).
+        books.MapPost("/tags/state", async (SelectionInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                return Results.Ok(await tagger.StateAsync(state.TenantId!.Value, visibility, Taggable(state), input.Books ?? [], context.RequestAborted));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("GetSelectionTags")
+            .WithSummary($"The plain tags of the selected books (at most {BookTagger.MaxSelection}) the caller may tag, each with how many of them have it.");
+
+        books.MapPost("/tags", async (SelectionInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                return ApiResults.From(await tagger.TagSelectionAsync(state.TenantId!.Value, visibility, Taggable(state), input.Books ?? [],
+                    new TagChange(input.Add, input.Remove), context.RequestAborted));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("TagSelection")
+            .WithSummary("Gives the selected books the tags of `add` (by `id`, or by `name`: found, else made) and takes those of `remove` away; books the caller can't tag are left out. A tag taken off stays off through re-imports.");
+
+        books.MapGet("/scope", async (int library, int? tag, string? q, int? folder, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
+                BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                if (!state.Access.HasIn(Rights.TagBooks, library) || folder is not null && !state.Access.HasIn(Rights.Folders, library))
+                    return Results.NotFound();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                var size = await tagger.CountAsync(state.TenantId!.Value, visibility, new BookScope(library, tag, q, folder), context.RequestAborted);
+                return Results.Ok(new ScopeCount(size.Books, size.Capped));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("CountScope")
+            .WithSummary("How many books a list holds (the library's, with `tag`, matching `q`): what tagging all of them asks to confirm.");
+
+        books.MapPost("/scope/tags", async (ScopeInput input, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookTagger tagger) =>
+            {
+                var state = await current.GetAsync();
+                if (!state.Access.HasIn(Rights.TagBooks, input.Library) || input.Folder is not null && !state.Access.HasIn(Rights.Folders, input.Library))
+                    return Results.NotFound();
+                var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+                var result = await tagger.TagScopeAsync(state.TenantId!.Value, visibility, new BookScope(input.Library, input.Tag, input.Q, input.Folder),
+                    new TagChange(input.Add, input.Remove), state.User.Id, context.RequestAborted);
+                return ApiResults.From(result, work => work.RunId is null ? Results.Ok(work) : Results.Accepted($"/api/tasks/{work.RunId}", work));
+            })
+            .RequireRight(Rights.TagBooks)
+            .WithName("TagScope")
+            .WithSummary($"Gives every book of a list (`library`, with `tag`, matching `q`) the tags of `add` and takes those of `remove` away, by batches of {TagService.BatchSize}; past {TagService.InlineLinks} changes a background run of the library (202 with it).");
 
         books.MapGet("/{id:int}/duplicates", async (int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries queries) =>
             {
@@ -142,6 +216,24 @@ public static class BookEndpoints
             .WithName("GetTag")
             .WithSummary("A tag or field value: its field, the tags it is under and those under it, its book count in `library`; its books are `GET api/books?tag=`.");
 
+        tags.MapGet("/tags/pick", async (string? field, string? q, int? limit, HttpContext context, CurrentAccess current, BookVisibilities visibilities, TagPicker picker) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                return await picker.FindAsync(tenantId, field, q, limit ?? 10, visibility, context.RequestAborted) is { } found ? Results.Ok(found) : Results.NotFound();
+            })
+            .WithName("PickTags")
+            .WithSummary("The tag picker's suggestions: tags of `field` (none: plain tags) whose name or other name starts with `q`, whose shorthand is `q`, or whose name has its words; the typed name first, then the most used; `exact` when one is named so.");
+
+        tags.MapGet("/tags/{id:int}/moved", async (int id, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities, TagQueries queries) =>
+            {
+                var (tenantId, visibility) = await VisibilityAsync(context, current, visibilities);
+                if (library is { } only && !visibility.Libraries.ContainsKey(only))
+                    return Results.NotFound();
+                return await queries.MovedAsync(tenantId, id, library, visibility, context.RequestAborted) is { } tag ? Results.Ok(tag) : Results.NotFound();
+            })
+            .WithName("GetMovedTag")
+            .WithSummary("Where a tag that is gone went: the tag it was merged into (through later merges), for its old addresses; 404 when it wasn't merged.");
+
         tags.MapGet("/search/suggestions", async (string? q, int? library, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
                 SearchSuggestions suggestions) =>
             {
@@ -184,4 +276,23 @@ public static class BookEndpoints
         new(target.Crc is { } crc
             ? $"\"{crc:x8}-{target.Size:x}\""
             : $"\"{target.Size:x}-{target.Modified?.Ticks ?? 0:x}\"");
+
+    internal static BookDetail WithRights(BookDetail book, AccessState state) => book with
+    {
+        CanDownload = book.MergedIntoId is null && state.Access.HasIn(Rights.Download, book.LibraryId),
+        CanTag = book.MergedIntoId is null && state.Access.HasIn(Rights.TagBooks, book.LibraryId),
+        CanEdit = book.MergedIntoId is null && state.Access.HasIn(Rights.EditBooks, book.LibraryId),
+        CanMerge = book.MergedIntoId is null && state.Access.HasIn(Rights.MergeBooks, book.LibraryId),
+    };
+
+    /// <summary>The libraries where the caller may tag books.</summary>
+    private static IReadOnlySet<int> Taggable(AccessState state) => state.Access.LibrariesWith(Rights.TagBooks).ToHashSet();
+
+    public sealed record SelectionInput(IReadOnlyList<int>? Books, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null);
+
+    public sealed record ScopeInput(int Library, int? Tag = null, string? Q = null, IReadOnlyList<BookTagEdit>? Add = null, IReadOnlyList<int>? Remove = null,
+        int? Folder = null);
+
+    /// <param name="Capped">At least <paramref name="Books"/>: counted up to <see cref="BookTagger.MaxCounted"/>.</param>
+    public sealed record ScopeCount(long Books, bool Capped);
 }

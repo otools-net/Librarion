@@ -49,6 +49,8 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<Book> Books => Set<Book>();
     public DbSet<BookFile> BookFiles => Set<BookFile>();
     public DbSet<Archive> Archives => Set<Archive>();
+    public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<DefaultTag> DefaultTags => Set<DefaultTag>();
     public DbSet<BookIdentifier> BookIdentifiers => Set<BookIdentifier>();
     public DbSet<BookProperty> BookProperties => Set<BookProperty>();
     public DbSet<Tag> Tags => Set<Tag>();
@@ -59,6 +61,16 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<TagCount> TagCounts => Set<TagCount>();
     public DbSet<GroupTagFilter> GroupTagFilters => Set<GroupTagFilter>();
     public DbSet<ImportTagMapping> ImportTagMappings => Set<ImportTagMapping>();
+    public DbSet<FieldKeyAlias> FieldKeyAliases => Set<FieldKeyAlias>();
+    public DbSet<BookTagSuppression> BookTagSuppressions => Set<BookTagSuppression>();
+    public DbSet<MergeLog> MergeLogs => Set<MergeLog>();
+    public DbSet<MergeLogLink> MergeLogLinks => Set<MergeLogLink>();
+    public DbSet<DuplicateGroup> DuplicateGroups => Set<DuplicateGroup>();
+    public DbSet<DuplicateMember> DuplicateMembers => Set<DuplicateMember>();
+    public DbSet<NotDuplicate> NotDuplicates => Set<NotDuplicate>();
+    public DbSet<TagDuplicateGroup> TagDuplicateGroups => Set<TagDuplicateGroup>();
+    public DbSet<TagDuplicateMember> TagDuplicateMembers => Set<TagDuplicateMember>();
+    public DbSet<NotSameTag> NotSameTags => Set<NotSameTag>();
     public DbSet<LibraryRoot> LibraryRoots => Set<LibraryRoot>();
     public DbSet<TaskRun> TaskRuns => Set<TaskRun>();
     public DbSet<TaskSchedule> TaskSchedules => Set<TaskSchedule>();

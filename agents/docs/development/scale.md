@@ -115,6 +115,89 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   not turned into a join), so `NarrowAsync`'s choice holds: 31–39 ms.
 - Imports with the search index kept row by row (2026-11-03, PostgreSQL): INPX 1M 9.2 min (8.9 before), Calibre 2M
   28.2 min (27.1; budget 30), unchanged re-imports 37 s and 2.7 min: within budget.
+- Imports with parents' totals kept (`TagCounts.TotalCount`, stage 6 4a, 2026-11-05, PostgreSQL): INPX 1M 9.0 min,
+  Calibre 2M 28.4 min (budget 30), unchanged re-imports 38 s and 2.7 min: the same as before.
+- The folder view (stage 6 chunk 8b, 2026-11-06, 2M PostgreSQL, warm, p95 in ms): a folder of 1,000 folders 3.9, a
+  folder with its path 10.2 (budget 50), books of a ZIP of 100k entries 22.1 (middle page 25.5: the sort index walked,
+  each book tested by its files), books of a folder of ~1,000 loose files by author 23.3 (from the folder's files,
+  sorted): within budget, no full scans. Generation 15.3 min with `Folders` (other work ran meanwhile).
+- Imports with folders and their counts (stage 6 chunk 8b, 2026-11-06, PostgreSQL): INPX 1M 9.1 min (9.0), Calibre
+  2M 28.9 min (28.4; budget 30), unchanged re-imports 38 s and 2.7 min. Within budget, but Calibre 2M has about a
+  minute left: the next change to the import path should be measured before it is kept.
+- Imports with default tags wired in (stage 6 chunk 8c, 2026-11-06, PostgreSQL, a library without any): INPX 1M 9.1
+  min, Calibre 2M 28.9 min, unchanged re-imports 38 s and 2.6 min: unchanged.
+- Imports with the Imported tags page's mappings and `TagCounts (LibraryId, BookCount, TagId)` (stage 6 chunk 9,
+  2026-11-06, PostgreSQL): INPX 1M 9.7 min, Calibre 2M 31.3 min (**over its 30 min budget**), unchanged re-imports
+  35 s and 2.6 min; then a batch's new files read 8 at a time: **Calibre 2M 25.4 min**, unchanged 2.4 min
+  ([imports](../features/imports.md#scale)).
+- The Imported tags page (stage 6 chunk 9, 2026-11-06): every list call within 100 ms on PostgreSQL (the bounded walk
+  140 ms on SQLite); its coverage line 245 / 184 ms, against a new on-demand budget of 500 ms, then kept; the whole run
+  on PostgreSQL within budget (`search: two common words` once 302 ms, 190 alone)
+  ([imported-tags](../features/imported-tags.md#scale-measured-2026-11-06-see-scale)).
+- Stored duplicate groups (stage 6 chunk 11, 2026-11-08, `duplicates` command): the whole build at 2M **66.6 s on
+  PostgreSQL** (proposed budget 10 min), 92.3 s on SQLite; 96,946 groups; of the first 2,000 planted pairs of each
+  level every one sharing its key found (files 2,000, ISBNs 798, works 1,983; 17 works more under noise keys). Calibre
+  2M on PostgreSQL with the first build at its end (the user's answer: automatic): **27.1 min** (25.4 before; budget
+  30), unchanged re-import 2.6 min (2.4). The book page's possible duplicates within budget, no full scans.
+  Generation: 2M SQLite 5.6 min, PostgreSQL 8.6 min.
+- The Duplicates page (stage 6 chunk 12, 2026-11-08, `run --only duplicates`): first page 44 ms p95 on PostgreSQL
+  (79 on SQLite), a deep page 37 (29), same identifier 27 (30); the book page's possible duplicates 15 ms (5). First
+  measured 132 ms (1 s on SQLite): a page of the biggest groups read about a thousand books as list items (now the
+  first 6 of a group), `NOT Noise` made SQLite sort every group (now `BookCount >= 2` on `(TenantId, BookCount, Id)`),
+  and SQLite had no statistics for the new tables (the build ends with `ANALYZE` of them there).
+- Possible duplicate tags (stage 6 chunk 14, 2026-11-09, `tag-duplicates` command): the whole build at 2M over
+  660,749 keyed tags **77 s on PostgreSQL** (proposed budget 10 min), 86 s on SQLite; 190,421 groups (71,626 of the
+  same words, 118,795 sounding alike; the generator's syllable names collide a lot), 2,858 noise keys. The authors'
+  page 9 ms p95 on PostgreSQL (6 on SQLite), its following pages 10 (5), a tag's look-alikes 8 (1). SQLite first
+  measured 1.3 s: no statistics for the new tables (the build ends with `ANALYZE` of them there, as the books').
+  Calibre 2M on PostgreSQL with the keys and their two indexes and both first builds at its end: **28.8 min** (27.1
+  before; budget 30), unchanged re-import 2.6 min; making the new tags 359 s (316 profiled before). The margin left is
+  1.2 min: the plan's next import speed-up (new tags copied in bulk on PostgreSQL) is due before more import work.
+  Done 2026-11-10: **Calibre 2M 24.5 min**, making the new tags 165 s ([imports](../features/imports.md#scale)).
+- Special search terms (stage 6 chunk 15, 2026-11-10, 2M, warm, p95 in ms, budget 300; catalogs generated again for
+  `Books.Untagged`; [search](../features/search.md#special-terms-stage-6-chunk-15)):
+
+  | Search | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | `special:untagged`, 30 % untagged (the generator's), by title / newest | 24 / 19 | 34 / 39 |
+  | `-special:untagged` | 24 | 35 |
+  | `special:untagged`, 0.1 % untagged, by title / newest | 37 / 56 | 55 / 54 |
+  | `special:untagged`, 0.1 %, and a common word | 112 | 208–234 |
+  | `special:duplicates` (who may merge) / and a common word | 44 / 139 | 31 / 162–178 |
+
+  The 0.1 % case with a word first took **324 ms on PostgreSQL**: its 2,000 untagged ids were the start list, and in
+  one sorted query with the word PostgreSQL walked the whole title index testing each book against the list. A short
+  start list (up to a quarter of the threshold) with other terms is now read first, unordered by key, and the books
+  passing them are the list (`BookSearch.ApplyAsync`). For every list it cost more than the walk ("an author by word
+  and a title word" 116 → 287 ms), hence the bound (148 ms with it). The machine ran ~25 % slower than at stage 5
+  during these runs (1.4 GB free with Docker): the untouched searches measured 94–139 ms where stage 5 had 103–131.
+- Stage 6 close (2026-11-10, 2M, warm, p95 in ms): every call of the UI's screens, now 87 scenarios, within budget on
+  both providers, no full scan. New ones:
+
+  | Query | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | tag manager: the fields / authors by name, first and middle / plain tags by name | 8 / 5 / 5 | 24 / 7–11 / 33 |
+  | tag manager: authors found by a last name / by two letters | 10 / 41 | 16 / 35 |
+  | picker: nothing typed (authors, categories) / two letters / a full name | 5 / 17 / 8 | 9–11 / 29 / 23 |
+  | picker: plain tags, two letters | 10 | 49 |
+  | Tag all's count: a 1 % tag / a common word / the library (budget 500, asked once) | 182 / 113 / 0.2 | 84 / 201 / 2 |
+
+  Found: the field chooser's count of plain tags took **186 ms on SQLite** (`FieldKey IS NULL` led it to the index
+  where every field value is; now counted on `FieldId` less the fields' rows: 3.5); the picker sent queries of empty
+  lists (`WHERE 0`, planned by SQLite as a scan; now skipped); **Tag all's count of a search timed out (30 s) on
+  PostgreSQL** (each book of the library tested against the search): now capped at 10,000 ("at least"), a search
+  sampled as facets are, a library seen whole from its stored count ([tags](../features/tags.md#tagging-many-books-built-stage-6-chunk-7)).
+- Curation runs at 2M (`curation` command, stage 6 close, background runs timed whole; no budget, D-6.4):
+
+  | Run | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | the most prolific author (36,735 links) merged into another / undone | 69 / 38 s | 77 / 79 s |
+  | a new tag given to the books of a 1 % tag / taken off | 14 / 9 s | 10 / 9 s |
+  | a new tag given to a common word's books (1,013,881: the word is in many tag names) / that tag deleted | 293 / 345 s | 417 / 171 s |
+
+- Stage 6 exit criterion "the top 500 raw tags cover > 90 % of imported links": with the generator's tags (50k plain
+  tags by Zipf 1.0) the first 500 plain tags hold **59.1 %**, the first 500 categories 95.4 %; reported, not forced
+  (the user's answer, chunk 9: [imported-tags](../features/imported-tags.md)); real catalogs to be measured.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

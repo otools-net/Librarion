@@ -51,12 +51,14 @@ public sealed class CatalogGenerator
     public int FilterTag(int i) => PlainTag(_shape.PlainTags) + i;
     public int LastTagId => FilterTag(CatalogShape.FilterShares.Length) - 1;
 
-    public static readonly string[] TagColumns = ["Id", "TenantId", "Name", "NormalizedName", "SortName", "IsCategory", "IsHidden", "FieldId"];
+    public static readonly string[] TagColumns = ["Id", "TenantId", "Name", "NormalizedName", "SortName", "IsCategory", "IsHidden", "FieldId", "SoundKey", "InitialsKey"];
 
     public IEnumerable<object?[]> Tags()
     {
+        // The match keys of possible duplicate tags (stage 6 chunk 14), as NameKeys.Apply sets them: none on categories.
         object?[] Row(int id, string name, string sortName, int? field, bool category = false) =>
-            [id, _target.TenantId, name, TagNames.Normalize(name), sortName, category, false, field];
+            [id, _target.TenantId, name, TagNames.Normalize(name), sortName, category, false, field, category ? null : NameKeys.SoundKey(name),
+                category ? null : NameKeys.InitialsKey(name)];
 
         for (var i = 0; i < _shape.Authors; i++)
         {
@@ -110,6 +112,28 @@ public sealed class CatalogGenerator
             var alias = space > 0 ? $"{name[0]}. {name[(space + 1)..]}" : $"{name} (pen name)";
             yield return [_target.TenantId, AuthorTag(i), alias, TagNames.Normalize(alias)];
         }
+    }
+
+    public static readonly string[] MappingColumns = ["TenantId", "Source", "FieldId", "NormalizedName", "Name", "TagId", "Ignored", "Reviewed"];
+
+    /// <summary>
+    /// The raw names an import of these books would have recorded (stage 6 chunk 9): one automatic FB2 mapping per plain
+    /// tag, category, language, publisher and year (people and series get none), what the Imported tags page lists.
+    /// </summary>
+    public IEnumerable<object?[]> ImportTagMappings()
+    {
+        object?[] Row(int tagId, string name, int? field) => [_target.TenantId, (byte)ImportTagSourceKind.Fb2, field, TagNames.Normalize(name), name, tagId, false, false];
+
+        for (var i = 0; i < _shape.Categories; i++)
+            yield return Row(CategoryTag(i), Names.Category(i).Name, _target.Fields[BuiltInTag.Category]);
+        for (var i = 0; i < _shape.Languages; i++)
+            yield return Row(LanguageTag(i), Names.Languages[i], _target.Fields[BuiltInTag.Language]);
+        for (var i = 0; i < _shape.Publishers; i++)
+            yield return Row(PublisherTag(i), Names.Publisher(i), _target.Fields[BuiltInTag.Publisher]);
+        for (var i = 0; i < CatalogShape.Years; i++)
+            yield return Row(YearTag(i), (CatalogShape.FirstYear + i).ToString(CultureInfo.InvariantCulture), _target.Fields[BuiltInTag.Year]);
+        for (var i = 0; i < _shape.PlainTags; i++)
+            yield return Row(PlainTag(i), Names.PlainTag(i), null);
     }
 
     public static readonly string[] ParentColumns = ["TenantId", "ChildId", "ParentId"];
@@ -176,10 +200,44 @@ public sealed class CatalogGenerator
 
     private static string ArchivePath(int index) => $"archives/fb2-{index:D4}.zip";
 
+    public static readonly string[] FolderColumns =
+        ["Id", "TenantId", "LibraryId", "RootId", "ParentId", "Name", "Path", "PathKey", "ArchiveId", "FileCount", "TotalFileCount", "FolderCount"];
+
+    /// <summary>
+    /// The folders as a scan makes them: the root's own (1), <c>archives</c> (2) and each ZIP under it, <c>books</c> and
+    /// its thousand sub-folders of loose files (<see cref="FolderOf"/>), with their counts (a pass over the files' plans).
+    /// </summary>
+    public IEnumerable<object?[]> Folders()
+    {
+        var books = 3 + _shape.Archives;
+        var files = new int[books + 1001];
+        for (var id = 1; id <= _shape.Books; id++)
+            foreach (var file in Plan(id).Files)
+                files[FolderOf(id, file)]++;
+        var archived = files.Skip(3).Take(_shape.Archives).Sum();
+        var loose = files.Skip(books + 1).Sum();
+
+        object?[] Row(int id, int? parent, string path, int? archive, int total, int folders) =>
+        [
+            id, _target.TenantId, _target.LibraryId, _target.RootId, parent, path[(path.LastIndexOf('/') + 1)..], path, PathKeys.Of(path), archive,
+            files[id], total, folders,
+        ];
+        yield return Row(1, null, "", null, archived + loose, 2);
+        yield return Row(2, 1, "archives", null, archived, _shape.Archives);
+        for (var i = 0; i < _shape.Archives; i++)
+            yield return Row(3 + i, 2, ArchivePath(i), i + 1, files[3 + i], 0);
+        yield return Row(books, 1, "books", null, loose, 1000);
+        for (var n = 0; n < 1000; n++)
+            yield return Row(books + 1 + n, books, $"books/{n:D3}", null, files[books + 1 + n], 0);
+    }
+
+    /// <summary>The folder of a file: its ZIP's, or the sub-folder of <c>books</c> it is in.</summary>
+    private int FolderOf(int bookId, FilePlan file) => file.Archive is { } archive ? 3 + archive : 4 + _shape.Archives + bookId % 1000;
+
     public static readonly string[] BookColumns =
     [
         "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SearchText", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added",
-        "Updated", "CoverSource", "GeneratedTemplate", "GeneratedVariant", "CoverState", "MergedIntoId", "WorkKey", "MetadataSource",
+        "Updated", "CoverSource", "GeneratedTemplate", "GeneratedVariant", "CoverState", "MergedIntoId", "WorkKey", "MetadataSource", "Edited", "Untagged",
     ];
 
     public IEnumerable<object?[]> Books()
@@ -194,13 +252,13 @@ public sealed class CatalogGenerator
                 book.Series is { } s ? SeriesTag(s) : null, book.SeriesNumber, book.Description, book.Rating, book.Added, book.Added,
                 (int)(book.GeneratedCover ? CoverSource.Generated : CoverSource.Book),
                 book.GeneratedCover ? (short)(id % 5) : null, book.GeneratedCover ? (short)(id / 5 % 8) : null,
-                (int)CoverState.Unknown, null, book.WorkKey, (short)MetadataSource.Heads,
+                (int)CoverState.Unknown, null, book.WorkKey, (short)MetadataSource.Heads, (short)BookEdits.None, book.PlainTags.Length == 0 && !book.Filters.Any(f => f),
             ];
         }
     }
 
     public static readonly string[] FileColumns =
-        ["Id", "TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
+        ["Id", "TenantId", "LibraryId", "BookId", "RootId", "ArchiveId", "FolderId", "Path", "PathKey", "Format", "Size", "Crc32", "Modified", "Locator", "Method", "PackedSize"];
 
     public IEnumerable<object?[]> Files()
     {
@@ -211,7 +269,8 @@ public sealed class CatalogGenerator
             {
                 yield return
                 [
-                    ++fileId, _target.TenantId, _target.LibraryId, id, file.Archive is null ? _target.RootId : null, file.Archive is { } a ? a + 1 : null, file.Path, PathKeys.Of(file.Path),
+                    ++fileId, _target.TenantId, _target.LibraryId, id, file.Archive is null ? _target.RootId : null, file.Archive is { } a ? a + 1 : null, FolderOf(id, file), file.Path,
+                    PathKeys.Of(file.Path),
                     file.Format, file.Size, file.Crc32, Start, file.Archive is null ? null : (long)id * 1024, file.Archive is null ? null : (short)8,
                     file.Archive is null ? null : file.Size / 3,
                 ];
@@ -235,8 +294,11 @@ public sealed class CatalogGenerator
 
     public static readonly string[] BookTagColumns = ["TenantId", "BookId", "TagId", "Source", "Ordinal", "Number"];
 
-    /// <summary>The links; counts per tag (direct, via parents and per field: once per book) gathered on the way.</summary>
-    public IEnumerable<object?[]> BookTags(int[] counts)
+    /// <summary>
+    /// The links; counts per tag gathered on the way, as the importer keeps them: <paramref name="direct"/> the links
+    /// themselves, <paramref name="counts"/> the totals (the tag, its parent and its field: once per book).
+    /// </summary>
+    public IEnumerable<object?[]> BookTags(int[] counts, int[] direct)
     {
         var seen = new HashSet<int>();
         for (var id = 1; id <= _shape.Books; id++)
@@ -246,6 +308,7 @@ public sealed class CatalogGenerator
 
             object?[] Link(int tagId, int? ordinal = null, double? number = null, int? field = null, int? parent = null)
             {
+                direct[tagId - _target.FirstTagId + Fields.Length]++;
                 Count(tagId);
                 if (field is { } f)
                     Count(f);
@@ -293,16 +356,16 @@ public sealed class CatalogGenerator
     /// <summary>The counts array <see cref="BookTags"/> fills: the fields first, then every generated tag.</summary>
     public int[] NewCounts() => new int[Fields.Length + LastTagId - _target.FirstTagId + 1];
 
-    public static readonly string[] CountColumns = ["TenantId", "LibraryId", "TagId", "BookCount"];
+    public static readonly string[] CountColumns = ["TenantId", "LibraryId", "TagId", "BookCount", "TotalCount"];
 
-    public IEnumerable<object?[]> TagCounts(int[] counts)
+    public IEnumerable<object?[]> TagCounts(int[] counts, int[] direct)
     {
         for (var i = 0; i < counts.Length; i++)
         {
-            if (counts[i] == 0)
+            if (counts[i] == 0 && direct[i] == 0)
                 continue;
             var tagId = i < Fields.Length ? _target.Fields[Fields[i]] : _target.FirstTagId + i - Fields.Length;
-            yield return [_target.TenantId, _target.LibraryId, tagId, counts[i]];
+            yield return [_target.TenantId, _target.LibraryId, tagId, direct[i], counts[i]];
         }
     }
 

@@ -62,7 +62,7 @@ export interface SetupInput {
 
 export type RightScope = 'library' | 'tenant' | 'server';
 export type RightKind = 'read' | 'write';
-export type BuiltInGroup = 'administrators' | 'users';
+export type BuiltInGroup = 'administrators' | 'users' | 'curators';
 
 export interface RightInfo {
     id: string;
@@ -101,6 +101,8 @@ export interface BookListItem {
     seriesNumber: number | null;
     formats: string[];
     coverSource: 'book' | 'calibre' | 'uploaded' | 'generated';
+    /** Changes with the book: the cover's address carries it. */
+    coverVersion?: string | null;
 }
 
 /** A link of a book to a tag: `field` the field's key (null for a plain tag); `number` its place in a series. */
@@ -146,11 +148,161 @@ export interface BookDetail {
     mergedIntoId: number | null;
     properties: KeyValue[] | null;
     canDownload: boolean;
+    /** May change the book's plain tags (`library.tag` in its library). */
+    canTag: boolean;
+    /** May change its title, description, rating and fields (`library.edit`). */
+    canEdit: boolean;
+    coverVersion?: string | null;
+    /** How its cover is chosen: the generated style it has, whether a user chose the cover (an upload, a style over its own). */
+    cover?: { template: number; variant: number; chosen: boolean } | null;
+    /** May merge it with its duplicates (`library.merge` in its library). */
+    canMerge?: boolean;
 }
 
-/** What the search box offers for the term being typed: a field to type a value of, or a value as a whole term. */
+/** A group of possible duplicates on the Duplicates page: its books the session sees in the library. */
+export interface DuplicateGroupItem {
+    id: number;
+    level: BookDuplicate['reason'];
+    /** The identifier's scheme, for an `identifier` group. */
+    scheme: string | null;
+    /** Its first books, to show (at most six). */
+    books: BookListItem[];
+    /** Every one of its books the session sees: compared, merged or set apart together. */
+    bookIds: number[];
+}
+
+export interface DuplicatePage {
+    items: DuplicateGroupItem[];
+    next: string | null;
+    /** The groups were built (else the next scan or import, or Find again, makes them). */
+    built: boolean;
+}
+
+/** A book merge (the Duplicates page's Merges): the kept book and the first names of those merged into it (`books` of them). */
+export interface BookMergeInfo {
+    id: number;
+    created: string;
+    targetId: number;
+    targetName: string;
+    sourceNames: string[];
+    books: number;
+    undone: string | null;
+}
+
+/** Books merged into `targetId`; each value from the book named (the target when null). */
+export interface BookMergeInput {
+    targetId: number;
+    sourceIds: number[];
+    titleFrom?: number | null;
+    descriptionFrom?: number | null;
+    ratingFrom?: number | null;
+    coverFrom?: number | null;
+}
+
+/** The generated cover styles: template names by index, and how many palettes each has. */
+export interface CoverStyles {
+    templates: string[];
+    palettes: number;
+    /** The templates the tenant turned off (Cover styles): not offered, but for the book's own. */
+    off: number[];
+}
+
+/** A generated template on Cover styles (`api/covers/templates`): new books get those on. */
+export interface CoverTemplateInfo {
+    index: number;
+    name: string;
+    on: boolean;
+}
+
+export interface CoverTemplates {
+    templates: CoverTemplateInfo[];
+    palettes: number;
+}
+
+/** A tag a book's field is to have: by id, or by name (found in the field, else made). */
+export interface BookTagEdit {
+    id?: number | null;
+    name?: string | null;
+    number?: number | null;
+}
+
+/** A plain tag among selected books: how many of them have it (all, some). */
+export interface SelectionTag {
+    id: number;
+    name: string;
+    color: string | null;
+    books: number;
+}
+
+export interface SelectionTags {
+    /** The selected books the caller may tag. */
+    books: number;
+    tags: SelectionTag[];
+}
+
+/** Plain tags to give to many books (by id, or by name: found, else made) and to take away. */
+export interface TagChangeInput {
+    add?: BookTagEdit[];
+    remove?: number[];
+}
+
+/** Every book of a library's list: all, those with a tag (its page), those matching a search, those in a folder. */
+export interface BookScope {
+    library: number;
+    tag?: number | null;
+    q?: string | null;
+    folder?: number | null;
+}
+
+/** A folder of the folder view: a directory, a ZIP (`zip`), a directory inside one; counts of present files. */
+export interface FolderItem {
+    id: number;
+    name: string;
+    zip: boolean;
+    /** Files directly in it; `totalFiles` with those of every folder under it. */
+    files: number;
+    totalFiles: number;
+    /** Folders directly under it. */
+    folders: number;
+    /** Its own default tags (the badge on its row). */
+    defaultTags: number;
+}
+
+/** A default tag of a library (`folderId` null) or a folder; `from` names where an inherited one is set (null: the library). */
+export interface DefaultTagItem {
+    tagId: number;
+    name: string;
+    color: string | null;
+    folderId: number | null;
+    from: string | null;
+}
+
+/** A library's or folder's own default tags, then those it inherits, nearest first. */
+export interface DefaultTagList {
+    own: DefaultTagItem[];
+    inherited: DefaultTagItem[];
+}
+
+/** A folder with the folders above it (a library's only root left out: the library is the top). */
+export interface FolderDetail {
+    folder: FolderItem;
+    libraryId: number;
+    path: { id: number; name: string }[];
+}
+
+/** What a save of the book editor changes (`PUT api/books/{id}`); a part left out stays as it is. */
+export interface BookEdit {
+    columns?: { title: string | null; description: string | null; rating: number | null } | null;
+    /** Each field's tags set whole, in order; `field` null for the plain tags. */
+    fields?: { field: string | null; tags: BookTagEdit[] }[] | null;
+}
+
+/**
+ * What the search box offers for the term being typed: a field to type a value of, a value as a whole term, or a
+ * special term (`special:untagged`; `name` is `untagged`).
+ */
 export interface SearchSuggestion {
-    kind: 'field' | 'value';
+    kind: 'field' | 'value' | 'special';
     /** The term put in place of the one being typed (`author:"Stephen King"`, `author:`). */
     insert: string;
     /** The value's name, or the field's key. */
@@ -220,6 +372,24 @@ export interface FieldValue {
 }
 
 /** A tag in another's detail; `field`: its field's key, null for a plain tag. */
+/** A tag the picker offers (`api/tags/pick`): `alias` the other name it was found by, `parent` the one telling it apart. */
+export interface PickedTag {
+    id: number;
+    name: string;
+    color: string | null;
+    field: string | null;
+    shorthand: string | null;
+    alias: string | null;
+    parent: string | null;
+    books: number;
+}
+
+export interface PickedTags {
+    items: PickedTag[];
+    /** A tag has the typed name itself: no "Create" then. */
+    exact: boolean;
+}
+
 export interface TagRef {
     id: number;
     name: string;
@@ -399,7 +569,7 @@ export interface ImportInput {
 export interface TaskRunInfo {
     id: number;
     libraryId: number | null;
-    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import';
+    task: 'libraryScan' | 'removeRoot' | 'removeMissing' | 'import' | 'tagDelete' | 'tagMerge' | 'fieldMerge' | 'mergeUndo' | 'tagCounts' | 'scopeTags' | 'tagIgnore' | 'coverReassign' | 'duplicateBuild' | 'bookMerge' | 'tagDuplicateBuild';
     trigger: 'manual' | 'schedule';
     started: string;
     finished: string | null;
@@ -467,4 +637,192 @@ export interface ScheduleInfo extends ScheduleInput {
     libraryId: number;
     lastRun: string | null;
     nextRun: string | null;
+}
+
+/** A field in the tag manager (`api/tags/manage/fields`): its values counted up to 10,000 (`capped` past it). */
+export interface ManagedField {
+    id: number;
+    key: string;
+    name: string;
+    builtIn: boolean;
+    color: string | null;
+    isHidden: boolean;
+    values: number;
+    capped: boolean;
+}
+
+export interface ManagedFields {
+    fields: ManagedField[];
+    plainTags: number;
+    plainCapped: boolean;
+}
+
+/** A tag in the tag manager: its books in every library, the tags directly under it. */
+export interface ManagedTag {
+    id: number;
+    name: string;
+    sortName: string;
+    color: string | null;
+    isCategory: boolean;
+    isHidden: boolean;
+    builtIn: boolean;
+    /** With the books of the tags under it, each once. */
+    books: number;
+    /** Linked to it itself: what a delete or merge moves. */
+    tagged: number;
+    children: number;
+}
+
+/** A page of the tag manager's list; a search is one page, `capped` when it found more. */
+export interface ManagedPage {
+    items: ManagedTag[];
+    next: string | null;
+    capped: boolean;
+}
+
+/** A tag as its editor has it (`api/tags/{id}/definition`). */
+export interface TagDefinition {
+    id: number;
+    name: string;
+    sortName: string;
+    shorthand: string | null;
+    color: string | null;
+    isCategory: boolean;
+    isHidden: boolean;
+    disambiguationParentId: number | null;
+    fieldId: number | null;
+    fieldKey: string | null;
+    builtIn: boolean;
+    aliases: string[];
+    parents: { id: number; name: string }[];
+    books: number;
+}
+
+export interface TagInput {
+    name: string;
+    sortName?: string | null;
+    shorthand?: string | null;
+    color?: string | null;
+    isCategory?: boolean;
+    isHidden?: boolean;
+    disambiguationParentId?: number | null;
+    aliases?: string[];
+    parentIds?: number[];
+    /** A new value of this field (create only). */
+    fieldId?: number | null;
+    /** A new field (create only). */
+    fieldKey?: string | null;
+}
+
+/** A change of books' links: done (`runId` null) or running in the background; `links` moved or removed. */
+/** A tag of a possible duplicates group: its books in every library (direct links). */
+export interface TagDuplicateTag {
+    id: number;
+    name: string;
+    books: number;
+}
+
+/** Why tags may be one: the same words, words that sound alike, a name and its initials. */
+export type TagDuplicateLevel = 'words' | 'sound' | 'initials';
+
+/** A group of possible duplicate tags of one field (Tags › Possible duplicates), the most books first. */
+export interface TagDuplicateItem {
+    id: number;
+    level: TagDuplicateLevel;
+    books: number;
+    tags: TagDuplicateTag[];
+}
+
+export interface TagDuplicatePage {
+    items: TagDuplicateItem[];
+    next: string | null;
+    built: boolean;
+}
+
+/** A tag that may be the same as the one shown (its page). */
+export interface TagLookAlike {
+    level: TagDuplicateLevel;
+    tag: TagDuplicateTag;
+}
+
+export interface TagWork {
+    runId: number | null;
+    logId: number | null;
+    links: number;
+}
+
+/** A tag or field merge (`api/merges`), undone while nothing later stands in the way. */
+export interface MergeLogInfo {
+    id: number;
+    kind: 'tag' | 'field' | 'ignore';
+    created: string;
+    sourceId: number;
+    sourceName: string;
+    targetId: number;
+    targetName: string;
+    links: number;
+    completed: boolean;
+    undone: string | null;
+}
+
+/** Where an imported name came from (`ImportTagSourceKind`). */
+export type ImportSource = 'fb2' | 'epub' | 'mobi' | 'pdf' | 'comicInfo' | 'calibre' | 'inpx';
+export const IMPORT_SOURCES: readonly ImportSource[] = ['fb2', 'epub', 'mobi', 'pdf', 'comicInfo', 'calibre', 'inpx'];
+
+export type ImportedStatus = 'review' | 'reviewed' | 'all';
+
+/** What the caller may do on the Imported tags page (`library.importedTags`). */
+export interface ImportedContext {
+    /** The libraries whose page it may read. */
+    libraries: number[];
+    /** Keep and ignore: the right in every library of the tenant (the mappings are the tenant's). */
+    canChange: boolean;
+    /** Map onto another tag: also `tenant.tags`. */
+    canMap: boolean;
+}
+
+/** Plain tags (`key` null) or a field, with its tags that have imported names (`capped` past 10,000). */
+export interface ImportedField {
+    id: number | null;
+    key: string | null;
+    name: string;
+    builtIn: boolean;
+    tags: number;
+    capped: boolean;
+}
+
+export interface ImportedName {
+    name: string;
+    source: ImportSource;
+    reviewed: boolean;
+}
+
+/** A tag imports give: its books in the library (direct links) and its raw names. */
+export interface ImportedTag {
+    id: number;
+    name: string;
+    color: string | null;
+    books: number;
+    names: ImportedName[];
+    reviewed: boolean;
+}
+
+/** How much of the field's imported links its first `topCount` and its reviewed tags hold. */
+export interface ImportedSummary {
+    tags: number;
+    links: number;
+    topCount: number;
+    top: number;
+    reviewed: number;
+}
+
+/** An ignore that stands: the tag, its raw names, the imported links taken off. */
+export interface IgnoredTagInfo {
+    id: number;
+    created: string;
+    tagId: number;
+    tagName: string;
+    names: string[];
+    links: number;
+    completed: boolean;
 }

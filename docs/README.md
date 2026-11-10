@@ -5,9 +5,11 @@
 - [Configuration](configuration.md): the database, the address, setup, security, rights.
 - [Signing in and your account](user-guide/account.md): password, preferences.
 - [Finding your way around](user-guide/finding-your-way.md): the top bar, libraries, menus, messages.
-- [Browsing the library](user-guide/browsing.md): covers or list, order, scrolling; authors, series, tags and other fields; a book's page and its downloads.
+- [Browsing the library](user-guide/browsing.md): covers or list, order, scrolling; selecting and tagging books; authors, series, tags and other fields; folders and their default tags; a book's page, its downloads, editing it and its cover.
 - [Searching](user-guide/searching.md): words, phrases, fields and tags, leaving out, suggestions.
-- [Administration](administration/README.md): accounts, groups, libraries, tenants, settings, security log.
+- [Administration](administration/README.md): accounts, groups, libraries, tenants, settings, security log; the
+  catalog: [tags](administration/tags.md), [imported tags](administration/imported-tags.md),
+  [duplicates](administration/duplicates.md), [cover styles](administration/cover-styles.md).
 - Reference: [rights](reference/rights.md), [settings levels](reference/settings-levels.md).
 
 More pages come with each feature (libraries, browsing, OPDS for reader apps, administration).

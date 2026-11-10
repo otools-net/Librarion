@@ -31,7 +31,7 @@ const detail = (overrides: Partial<BookDetail> = {}): BookDetail => ({
         { id: 8, format: 'fb2', size: 900, name: 'Guards.fb2', inArchive: false, archive: null, missing: true },
     ],
     identifiers: [{ key: 'isbn', value: '9780552134637' }, { key: 'goodreads', value: '64216' }],
-    mergedIntoId: null, properties: [{ key: 'Shelf', value: 'Top' }], canDownload: true, ...overrides,
+    mergedIntoId: null, properties: [{ key: 'Shelf', value: 'Top' }], canDownload: true, canTag: false, canEdit: false, ...overrides,
 });
 
 const listed = (id: number, title: string): BookListItem => ({
@@ -74,7 +74,7 @@ describe('The book page', () => {
         expect(element.querySelector('h1')?.classList).not.toContain('file-title');
         expect(element.querySelector('.book-page-cover img')?.getAttribute('src')).toBe('api/books/42/cover/l');
         const authors = [...element.querySelectorAll('.book-by a')];
-        expect(authors.map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Terry Pratchett', '/tags/21'], ['Neil Gaiman', '/tags/22']]);
+        expect(authors.map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Terry Pratchett', '/author/21/Terry%20Pratchett'], ['Neil Gaiman', '/author/22/Neil%20Gaiman']]);
         expect(element.querySelector('.book-in-series a')?.textContent).toBe('Discworld #8');
         expect(element.querySelector('.book-rating')?.textContent?.trim()).toBe('4.5 of 5');
         const fields = [...element.querySelectorAll('.book-field')].map(f => [
@@ -154,6 +154,39 @@ describe('The book page', () => {
         expect(element.querySelector('h1')?.textContent?.trim()).toBe('Guards! Guards!');
         expect(element.querySelector('.book-duplicates')).toBeNull();
         expect(element.querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('splits chosen files off into a new book with the right, and opens it', async () => {
+        const api = bookApi();
+        api.book.mockImplementation(async (id: number) => id === 42 ? detail({ canMerge: true }) : detail({ id: 43, title: 'Guards (scan)', canMerge: true }));
+        api.splitBook.mockResolvedValue(detail({ id: 43, title: 'Guards (scan)' }));
+        const { router, element, harness } = await open('/books/42', api);
+        const buttons = () => [...element.querySelectorAll<HTMLButtonElement>('button')];
+
+        buttons().find(b => b.textContent?.trim() === 'Split…')!.click();
+        harness.detectChanges();
+        const action = () => buttons().find(b => b.textContent?.trim().startsWith('Split'))!;
+        expect(action().disabled).toBe(true);
+        const boxes = element.querySelectorAll<HTMLInputElement>('.book-file-check');
+        expect(boxes).toHaveLength(2);
+        boxes[1].click();
+        harness.detectChanges();
+        expect(action().textContent?.trim()).toBe('Split 1 file off');
+        action().click();
+        for (let i = 0; i < 4; i++) {
+            await settle();
+            harness.detectChanges();
+            await harness.fixture.whenStable();
+        }
+        expect(api.splitBook).toHaveBeenCalledWith(42, [8]);
+        expect(router.url).toBe('/books/43');
+    });
+
+    it('offers no split without the right or with one file', async () => {
+        const api = bookApi();
+        api.book.mockResolvedValue(detail({ canMerge: true, files: [detail().files[0]] }));
+        const { element } = await open('/books/42', api);
+        expect([...element.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Split…')).toBe(false);
     });
 
     it('goes to the book a merged one lives in, replacing the address', async () => {

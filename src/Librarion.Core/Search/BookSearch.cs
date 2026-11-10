@@ -46,16 +46,37 @@ internal static class BookSearch
         (await db.Tags.Where(t => t.FieldKey != null).OrderBy(t => t.FieldKey).Select(t => new { t.FieldKey, t.Id }).ToListAsync(cancellationToken))
             .ToDictionary(t => t.FieldKey!, t => t.Id, StringComparer.Ordinal);
 
+    /// <summary>
+    /// <see cref="FieldsAsync"/> and the keys of fields merged into others (<c>genre</c> → the <c>category</c> field's
+    /// id): what a query is read with. Listing fields uses <see cref="FieldsAsync"/>, which names each field once.
+    /// </summary>
+    public static async Task<Dictionary<string, int>> KeysAsync(LibrarionDbContext db, CancellationToken cancellationToken)
+    {
+        var keys = await FieldsAsync(db, cancellationToken);
+        foreach (var alias in await db.FieldKeyAliases.OrderBy(a => a.Key).Select(a => new { a.Key, a.FieldId }).ToListAsync(cancellationToken))
+            keys.TryAdd(alias.Key, alias.FieldId);
+        return keys;
+    }
+
+    /// <param name="merging">The libraries where the caller may merge books: where <c>special:duplicates</c> finds books.</param>
     public static async Task<IQueryable<Book>> ApplyAsync(LibrarionDbContext db, IQueryable<Book> books, SearchQuery query, IReadOnlyDictionary<string, int> fields,
-        IReadOnlyCollection<int> libraries, int limit, CancellationToken cancellationToken)
+        IReadOnlyCollection<int> libraries, IReadOnlySet<int>? merging, int limit, CancellationToken cancellationToken)
     {
         if (query.IsEmpty)
             return books;
         var total = await db.Libraries.Where(l => libraries.Contains(l.Id)).SumAsync(l => (long)l.BookCount, cancellationToken);
         var threshold = (long)Math.Sqrt((double)limit * Math.Max(total, 1));
-        var conditions = await ResolveAsync(db, query, fields, libraries, threshold, cancellationToken);
+        var conditions = await ResolveAsync(db, query, fields, libraries, merging, threshold, cancellationToken);
         var start = conditions.Where(c => !c.Term.Negated && c.Size < threshold).MinBy(c => c.Size);
-        return await FilterAsync(db, books, conditions, start, cancellationToken);
+        var filtered = await FilterAsync(db, books, conditions, start, cancellationToken);
+        if (start?.Start is not { } list || conditions.Count == 1 || list.Count > threshold / 4)
+            return filtered;
+        // A short start list with other terms: its books passing them read first, unordered (by key), and those become
+        // the list. With the list and a common word in one sorted query, PostgreSQL expected hundreds of matches and
+        // walked the whole sort index testing each book against the list (0.1 % untagged and "night": 324 ms at 2M).
+        // A longer list costs more read by key than the walk does (an author by word and a title word: 116 → 287 ms).
+        var passing = await filtered.Select(b => b.Id).ToListAsync(cancellationToken);
+        return books.Where(b => EF.Parameter(passing).Contains(b.Id));
     }
 
     /// <summary>
@@ -64,9 +85,9 @@ internal static class BookSearch
     /// against every term. <c>Capped</c>: more may match than were read.
     /// </summary>
     public static async Task<(List<int> Books, bool Capped)> SampleAsync(LibrarionDbContext db, IQueryable<Book> books, SearchQuery query,
-        IReadOnlyDictionary<string, int> fields, IReadOnlyCollection<int> libraries, int cap, CancellationToken cancellationToken)
+        IReadOnlyDictionary<string, int> fields, IReadOnlyCollection<int> libraries, IReadOnlySet<int>? merging, int cap, CancellationToken cancellationToken)
     {
-        var conditions = await ResolveAsync(db, query, fields, libraries, cap, cancellationToken);
+        var conditions = await ResolveAsync(db, query, fields, libraries, merging, cap, cancellationToken);
         var matching = await FilterAsync(db, books, conditions, null, cancellationToken);
         var start = conditions.Where(c => !c.Term.Negated).MinBy(c => c.Size ?? long.MaxValue);
         if (start is null)
@@ -85,11 +106,13 @@ internal static class BookSearch
     }
 
     private static async Task<List<Condition>> ResolveAsync(LibrarionDbContext db, SearchQuery query, IReadOnlyDictionary<string, int> fields,
-        IReadOnlyCollection<int> libraries, long threshold, CancellationToken cancellationToken)
+        IReadOnlyCollection<int> libraries, IReadOnlySet<int>? merging, long threshold, CancellationToken cancellationToken)
     {
         var conditions = new List<Condition>();
         foreach (var term in query.Terms)
-            conditions.Add(await ResolveAsync(db, term, fields, libraries, threshold, cancellationToken));
+            conditions.Add(term.Kind == SearchTermKind.Special
+                ? await SpecialAsync(db, term, libraries, merging, threshold, cancellationToken)
+                : await ResolveAsync(db, term, fields, libraries, threshold, cancellationToken));
         return conditions;
     }
 
@@ -129,6 +152,44 @@ internal static class BookSearch
                 return await TagsAsync(db, term, null, term.Value, libraries, threshold, cancellationToken);
             default:
                 return await WordsAsync(db, term, libraries, threshold, cancellationToken);
+        }
+    }
+
+    private static Condition Nothing(SearchTerm term) => new(term, 0, b => false, b => false, [], Listed([]), []);
+
+    /// <summary>
+    /// <c>special:untagged</c>: books without a plain tag (<see cref="Book.Untagged"/>, stage 6 chunk 15), read from the
+    /// partial index of the untagged books when they are few, else the flag tested on each book walked.
+    /// <c>special:duplicates</c>: books in a stored duplicate group (<see cref="DuplicateMember"/>), in the libraries where
+    /// the caller may merge books only. Any other value finds nothing (as an unknown tag).
+    /// </summary>
+    private static async Task<Condition> SpecialAsync(LibrarionDbContext db, SearchTerm term, IReadOnlyCollection<int> libraries, IReadOnlySet<int>? merging,
+        long threshold, CancellationToken cancellationToken)
+    {
+        var cap = (int)Math.Min(threshold + 1, int.MaxValue);
+        var searched = libraries.ToList();
+        switch (term.Value.Trim().ToLowerInvariant())
+        {
+            case "untagged":
+                var untagged = db.Books.Where(b => b.Untagged && searched.Contains(b.LibraryId)).Select(b => b.Id);
+                var few = await untagged.Take(cap).ToListAsync(cancellationToken);
+                Expression<Func<Book, bool>> flagged = b => b.Untagged;
+                return few.Count <= threshold
+                    ? new Condition(term, few.Count, b => EF.Parameter(few).Contains(b.Id), flagged, [], Listed(few), few)
+                    : new Condition(term, few.Count, flagged, flagged, [], Reading(untagged));
+            case "duplicates":
+                var allowed = searched.Where(id => merging?.Contains(id) == true).ToList();
+                if (allowed.Count == 0)
+                    return Nothing(term);
+                Expression<Func<Book, bool>> grouped = b => allowed.Contains(b.LibraryId) && db.DuplicateMembers.Any(m => m.BookId == b.Id);
+                var members = db.DuplicateMembers.Select(m => m.BookId);
+                // Members of every library of the tenant, made distinct here (a book in two groups); the query keeps those allowed.
+                var read = (await members.Take(cap).ToListAsync(cancellationToken)).Distinct().ToList();
+                return read.Count <= threshold
+                    ? new Condition(term, read.Count, b => EF.Parameter(read).Contains(b.Id) && allowed.Contains(b.LibraryId), grouped, [], Listed(read), read)
+                    : new Condition(term, read.Count, grouped, grouped, [], Reading(members));
+            default:
+                return Nothing(term);
         }
     }
 
@@ -205,6 +266,8 @@ internal static class BookSearch
             var aliased = await db.TagAliases.Where(a => a.NormalizedName == normalized).Select(a => a.TagId).OrderBy(id => id).Take(MaxTags).ToListAsync(cancellationToken);
             if (aliased.Count > 0)
                 tags.AddRange(await inField.Where(t => aliased.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken));
+            if (tags.Count == 0 && Disambiguated(value) is var (name, parent))
+                tags = await DisambiguatedAsync(db, inField, name, parent, cancellationToken);
             if (tags.Count == 0 && SearchText.Words(value).Count > 0)
             {
                 var named = SearchIndexes.For(db).Tags(db, new SearchMatch(SearchText.Words(value), SearchText.Spelled(value), term.Quoted, Prefix: false));
@@ -224,7 +287,7 @@ internal static class BookSearch
         }
 
         if (tags.Count == 0)
-            return new Condition(term, 0, b => false, b => false, [], Listed([]), []);
+            return Nothing(term);
         var set = await BookQueries.DescendantsAsync(db, tags, cancellationToken);
         var listed = set.Descendants;
         var size = await CountAsync(db, listed ?? tags, libraries, cancellationToken);
@@ -241,6 +304,35 @@ internal static class BookSearch
         // PostgreSQL's whole key of BookTags for ids in order, 1.6 s).
         var start = (await books.Take((int)Math.Min(threshold + 1, int.MaxValue)).ToListAsync(cancellationToken)).Distinct().ToList();
         return new Condition(term, size, b => EF.Parameter(start).Contains(b.Id), probe, listed ?? tags, Listed(start), start);
+    }
+
+    /// <summary><c>Freddy (FNAF)</c> as the name and the disambiguation parent's name; null without a parenthesis at the end.</summary>
+    internal static (string Name, string Parent)? Disambiguated(string value)
+    {
+        var trimmed = value.Trim();
+        var open = trimmed.LastIndexOf('(');
+        if (open <= 0 || !trimmed.EndsWith(')') || trimmed.IndexOf(')', open) != trimmed.Length - 1)
+            return null;
+        var name = trimmed[..open].Trim();
+        var parent = trimmed[(open + 1)..^1].Trim();
+        return name.Length == 0 || parent.Length == 0 ? null : (name, parent);
+    }
+
+    /// <summary>
+    /// <c>tag:"Freddy (FNAF)"</c>: the tags of <paramref name="scope"/> named <paramref name="name"/> told apart by a
+    /// disambiguation parent named <paramref name="parent"/>. The tags by name (the name index), then their parents by key.
+    /// </summary>
+    private static async Task<List<int>> DisambiguatedAsync(LibrarionDbContext db, IQueryable<Tag> scope, string name, string parent, CancellationToken cancellationToken)
+    {
+        var normalized = TagNames.Normalize(name);
+        var named = await scope.Where(t => t.NormalizedName == normalized && t.DisambiguationParentId != null)
+            .Select(t => new { t.Id, Parent = t.DisambiguationParentId!.Value }).Take(MaxTags).ToListAsync(cancellationToken);
+        if (named.Count == 0)
+            return [];
+        var parentIds = named.Select(n => n.Parent).Distinct().ToList();
+        var folded = TagNames.Normalize(parent);
+        var parents = await db.Tags.Where(t => parentIds.Contains(t.Id) && t.NormalizedName == folded).Select(t => t.Id).ToListAsync(cancellationToken);
+        return named.Where(n => parents.Contains(n.Parent)).Select(n => n.Id).ToList();
     }
 
     /// <summary>Most tag ids read from the name index for one term: past it the term is joined as a query.</summary>

@@ -3,12 +3,29 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, SuggestionList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, LibraryInfo, LibraryRootInfo, MissingBookPage, MissingRemoval, ScheduleInfo, ScheduleInput, TaskOverview, TaskRunInfo, RightInfo, KeysetPage, SecurityEventInfo, TagDetail, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput,
-    SetupState, SystemInfo, TenantInfo, TenantInput, UserInfo, UserInput,
+    BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
+    LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
+    SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
+    PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
+    BookScope, BookTagEdit, DefaultTagList, FolderDetail, FolderItem, SelectionTags, TagChangeInput, IgnoredTagInfo, ImportedContext, ImportedField,
+    ImportedStatus, ImportedSummary, ImportedTag, ImportSource, CoverStyles, CoverTemplates, DuplicatePage, BookMergeInput, BookMergeInfo, TagDuplicatePage, TagLookAlike,
 } from './models';
 
-/** A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands in. */
-export const coverUrl = (book: number, size: 's' | 'm' | 'l') => `api/books/${book}/cover/${size}`;
+/**
+ * A book's cover (`s` 80 px, `m` 240, `l` 600 wide), relative to the app's root: never missing, a generated one stands
+ * in. `version` (the book's `coverVersion`) changes with the book, so the browser's cached cover (a day) is not shown
+ * after an edit.
+ */
+export const coverUrl = (book: number, size: 's' | 'm' | 'l', version?: string | null) =>
+    `api/books/${book}/cover/${size}${version ? `?v=${version}` : ''}`;
+
+/** A book drawn in a generated style, small: Change cover style's previews. */
+/** A template and palette drawn with a sample title and author (Cover styles, `tenant.coverStyles`), 240 px wide. */
+export const coverSampleUrl = (template: number, variant: number, title: string, author: string) =>
+    `api/covers/templates/${template}/preview/${variant}?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}`;
+
+export const coverPreviewUrl = (book: number, template: number, variant: number, version?: string | null) =>
+    `api/books/${book}/cover/preview/${template}/${variant}${version ? `?v=${version}` : ''}`;
 
 /** A file of a book to download (`library.download` in its library); streamed from the library, never unpacked. */
 export const fileUrl = (book: number, file: number) => `api/books/${book}/files/${file}`;
@@ -117,10 +134,25 @@ export class Api {
     deleteGroup = (id: number) => this.delete<void>(`api/groups/${id}`);
 
     /** The books of a library the session may browse, a page at a time by key (`after`: the `next` of the page before). */
-    books = (query: { library: number; sort: BookSort; tag?: number | null; q?: string | null; after?: string | null; limit?: number }) =>
+    books = (query: {
+        library: number; sort: BookSort; tag?: number | null; q?: string | null; folder?: number | null; after?: string | null; limit?: number;
+    }) =>
         this.get<KeysetPage<BookListItem>>('api/books', {
-            library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit,
+            library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, folder: query.folder ?? undefined,
+            after: query.after ?? undefined, limit: query.limit,
         });
+    /** The folder view (agents/docs/features/folders.md, `library.folders`): a library's roots, a folder, its folders by key. */
+    libraryFolders = (library: number) => this.get<FolderItem[]>(`api/libraries/${library}/folders`);
+    folder = (id: number) => this.get<FolderDetail>(`api/folders/${id}`);
+    folders = (id: number, after?: string | null, limit?: number) =>
+        this.get<KeysetPage<FolderItem>>(`api/folders/${id}/folders`, { after: after ?? undefined, limit });
+    /** Default tags (stage 6 chunk 8c) of a library (`folder` null) or a folder. */
+    defaultTags = (library: number, folder: number | null) =>
+        this.get<DefaultTagList>(`api/libraries/${library}/default-tags`, { folder: folder ?? undefined });
+    addDefaultTag = (library: number, input: { folder: number | null; tag: BookTagEdit; existing: boolean }) =>
+        this.post<TagWork>(`api/libraries/${library}/default-tags`, input);
+    removeDefaultTag = (library: number, tagId: number, folder: number | null, books: boolean) =>
+        this.delete<TagWork>(`api/libraries/${library}/default-tags/${tagId}?${new URLSearchParams({ ...(folder === null ? {} : { folder: String(folder) }), books: String(books) })}`);
     /** What to offer for the last term of a search being typed, the most used in `library` first. */
     suggestions = (q: string, library?: number) => this.get<SuggestionList>('api/search/suggestions', { q, library });
     /** The most frequent values of each field among the books of `library` matching `q` (all of them without), with counts. */
@@ -128,6 +160,25 @@ export class Api {
     book = (id: number) => this.get<BookDetail>(`api/books/${id}`);
     /** Other books the session sees that may be this one, strongest reason first (at most 20). */
     bookDuplicates = (id: number) => this.get<BookDuplicate[]>(`api/books/${id}/duplicates`);
+    /** The Duplicates page: a library's groups, the biggest first (`library.merge`). */
+    duplicates = (library: number, level: string | null, after: string | null, limit = 20) =>
+        this.get<DuplicatePage>('api/duplicates', { library, level, after, limit });
+    duplicateContext = () => this.get<{ libraries: number[] }>('api/duplicates/context');
+    /** Merges books into `targetId`; answers the kept book. */
+    mergeBooks = (input: BookMergeInput) => this.post<BookDetail>('api/books/merge', input);
+    /** The books are not duplicates of each other. */
+    notDuplicates = (bookIds: number[]) => this.post<void>('api/duplicates/not', { bookIds });
+    /** Starts the run finding the duplicates again. */
+    buildDuplicates = () => this.post<{ runId: number }>('api/duplicates/build');
+    /** Starts a run merging groups in bulk: the chosen ones, else every group of `level` (`file`, `identifier`). */
+    mergeDuplicates = (library: number, groupIds: number[] | null, level: string | null) =>
+        this.post<{ runId: number }>('api/duplicates/merge', { library, groupIds, level });
+    /** A library's book merges, the newest first. */
+    bookMerges = (library: number, before?: number) => this.get<BookMergeInfo[]>('api/duplicates/merges', { library, before });
+    /** Undoes a book merge whole; answers how many books came back. */
+    undoBookMerge = (id: number) => this.post<{ books: number }>(`api/duplicates/merges/${id}/undo`);
+    /** Moves files of a book out into a new book; answers the new book. */
+    splitBook = (id: number, fileIds: number[]) => this.post<BookDetail>(`api/books/${id}/split`, { fileIds });
 
     fields = () => this.get<FieldInfo[]>('api/fields');
     /**
@@ -139,6 +190,64 @@ export class Api {
             library: query.library, from: query.from || undefined, after: query.after ?? undefined, limit: query.limit,
         });
     tag = (id: number, library?: number) => this.get<TagDetail>(`api/tags/${id}`, { library });
+    /** The tag a gone tag was merged into (its old address); 404 when it wasn't merged. */
+    movedTag = (id: number, library?: number) => this.get<TagRef>(`api/tags/${id}/moved`, { library });
+
+    /** The tag manager (`tenant.tags`): the fields with their value counts; a field's tags (`field` null: plain tags) by key, or found by `q`. */
+    /** The tag picker's suggestions: tags of `field` (null: plain tags) found by what is typed. */
+    pickTags = (field: string | null, q: string, limit = 10) => this.get<PickedTags>('api/tags/pick', { field, q, limit });
+    managedFields = () => this.get<ManagedFields>('api/tags/manage/fields');
+    /** Possible duplicate tags of a field (`field` null: plain tags), the most books first. */
+    tagDuplicates = (field: string | null, after: string | null, limit = 20) =>
+        this.get<TagDuplicatePage>('api/tag-duplicates', { field, after, limit });
+    /** Starts the run finding possible duplicate tags again. */
+    buildTagDuplicates = () => this.post<{ runId: number }>('api/tag-duplicates/build');
+    /** The tags are not the same as each other. */
+    notSameTags = (tagIds: number[]) => this.post<void>('api/tag-duplicates/not', { tagIds });
+    /** The tags that may be the same as this one. */
+    tagLookAlikes = (id: number) => this.get<TagLookAlike[]>(`api/tags/${id}/look-alikes`);
+    managedTags = (field: string | null, query: { q?: string | null; after?: string | null; limit?: number } = {}) =>
+        this.get<ManagedPage>('api/tags/manage', { field: field ?? undefined, q: query.q || undefined, after: query.after ?? undefined, limit: query.limit });
+    tagDefinition = (id: number) => this.get<TagDefinition>(`api/tags/${id}/definition`);
+    createTag = (input: TagInput) => this.post<TagDefinition>('api/tags', input);
+    selectionTags = (books: number[]) => this.post<SelectionTags>('api/books/tags/state', { books });
+    tagSelection = (books: number[], change: TagChangeInput) => this.post<TagWork>('api/books/tags', { books, ...change });
+    countScope = (scope: BookScope) =>
+        this.get<{ books: number; capped: boolean }>('api/books/scope', { library: scope.library, tag: scope.tag, q: scope.q, folder: scope.folder ?? undefined });
+    tagScope = (scope: BookScope, change: TagChangeInput) => this.post<TagWork>('api/books/scope/tags', { ...scope, ...change });
+    editBook = (id: number, edit: BookEdit) => this.put<BookDetail>(`api/books/${id}`, edit);
+    /** A book's cover (`library.edit`): a picture uploaded (its type is the body's), a generated style, back to its own. */
+    uploadCover = (id: number, picture: Blob) => this.put<BookDetail>(`api/books/${id}/cover`, picture);
+    coverStyle = (id: number, template: number, variant: number) => this.put<BookDetail>(`api/books/${id}/cover/style`, { template, variant });
+    useOwnCover = (id: number) => this.delete<BookDetail>(`api/books/${id}/cover`);
+    coverStyles = () => this.get<CoverStyles>('api/covers/styles');
+    coverTemplates = () => this.get<CoverTemplates>('api/covers/templates');
+    setCoverTemplate = (template: number, on: boolean) => this.put<CoverTemplates>(`api/covers/templates/${template}`, { on });
+    /** Starts the run giving a template turned off's books one of those on. */
+    reassignCoverTemplate = (template: number) => this.post<{ runId: number }>(`api/covers/templates/${template}/reassign`);
+    updateTag = (id: number, input: TagInput) => this.put<TagDefinition>(`api/tags/${id}`, input);
+    /** Done, or a run when it touches many books (`runId`). */
+    deleteTag = (id: number) => this.delete<TagWork>(`api/tags/${id}`);
+    mergeTag = (id: number, targetId: number) => this.post<TagWork>(`api/tags/${id}/merge`, { targetId });
+    mergeField = (key: string, target: string) => this.post<TagWork>(`api/fields/${encodeURIComponent(key)}/merge`, { target });
+    merges = (before?: number) => this.get<MergeLogInfo[]>('api/merges', { before });
+    undoMerge = (id: number) => this.post<TagWork>(`api/merges/${id}/undo`);
+
+    /** The Imported tags page (`library.importedTags`): a field's imported tags in a library by books, a page at a time. */
+    importedContext = () => this.get<ImportedContext>('api/imported-tags/context');
+    importedFields = () => this.get<ImportedField[]>('api/imported-tags/fields');
+    importedTags = (query: { library: number; field: string | null; source: ImportSource | null; status: ImportedStatus; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<ImportedTag>>('api/imported-tags', {
+            library: query.library, field: query.field ?? undefined, source: query.source ?? undefined, status: query.status, after: query.after ?? undefined, limit: query.limit,
+        });
+    importedSummary = (library: number, field: string | null, source: ImportSource | null) =>
+        this.get<ImportedSummary>('api/imported-tags/summary', { library, field: field ?? undefined, source: source ?? undefined });
+    reviewImported = (tagIds: number[], reviewed = true) => this.post<{ changed: number }>('api/imported-tags/review', { tagIds, reviewed });
+    /** Done, or a run when it touches many books or tags (`runId`). */
+    mapImported = (tagIds: number[], targetId: number) => this.post<TagWork>('api/imported-tags/map', { tagIds, targetId });
+    ignoreImported = (tagIds: number[]) => this.post<TagWork>('api/imported-tags/ignore', { tagIds });
+    ignoredTags = (before?: number) => this.get<IgnoredTagInfo[]>('api/imported-tags/ignored', { before });
+    undoIgnore = (id: number) => this.post<TagWork>(`api/imported-tags/ignored/${id}/undo`);
 
     /** The settings of a level; `owner`: the library (or another tenant); the user level is one's own preferences. */
     settings = (level: SettingLevel, owner?: number) =>

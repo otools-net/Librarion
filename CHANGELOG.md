@@ -2,6 +2,109 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## 0.7.0
+
+### Added
+
+- **Search: `special:untagged`** finds the books without a tag of their own (fields such as authors and series don't
+  count), to see what is left to tag; `-special:untagged` the others. **`special:duplicates`** finds books that may be
+  duplicates, for those who may merge books. **`tag:"Freddy (FNAF)"`** finds one of two tags of the same name, told
+  apart by the tag in brackets; Refine and the suggestions name such tags that way. Typing `spec` in the search box
+  offers the special terms; the search page's help lists them. A database made by an earlier build must be deleted
+  and the libraries scanned again (before 1.0 the database is not upgraded).
+- **Tags → Possible duplicates** (with the Manage tags right): tags of one field that may be the same, with most books
+  first: the same words in another order or alphabet ("King, Stephen", "Кинг Стивен" spelled alike), names that sound
+  alike ("Steven" / "Stephen" / "Стивен"), or a name and its initials ("S. King"). Keep one and merge the others into
+  it, or say they are not the same. A tag's page shows its possible duplicates to those who manage tags.
+- **Duplicates: merge many, undo, split.** Groups with the same file or the same identifier can be ticked and
+  merged together, or all of one reason at once, in the background; each keeps its book with the most details. The
+  new **Merges** tab lists a library's merges, and **Undo** puts one back whole (the kept book's title, cover,
+  description and rating too, unless changed since). **Split…** on a book's page moves some of its files out into a
+  new book.
+- **Administration → Catalog → Duplicates** (with the Merge books right): a library's possible duplicates, the biggest
+  groups first, with why (the same file, identifier, or title and author). **Compare and merge** shows the books side
+  by side (one under the other on a phone): keep one, choose which title, cover, description and rating it gets, and
+  the others' files, tags and identifiers move into it; their pages and links lead to the kept book. **Not
+  duplicates** sets books apart for good. **Find again** looks at every book again in the background. A book's
+  page offers the same for each possible duplicate.
+- Possible duplicate books are now found once for the whole catalog and kept up to date by every scan and import
+  (the first scan or import after this update finds them); a run in the background can find them again. Books marked
+  as different stay apart. The Duplicates page comes next.
+- **Same file twice: one book** (tenant setting, on by default): turned off, a scanned file with the same bytes as one
+  already in the library stays a book of its own, shown as a possible duplicate.
+- **Administration → Catalog → Cover styles** (with the new Manage cover styles right, Administrators and
+  Curators): the drawn cover styles with a sample in every set of colors, each turned on or off for new books (one
+  stays on). The books of a style turned off keep it until **Give its books another style**, a background run; a
+  style chosen on a book's page stays. A book's **Cover** offers only the styles turned on.
+- **Cover** on a book's page (for those who may edit books): upload a picture (JPEG, PNG or WebP, up to 5 MB), pick
+  a drawn cover from previews of the book in every style and color set, or go back to the book's own cover. The
+  choice stays through re-imports. Uploaded covers are kept in a new data folder (`Librarion:Data:Directory`,
+  default `data`): back it up with the database.
+- **Administration → Catalog → Imported tags** (with the Imported tags right): the tags and genres that books came
+  with, in one library by how many books have them, with the names and sources they came from and how much the first
+  500 cover. Tick some to **Keep** them as they are, **Map** them onto the right tag (a merge, undone under Tags →
+  Merges) or **Ignore** them (imports skip their names and the links imports gave them go; undone under Ignored).
+  Imports remember from now on every tag and genre name they meet, except people and series.
+- **Folders** in the navigation, for those with the new **Browse by folder** right (Administrators and Curators):
+  the library's folders and ZIP files with how many files each holds, then the books of each, which can be selected
+  and tagged as anywhere else.
+- **Default tags** for a library and its folders (with the Default tags right): books that come in get them, a book
+  moved into a folder gets that folder's, and adding one can also tag the books already there. Shown under each
+  folder's name; a folder with its own has a badge in the list.
+- Select books (the box on a cover, Ctrl- or Shift-click, a long press on a phone) and give them tags or take tags
+  away at once; **Tag all** does it for every book of the list on screen (the library, an author, a tag, a search),
+  saying first how many books that is. A big change runs in the background.
+- Edit a book on its page: title, authors in order, series and number, other fields, tags, description and rating,
+  for those allowed to tag or edit books there (such as Curators). Edits stay when the book is read or imported
+  again, and a tag taken off stays off.
+- Choosing a tag (a parent, the tag a merge goes into) finds it by its other names and its shorthand too, the most
+  used first, with its color, books and the name it was found by; the arrow keys and Enter choose.
+- Readable addresses for authors, series and every tag: `/author/1234/Stephen King`, `/tag/5/To read`. The number
+  finds the page and the name is only for reading: an address without it, with an old name or the old `/tags/1234`
+  shows the current one, and a merged tag's address opens the tag it went into.
+- A third built-in group, **Curators**, and the rights for looking after the catalog, under a new Catalog heading in
+  the group editor: **Tag books**, **Edit books**, **Merge books**, **Imported tags**, **Default tags** and **Manage
+  tags**. Administrators and Curators have them; Curators also have what Users have, and nothing that manages
+  accounts, groups, libraries or settings. The screens using them come in the next changes. A tenant created before
+  this version gets no Curators group (before 1.0 the database is not upgraded: delete it to start again).
+- Tags and fields can be created, edited (names, other names, parents, colour, hidden), deleted and merged through the
+  API (`api/tags`, `api/fields/{key}/merge`), and every merge undone (`api/merges`): a merged author's books move to
+  the other, its name becomes another name of it, and books imported later under the old name land there too; a
+  merged field's key keeps working in searches (`genre:` after merging it into `category:`). Changes of more than
+  10,000 links run in the background, shown in the progress panel to those who manage tags.
+- A tag's number of books now includes the books of the tags under it, each once: "Fiction" counts its "Fantasy" and
+  "Horror" books, a field (Authors) the books with any author. Shown in the lists of values, on a tag's page, in
+  search suggestions, in Refine and in the tag manager, which also says how many are tagged with it itself.
+- Administration › Catalog › Tags: every plain tag or every value of a field (authors, series…), with how many books
+  have it and how many tags are under it, a page at a time or found by name; an editor for its names, other names,
+  parents, color, category and hidden; Merge and Delete, each saying first how many books change; and Merges, where a
+  merge is undone. See [Tags](docs/administration/tags.md).
+
+### Changed
+
+- Importing a Calibre library is faster: the books' files are checked several at a time (2M books in 25 minutes
+  instead of 31 on the test machine).
+- Imports that meet many new authors, series or tags are faster on PostgreSQL: the new tags are written in bulk
+  (a 2M-book Calibre library in 24.5 minutes instead of 28.8 on the test machine).
+- The catalog now records the folder (or ZIP) each book file is in, for browsing by folder and folder default tags
+  coming next. A database made by an earlier build must be deleted and the libraries scanned again (before 1.0 the
+  database is not upgraded).
+
+### Fixed
+
+- Administration → Catalog → Tags now shows the list again once a merge, undo or delete that ran in the background
+  ends (it showed the list from before the change until reloaded).
+- **Tag all** on a big search no longer fails in a large library (counting every match took longer than the server
+  waits): a list of more than 10,000 books is shown as "at least 10,000" and tagged in the background.
+- The tag manager opens faster on SQLite with many tags (its count of plain tags read every field's values: 190 ms at
+  2M books, now 4).
+- The Duplicates page now shows the list again once **Find again** ends; possible duplicates could be listed twice
+  when scans of several libraries ended at the same time.
+- Possible duplicates no longer lists every book made by the same person as the same book: an FB2 file's maker (in
+  its document info) can have an id of their own, which was read as the book's FB2 id. Read the library again to
+  drop the wrong ids from books already there. A shared FB2 id now also needs the same title or the same first
+  author, since hand-made files often copy it from one another.
+
 ## 0.6.1
 
 ### Fixed

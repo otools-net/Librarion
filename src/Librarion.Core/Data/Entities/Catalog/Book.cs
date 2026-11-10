@@ -51,6 +51,12 @@ public sealed class Book
     public short? GeneratedTemplate { get; set; }
     public short? GeneratedVariant { get; set; }
 
+    /// <summary>
+    /// An uploaded cover (<see cref="CoverSource.Uploaded"/>, stage 6 chunk 10): its path in the data folder's covers
+    /// (<see cref="Covers.CoverUploads"/>); its file name is its hash.
+    /// </summary>
+    public string? CoverFile { get; set; }
+
     /// <summary>Whether the cover in the book could be read (extracted covers only).</summary>
     public CoverState CoverState { get; set; }
 
@@ -75,6 +81,15 @@ public sealed class Book
 
     /// <summary>Blocking key for "same work" duplicates: a hash of the normalized title (else file stem) and first author.</summary>
     public long? WorkKey { get; set; }
+
+    /// <summary>The columns a user edited (stage 6, D-6.3): a re-read or re-import keeps them.</summary>
+    public BookEdits Edited { get; set; }
+
+    /// <summary>
+    /// No plain tag (one outside the fields), what <c>special:untagged</c> finds (stage 6 chunk 15): set when the book is
+    /// written and wherever its plain links change (<see cref="Tagging.TagLinks.UntaggedAsync"/>). A new book has no tags.
+    /// </summary>
+    public bool Untagged { get; set; } = true;
 
     public List<BookFile> Files { get; set; } = [];
     public List<BookTag> Tags { get; set; } = [];
@@ -127,6 +142,10 @@ public sealed class BookFile
     public int? ArchiveId { get; set; }
     public Archive? Archive { get; set; }
 
+    /// <summary>The folder the file is in (a directory, a ZIP, a directory inside one): set by <c>Folders.AssignAsync</c>.</summary>
+    public int FolderId { get; set; }
+    public Folder? Folder { get; set; }
+
     /// <summary>Path relative to <see cref="Root"/> (<c>/</c> separators), or the entry's name inside <see cref="Archive"/>.</summary>
     public string Path { get; set; } = string.Empty;
 
@@ -176,6 +195,63 @@ public sealed class Archive
 
     /// <summary>Set when a scan didn't find the archive: its entries are missing too, kept until they come back or are removed.</summary>
     public DateTime? MissingSince { get; set; }
+}
+
+/// <summary>
+/// A folder books are found in (stage 6, chunk 8): a root itself (<see cref="Path"/> empty, no parent), a directory
+/// under it, a ZIP container (<see cref="ArchiveId"/>) or a directory inside one. Every book file has one
+/// (<see cref="BookFile.FolderId"/>): a library's books by folder, and default tags given by folder, are indexed joins.
+/// Made when a file first needs it, removed when it holds neither files nor folders (<c>Folders.PruneAsync</c>).
+/// </summary>
+public sealed class Folder
+{
+    public const int MaxNameLength = 255;
+
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public int LibraryId { get; set; }
+    public int RootId { get; set; }
+    public LibraryRoot? Root { get; set; }
+
+    /// <summary>Null for a root's own folder.</summary>
+    public int? ParentId { get; set; }
+    public Folder? Parent { get; set; }
+
+    /// <summary>The last part of <see cref="Path"/> (cut to <see cref="MaxNameLength"/>: it sorts the lists).</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Relative to <see cref="Root"/>, <c>/</c> separators; inside a ZIP the archive's path, then the entry's directories.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary><see cref="Catalog.PathKeys"/> of <see cref="Path"/>.</summary>
+    public long PathKey { get; set; }
+
+    /// <summary>Set on a ZIP container's own folder (not on the directories inside it).</summary>
+    public int? ArchiveId { get; set; }
+
+    /// <summary>Present (not missing) files directly in it; kept by deltas (<c>Folders.FlushAsync</c>), never counted over the catalog.</summary>
+    public int FileCount { get; set; }
+
+    /// <summary>Present files in it and every folder under it.</summary>
+    public int TotalFileCount { get; set; }
+
+    /// <summary>Folders directly under it.</summary>
+    public int FolderCount { get; set; }
+}
+
+/// <summary>
+/// A plain tag a library (<see cref="FolderId"/> null) or a folder and every folder under it gives the books that come
+/// in (stage 6 chunk 8c; SFE's default tags, agents/docs/features/default-tags.md), as <see cref="TagSource.Rule"/>
+/// links. A folder holding one is never pruned while it does.
+/// </summary>
+public sealed class DefaultTag
+{
+    public int Id { get; set; }
+    public int TenantId { get; set; }
+    public int LibraryId { get; set; }
+    public int? FolderId { get; set; }
+    public int TagId { get; set; }
+    public DateTime Created { get; set; }
 }
 
 public enum ArchiveScanState
@@ -238,4 +314,17 @@ public sealed class LibraryRoot
     public string Path { get; set; } = string.Empty;
 
     public DateTime Created { get; set; }
+}
+
+/// <summary>A book's columns edited by a user, which imports leave as they are.</summary>
+[Flags]
+public enum BookEdits : byte
+{
+    None = 0,
+    /// <summary>The title, with its sort key and search text.</summary>
+    Title = 1,
+    Description = 2,
+    Rating = 4,
+    /// <summary>The cover's source chosen by a user (an upload, or a generated style over the book's own): imports leave it.</summary>
+    Cover = 8,
 }

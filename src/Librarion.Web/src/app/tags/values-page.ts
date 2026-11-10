@@ -13,6 +13,7 @@ import { ListWindow } from '../browse/list-window';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from './field-catalog';
+import { tagLink } from './tag-link';
 
 /** Values asked for at a time. */
 const PAGE = 100;
@@ -54,7 +55,7 @@ const JUMP_DELAY = 300;
                 @for (entry of shown(); track entry.value.id) {
                     @let value = entry.value;
                     <li class="value">
-                        <a [routerLink]="['/tags', value.id]" [title]="name(value)">
+                        <a [routerLink]="link(value)" [title]="name(value)">
                             <span class="value-name">{{ name(value) }}</span>
                             @if (value.bookCount != null) {
                                 <span class="value-count" [attr.aria-label]="'browse.count' | t: { count: i18n.number(value.bookCount) }">{{ i18n.number(value.bookCount) }}</span>
@@ -153,6 +154,10 @@ export class ValuesPage {
             if (this.items().length)
                 this.state.keep({ key: this.key(), items: this.items(), next: this.next(), offset: this.window.offset() });
         });
+    }
+
+    protected link(value: FieldValue): (string | number)[] {
+        return tagLink({ id: value.id, name: value.name, field: this.field() });
     }
 
     protected name(value: FieldValue): string {

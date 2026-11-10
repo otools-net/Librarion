@@ -6,6 +6,7 @@ using Librarion.Benchmarks.Data;
 using Librarion.Core.Access;
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
+using Librarion.Core.Tagging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,6 +29,9 @@ public static class RunCommand
     private const double DetailBudget = 50;
     private const double SearchBudget = 300;
 
+    /// <summary>A figure asked once when a page or a choice opens and kept after (the Imported tags page's coverage line).</summary>
+    private const double OnDemandBudget = 500;
+
     /// <param name="only">Only the scenarios whose name contains it (empty: all).</param>
     public static async Task<int> RunAsync(BenchTarget target, string workFolder, int iterations, Action<string> report, CancellationToken cancellationToken, string only = "")
     {
@@ -36,6 +40,11 @@ public static class RunCommand
         var tenantDb = services.GetRequiredService<TenantDb>();
         var books = services.GetRequiredService<BookQueries>();
         var tags = services.GetRequiredService<TagQueries>();
+        var folders = services.GetRequiredService<FolderQueries>();
+        var imported = services.GetRequiredService<ImportedTags>();
+        var managed = services.GetRequiredService<TagLists>();
+        var picker = services.GetRequiredService<TagPicker>();
+        var tagger = services.GetRequiredService<BookTagger>();
         var suggestions = services.GetRequiredService<Librarion.Core.Search.SearchSuggestions>();
         var facets = services.GetRequiredService<Librarion.Core.Search.SearchFacets>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
@@ -50,8 +59,15 @@ public static class RunCommand
         int middleAddedId;
         string prolificName, middleName;
         List<int> sampleIds;
+        int zipFolder, looseParent, looseFolder, filterTag;
+        string importedCursor;
         await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
         {
+            // The folder view (stage 6 chunk 8b): a ZIP of 100k entries, the folder of the thousand folders of loose files, one of those.
+            zipFolder = await db.Folders.Where(f => f.ArchiveId != null).OrderByDescending(f => f.FileCount).Select(f => f.Id).FirstAsync(cancellationToken);
+            looseParent = await db.Folders.Where(f => f.Path == "books").Select(f => f.Id).SingleAsync(cancellationToken);
+            looseFolder = await db.Folders.Where(f => f.Path == "books/500").Select(f => f.Id).SingleAsync(cancellationToken);
+            filterTag = await db.Tags.Where(t => t.Name == "filter 1%").Select(t => t.Id).SingleAsync(cancellationToken);
             var library = await db.Libraries.SingleAsync(cancellationToken);
             libraryId = library.Id;
             bookCount = library.BookCount;
@@ -75,11 +91,22 @@ public static class RunCommand
             var middleValue = await db.Tags.Where(t => t.FieldId == authorField).OrderBy(t => t.SortName).ThenBy(t => t.Id).Skip(authorsTotal / 2)
                 .Select(t => new { t.SortName, t.Id }).FirstAsync(cancellationToken);
             middleValueCursor = new KeysetCursor(middleValue.SortName, null, middleValue.Id).Encode();
+            // The Imported tags page's deep page: the plain tag 5,000th by books.
+            var plainCount = await db.TagCounts.Where(c => c.LibraryId == libraryId && db.Tags.Any(t => t.Id == c.TagId && t.FieldId == null && t.FieldKey == null))
+                .OrderByDescending(c => c.BookCount).ThenByDescending(c => c.TagId).Skip(5000).Select(c => new { c.BookCount, c.TagId }).FirstAsync(cancellationToken);
+            importedCursor = new KeysetCursor(null, plainCount.BookCount, plainCount.TagId).Encode();
             var random = new Random(42);
             sampleIds = Enumerable.Range(0, iterations + 3).Select(_ => 1 + random.Next(bookCount)).ToList();
         }
 
         var open = new BookVisibility(new Dictionary<int, IReadOnlyList<FilterProfile>> { [libraryId] = [new FilterProfile([], [])] });
+        // Who may merge books: special:duplicates finds books for them only (stage 6 chunk 15).
+        var curator = open with { Merging = new HashSet<int> { libraryId } };
+        // The Duplicates page (stage 6 chunk 12) on the groups the `duplicates` command built: a page deep in the list, found once.
+        var duplicates = services.GetRequiredService<Librarion.Core.Merging.DuplicateQueries>();
+        string? duplicatesCursor = null;
+        for (var i = 0; i < 20; i++)
+            duplicatesCursor = (await duplicates.ListAsync(tenant.Id, open, libraryId, null, duplicatesCursor, 100, cancellationToken)).Next ?? duplicatesCursor;
         var filtered = new List<(string Name, BookVisibility Visibility)>();
         foreach (var name in new[] { "filter-0", "filter-1", "filter-2" })
         {
@@ -117,6 +144,43 @@ public static class RunCommand
             ("a tag's page: the most prolific author", DetailBudget, async _ => await tags.GetAsync(tenant.Id, prolificAuthor, libraryId, open, cancellationToken) is null ? 0 : 1),
             ("a tag's page: category Fiction", DetailBudget, async _ => await tags.GetAsync(tenant.Id, fiction, libraryId, open, cancellationToken) is null ? 0 : 1),
             ("possible duplicates", ListBudget, async i => (await books.DuplicatesAsync(tenant.Id, open, sampleIds[i], cancellationToken))?.Count ?? 0),
+            // The folder view (stage 6 chunk 8b): a folder's folders by key, a folder with its path, a folder's books.
+            ("folders: a folder of 1,000 folders, first page", ListBudget, async _ => (await folders.ChildrenAsync(tenant.Id, looseParent, null, 100, cancellationToken)).Items.Count),
+            ("folders: a folder with the folders above it", DetailBudget, async _ => await folders.GetAsync(tenant.Id, looseFolder, cancellationToken) is null ? 0 : 1),
+            ("books of a ZIP of 100k entries, by title", ListBudget, _ => List(open, new BookPageRequest(libraryId, FolderId: zipFolder))),
+            ("books of a ZIP of 100k entries, by title, middle page", ListBudget, _ => List(open, new BookPageRequest(libraryId, After: titleCursor, FolderId: zipFolder))),
+            ("books of a folder of loose files, by author", ListBudget, _ => List(open, new BookPageRequest(libraryId, BookSort.Author, FolderId: looseFolder))),
+            ("duplicates page: first page", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, null, null, 20, cancellationToken)).Items.Count),
+            ("duplicates page: deep page", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, null, duplicatesCursor, 20, cancellationToken)).Items.Count),
+            ("duplicates page: same identifier", ListBudget, async _ => (await duplicates.ListAsync(tenant.Id, open, libraryId, Librarion.Core.Catalog.DuplicateReason.Identifier, null, 20, cancellationToken)).Items.Count),
+            // Administration › Catalog › Tags (stage 6 chunk 4) and the tag picker (chunk 5): a field's values by name, never
+            // loaded whole; found by prefix and by word; the picker's prefix on names, other names and shorthands.
+            ("tag manager: the fields", ListBudget, async _ => (await managed.FieldsAsync(tenant.Id, cancellationToken)).Fields.Count),
+            ("tag manager: authors by name, first page", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", null, null, 100, cancellationToken))!.Items.Count),
+            ("tag manager: authors by name, middle page", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", null, middleValueCursor, 100, cancellationToken))!.Items.Count),
+            ("tag manager: plain tags by name, first page", ListBudget, async _ => (await managed.ListAsync(tenant.Id, null, null, null, 100, cancellationToken))!.Items.Count),
+            ("tag manager: authors found by a last name", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", prolificName.Split(' ')[^1], null, 100, cancellationToken))!.Items.Count),
+            ("tag manager: authors found by two letters", ListBudget, async _ => (await managed.ListAsync(tenant.Id, "author", middleName[..2], null, 100, cancellationToken))!.Items.Count),
+            ("picker: authors, nothing typed", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "author", null, 10, open, cancellationToken))!.Items.Count),
+            ("picker: authors, two letters", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "author", middleName[..2], 10, open, cancellationToken))!.Items.Count),
+            ("picker: authors, a full name", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "author", middleName, 10, open, cancellationToken))!.Items.Count),
+            ("picker: plain tags, two letters", ListBudget, async _ => (await picker.FindAsync(tenant.Id, null, "ma", 10, open, cancellationToken))!.Items.Count),
+            ("picker: categories, nothing typed", ListBudget, async _ => (await picker.FindAsync(tenant.Id, "category", null, 10, open, cancellationToken))!.Items.Count),
+            // Tag all (stage 6 chunk 7): the dialog counts the list's books when it opens (asked once: OnDemandBudget).
+            ("tag all: the books of a 1 % tag counted", OnDemandBudget, async _ => (int)(await tagger.CountAsync(tenant.Id, open, new BookScope(libraryId, Tag: filterTag), cancellationToken)).Books),
+            ("tag all: a word in many titles counted", OnDemandBudget, async _ => (int)(await tagger.CountAsync(tenant.Id, open, new BookScope(libraryId, Query: "night"), cancellationToken)).Books),
+            ("tag all: the library counted", OnDemandBudget, async _ => (int)(await tagger.CountAsync(tenant.Id, open, new BookScope(libraryId), cancellationToken)).Books),
+            // The Imported tags page (stage 6 chunk 9): 50k plain tags walked by books from the most (a deep page, and a status
+            // none has: the walk's bound per request), a small field read whole, the coverage line.
+            ("imported tags: plain tags by books, first page", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: plain tags by books, deep page", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Review, importedCursor, 50, cancellationToken))!.Items.Count),
+            ("imported tags: plain tags none reviewed (bounded walk)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, null, null, ImportedStatus.Reviewed, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: languages (a small field)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, "language", null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
+            ("imported tags: categories (a small field)", ListBudget, async _ => (await imported.ListAsync(tenant.Id, libraryId, "category", null, ImportedStatus.Review, null, 50, cancellationToken))!.Items.Count),
+            // The coverage line reads the field's 50k tags: kept between views, its first view on demand (OnDemandBudget).
+            ("imported tags: the coverage of plain tags, computed", OnDemandBudget, async _ => (await imported.SummaryAsync(tenant.Id, libraryId, null, null, cancellationToken, fresh: true))!.Tags),
+            ("imported tags: the coverage of plain tags, kept", ListBudget, async _ => (await imported.SummaryAsync(tenant.Id, libraryId, null, null, cancellationToken))!.Tags),
+            ("imported tags: the fields", ListBudget, async _ => (await imported.FieldsAsync(tenant.Id, cancellationToken)).Count),
             // Search (agents/docs/features/search.md): each title word is on about 2 % of the books (the generator's word list),
             // a file name (the id) on one; author names reach books through the tag-name index.
             ("search: a word in many titles", SearchBudget, _ => List(open, new BookPageRequest(Query: "night"))),
@@ -129,6 +193,12 @@ public static class RunCommand
             ("search: an author by word and a title word", SearchBudget, _ => List(open, new BookPageRequest(Query: $"author:{middleName.Split(' ')[^1]} night"))),
             ("search: category Fiction, no PDF, by author", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Author, Query: "category:Fiction -format:pdf"))),
             ("search: books outside any series, newest", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Added, Query: "-series:"))),
+            // Stage 6 chunk 15: the generated books without a plain tag are 30 %; the few case is measured after these.
+            ("search: untagged books (30 %)", SearchBudget, _ => List(open, new BookPageRequest(Query: "special:untagged"))),
+            ("search: untagged books (30 %), newest", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Added, Query: "special:untagged"))),
+            ("search: books with a tag of their own", SearchBudget, _ => List(open, new BookPageRequest(Query: "-special:untagged"))),
+            ("search: possible duplicates (who may merge)", SearchBudget, _ => List(curator, new BookPageRequest(Query: "special:duplicates"))),
+            ("search: possible duplicates and a common word", SearchBudget, _ => List(curator, new BookPageRequest(Query: "special:duplicates night"))),
             ("suggestions: two letters", SearchBudget, async _ => (await suggestions.SuggestAsync(tenant.Id, "ri", libraryId, open, cancellationToken)).Items.Count),
             ("suggestions: an author's first letters", SearchBudget, async _ => (await suggestions.SuggestAsync(tenant.Id, $"author:{middleName[..3]}", libraryId, open, cancellationToken)).Items.Count),
             // Facets (D-5.8): the stored counts for the library seen whole, else counted over at most 10,000 matches.
@@ -151,39 +221,81 @@ public static class RunCommand
         scenarios.RemoveAll(s => !s.Name.Contains(only, StringComparison.OrdinalIgnoreCase));
         using var capture = new CommandCapture();
         var results = new List<ScenarioResult>();
-        foreach (var (name, budget, run) in scenarios)
+        async Task MeasureAsync(IEnumerable<(string Name, double Budget, Func<int, Task<int>> Run)> list)
         {
-            for (var i = 0; i < 3; i++)
-                await run(i);
-            capture.Take();
-            capture.Recording = true;
-            var rows = await run(0);
-            capture.Recording = false;
-            var commands = capture.Take();
-
-            var times = new List<double>();
-            for (var i = 0; i < iterations; i++)
+            foreach (var (name, budget, run) in list)
             {
-                var watch = Stopwatch.StartNew();
-                await run(i + 3 < sampleIds.Count ? i + 3 : i);
-                times.Add(watch.Elapsed.TotalMilliseconds);
+                for (var i = 0; i < 3; i++)
+                    await run(i);
+                capture.Take();
+                capture.Recording = true;
+                var rows = await run(0);
+                capture.Recording = false;
+                var commands = capture.Take();
+
+                var times = new List<double>();
+                for (var i = 0; i < iterations; i++)
+                {
+                    var watch = Stopwatch.StartNew();
+                    await run(i + 3 < sampleIds.Count ? i + 3 : i);
+                    times.Add(watch.Elapsed.TotalMilliseconds);
+                }
+
+                times.Sort();
+                var scans = new List<string>();
+                var plans = new List<string>();
+                foreach (var command in commands)
+                {
+                    var (plan, found) = await PlanCheck.ExplainAsync(target.Provider, target.ConnectionString, command, cancellationToken);
+                    plans.Add(command.Sql + "\n--\n" + plan);
+                    scans.AddRange(found);
+                }
+
+                var result = new ScenarioResult(name, budget, times[times.Count / 2], times[(int)Math.Ceiling(times.Count * 0.95) - 1], times[^1], rows, scans, plans);
+                results.Add(result);
+                report($"{(result.WithinBudget ? "ok  " : "SLOW")} {(scans.Count > 0 ? "SCAN" : "    ")} p50 {result.P50Ms,7:0.0} ms  p95 {result.P95Ms,7:0.0} ms  (budget {budget:0}) {rows,4} rows  {name}");
+                foreach (var scan in scans.Distinct())
+                    report($"        full scan: {scan}");
+            }
+        }
+
+        await MeasureAsync(scenarios);
+
+        // special:untagged once curation has left few (stage 6 chunk 15): 0.1 % of the books stay flagged for these
+        // scenarios (the index of the untagged books read), then the flags are put back from the links.
+        var few = new List<(string Name, double Budget, Func<int, Task<int>> Run)>
+        {
+            ("search: untagged books, few (0.1 %)", SearchBudget, _ => List(open, new BookPageRequest(Query: "special:untagged"))),
+            ("search: untagged books, few (0.1 %), newest", SearchBudget, _ => List(open, new BookPageRequest(Sort: BookSort.Added, Query: "special:untagged"))),
+            ("search: untagged books, few (0.1 %), and a common word", SearchBudget, _ => List(open, new BookPageRequest(Query: "special:untagged night"))),
+        };
+        few.RemoveAll(s => !s.Name.Contains(only, StringComparison.OrdinalIgnoreCase));
+        if (few.Count > 0)
+        {
+            await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
+            {
+                db.Database.SetCommandTimeout(TimeSpan.FromMinutes(30));
+                await db.Books.Where(b => b.Untagged && b.Id % 300 != 0).ExecuteUpdateAsync(u => u.SetProperty(b => b.Untagged, false), cancellationToken);
             }
 
-            times.Sort();
-            var scans = new List<string>();
-            var plans = new List<string>();
-            foreach (var command in commands)
+            try
             {
-                var (plan, found) = await PlanCheck.ExplainAsync(target.Provider, target.ConnectionString, command, cancellationToken);
-                plans.Add(command.Sql + "\n--\n" + plan);
-                scans.AddRange(found);
+                await MeasureAsync(few);
             }
+            finally
+            {
+                await using var db = await tenantDb.ForTenantAsync(tenant.Id, CancellationToken.None);
+                db.Database.SetCommandTimeout(TimeSpan.FromMinutes(30));
+                await db.Books.Where(b => !b.Untagged && b.Id % 300 != 0 && !db.BookTags.Any(l => l.BookId == b.Id && l.Tag!.FieldId == null && l.Tag.FieldKey == null))
+                    .ExecuteUpdateAsync(u => u.SetProperty(b => b.Untagged, true), CancellationToken.None);
+            }
+        }
 
-            var result = new ScenarioResult(name, budget, times[times.Count / 2], times[(int)Math.Ceiling(times.Count * 0.95) - 1], times[^1], rows, scans, plans);
-            results.Add(result);
-            report($"{(result.WithinBudget ? "ok  " : "SLOW")} {(scans.Count > 0 ? "SCAN" : "    ")} p50 {result.P50Ms,7:0.0} ms  p95 {result.P95Ms,7:0.0} ms  (budget {budget:0}) {rows,4} rows  {name}");
-            foreach (var scan in scans.Distinct())
-                report($"        full scan: {scan}");
+        // The exit criterion of stage 6: how much of the imported links the first 500 tags hold (plain tags; categories).
+        foreach (var field in new string?[] { null, "category" })
+        {
+            var summary = (await imported.SummaryAsync(tenant.Id, libraryId, field, null, cancellationToken))!;
+            report($"imported {field ?? "plain tags"}: {summary.Tags:N0} tags, {summary.Links:N0} links, the first {summary.TopCount} hold {100.0 * summary.Top / Math.Max(1, summary.Links):0.0} %");
         }
 
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);

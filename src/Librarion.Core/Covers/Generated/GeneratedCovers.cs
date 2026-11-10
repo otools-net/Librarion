@@ -26,11 +26,23 @@ public static class GeneratedCovers
         new(new SKColor(0x3D, 0x2C, 0x5C), new SKColor(0xE4, 0xB8, 0x5A), new SKColor(0xF3, 0xEE, 0xF8), new SKColor(0xC4, 0xB8, 0xD8)),
     ];
 
-    /// <summary>The template and palette of a book, from a 64-bit value of its identity (its <c>WorkKey</c>).</summary>
-    public static (short Template, short Variant) Assign(long identity)
+    /// <summary>
+    /// The template and palette of a book, from a 64-bit value of its identity (its <c>WorkKey</c>), among the templates
+    /// not in <paramref name="off"/> (a tenant's <c>CoverTemplatesOff</c>; all of them when none would be left). With
+    /// every template on, the same as it always was: a book keeps its look.
+    /// </summary>
+    public static (short Template, short Variant) Assign(long identity, int off = 0)
     {
+        var on = On(off);
         var mixed = Mix((ulong)identity);
-        return ((short)(mixed % (ulong)Templates.Count), (short)(mixed / (ulong)Templates.Count % (ulong)Palettes.Count));
+        return ((short)on[(int)(mixed % (ulong)on.Count)], (short)(mixed / (ulong)on.Count % (ulong)Palettes.Count));
+    }
+
+    /// <summary>The templates' indexes not in <paramref name="off"/> (bit <c>i</c> = template <c>i</c>); every one when that leaves none.</summary>
+    public static IReadOnlyList<int> On(int off)
+    {
+        var on = Enumerable.Range(0, Templates.Count).Where(i => (off & (1 << i)) == 0).ToList();
+        return on.Count > 0 ? on : Enumerable.Range(0, Templates.Count).ToList();
     }
 
     /// <summary>The cover drawn at <paramref name="size"/> (2:3), as WebP. An unknown index falls back to the first.</summary>

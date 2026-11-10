@@ -7,6 +7,7 @@ import { FieldInfo, FieldValue, TagDetail } from '../core/models';
 import { LibraryContext } from '../core/library-context';
 import { SessionService } from '../core/session.service';
 import { FieldsPage } from './fields-page';
+import { fieldValueMatcher } from './tag-link';
 import { TagPage } from './tag-page';
 import { ValuesPage } from './values-page';
 
@@ -23,20 +24,26 @@ const tag = (overrides: Partial<TagDetail> = {}): TagDetail => ({
 });
 
 describe('Browsing by value', () => {
-    async function open(url: string, api: ApiMock) {
+    async function open(url: string, api: ApiMock, rights = ['library.browse']) {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({ providers: testProviders(api) });
         localStorage.clear();
         api.libraries.mockResolvedValue([{ id: 5, tenantId: 1, name: 'Discworld', created: '', bookCount: 120 }]);
         api.fields.mockResolvedValue(FIELDS);
         api.books.mockResolvedValue({ items: [], next: null });
-        TestBed.inject(SessionService).set(sessionInfo(['library.browse']));
+        TestBed.inject(SessionService).set(sessionInfo(rights));
         const router = TestBed.inject(Router);
         router.resetConfig([
             { path: 'fields', component: FieldsPage },
             { path: 'fields/:key', component: ValuesPage },
             { path: 'tags', component: ValuesPage },
+            // As app.routes.ts has them.
+            { path: 'tag/:id', component: TagPage },
+            { path: 'tag/:id/:name', component: TagPage },
             { path: 'tags/:id', component: TagPage },
+            { path: 'fields/:key/:id', component: TagPage },
+            { path: 'fields/:key/:id/:name', component: TagPage },
+            { matcher: fieldValueMatcher, component: TagPage },
         ]);
         const harness = await RouterTestingHarness.create();
         await harness.navigateByUrl(url);
@@ -62,7 +69,7 @@ describe('Browsing by value', () => {
         const rows = [...element.querySelectorAll('.value a')];
         expect(rows.map(r => r.querySelector('.value-name')?.textContent)).toEqual(['Terry Pratchett', 'Neil Gaiman']);
         expect(rows[1].querySelector('.value-count')?.textContent).toBe('1,234');
-        expect(rows[0].getAttribute('href')).toBe('/tags/21');
+        expect(rows[0].getAttribute('href')).toBe('/author/21/Terry%20Pratchett');
     });
 
     it('goes on through short pages until the server says the list ends', async () => {
@@ -134,23 +141,39 @@ describe('Browsing by value', () => {
         api.tag.mockResolvedValue(tag({
             parents: [{ id: 2, name: 'Fantasy', field: 'category' }], children: [{ id: 9, name: 'Discworld', field: null }], moreChildren: true,
         }));
-        const { element } = await open('/tags/21', api);
+        const { element } = await open('/author/21/Terry Pratchett', api);
 
         expect(api.tag).toHaveBeenLastCalledWith(21, 5);
         expect(element.querySelector('.tag-kind')?.textContent?.trim()).toBe('Author');
         expect(element.querySelector('.tag-kind')?.getAttribute('href')).toBe('/fields/author');
         expect(element.querySelector('h1')?.textContent).toBe('Terry Pratchett');
         expect(element.querySelector('.browse-count')?.textContent).toBe('41 books in Discworld');
-        expect([...element.querySelectorAll('.tag-related .chip')].map(c => c.textContent)).toEqual(['Fantasy', 'Discworld']);
+        expect([...element.querySelectorAll('.tag-related .chip')].map(c => [c.textContent, c.getAttribute('href')]))
+            .toEqual([['Fantasy', '/category/2/Fantasy'], ['Discworld', '/tag/9/Discworld']]);
         expect(element.querySelector('.tag-related-more')).not.toBeNull();
         expect(api.books).toHaveBeenLastCalledWith(expect.objectContaining({ library: 5, tag: 21, sort: 'title' }));
         expect(element.querySelector('.empty')?.textContent).toContain('No books with it in this library.');
     });
 
+    it('shows the tags that may be the same to those who manage tags, and asks nothing for the others', async () => {
+        const api = mockApi();
+        api.tag.mockResolvedValue(tag());
+        api.tagLookAlikes.mockResolvedValue([{ level: 'sound', tag: { id: 23, name: 'Терри Пратчетт', books: 4 } }]);
+        let { element } = await open('/author/21/Terry Pratchett', api);
+        expect(api.tagLookAlikes).not.toHaveBeenCalled();
+        expect(element.textContent).not.toContain('May be the same as');
+
+        ({ element } = await open('/author/21/Terry Pratchett', api, ['library.browse', 'tenant.tags']));
+        expect(api.tagLookAlikes).toHaveBeenCalledWith(21);
+        const chip = [...element.querySelectorAll<HTMLAnchorElement>('.tag-related .chip')].find(c => c.textContent === 'Терри Пратчетт')!;
+        expect(chip.getAttribute('href')).toBe('/author/23/%D0%A2%D0%B5%D1%80%D1%80%D0%B8%20%D0%9F%D1%80%D0%B0%D1%82%D1%87%D0%B5%D1%82%D1%82');
+        expect(chip.title).toBe('Sound alike');
+    });
+
     it('lists a series by its numbers first', async () => {
         const api = mockApi();
         api.tag.mockResolvedValue(tag({ id: 30, name: 'Rincewind', field: 'series', fieldName: 'series' }));
-        const { element } = await open('/tags/30', api);
+        const { element } = await open('/series/30/Rincewind', api);
 
         expect(api.books).toHaveBeenLastCalledWith(expect.objectContaining({ tag: 30, sort: 'number' }));
         expect(element.querySelector<HTMLSelectElement>('.browse-sort select')?.value).toBe('number');
@@ -159,8 +182,51 @@ describe('Browsing by value', () => {
     it('says when a tag is not there (or not shown)', async () => {
         const api = mockApi();
         api.tag.mockRejectedValue(new ApiError(404, 'Not found'));
-        const { element } = await open('/tags/999', api);
+        api.movedTag.mockRejectedValue(new ApiError(404, 'Not found'));
+        const { element, router } = await open('/tag/999/Gone', api);
         expect(element.querySelector('h1')?.textContent).toBe('Not found');
+        expect(api.movedTag).toHaveBeenLastCalledWith(999, 5);
+        expect(router.url).toBe('/tag/999/Gone');
+    });
+
+    // The id finds the tag; the rest of the address is put right without a history entry.
+    it.each([
+        ['the id alone', '/author/21'],
+        ['an old name', '/author/21/Terry%20Prachett'],
+        ['another key', '/series/21/Terry%20Pratchett'],
+        ['the old address', '/tags/21'],
+        ['the fields form of a key that needs none', '/fields/author/21/Terry%20Pratchett'],
+    ])("replaces %s by the tag's readable address", async (_, url) => {
+        const api = mockApi();
+        api.tag.mockResolvedValue(tag());
+        const { router, element } = await open(url, api);
+        expect(router.url).toBe('/author/21/Terry%20Pratchett');
+        expect(element.querySelector('h1')?.textContent).toBe('Terry Pratchett');
+    });
+
+    it('opens the tag a merged tag went into', async () => {
+        const api = mockApi();
+        api.tag.mockImplementation(async (id: number) => {
+            if (id === 21)
+                return tag();
+            throw new ApiError(404, 'Not found');
+        });
+        api.movedTag.mockResolvedValue({ id: 21, name: 'Terry Pratchett', field: 'author' });
+        const { router, element } = await open('/author/77/T.%20Pratchett', api);
+        expect(api.movedTag).toHaveBeenLastCalledWith(77, 5);
+        expect(router.url).toBe('/author/21/Terry%20Pratchett');
+        expect(element.querySelector('h1')?.textContent).toBe('Terry Pratchett');
+    });
+
+    it('keeps a plain tag under /tag and a key that clashes with a page under /fields', async () => {
+        const api = mockApi();
+        api.tag.mockResolvedValue(tag({ id: 9, name: 'To read', field: null, fieldName: null }));
+        const plain = await open('/tags/9', api);
+        expect(plain.router.url).toBe('/tag/9/To%20read');
+
+        api.tag.mockResolvedValue(tag({ id: 12, name: 'Owned', field: 'books', fieldName: 'books' }));
+        const clashing = await open('/books/12/Owned', api);
+        expect(clashing.router.url).toBe('/fields/books/12/Owned');
     });
 
     it('lists the fields, then the tags', async () => {

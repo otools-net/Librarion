@@ -1,7 +1,7 @@
 // Search on every device: a library of three books (two by one author), scanned through the API; typing part of the
 // author's name in the top bar offers the author, choosing it and pressing Enter lists the two books; a title word
 // narrows to one, which opens its page; the help's examples run their search. Refine narrows by a value with its
-// count, takes it out again, and leaves a value's books out.
+// count, takes it out again, and leaves a value's books out. The box offers special:untagged (stage 6 chunk 15).
 import fs from 'node:fs';
 import path from 'node:path';
 import { uniqueName } from '../fixtures/accounts';
@@ -95,5 +95,30 @@ test.describe('@search', () => {
         await press(authors.getByRole('link', { name: `Leave out ${author}` }), isMobile);
         await expect(results).toHaveCount(1);
         await expect(box).toHaveValue(`lanterns -author:"${author}"`);
+    });
+
+    test('the box offers special:untagged, which finds the books without a tag of their own @desktop', async ({ page, isMobile }, testInfo) => {
+        const name = uniqueName('Untagged', testInfo);
+        await scannedLibrary(page, name, folder => {
+            fs.writeFileSync(path.join(folder, 'a.fb2'), fb2('Lanterns of Brass', 'Odile Varn', undefined, ['brasswork']));
+            fs.writeFileSync(path.join(folder, 'b.fb2'), fb2('Harbour of Lanterns', 'Odile Varn'));
+            fs.writeFileSync(path.join(folder, 'c.fb2'), fb2('A Quiet Mill', 'Bram Other'));
+        });
+
+        const box = page.getByRole('combobox', { name: 'Search books' });
+        await box.fill('speci');
+        const option = page.getByRole('option', { name: /Books without tags/ });
+        await expect(option).toBeVisible();
+        await press(option, isMobile);
+        await expect(box).toHaveValue('special:untagged ');
+        await box.press('Enter');
+        const results = page.getByRole('list', { name: /^Books matching/ }).locator('.book');
+        await expect(results).toHaveCount(2, { timeout: 10_000 });
+        await expect(results.filter({ hasText: 'Lanterns of Brass' })).toHaveCount(0);
+
+        await box.fill('-special:untagged');
+        await box.press('Enter');
+        await expect(results).toHaveCount(1);
+        await expect(results.first()).toContainText('Lanterns of Brass');
     });
 });

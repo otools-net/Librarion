@@ -10,7 +10,9 @@ Code: `core/task-watch.ts` (`TaskWatch`), `core/task-text.ts` (titles, counts, e
 [Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01)); the runs themselves: [tasks](tasks.md).
 
 - Everything covers the libraries the caller may scan (`Access.LibrariesWith(Rights.Scan)`); the overview also lists
-  their ids (`libraries`), as the client has no per-library rights.
+  their ids (`libraries`), as the client has no per-library rights. Tenant runs (tag deletes, merges, undos: no
+  library) are added for `tenant.tags` (stage 6): the watch runs for `library.scan` or `tenant.tags`, the run's place
+  reads "Every library" and its counts are links (`task-text.ts`).
 - `api/tasks/running` answers from `BackgroundTasks.active` (memory) and reads the database only when something runs
   in the tenant: polling it is free while idle. `TaskWatch` polls it every 1.5 s while a run goes, every 20 s
   otherwise, never while the page is hidden (asks at once when it shows again), and only while the panel is shown and

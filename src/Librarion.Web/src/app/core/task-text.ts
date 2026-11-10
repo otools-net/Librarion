@@ -6,6 +6,9 @@ import { TaskRunInfo } from './models';
  * ("Scanning Comics…"), the counts so far or at its end, the time it took. Texts `taskRun.*`, `tasks.*`.
  */
 
+/** Runs over a whole tenant's tags (no library): their counts are links. */
+const TAG_TASKS = new Set<TaskRunInfo['task']>(['tagDelete', 'tagMerge', 'fieldMerge', 'mergeUndo', 'tagCounts', 'scopeTags', 'tagIgnore']);
+
 /** "Scanning Comics…" while it runs; "Scan · Comics" once it ended (its outcome is shown beside). */
 export function runTitle(i18n: I18n, run: TaskRunInfo, library: string): string {
     return run.outcome === 'running'
@@ -21,13 +24,27 @@ export function runDetail(i18n: I18n, run: TaskRunInfo): string {
         const progress = run.progress;
         if (!progress)
             return i18n.t('tasks.starting');
+        if (run.task === 'coverReassign')
+            return i18n.t('tasks.coverProgress', { books: progress.changed });
+        if (run.task === 'duplicateBuild')
+            return i18n.t('tasks.duplicateProgress', { groups: progress.added, rows: progress.filesSeen });
+        if (run.task === 'tagDuplicateBuild')
+            return i18n.t('tasks.tagDuplicateProgress', { groups: progress.added, tags: progress.filesSeen });
+        if (run.task === 'bookMerge')
+            return i18n.t('tasks.mergeProgress', { merged: progress.changed, skipped: progress.skipped });
+        if (TAG_TASKS.has(run.task))
+            return i18n.t('tasks.tagProgress', { links: progress.changed + progress.removed, tag: progress.current ?? '' });
         return run.task === 'import'
             ? i18n.t('tasks.importProgress', { records: progress.filesSeen, added: progress.added, changed: progress.changed, skipped: progress.skipped })
             : i18n.t('tasks.progress', { files: progress.filesSeen, added: progress.added, changed: progress.changed, missing: progress.missing, removed: progress.removed });
     }
     const counts = run.counts;
     const parts = [
-        counts && (run.task === 'import'
+        counts && TAG_TASKS.has(run.task) && i18n.t('tasks.tagCounts', { links: counts.changed + counts.removed }),
+        counts && run.task === 'coverReassign' && i18n.t('tasks.coverCounts', { books: counts.changed }),
+        counts && (run.task === 'duplicateBuild' || run.task === 'tagDuplicateBuild') && i18n.t('tasks.duplicateCounts', { groups: counts.changed }),
+        counts && run.task === 'bookMerge' && i18n.t(counts.changed === 1 ? 'tasks.mergeCounts.one' : 'tasks.mergeCounts', { merged: counts.changed, skipped: counts.skipped }),
+        counts && !TAG_TASKS.has(run.task) && !['coverReassign', 'duplicateBuild', 'bookMerge', 'tagDuplicateBuild'].includes(run.task) && (run.task === 'import'
             ? i18n.t('tasks.importCounts', { added: counts.added, changed: counts.changed, unchanged: counts.unchanged, skipped: counts.skipped })
             : i18n.t('tasks.counts', { added: counts.added, changed: counts.changed, missing: counts.missing, returned: counts.returned, removed: counts.removed, unchanged: counts.unchanged })),
         run.summary,

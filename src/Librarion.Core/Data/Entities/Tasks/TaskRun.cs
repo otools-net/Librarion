@@ -10,6 +10,28 @@ public enum BackgroundTaskKind : byte
     RemoveMissing,
     /// <summary>A manual import from another source (Calibre, INPX): its records written into the catalog.</summary>
     Import,
+    /// <summary>A tag deleted with its links (in every library of the tenant: no library).</summary>
+    TagDelete,
+    /// <summary>A tag merged into another, its links moved in batches.</summary>
+    TagMerge,
+    /// <summary>A field merged into another: its values merged by name or moved.</summary>
+    FieldMerge,
+    /// <summary>A merge undone: the links moved back.</summary>
+    MergeUndo,
+    /// <summary>A tag with many books under it moved: the totals of the tags it left and joined counted again.</summary>
+    TagCounts,
+    /// <summary>Tags given to or taken from every book of a library's list (a search, a tag's page, the library), in batches.</summary>
+    ScopeTags,
+    /// <summary>Imported names ignored (the Imported tags page): their tags' imported links taken off in batches.</summary>
+    TagIgnore,
+    /// <summary>The books of a cover template turned off given one of the templates still on, in batches.</summary>
+    CoverReassign,
+    /// <summary>The tenant's duplicate groups built whole again (Rebuild; a scan or import's end builds them when there are none).</summary>
+    DuplicateBuild,
+    /// <summary>Duplicate groups of a library merged in bulk (the same file, the same identifier), each with the default choices.</summary>
+    BookMerge,
+    /// <summary>The tenant's possible duplicate tags built whole again (Find again; a scan or import's end builds them when there are none).</summary>
+    TagDuplicateBuild,
 }
 
 public enum TaskTrigger : byte

@@ -25,7 +25,7 @@ public static class Fb2Reader
         var tags = new List<string>();
         var ids = new List<(string, string)>();
         var section = Section.None;
-        int authors = 0, translators = 0;
+        int authors = 0, translators = 0, documentDepth = -1;
         var any = false;
         try
         {
@@ -61,6 +61,7 @@ public static class Fb2Reader
                         break;
                     case ("document-info", _):
                         section = Section.Document;
+                        documentDepth = xml.Depth;
                         break;
                     case ("publish-info", _):
                         section = Section.Publish;
@@ -99,7 +100,9 @@ public static class Fb2Reader
                         if (xml.GetAttribute("name")?.Trim() is { Length: > 0 } series)
                             values.Add(new FieldValue("series", series, Number: Number(xml.GetAttribute("number"))));
                         break;
-                    case ("id", Section.Document):
+                    case ("id", Section.Document) when xml.Depth == documentDepth + 1:
+                        // The document's own id only: the file maker's <author> (and <publisher>) inside
+                        // <document-info> may carry an <id> of the person, shared by every file they made.
                         if (SafeXml.Text(xml) is { Length: > 0 } id)
                             ids.Add(("fb2-id", id));
                         continue;

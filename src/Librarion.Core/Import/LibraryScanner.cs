@@ -1,3 +1,6 @@
+using Librarion.Core.Settings;
+using Librarion.Core.Merging;
+using System.Text.Json;
 using Librarion.Core.Catalog;
 using Librarion.Core.Containers;
 using Librarion.Core.Data;
@@ -26,7 +29,8 @@ public sealed record ScanResult(
 /// are bits, never a list of paths. A root that is missing is reported and left alone (an unplugged disk is not a
 /// deletion). Resumable: books are written as they are read, an archive is marked done only at its end.
 /// </summary>
-public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, TimeProvider time, ILogger<LibraryScanner> logger)
+public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, DuplicateIndex duplicates, TagDuplicateIndex tagDuplicates, SettingsService settings,
+    TimeProvider time, ILogger<LibraryScanner> logger)
 {
     public const int BatchSize = 1000;
     private const int MaxProblems = 100;
@@ -54,10 +58,13 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var roots = await db.LibraryRoots.Where(r => r.LibraryId == libraryId).OrderBy(r => r.Id).ToListAsync(cancellationToken);
-        var run = new Run(this, db, new CatalogWriter(tenantId, libraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time), progress);
+        var merge = await MergeSameFilesAsync(tenantId, libraryId, cancellationToken);
+        var run = new Run(this, db, new CatalogWriter(tenantId, libraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time) { MergeCopies = merge },
+            progress);
         // What this scan adds has larger ids: a moved file is found among them afterwards.
         var lastFile = await db.BookFiles.Where(f => f.LibraryId == libraryId).MaxAsync(f => (int?)f.Id, cancellationToken) ?? 0;
         var lastBook = await db.Books.Where(b => b.LibraryId == libraryId).MaxAsync(b => (int?)b.Id, cancellationToken) ?? 0;
+        var completed = false;
         try
         {
             foreach (var root in roots)
@@ -73,11 +80,14 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
             }
 
             await run.RelinkAsync(libraryId, lastFile, lastBook, cancellationToken);
+            completed = true;
         }
         finally
         {
             // Books already written keep their counts, also when the scan is cancelled or fails.
             await run.Writer.FlushCountsAsync(db, CancellationToken.None);
+            await duplicates.AfterRunAsync(tenantId, run.Writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
+            await tagDuplicates.AfterRunAsync(tenantId, run.Writer.NewTags, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return run.Result();
@@ -95,16 +105,27 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
             return new ScanResult(0, 0, 0, 0, 0, 0, 0, [], []);
         // The user confirmed the removal: the root's books go for good, not as missing.
         var run = new Run(this, db, new CatalogWriter(tenantId, root.LibraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time), progress, purge: true);
+        var completed = false;
         try
         {
             await run.RemoveAllAsync(root, cancellationToken);
+            completed = true;
         }
         finally
         {
             await run.Writer.FlushCountsAsync(db, CancellationToken.None);
+            await duplicates.AfterRunAsync(tenantId, run.Writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
+            await tagDuplicates.AfterRunAsync(tenantId, run.Writer.NewTags, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return run.Result();
+    }
+
+    /// <summary>The library's <see cref="SettingCatalog.MergeSameFiles"/> (by its levels).</summary>
+    private async Task<bool> MergeSameFilesAsync(int tenantId, int libraryId, CancellationToken cancellationToken)
+    {
+        var states = await settings.GetAsync(new SettingOwner(SettingLevel.Library, libraryId), tenantId, cancellationToken);
+        return states?.FirstOrDefault(s => s.Key == SettingCatalog.MergeSameFiles)?.Value is not { ValueKind: JsonValueKind.String } value || value.GetString() != "off";
     }
 
     /// <param name="purge">Files not seen are removed with their books (a root removal the user confirmed); otherwise
@@ -125,6 +146,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
         {
             if (fileIds.Count == 0)
                 return;
+            await writer.CountFilesAsync(db, fileIds, present: true, -1, cancellationToken);
             if (purge)
             {
                 await db.BookFiles.Where(f => fileIds.Contains(f.Id)).ExecuteDeleteAsync(cancellationToken);
@@ -142,6 +164,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
         {
             if (fileIds.Count == 0)
                 return;
+            await writer.CountFilesAsync(db, fileIds, present: false, 1, cancellationToken);
             await db.BookFiles.Where(f => fileIds.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, (DateTime?)null), cancellationToken);
             await writer.ReturnAsync(db, bookIds, cancellationToken);
         }
@@ -158,6 +181,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
             // Pairs first, over every new file: a missing file's candidates may lie in different pages.
             var candidates = new Dictionary<int, List<(BookFile File, bool SameName)>>();
             var missingBooks = new Dictionary<int, int>();
+            var oldFolders = new Dictionary<int, int>();
             var afterId = lastFile;
             while (true)
             {
@@ -169,7 +193,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
                 afterId = added[^1].Id;
                 var sizes = added.Select(f => f.Size).Distinct().ToList();
                 var missing = await db.BookFiles.Where(f => f.LibraryId == libraryId && f.MissingSince != null && sizes.Contains(f.Size))
-                    .Select(f => new { f.Id, f.BookId, f.Size, f.Crc32, f.Path }).ToListAsync(cancellationToken);
+                    .Select(f => new { f.Id, f.BookId, f.Size, f.Crc32, f.Path, f.FolderId }).ToListAsync(cancellationToken);
                 foreach (var old in missing)
                 {
                     var name = NameOf(old.Path);
@@ -182,6 +206,7 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
                             candidates[old.Id] = list = [];
                         list.Add((file, sameName));
                         missingBooks[old.Id] = old.BookId;
+                        oldFolders[old.Id] = old.FolderId;
                     }
                 }
             }
@@ -196,24 +221,34 @@ public sealed class LibraryScanner(TenantDb tenantDb, IMetadataReader reader, Ti
 
             // A new file two missing files would claim stays a new book.
             var claimed = chosen.GroupBy(c => c.File.Id).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
-            var relinked = 0;
+            var relinked = new List<int>();
+            var moves = new List<(int BookId, int From, int To)>();
             foreach (var (oldId, file) in chosen.Where(c => !claimed.Contains(c.File.Id)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await db.BookFiles.Where(f => f.Id == oldId).ExecuteUpdateAsync(s => s
-                    .SetProperty(f => f.RootId, file.RootId).SetProperty(f => f.ArchiveId, file.ArchiveId).SetProperty(f => f.Path, file.Path)
+                    .SetProperty(f => f.RootId, file.RootId).SetProperty(f => f.ArchiveId, file.ArchiveId).SetProperty(f => f.FolderId, file.FolderId).SetProperty(f => f.Path, file.Path)
                     .SetProperty(f => f.PathKey, file.PathKey).SetProperty(f => f.Format, file.Format).SetProperty(f => f.Crc32, file.Crc32)
                     .SetProperty(f => f.Modified, file.Modified).SetProperty(f => f.Locator, file.Locator).SetProperty(f => f.Method, file.Method)
                     .SetProperty(f => f.PackedSize, file.PackedSize).SetProperty(f => f.MissingSince, (DateTime?)null), cancellationToken);
                 await db.BookFiles.Where(f => f.Id == file.Id).ExecuteDeleteAsync(cancellationToken);
                 await writer.RemoveEmptyBooksAsync(db, [file.BookId], cancellationToken, undoAdd: true);
                 await writer.ReturnAsync(db, [missingBooks[oldId]], cancellationToken);
-                relinked++;
+                relinked.Add(oldFolders[oldId]);
+                if (oldFolders[oldId] != file.FolderId)
+                    moves.Add((missingBooks[oldId], oldFolders[oldId], file.FolderId));
             }
 
-            if (relinked > 0)
+            // Moved into a place with other default tags: those come with it.
+            await writer.MovedAsync(db, moves, cancellationToken);
+
+            if (relinked.Count > 0)
+            {
                 await db.Archives.Where(a => a.LibraryId == libraryId && a.MissingSince != null && !db.BookFiles.Any(f => f.ArchiveId == a.Id))
                     .ExecuteDeleteAsync(cancellationToken);
+                // The folders the moved files left, if nothing else is in them.
+                await writer.Folders.PruneAsync(db, relinked, cancellationToken);
+            }
         }
 
         private static string NameOf(string path) => path[(path.LastIndexOfAny(['/', '\\']) + 1)..];

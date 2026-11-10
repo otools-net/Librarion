@@ -358,10 +358,14 @@ internal sealed class ScannedLibrary : IAsyncDisposable
     }
 
     public Task<ScanResult> ScanAsync(CancellationToken cancellationToken, IMetadataReader? reader = null) =>
-        new LibraryScanner(factory.Services.GetRequiredService<TenantDb>(), reader ?? new NoMetadataReader(), TimeProvider.System, NullLogger<LibraryScanner>.Instance)
+        new LibraryScanner(factory.Services.GetRequiredService<TenantDb>(), reader ?? new NoMetadataReader(), factory.Services.GetRequiredService<Librarion.Core.Merging.DuplicateIndex>(),
+                factory.Services.GetRequiredService<Librarion.Core.Merging.TagDuplicateIndex>(),
+                factory.Services.GetRequiredService<Librarion.Core.Settings.SettingsService>(), TimeProvider.System, NullLogger<LibraryScanner>.Instance)
             .ScanAsync(TenantId, LibraryId, null, cancellationToken);
 
     public T Service<T>() where T : notnull => factory.Services.GetRequiredService<T>();
+
+    public WebApplicationFactory<Program> Factory => factory;
 
     public Task<LibrarionDbContext> DbAsync(CancellationToken cancellationToken) =>
         factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(TenantId, cancellationToken);

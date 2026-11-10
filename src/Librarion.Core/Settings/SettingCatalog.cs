@@ -45,6 +45,9 @@ public static class SettingCatalog
     /// <summary>Days a missing book waits before it is offered for removal (agents/docs/features/missing-books.md); never removed without a user.</summary>
     public const string KeepMissingDays = "library.keepMissingDays";
 
+    /// <summary>A scanned file with the same bytes as one of the library becomes another file of that book (D19, the user's Q4: on by default).</summary>
+    public const string MergeSameFiles = "import.mergeSameFiles";
+
     public static IReadOnlyList<SettingDefinition> All { get; } =
     [
         new(Theme, SettingKind.Choice, Json("\"system\""), SettingLevel.User, "interface", Choices: ["system", "light", "dark"]),
@@ -52,6 +55,7 @@ public static class SettingCatalog
         new(Language, SettingKind.Choice, Json("\"browser\""), SettingLevel.User, "interface", Choices: ["browser", "en"]),
         new(PageSize, SettingKind.Integer, Json("50"), SettingLevel.User, "interface", Min: 20, Max: 200),
         new(KeepMissingDays, SettingKind.Integer, Json("30"), SettingLevel.Library, "libraries", Min: 0, Max: 3650),
+        new(MergeSameFiles, SettingKind.Choice, Json("\"on\""), SettingLevel.Tenant, "libraries", Choices: ["on", "off"]),
     ];
 
     private static readonly Dictionary<string, SettingDefinition> ByKey = All.ToDictionary(s => s.Key, StringComparer.Ordinal);

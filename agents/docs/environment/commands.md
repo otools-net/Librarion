@@ -14,3 +14,13 @@ dotnet msbuild src/Librarion.Api/Librarion.Api.csproj -getProperty:Version   # c
 - Migrations (two per change): [database](../development/database.md).
 - `npm start` proxies `/api` and `/openapi` to `:5090` (`proxy.conf.json`): run the Api alongside.
 - Build mechanics and errors: [build](build.md).
+
+## Long runs in the background
+
+The user's rule (2026-11-08): a run in the background expected to take more than 10 minutes (a 2M benchmark, a full
+test or e2e suite, a big import) gets a progress report every 10 minutes until it ends.
+
+- Write the run's output to a log (`… > D:/Temp/librarion-bench/<name>.log 2>&1`), start it with `run_in_background`.
+- Create a recurring cron job (`CronCreate`, e.g. `*/10 * * * *`) whose prompt reads the log's last lines and tells
+  the user in a line or two what step it is on and the numbers so far; nothing else (no new work started by it).
+- Delete the job (`CronDelete`) as soon as the run's completion arrives; the report of the end replaces it.

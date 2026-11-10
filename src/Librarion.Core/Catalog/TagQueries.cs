@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librarion.Core.Catalog;
 
-/// <param name="BookCount">Books of the library linked to it, from <see cref="TagCount"/>; null when no library was named.</param>
+/// <param name="BookCount">Books of the library with it or a tag under it (<see cref="TagCount.TotalCount"/>); null when no library was named.</param>
 public sealed record FieldValue(int Id, string Name, string SortName, int? BookCount);
 
 /// <param name="BuiltIn">One of the fields every tenant has (its name is translated by the client from its key).</param>
@@ -15,7 +15,7 @@ public sealed record TagRef(int Id, string Name, string? Field);
 
 /// <param name="Field">The field it is a value of (its key); null for a plain tag.</param>
 /// <param name="FieldName">That field's own name (a custom field's; a built-in one is translated from its key).</param>
-/// <param name="BookCount">Books of the library linked to it; null when no library was named.</param>
+/// <param name="BookCount">Books of the library with it or a tag under it; null when no library was named.</param>
 /// <param name="Parents">The tags it is under ("Horror" under "Fiction"), by name.</param>
 /// <param name="Children">The tags under it, by name, at most <see cref="TagQueries.MaxChildren"/>.</param>
 /// <param name="MoreChildren">More tags are under it than <paramref name="Children"/> holds (those are then any of them).</param>
@@ -37,6 +37,9 @@ public sealed class TagQueries(TenantDb tenantDb)
     public const int MaxScanned = 2000;
 
     public const int MaxChildren = 50;
+
+    /// <summary>Merges followed from an old id at most (a merge into a tag merged later, and so on).</summary>
+    public const int MaxMoves = 20;
 
     /// <summary>Denied tags listed with their descendants at most; past it the list is cut (a broad deny filter).</summary>
     private const int MaxDenied = 500;
@@ -95,7 +98,7 @@ public sealed class TagQueries(TenantDb tenantDb)
 
         int? count = null;
         if (libraryId is { } library)
-            count = await db.TagCounts.Where(c => c.LibraryId == library && c.TagId == tagId).Select(c => (int?)c.BookCount).FirstOrDefaultAsync(cancellationToken) ?? 0;
+            count = await db.TagCounts.Where(c => c.LibraryId == library && c.TagId == tagId).Select(c => (int?)c.TotalCount).FirstOrDefaultAsync(cancellationToken) ?? 0;
         var parents = await db.TagParents.Where(p => p.ChildId == tagId)
             .Select(p => new TagRef(p.ParentId, p.Parent!.Name, p.Parent.Field == null ? null : p.Parent.Field.FieldKey))
             .ToListAsync(cancellationToken);
@@ -109,6 +112,31 @@ public sealed class TagQueries(TenantDb tenantDb)
             parents.Where(p => !denied.Contains(p.Id)).OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToList(),
             children.Take(MaxChildren).Where(c => !denied.Contains(c.Id)).OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase).ToList(),
             more);
+    }
+
+    /// <summary>
+    /// Where a merged tag went (an old address of it, a bookmark): the merge logs that hold, followed through later merges
+    /// up to <see cref="MaxMoves"/>; null when the id was never merged, or its tag is gone or denied.
+    /// </summary>
+    public async Task<TagRef?> MovedAsync(int tenantId, int tagId, int? libraryId, BookVisibility? visibility = null, CancellationToken cancellationToken = default)
+    {
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var id = tagId;
+        for (var moves = 0; moves < MaxMoves; moves++)
+        {
+            var from = id;
+            var target = await db.MergeLogs.Where(l => l.SourceId == from && l.Kind != MergeKind.Book && l.Completed && l.Undone == null).OrderByDescending(l => l.Id)
+                .Select(l => (int?)l.TargetId).FirstOrDefaultAsync(cancellationToken);
+            if (target is null)
+                return null;
+            id = target.Value;
+            var tag = await db.Tags.Where(t => t.Id == id && t.FieldKey == null)
+                .Select(t => new TagRef(t.Id, t.Name, t.Field == null ? null : t.Field.FieldKey)).FirstOrDefaultAsync(cancellationToken);
+            if (tag is not null)
+                return (await DeniedAsync(db, libraryId, visibility, cancellationToken)).Contains(tag.Id) ? null : tag;
+        }
+
+        return null;
     }
 
     private async Task<Page<FieldValue>> PageAsync(LibrarionDbContext db, IQueryable<Tag> tags, int? libraryId, string? after, string? from, int limit,
@@ -146,8 +174,9 @@ public sealed class TagQueries(TenantDb tenantDb)
             else
             {
                 var ids = rows.Select(r => r.Id).ToList();
-                var counts = await db.TagCounts.Where(c => c.LibraryId == library && ids.Contains(c.TagId) && c.BookCount > 0)
-                    .ToDictionaryAsync(c => c.TagId, c => c.BookCount, cancellationToken);
+                // With what is under them: a category whose books are all in its subcategories is listed too.
+                var counts = await db.TagCounts.Where(c => c.LibraryId == library && ids.Contains(c.TagId) && c.TotalCount > 0)
+                    .ToDictionaryAsync(c => c.TagId, c => c.TotalCount, cancellationToken);
                 items.AddRange(rows.Where(r => counts.ContainsKey(r.Id)).Select(r => new FieldValue(r.Id, r.Name, r.SortName, counts[r.Id])));
             }
 

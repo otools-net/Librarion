@@ -19,6 +19,21 @@ public sealed class Tenant
 
     public DateTime Created { get; set; }
 
+    /// <summary>
+    /// The generated cover templates turned off (bit <c>i</c> = template <c>i</c>, agents/docs/features/book-display.md):
+    /// new books get one of the others. At least one stays on.
+    /// </summary>
+    public int CoverTemplatesOff { get; set; }
+
+    /// <summary>
+    /// UTC, when the duplicate groups were last built whole (agents/docs/features/merging.md#stored-duplicate-groups);
+    /// null until then: the end of the next scan or import builds them.
+    /// </summary>
+    public DateTime? DuplicatesBuilt { get; set; }
+
+    /// <summary>UTC, when the possible duplicate tags were last built whole (stage 6 chunk 14); null until then.</summary>
+    public DateTime? TagDuplicatesBuilt { get; set; }
+
     public List<Library> Libraries { get; set; } = [];
     public List<UserGroup> Groups { get; set; } = [];
     public List<TenantDisabledRight> DisabledRights { get; set; } = [];

@@ -3,10 +3,11 @@
 Code: `app/browse/browse-page.ts` (`BrowsePage`, the route `''`), `browse/book-list.ts` (`BookList`: tools, books,
 paging, way back), `browse/list-window.ts` (`ListWindow`: the drawn rows), `browse/book-window.ts` (`bookWindow`,
 `gridColumns`), `browse/browse-state.ts` (`BrowseState`); `app/tags/` (`FieldsPage` `fields`, `ValuesPage`
-`fields/:key` and `tags`, `TagPage` `tags/:id`, `FieldCatalog`); `coverUrl`, `Api.books`, `fields`, `tagValues`,
+`fields/:key` and `tags`, `TagPage` at the readable addresses of `tags/tag-link.ts`, `FieldCatalog`); `coverUrl`, `Api.books`, `fields`, `tagValues`,
 `tag` in `core/api.service.ts`; styles `styles/browse.css`. Server: `GET api/books` ([catalog](catalog.md), keyset
-pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/values`, `api/tags`, `api/tags/{id}`
-(`TagQueries`). Tests `browse.spec.ts`, `tags/tags.spec.ts` (client), `CatalogQueryTests` (both providers), e2e
+pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/values`, `api/tags`, `api/tags/{id}`,
+`api/tags/{id}/moved` (`TagQueries`); `Api/Program.cs` serves the client's page for named addresses. Tests `browse.spec.ts`, `tags/tags.spec.ts`, `tags/tag-link.spec.ts` (client),
+`CatalogQueryTests`, `TagCurationTests.AMergedTagsIdLeadsToTheTagItWentInto` (both providers), e2e
 `browse.spec.ts`, `fields.spec.ts`, `a11y.spec.ts`. D-5.5 under [Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01).
 
 - The home page is the library chosen in the switcher (`LibraryContext.current`): its name, its book count, the books
@@ -30,6 +31,22 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - Each book is a `li` with `aria-posinset` and `aria-setsize` (the library's count), as the list is partial.
 - Every book is a link to its page ([book-page](book-page.md)): `a.book-link` inside the `li`, which keeps the layout's
   measures.
+
+## Selecting books (built, stage 6 chunk 7)
+
+- `BookList` (library, tag page, search) selects with `library.tag` (`SessionService.can`): a box over each cover
+  (`.book-select`, `role="checkbox"`; shown on hover / focus and on every card once one is selected), Ctrl / Cmd-click,
+  Shift-click for a range from the last book toggled, a **long press** on touch (`pointerdown` with `pointerType`
+  touch, 500 ms, cancelled by a 10 px move or a lift: iOS fires no `contextmenu` on links; `-webkit-touch-callout:
+  none`). While books are selected a click selects instead of opening.
+- Clicks are caught by a **capture** listener on the host, which stops them: a host `(click)` runs after RouterLink's
+  own handler on the `<a>` and the book had opened. Escape clears (not from inputs or with a dialog open); another
+  list (library, tag, search, sort) clears; at most 1,000.
+- The bar (`.selection-dock`, fixed at the bottom over the safe area; the list gets 72 px more padding while it shows):
+  Clear, the count (`role="status"`), Select all (the loaded books), Tags. **Tag all** in the list's tools tags the
+  whole list ([tags](tags.md#tagging-many-books-built-stage-6-chunk-7)); under 480 px it shows its icon only
+  (`.tool-label` hidden but read), and the tools row wraps: on a 360 px phone the button had pushed the row, then the
+  page, past the screen.
 
 ## Fields and tags
 
@@ -69,3 +86,25 @@ pages, `sort` title / author / added / number), `api/fields`, `api/fields/{key}/
 - **D-5.5 Browse:** the home page is the library: a virtual grid of covers (or a dense list), sort and view remembered
   per browser, keyset pages loaded while scrolling, the scroll restored on the way back. Field pages (authors, series,
   categories, languages, publishers, custom fields) and tags, each value with its count.
+
+## Readable tag addresses (stage 6, chunk 15a; asked by the user 2026-11-05)
+
+- A field's value at `/<key>/<id>/<name>` (`/author/1234/Stephen King`), a plain tag at `/tag/<id>/<name>`; every
+  link builds it with `tagLink` (`tags/tag-link.ts`): book page, values lists, the tag page's parents and children.
+  Suggestions and Refine lead to searches, the tag manager to the editor: no tag address there.
+- The id finds the tag, the name is decorative: `TagPage` compares the address with `tagLink(tag)` once loaded and
+  replaces it (`replaceUrl`, no history entry) for the id alone, an old name, another key, the old `/tags/<id>` and
+  `/fields/<key>/<id>/…` of a key that needs no `/fields`. The name trimmed, spaces folded, cut to 80 characters
+  (`addressName`; the router encodes it).
+- A merged tag's id: `GET api/tags/{id}` answers 404, then `GET api/tags/{id}/moved` follows the merge logs that hold
+  (completed, not undone; index on `MergeLogs.SourceId`) through later merges, up to 20, to a tag the caller may see.
+- Keys that clash with a first segment of the app or server (`RESERVED_KEYS`: setup, login, fields, tags, tag, books,
+  search, account, admin, api, openapi): decided to keep such keys allowed (imports make them from Calibre columns and
+  FB2 `custom-info`) and give their values `/fields/<key>/<id>/<name>`. `tag-link.spec.ts` checks every route's first
+  segment is reserved: a new top-level route must be added there.
+- Routes: `fieldValueMatcher` (a key as fields have them, a numeric id, the name or not) comes after every app route,
+  so `/no/such/page` still gets Page not found (a catch-all `:key/:id/:name` swallowed it: the smoke e2e). The server's fallback skips paths that look like files (`Vol. 2`,
+  `J. R. R. Tolkien`), so `Program.cs` maps `{key}/{id:int}/{**name}` (not `api`, `openapi`) and
+  `fields/{key}/{id:int}/{**name}` to the client's page (`ApiTests.ATagAddressWithADottedNameGetsThePage`).
+- e2e gotcha: `page.goBack()` across several full loads (`page.goto`) failed on Chromium phones ("Not attached to an
+  active page"); `fields.spec.ts` checks `history.length` instead.

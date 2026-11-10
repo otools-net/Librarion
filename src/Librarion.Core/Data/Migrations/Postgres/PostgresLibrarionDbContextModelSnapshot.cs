@@ -85,6 +85,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<DateTime>("Added")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CoverFile")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<int>("CoverSource")
                         .HasColumnType("integer");
 
@@ -93,6 +97,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<byte>("Edited")
+                        .HasColumnType("smallint");
 
                     b.Property<short?>("GeneratedTemplate")
                         .HasColumnType("smallint");
@@ -145,6 +152,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool>("Untagged")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("Updated")
                         .HasColumnType("timestamp with time zone");
 
@@ -152,6 +162,13 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "Id")
+                        .HasDatabaseName("IX_Books_LibraryId_Id_Untagged")
+                        .HasFilter("\"Untagged\"");
+
+                    b.HasIndex("TenantId", "CoverFile")
+                        .HasFilter("\"CoverFile\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "WorkKey");
 
@@ -195,6 +212,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     b.Property<long?>("Crc32")
                         .HasColumnType("bigint");
+
+                    b.Property<int>("FolderId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Format")
                         .IsRequired()
@@ -241,6 +261,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("BookId");
 
                     b.HasIndex("ArchiveId", "PathKey");
+
+                    b.HasIndex("FolderId", "BookId");
 
                     b.HasIndex("RootId", "PathKey");
 
@@ -327,6 +349,200 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("BookTags");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.BookTagSuppression", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BookId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("BookTagSuppressions");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DefaultTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("FolderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FolderId");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("LibraryId", "FolderId", "TagId")
+                        .IsUnique();
+
+                    b.ToTable("DefaultTags");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<long>("KeyHash")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Noise")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BookCount", "Id");
+
+                    b.HasIndex("TenantId", "Level", "KeyHash");
+
+                    b.ToTable("DuplicateGroups");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateMember", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("GroupId", "BookId");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("TenantId", "BookId");
+
+                    b.ToTable("DuplicateMembers");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("FieldId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("TenantId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("FieldKeyAliases");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Folder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ArchiveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FileCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FolderCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("PathKey")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RootId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalFileCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArchiveId");
+
+                    b.HasIndex("RootId", "PathKey");
+
+                    b.HasIndex("ParentId", "Name", "Id");
+
+                    b.ToTable("Folders");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
                 {
                     b.Property<int>("GroupId")
@@ -403,10 +619,18 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<bool>("Ignored")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<bool>("Reviewed")
+                        .HasColumnType("boolean");
 
                     b.Property<byte>("Source")
                         .HasColumnType("smallint");
@@ -422,6 +646,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("FieldId");
 
                     b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "FieldId", "TagId");
 
                     b.HasIndex("TenantId", "Source", "FieldId", "NormalizedName");
 
@@ -484,6 +710,144 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("LibraryId");
 
                     b.ToTable("LibraryRoots");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("text");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("Links")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("ParentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SourceId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("TargetId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("Undone")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("SourceId");
+
+                    b.HasIndex("TargetId");
+
+                    b.HasIndex("TenantId", "Id");
+
+                    b.ToTable("MergeLogs");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLogLink", b =>
+                {
+                    b.Property<long>("LogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("smallint");
+
+                    b.Property<bool>("Kept")
+                        .HasColumnType("boolean");
+
+                    b.Property<double?>("Number")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("Ordinal")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("LogId", "BookId", "Source");
+
+                    b.ToTable("MergeLogLinks");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.NotDuplicate", b =>
+                {
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OtherId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BookId", "OtherId");
+
+                    b.HasIndex("OtherId");
+
+                    b.HasIndex("TenantId", "OtherId");
+
+                    b.ToTable("NotDuplicates");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.NotSameTag", b =>
+                {
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OtherId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TagId", "OtherId");
+
+                    b.HasIndex("OtherId");
+
+                    b.HasIndex("TenantId", "OtherId");
+
+                    b.ToTable("NotSameTags");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.SecurityEvent", b =>
@@ -599,6 +963,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<long?>("InitialsKey")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("IsCategory")
                         .HasColumnType("boolean");
 
@@ -624,6 +991,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<long?>("SoundKey")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
@@ -637,7 +1007,14 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasIndex("TenantId", "IsHidden")
                         .HasFilter("\"IsHidden\"");
 
+                    b.HasIndex("TenantId", "Shorthand")
+                        .HasFilter("\"Shorthand\" IS NOT NULL");
+
+                    b.HasIndex("TenantId", "FieldId", "InitialsKey");
+
                     b.HasIndex("TenantId", "FieldId", "NormalizedName");
+
+                    b.HasIndex("TenantId", "FieldId", "SoundKey");
 
                     b.HasIndex("TenantId", "FieldId", "SortName", "Id");
 
@@ -712,11 +1089,74 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TotalCount")
+                        .HasColumnType("integer");
+
                     b.HasKey("LibraryId", "TagId");
 
                     b.HasIndex("TagId");
 
+                    b.HasIndex("LibraryId", "BookCount", "TagId");
+
                     b.ToTable("TagCounts");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("BookCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Field")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Key")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte>("Level")
+                        .HasColumnType("smallint");
+
+                    b.Property<bool>("Noise")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("TagCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Field", "Key");
+
+                    b.HasIndex("TenantId", "Field", "BookCount", "Id");
+
+                    b.ToTable("TagDuplicateGroups");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateMember", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("GroupId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TenantId", "TagId");
+
+                    b.ToTable("TagDuplicateMembers");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.TagParent", b =>
@@ -854,11 +1294,17 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CoverTemplatesOff")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("DuplicatesBuilt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -869,6 +1315,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("TagDuplicatesBuilt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -1048,6 +1497,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Librarion.Core.Data.Folder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
                         .WithMany()
                         .HasForeignKey("RootId")
@@ -1056,6 +1511,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Archive");
 
                     b.Navigation("Book");
+
+                    b.Navigation("Folder");
 
                     b.Navigation("Root");
                 });
@@ -1099,6 +1556,105 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Book");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.BookTagSuppression", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DefaultTag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateGroup", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateMember", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.DuplicateGroup", null)
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.FieldKeyAlias", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", "Field")
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Field");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.Folder", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Archive", null)
+                        .WithMany()
+                        .HasForeignKey("ArchiveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Librarion.Core.Data.Folder", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Librarion.Core.Data.LibraryRoot", "Root")
+                        .WithMany()
+                        .HasForeignKey("RootId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("Root");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.GroupLibrary", b =>
@@ -1212,6 +1768,54 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Library");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.MergeLog", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.MergeLogLink", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.MergeLog", null)
+                        .WithMany()
+                        .HasForeignKey("LogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.NotDuplicate", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Book", null)
+                        .WithMany()
+                        .HasForeignKey("OtherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.NotSameTag", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("OtherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Tag", "Field")
@@ -1263,6 +1867,30 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.HasOne("Librarion.Core.Data.Library", null)
                         .WithMany()
                         .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateGroup", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateMember", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.TagDuplicateGroup", null)
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1355,9 +1983,19 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.Navigation("Tags");
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.DuplicateGroup", b =>
+                {
+                    b.Navigation("Members");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Tag", b =>
                 {
                     b.Navigation("Aliases");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.TagDuplicateGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Tenant", b =>

@@ -5,7 +5,7 @@ groups, settings and security log. Their people never see each other. Only serve
 
 **Administration → Tenants**:
 
-- **Add:** type the name of a new tenant. It gets the built-in groups Administrators and Users, and a first library.
+- **Add:** type the name of a new tenant. It gets the built-in groups Administrators, Users and Curators, and a first library.
   Then make its first administrator in [Accounts](accounts.md), working in that tenant.
 - **Work here:** switches your session to that tenant (as the account menu in the top bar does); **Working here** marks the
   current one.

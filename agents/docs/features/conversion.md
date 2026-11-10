@@ -58,8 +58,8 @@ archive library as AZW3 for a Kindle, an EPUB as KEPUB for a Kobo. Converted **o
 
 ## Rights
 
-- `books.convert` (Read kind: downloading a converted copy; costs CPU, so separate from `books.download`, which it
-  requires). Keeping the result as a book file needs `books.edit` too ([rights](rights.md)).
+- `library.convert` (Read kind: downloading a converted copy; costs CPU, so separate from `library.download`, which it
+  requires). Keeping the result as a book file needs `library.edit` too ([rights](rights.md)).
 
 ## Safety and cost
 

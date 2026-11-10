@@ -35,7 +35,10 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
 - Planted duplicates: same file (size + CRC) every 100th book, same ISBN, same work (title + author) every 50th.
 - Filter tags on 0.1 %, 1 % and 10 % of the books, one group with an account (`filter-0`, `filter-1`, `filter-2`,
   password `benchmark-password`) limited to each (D22's narrow allow-lists).
-- `TagCounts` (direct, parents, fields once per book) and `Libraries.BookCount`.
+- `TagCounts`: `BookCount` the direct links, `TotalCount` the tag with its parent and field once per book (as the
+  importer keeps them, stage 6 4a), and `Libraries.BookCount`.
+- `ImportTagMappings`: one automatic FB2 mapping per plain tag, category, language, publisher and year, as an import
+  would have recorded them (stage 6 chunk 9; none for people and series).
 - Small-size tests: `CatalogGeneratorTests` (3,000 books, both providers).
 
 ## What `run` measures
@@ -44,7 +47,7 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
 dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/sqlite-2m.db" [--iterations 20] [--only "search:"]
 ```
 
-- 49 queries through Core's own services, the ones the UI's routes call (`BookQueries`, `TagQueries`,
+- 87 queries through Core's own services, the ones the UI's routes call (`BookQueries`, `TagQueries`,
   `BookVisibilities`, `SearchSuggestions`, `SearchFacets`): first and middle pages by title, author and newest first
   (all libraries and one), the books of the most prolific author, of an author with 5–20 books, of the biggest
   series, of category Fiction with its subcategories, authors A–Z (first and middle, and from a letter as Go to), the
@@ -53,9 +56,21 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
   (first and middle page), two such words, a two-letter prefix, a file name (one book), an author's last name, an
   author by field and by word with a title word, a category less a format, books outside any series; suggestions for
   two letters and after `author:`; facets (Refine) of the library, of those searches and of each filtered group's
-  library.
+  library. The Imported tags page (stage 6 chunk 9, `--only "imported"`): plain tags by books (first page, the page
+  after the 5,000th, a status none has: the walk's bound), languages and categories (small fields), the coverage
+  line, the fields; the run also reports how much of the imported links the first 500 plain tags and categories hold.
+  The tag manager and the picker (stage 6 close, `--only "tag manager"`, `--only picker`): the field chooser, authors and
+  plain tags by name (first and middle page), authors found by a last name and by two letters; the picker for authors
+  (nothing typed, two letters, a full name), plain tags (two letters) and categories (nothing typed); Tag all's count
+  (`--only "tag all"`, asked once: 500 ms) of a 1 % tag, a common word and the library.
+  Special terms (stage 6 chunk 15; alone with `--only untagged` or `--only "possible duplicates"`):
+  `special:untagged` with the generated 30 % (by title and newest), `-special:untagged`, `special:duplicates` for a
+  caller who may merge (alone and with a common word; the groups of the `duplicates` command); then the few case:
+  all but 0.1 % of the books unflagged for three scenarios (alone, newest, with a common word), the flags put back
+  from the links afterwards (a minute or so at 2M).
 - `--only <text>`: only the scenarios whose name contains it (a slow one measured with its plans, alone).
-- Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms).
+- Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms, a
+  figure asked once and kept 500 ms).
 - Every SQL command a query runs is captured (EF's diagnostic events) and explained with its parameters:
   PostgreSQL `EXPLAIN` (a `Seq Scan` on a big table fails), SQLite `EXPLAIN QUERY PLAN` (a bare `SCAN` of a big table
   fails; `SCAN … USING INDEX` is the keyset walk).
@@ -87,6 +102,42 @@ dotnet $bench archive --provider sqlite --connection "Data Source=D:/Temp/librar
   rather than generating it (the disk writes ~10 MB/s).
 - Small-size test: `ArchiveBenchTests` (500 entries, both providers).
 
+## What `duplicates` measures (stage 6 chunk 11, [merging](../../docs/features/merging.md#stored-duplicate-groups-built-stage-6-chunk-11))
+
+```sh
+dotnet $bench duplicates --provider sqlite|postgres --connection "…" --work D:/Temp/librarion-bench
+```
+
+- On a generated catalog: the duplicate groups built whole (`DuplicateIndex.BuildAsync`, groups written into the
+  database), timed against 10 minutes at 2M books on PostgreSQL (SQLite recorded).
+- Then the generator's planted duplicates (book `id` and `id - 1`: the same file every 100th from 7, the same ISBN from
+  13, the same work every 50th from 21), the first 2,000 of each: every pair whose books do share the key in the
+  database must be in one group of its level, unless that key is noise (counted apart). Exit 1 otherwise.
+
+## What `tag-duplicates` measures (stage 6 chunk 14, [merging](../../docs/features/merging.md#possible-duplicate-tags-built-stage-6-chunk-14))
+
+```sh
+dotnet $bench tag-duplicates --provider sqlite|postgres --connection "…" --work D:/Temp/librarion-bench
+```
+
+- The possible duplicate tags built whole (`TagDuplicateIndex.BuildAsync`), timed (budget 10 minutes at 2M on
+  PostgreSQL), with the groups by level and the noise keys; the generator gives every tag its match keys.
+- Then the Possible duplicates page of the authors (the first page, then the pages after it as More walks them) and a
+  tag's look-alikes, 20 times each after 3 warm-ups: p95 against the list budget (100 ms), enforced on PostgreSQL.
+- A database generated before chunk 14 has no keys: generate it again.
+
+## What `curation` measures (stage 6 close)
+
+```sh
+dotnet $bench curation --provider sqlite|postgres --connection "…" --work D:/Temp/librarion-bench
+```
+
+- The big changes of curation, each timed whole through the real services (a background run past 10,000 links, waited
+  for): the most prolific author merged into the second (`TagMerger.MergeAsync`) and the merge undone; the books of the
+  1 % filter tag counted (what Tag all confirms), given a new plain tag (`BookTagger.TagScopeAsync`), the tag taken off
+  again and deleted. The catalog is left as it was.
+- No budget (D-6.4: runs, times recorded); exit 1 when a run fails or the links don't come back.
+
 ## What `import` measures (stage 4, [imports](../../docs/features/imports.md#scale))
 
 ```sh
@@ -100,6 +151,8 @@ agents/tools/benchmark/import.sh postgres [inpx-records 1000000] [calibre-books 
   their zips (stored one-byte entries; one record in a hundred `DEL=1`).
 - Into a fresh database (the target is recreated): the source's folder added as a root, the real `CatalogImporter`
   run, then run again with the source unchanged (must write nothing).
+- After the import, where its time went by step (`Core/Import/StepTimes.cs`, switched on only here): the importer's
+  steps (matching, tag names, each bulk copy, the counts) with their seconds and share; steps nest.
 - Budgets (checked only at their sizes): Calibre 2M < 30 min, INPX 1M < 15 min, each unchanged re-import < 5 min;
   exit 1 past one. Report `import-<source>-<provider>-<records>-<time>.json` in the work folder.
 - `import.sh` builds the benchmark in Release, starts the PostgreSQL container for `postgres` (Docker Desktop must

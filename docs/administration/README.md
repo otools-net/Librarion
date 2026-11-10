@@ -11,6 +11,10 @@ overview, its group and its section. The arrow at the top left returns to the li
 | Account | My account | your preferences and password ([your account](../user-guide/account.md)) | everyone |
 | Libraries | [Libraries](libraries.md) | the tenant's libraries | tenant administrators, server administrators |
 | Libraries | [Library settings](settings.md) | the settings of one library | whoever holds the library settings right |
+| Catalog | [Tags](tags.md) | the tags and fields: edit, merge, undo a merge, delete | whoever holds the manage tags right (Administrators, Curators) |
+| Catalog | [Duplicates](duplicates.md) | books that may be the same one: compare and merge, or set apart | whoever holds the merge books right (Administrators, Curators) |
+| Catalog | [Cover styles](cover-styles.md) | the drawn cover styles new books get, the books of a style turned off given another | whoever holds the manage cover styles right (Administrators, Curators) |
+| Catalog | [Imported tags](imported-tags.md) | the tags and genres books came with, the most used first: keep, map, ignore | whoever holds the imported tags right (Administrators, Curators) |
 | People and access | [Accounts](accounts.md) | people who sign in | tenant administrators (their tenant), server administrators (all) |
 | People and access | [Groups](groups.md) | what accounts may do, and in which libraries | tenant administrators, server administrators |
 | Tenant and server | [Background tasks](background-tasks.md) | scans and imports of every library: running now, history, schedules | whoever holds the scan right |

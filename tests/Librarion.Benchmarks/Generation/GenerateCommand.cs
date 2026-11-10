@@ -38,6 +38,7 @@ public static class GenerateCommand
 
         var generator = new CatalogGenerator(shape, catalogTarget);
         var counts = generator.NewCounts();
+        var direct = generator.NewCounts();
         await using (var writer = BulkWriter.Open(target.Provider, target.ConnectionString))
         {
             await writer.BeginAsync(cancellationToken);
@@ -52,12 +53,14 @@ public static class GenerateCommand
             await Load("TagAliases", CatalogGenerator.AliasColumns, generator.TagAliases());
             await Load("TagParents", CatalogGenerator.ParentColumns, generator.TagParents());
             await Load("TagClosure", CatalogGenerator.ClosureColumns, generator.Closure());
+            await Load("ImportTagMappings", CatalogGenerator.MappingColumns, generator.ImportTagMappings());
             await Load("Archives", CatalogGenerator.ArchiveColumns, generator.Archives());
+            await Load("Folders", CatalogGenerator.FolderColumns, generator.Folders());
             await Load("Books", CatalogGenerator.BookColumns, generator.Books());
             await Load("BookFiles", CatalogGenerator.FileColumns, generator.Files());
             await Load("BookIdentifiers", CatalogGenerator.IdentifierColumns, generator.Identifiers());
-            await Load("BookTags", CatalogGenerator.BookTagColumns, generator.BookTags(counts));
-            await Load("TagCounts", CatalogGenerator.CountColumns, generator.TagCounts(counts));
+            await Load("BookTags", CatalogGenerator.BookTagColumns, generator.BookTags(counts, direct));
+            await Load("TagCounts", CatalogGenerator.CountColumns, generator.TagCounts(counts, direct));
             await writer.ExecuteAsync($"UPDATE \"Libraries\" SET \"BookCount\" = {shape.Books} WHERE \"Id\" = {catalogTarget.LibraryId}", cancellationToken);
 
             var indexes = Stopwatch.StartNew();

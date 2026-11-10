@@ -24,8 +24,21 @@
 
 .browse-tools {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+}
+
+/* On a phone a tool shows its icon only (Tag all), its name kept for screen readers: the row fits 360 px. */
+@media (max-width: 480px) {
+    .browse-tools .tool-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
 }
 
 .browse-sort select {
@@ -264,6 +277,150 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Folders (the folder view: stage 6 chunk 8b) ---------- */
+
+.folder-head {
+    margin-bottom: var(--space-4);
+}
+
+.folder-head h1 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.folder-crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    list-style: none;
+}
+
+.folder-crumbs li {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.folder-crumbs li + li::before {
+    margin: 0 var(--space-1);
+    content: "A" / "";
+    opacity: .7;
+}
+
+.folder-crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    overflow-wrap: anywhere;
+    color: inherit;
+    text-decoration: none;
+}
+
+.folder-crumbs a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.values.folders {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--value-min)), 1fr));
+}
+
+.folder-row .icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.default-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    color: var(--accent);
+    font-size: var(--text-sm);
+}
+
+.folder-defaults {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.folder-defaults-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.folder-defaults .chip.inherited {
+    border-style: dashed;
+}
+
+.folder-defaults-none {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.default-tag-rows {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    list-style: none;
+}
+
+.default-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+}
+
+.default-tag-ask {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.chip-note {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.default-tags-when {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.default-tags-when label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 32px;
+}
+
+.folders-more {
+    margin: var(--space-3) 0;
+}
+
+.folder-books {
+    display: block;
+    margin-top: var(--space-6);
 }
 
 /* ---------- A tag's heading ---------- */
@@ -511,4 +668,124 @@
     .facet-value {
         min-height: 44px;
     }
+}
+
+/* Selection (stage 6, browse/book-list.ts): a box over each cover, shown on hover or focus and on every card while
+   books are selected (a phone selects the first by a long press); the bar at the bottom of the screen. */
+.book {
+    position: relative;
+}
+
+.book-link {
+    -webkit-touch-callout: none;
+}
+
+.book-select {
+    position: absolute;
+    inset: var(--space-1) auto auto var(--space-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: transparent;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--duration) var(--ease);
+}
+
+.book-select .icon {
+    width: 18px;
+    height: 18px;
+}
+
+.book:hover .book-select,
+.book-select:focus-visible,
+.books:has(.book.selected) .book-select {
+    opacity: 1;
+}
+
+.book.selected .book-select {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-text);
+    opacity: 1;
+}
+
+.book.selected .book-link {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+    .book-select {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+.selection-dock {
+    position: fixed;
+    inset: auto 0 max(var(--space-3), env(safe-area-inset-bottom)) 0;
+    z-index: 40;
+    display: flex;
+    justify-content: center;
+    padding: 0 var(--space-3);
+    pointer-events: none;
+}
+
+.selection-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 100%;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    pointer-events: auto;
+}
+
+.selection-count {
+    padding: 0 var(--space-1);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* The selection's and a list's tags (browse/selection-tags.ts, scope-tags.ts). */
+.selection-tags {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.selection-tag-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.selection-tag-rows .check {
+    align-items: center;
+    min-height: 40px;
+}
+
+.scope-count {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* The bar never covers the last row. */
+lib-book-list:has(.selection-dock) {
+    display: block;
+    padding-bottom: 72px;
 }

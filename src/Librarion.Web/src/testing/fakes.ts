@@ -82,5 +82,6 @@ export function settingCatalog(): SettingInfo[] {
         { key: 'ui.language', section: 'interface', kind: 'choice', choices: ['browser', 'en'], min: 0, max: 0, lowestLevel: 'user' },
         { key: 'ui.pageSize', section: 'interface', kind: 'integer', choices: null, min: 20, max: 200, lowestLevel: 'user' },
         { key: 'library.keepMissingDays', section: 'libraries', kind: 'integer', choices: null, min: 0, max: 3650, lowestLevel: 'library' },
+        { key: 'import.mergeSameFiles', section: 'libraries', kind: 'choice', choices: ['on', 'off'], min: 0, max: 0, lowestLevel: 'tenant' },
     ];
 }

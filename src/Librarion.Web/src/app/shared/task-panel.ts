@@ -6,7 +6,10 @@ import { TaskWatch } from '../core/task-watch';
 import { ConfirmService } from './confirm';
 import { Icon, IconName } from './icon';
 
-const ICONS: Record<TaskRunInfo['task'], IconName> = { libraryScan: 'refresh', import: 'import', removeRoot: 'folder', removeMissing: 'missing' };
+const ICONS: Record<TaskRunInfo['task'], IconName> = {
+    libraryScan: 'refresh', import: 'import', removeRoot: 'folder', removeMissing: 'missing', tagDelete: 'trash', tagMerge: 'tag', fieldMerge: 'category', mergeUndo: 'back', tagCounts: 'refresh', scopeTags: 'tag',
+    tagIgnore: 'hidden', coverReassign: 'image', duplicateBuild: 'copy', bookMerge: 'copy', tagDuplicateBuild: 'tag',
+};
 
 /**
  * The runs going on, under the top bar (SFE's scan panel; agents/docs/features/task-progress.md): a thin moving bar,

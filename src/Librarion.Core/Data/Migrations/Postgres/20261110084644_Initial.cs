@@ -68,11 +68,38 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     Slug = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Disabled = table.Column<bool>(type: "boolean", nullable: false),
-                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CoverTemplatesOff = table.Column<int>(type: "integer", nullable: false),
+                    DuplicatesBuilt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    TagDuplicatesBuilt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tenants", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DuplicateGroups",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Level = table.Column<int>(type: "integer", nullable: false),
+                    Key = table.Column<string>(type: "character varying(600)", maxLength: 600, nullable: false),
+                    KeyHash = table.Column<long>(type: "bigint", nullable: false),
+                    Noise = table.Column<bool>(type: "boolean", nullable: false),
+                    BookCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DuplicateGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DuplicateGroups_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -121,6 +148,62 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 });
 
             migrationBuilder.CreateTable(
+                name: "MergeLogs",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Kind = table.Column<byte>(type: "smallint", nullable: false),
+                    ParentId = table.Column<long>(type: "bigint", nullable: true),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    SourceId = table.Column<int>(type: "integer", nullable: false),
+                    SourceName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    TargetId = table.Column<int>(type: "integer", nullable: false),
+                    TargetName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    Links = table.Column<int>(type: "integer", nullable: false),
+                    Completed = table.Column<bool>(type: "boolean", nullable: false),
+                    Data = table.Column<string>(type: "text", nullable: true),
+                    Undone = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MergeLogs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MergeLogs_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TagDuplicateGroups",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Field = table.Column<int>(type: "integer", nullable: false),
+                    Level = table.Column<byte>(type: "smallint", nullable: false),
+                    Key = table.Column<long>(type: "bigint", nullable: false),
+                    Noise = table.Column<bool>(type: "boolean", nullable: false),
+                    TagCount = table.Column<int>(type: "integer", nullable: false),
+                    BookCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TagDuplicateGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TagDuplicateGroups_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tags",
                 columns: table => new
                 {
@@ -137,7 +220,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     DisambiguationParentId = table.Column<int>(type: "integer", nullable: true),
                     FieldKey = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     FieldId = table.Column<int>(type: "integer", nullable: true),
-                    BuiltIn = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true)
+                    BuiltIn = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    SoundKey = table.Column<long>(type: "bigint", nullable: true),
+                    InitialsKey = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -274,12 +359,15 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     CoverSource = table.Column<int>(type: "integer", nullable: false),
                     GeneratedTemplate = table.Column<short>(type: "smallint", nullable: true),
                     GeneratedVariant = table.Column<short>(type: "smallint", nullable: true),
+                    CoverFile = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     CoverState = table.Column<int>(type: "integer", nullable: false),
                     MergedIntoId = table.Column<int>(type: "integer", nullable: true),
                     MissingSince = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     MetadataSource = table.Column<byte>(type: "smallint", nullable: false),
                     ImportHash = table.Column<long>(type: "bigint", nullable: true),
-                    WorkKey = table.Column<long>(type: "bigint", nullable: true)
+                    WorkKey = table.Column<long>(type: "bigint", nullable: true),
+                    Edited = table.Column<byte>(type: "smallint", nullable: false),
+                    Untagged = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -376,6 +464,56 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 });
 
             migrationBuilder.CreateTable(
+                name: "MergeLogLinks",
+                columns: table => new
+                {
+                    LogId = table.Column<long>(type: "bigint", nullable: false),
+                    BookId = table.Column<int>(type: "integer", nullable: false),
+                    Source = table.Column<byte>(type: "smallint", nullable: false),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Ordinal = table.Column<int>(type: "integer", nullable: true),
+                    Number = table.Column<double>(type: "double precision", nullable: true),
+                    Kept = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MergeLogLinks", x => new { x.LogId, x.BookId, x.Source });
+                    table.ForeignKey(
+                        name: "FK_MergeLogLinks_MergeLogs_LogId",
+                        column: x => x.LogId,
+                        principalTable: "MergeLogs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FieldKeyAliases",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Key = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    FieldId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FieldKeyAliases", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_FieldKeyAliases_Tags_FieldId",
+                        column: x => x.FieldId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_FieldKeyAliases_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GroupTagFilters",
                 columns: table => new
                 {
@@ -410,8 +548,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     Source = table.Column<byte>(type: "smallint", nullable: false),
                     FieldId = table.Column<int>(type: "integer", nullable: true),
                     NormalizedName = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    Name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
                     TagId = table.Column<int>(type: "integer", nullable: true),
-                    Ignored = table.Column<bool>(type: "boolean", nullable: false)
+                    Ignored = table.Column<bool>(type: "boolean", nullable: false),
+                    Reviewed = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -432,6 +572,32 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         name: "FK_ImportTagMappings_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NotSameTags",
+                columns: table => new
+                {
+                    TagId = table.Column<int>(type: "integer", nullable: false),
+                    OtherId = table.Column<int>(type: "integer", nullable: false),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NotSameTags", x => new { x.TagId, x.OtherId });
+                    table.ForeignKey(
+                        name: "FK_NotSameTags_Tags_OtherId",
+                        column: x => x.OtherId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NotSameTags_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -491,7 +657,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     LibraryId = table.Column<int>(type: "integer", nullable: false),
                     TagId = table.Column<int>(type: "integer", nullable: false),
                     TenantId = table.Column<int>(type: "integer", nullable: false),
-                    BookCount = table.Column<int>(type: "integer", nullable: false)
+                    BookCount = table.Column<int>(type: "integer", nullable: false),
+                    TotalCount = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -504,6 +671,31 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_TagCounts_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TagDuplicateMembers",
+                columns: table => new
+                {
+                    GroupId = table.Column<long>(type: "bigint", nullable: false),
+                    TagId = table.Column<int>(type: "integer", nullable: false),
+                    TenantId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TagDuplicateMembers", x => new { x.GroupId, x.TagId });
+                    table.ForeignKey(
+                        name: "FK_TagDuplicateMembers_TagDuplicateGroups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "TagDuplicateGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TagDuplicateMembers_Tags_TagId",
                         column: x => x.TagId,
                         principalTable: "Tags",
                         principalColumn: "Id",
@@ -628,6 +820,82 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 });
 
             migrationBuilder.CreateTable(
+                name: "BookTagSuppressions",
+                columns: table => new
+                {
+                    BookId = table.Column<int>(type: "integer", nullable: false),
+                    TagId = table.Column<int>(type: "integer", nullable: false),
+                    TenantId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BookTagSuppressions", x => new { x.BookId, x.TagId });
+                    table.ForeignKey(
+                        name: "FK_BookTagSuppressions_Books_BookId",
+                        column: x => x.BookId,
+                        principalTable: "Books",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BookTagSuppressions_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DuplicateMembers",
+                columns: table => new
+                {
+                    GroupId = table.Column<long>(type: "bigint", nullable: false),
+                    BookId = table.Column<int>(type: "integer", nullable: false),
+                    TenantId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DuplicateMembers", x => new { x.GroupId, x.BookId });
+                    table.ForeignKey(
+                        name: "FK_DuplicateMembers_Books_BookId",
+                        column: x => x.BookId,
+                        principalTable: "Books",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DuplicateMembers_DuplicateGroups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "DuplicateGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NotDuplicates",
+                columns: table => new
+                {
+                    BookId = table.Column<int>(type: "integer", nullable: false),
+                    OtherId = table.Column<int>(type: "integer", nullable: false),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NotDuplicates", x => new { x.BookId, x.OtherId });
+                    table.ForeignKey(
+                        name: "FK_NotDuplicates_Books_BookId",
+                        column: x => x.BookId,
+                        principalTable: "Books",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NotDuplicates_Books_OtherId",
+                        column: x => x.OtherId,
+                        principalTable: "Books",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Archives",
                 columns: table => new
                 {
@@ -663,6 +931,47 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 });
 
             migrationBuilder.CreateTable(
+                name: "Folders",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    LibraryId = table.Column<int>(type: "integer", nullable: false),
+                    RootId = table.Column<int>(type: "integer", nullable: false),
+                    ParentId = table.Column<int>(type: "integer", nullable: true),
+                    Name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    Path = table.Column<string>(type: "text", nullable: false),
+                    PathKey = table.Column<long>(type: "bigint", nullable: false),
+                    ArchiveId = table.Column<int>(type: "integer", nullable: true),
+                    FileCount = table.Column<int>(type: "integer", nullable: false),
+                    TotalFileCount = table.Column<int>(type: "integer", nullable: false),
+                    FolderCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Folders", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Folders_Archives_ArchiveId",
+                        column: x => x.ArchiveId,
+                        principalTable: "Archives",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Folders_Folders_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "Folders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Folders_LibraryRoots_RootId",
+                        column: x => x.RootId,
+                        principalTable: "LibraryRoots",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BookFiles",
                 columns: table => new
                 {
@@ -673,6 +982,7 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     BookId = table.Column<int>(type: "integer", nullable: false),
                     RootId = table.Column<int>(type: "integer", nullable: true),
                     ArchiveId = table.Column<int>(type: "integer", nullable: true),
+                    FolderId = table.Column<int>(type: "integer", nullable: false),
                     Path = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
                     PathKey = table.Column<long>(type: "bigint", nullable: false),
                     Format = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -701,9 +1011,50 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_BookFiles_Folders_FolderId",
+                        column: x => x.FolderId,
+                        principalTable: "Folders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_BookFiles_LibraryRoots_RootId",
                         column: x => x.RootId,
                         principalTable: "LibraryRoots",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DefaultTags",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    TenantId = table.Column<int>(type: "integer", nullable: false),
+                    LibraryId = table.Column<int>(type: "integer", nullable: false),
+                    FolderId = table.Column<int>(type: "integer", nullable: true),
+                    TagId = table.Column<int>(type: "integer", nullable: false),
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DefaultTags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DefaultTags_Folders_FolderId",
+                        column: x => x.FolderId,
+                        principalTable: "Folders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DefaultTags_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DefaultTags_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -727,6 +1078,11 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "IX_BookFiles_BookId",
                 table: "BookFiles",
                 column: "BookId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BookFiles_FolderId_BookId",
+                table: "BookFiles",
+                columns: new[] { "FolderId", "BookId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_BookFiles_LibraryId_Size_Id",
@@ -755,6 +1111,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 columns: new[] { "LibraryId", "Added", "Id" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Books_LibraryId_Id_Untagged",
+                table: "Books",
+                columns: new[] { "LibraryId", "Id" },
+                filter: "\"Untagged\"");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Books_LibraryId_MissingSince_Id",
                 table: "Books",
                 columns: new[] { "LibraryId", "MissingSince", "Id" },
@@ -781,6 +1143,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 columns: new[] { "TenantId", "Added", "Id" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Books_TenantId_CoverFile",
+                table: "Books",
+                columns: new[] { "TenantId", "CoverFile" },
+                filter: "\"CoverFile\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Books_TenantId_SortAuthor_Id",
                 table: "Books",
                 columns: new[] { "TenantId", "SortAuthor", "Id" });
@@ -805,6 +1173,73 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 table: "BookTags",
                 columns: new[] { "TagId", "Number", "BookId" },
                 filter: "\"Number\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BookTagSuppressions_TagId",
+                table: "BookTagSuppressions",
+                column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTags_FolderId",
+                table: "DefaultTags",
+                column: "FolderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTags_LibraryId_FolderId_TagId",
+                table: "DefaultTags",
+                columns: new[] { "LibraryId", "FolderId", "TagId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTags_TagId",
+                table: "DefaultTags",
+                column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DuplicateGroups_TenantId_BookCount_Id",
+                table: "DuplicateGroups",
+                columns: new[] { "TenantId", "BookCount", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DuplicateGroups_TenantId_Level_KeyHash",
+                table: "DuplicateGroups",
+                columns: new[] { "TenantId", "Level", "KeyHash" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DuplicateMembers_BookId",
+                table: "DuplicateMembers",
+                column: "BookId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DuplicateMembers_TenantId_BookId",
+                table: "DuplicateMembers",
+                columns: new[] { "TenantId", "BookId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FieldKeyAliases_FieldId",
+                table: "FieldKeyAliases",
+                column: "FieldId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FieldKeyAliases_TenantId_Key",
+                table: "FieldKeyAliases",
+                columns: new[] { "TenantId", "Key" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Folders_ArchiveId",
+                table: "Folders",
+                column: "ArchiveId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Folders_ParentId_Name_Id",
+                table: "Folders",
+                columns: new[] { "ParentId", "Name", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Folders_RootId_PathKey",
+                table: "Folders",
+                columns: new[] { "RootId", "PathKey" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_GroupLibraries_LibraryId",
@@ -837,6 +1272,11 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ImportTagMappings_TenantId_FieldId_TagId",
+                table: "ImportTagMappings",
+                columns: new[] { "TenantId", "FieldId", "TagId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ImportTagMappings_TenantId_Source_FieldId_NormalizedName",
                 table: "ImportTagMappings",
                 columns: new[] { "TenantId", "Source", "FieldId", "NormalizedName" });
@@ -850,6 +1290,46 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "IX_LibraryRoots_LibraryId",
                 table: "LibraryRoots",
                 column: "LibraryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MergeLogs_ParentId",
+                table: "MergeLogs",
+                column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MergeLogs_SourceId",
+                table: "MergeLogs",
+                column: "SourceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MergeLogs_TargetId",
+                table: "MergeLogs",
+                column: "TargetId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MergeLogs_TenantId_Id",
+                table: "MergeLogs",
+                columns: new[] { "TenantId", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotDuplicates_OtherId",
+                table: "NotDuplicates",
+                column: "OtherId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotDuplicates_TenantId_OtherId",
+                table: "NotDuplicates",
+                columns: new[] { "TenantId", "OtherId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotSameTags_OtherId",
+                table: "NotSameTags",
+                column: "OtherId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotSameTags_TenantId_OtherId",
+                table: "NotSameTags",
+                columns: new[] { "TenantId", "OtherId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SecurityEvents_TenantId_Id",
@@ -882,9 +1362,34 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 columns: new[] { "DescendantId", "AncestorId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_TagCounts_LibraryId_BookCount_TagId",
+                table: "TagCounts",
+                columns: new[] { "LibraryId", "BookCount", "TagId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TagCounts_TagId",
                 table: "TagCounts",
                 column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TagDuplicateGroups_TenantId_Field_BookCount_Id",
+                table: "TagDuplicateGroups",
+                columns: new[] { "TenantId", "Field", "BookCount", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TagDuplicateGroups_TenantId_Field_Key",
+                table: "TagDuplicateGroups",
+                columns: new[] { "TenantId", "Field", "Key" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TagDuplicateMembers_TagId",
+                table: "TagDuplicateMembers",
+                column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TagDuplicateMembers_TenantId_TagId",
+                table: "TagDuplicateMembers",
+                columns: new[] { "TenantId", "TagId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_TagParents_ParentId",
@@ -897,6 +1402,11 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 column: "FieldId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tags_TenantId_FieldId_InitialsKey",
+                table: "Tags",
+                columns: new[] { "TenantId", "FieldId", "InitialsKey" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tags_TenantId_FieldId_NormalizedName",
                 table: "Tags",
                 columns: new[] { "TenantId", "FieldId", "NormalizedName" });
@@ -905,6 +1415,11 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "IX_Tags_TenantId_FieldId_SortName_Id",
                 table: "Tags",
                 columns: new[] { "TenantId", "FieldId", "SortName", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tags_TenantId_FieldId_SoundKey",
+                table: "Tags",
+                columns: new[] { "TenantId", "FieldId", "SoundKey" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tags_TenantId_FieldKey",
@@ -917,6 +1432,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 table: "Tags",
                 columns: new[] { "TenantId", "IsHidden" },
                 filter: "\"IsHidden\"");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tags_TenantId_Shorthand",
+                table: "Tags",
+                columns: new[] { "TenantId", "Shorthand" },
+                filter: "\"Shorthand\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TaskRuns_Outcome",
@@ -972,6 +1493,18 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "BookTags");
 
             migrationBuilder.DropTable(
+                name: "BookTagSuppressions");
+
+            migrationBuilder.DropTable(
+                name: "DefaultTags");
+
+            migrationBuilder.DropTable(
+                name: "DuplicateMembers");
+
+            migrationBuilder.DropTable(
+                name: "FieldKeyAliases");
+
+            migrationBuilder.DropTable(
                 name: "GroupLibraries");
 
             migrationBuilder.DropTable(
@@ -985,6 +1518,15 @@ namespace Librarion.Core.Data.Migrations.Postgres
 
             migrationBuilder.DropTable(
                 name: "ImportTagMappings");
+
+            migrationBuilder.DropTable(
+                name: "MergeLogLinks");
+
+            migrationBuilder.DropTable(
+                name: "NotDuplicates");
+
+            migrationBuilder.DropTable(
+                name: "NotSameTags");
 
             migrationBuilder.DropTable(
                 name: "SecurityEvents");
@@ -1005,6 +1547,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TagCounts");
 
             migrationBuilder.DropTable(
+                name: "TagDuplicateMembers");
+
+            migrationBuilder.DropTable(
                 name: "TagParents");
 
             migrationBuilder.DropTable(
@@ -1017,10 +1562,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "TenantDisabledRights");
 
             migrationBuilder.DropTable(
-                name: "Archives");
+                name: "Folders");
 
             migrationBuilder.DropTable(
-                name: "Books");
+                name: "DuplicateGroups");
 
             migrationBuilder.DropTable(
                 name: "Users");
@@ -1029,7 +1574,19 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "Groups");
 
             migrationBuilder.DropTable(
+                name: "MergeLogs");
+
+            migrationBuilder.DropTable(
+                name: "Books");
+
+            migrationBuilder.DropTable(
+                name: "TagDuplicateGroups");
+
+            migrationBuilder.DropTable(
                 name: "Tags");
+
+            migrationBuilder.DropTable(
+                name: "Archives");
 
             migrationBuilder.DropTable(
                 name: "LibraryRoots");

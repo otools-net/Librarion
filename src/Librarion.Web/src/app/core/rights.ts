@@ -4,8 +4,17 @@ import type { RightInfo } from './models';
 export const Rights = {
     browse: 'library.browse',
     scan: 'library.scan',
+    download: 'library.download',
+    folders: 'library.folders',
     import: 'library.import',
     librarySettings: 'library.settings',
+    tagBooks: 'library.tag',
+    editBooks: 'library.edit',
+    mergeBooks: 'library.merge',
+    importedTags: 'library.importedTags',
+    defaultTags: 'library.defaultTags',
+    manageTags: 'tenant.tags',
+    coverStyles: 'tenant.coverStyles',
     manageUsers: 'tenant.users',
     manageLibraries: 'tenant.libraries',
     tenantSettings: 'tenant.settings',
@@ -22,7 +31,7 @@ export const Rights = {
 
 /** Any of these opens the administration. */
 export const ADMIN_RIGHTS: string[] = [
-    Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings,
+    Rights.manageUsers, Rights.manageLibraries, Rights.tenantSettings, Rights.tenantSecurityLog, Rights.librarySettings, Rights.manageTags, Rights.coverStyles, Rights.mergeBooks,
     Rights.manageTenants, Rights.manageAllUsers, Rights.serverSettings, Rights.serverSecurityLog,
 ];
 

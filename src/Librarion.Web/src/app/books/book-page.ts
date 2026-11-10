@@ -6,10 +6,15 @@ import { Api, coverUrl, fileUrl } from '../core/api.service';
 import { errorText } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
+import { ToastService } from '../core/toast.service';
 import { BookDetail, BookDuplicate, BookFile, BookListItem, BookTag } from '../core/models';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
 import { FieldCatalog } from '../tags/field-catalog';
+import { BookEditor } from './book-editor';
+import { CoverEditor } from './cover-editor';
+import { BookCompare } from './book-compare';
+import { tagLink } from '../tags/tag-link';
 
 /** The book's tags of one field (or the plain tags, `field` null), in the order the server gave them. */
 interface FieldGroup {
@@ -22,11 +27,11 @@ interface FieldGroup {
  * metadata gave none, marked), authors and series linking to their pages, the other fields as chips, the description,
  * its files with Download (when the session may download in its library), details (added, identifiers, imported
  * properties), and other books that may be the same one (read only until merging comes). A merged book goes to the
- * book it now lives in.
+ * book it now lives in. Edit (with `library.edit` or `library.tag` in its library) opens `BookEditor`.
  */
 @Component({
     selector: 'lib-book-page',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor, CoverEditor, BookCompare],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'book-page' },
     template: `
@@ -37,7 +42,7 @@ interface FieldGroup {
             <article class="book-sheet" aria-labelledby="book-title">
                 <div class="book-head">
                     <span class="book-page-cover">
-                        <img [src]="cover(book.id, 'l')" alt="" width="600" height="900" decoding="async">
+                        <img [src]="cover(book.id, 'l', book.coverVersion)" alt="" width="600" height="900" decoding="async">
                     </span>
                     <div class="book-main">
                         @if (libraryName(); as name) {
@@ -48,14 +53,14 @@ interface FieldGroup {
                             <p class="book-by">
                                 {{ 'book.by' | t }}
                                 @for (author of authors(); track author.id; let last = $last) {
-                                    <a [routerLink]="['/tags', author.id]">{{ author.name }}</a>@if (!last) {, }
+                                    <a [routerLink]="link(author)">{{ author.name }}</a>@if (!last) {, }
                                 }
                             </p>
                         }
                         @for (series of series(); track series.id) {
                             <p class="book-in-series">
                                 <svg libIcon="series"></svg>
-                                <a [routerLink]="['/tags', series.id]">{{ seriesText(series) }}</a>
+                                <a [routerLink]="link(series)">{{ seriesText(series) }}</a>
                             </p>
                         }
                         @if (book.rating) {
@@ -63,11 +68,23 @@ interface FieldGroup {
                                 <svg libIcon="star"></svg>{{ 'book.rating' | t: { stars: i18n.number(book.rating / 2) } }}
                             </p>
                         }
-                        @if (first(); as file) {
+                        @if (first() || book.canEdit || book.canTag) {
                             <p class="book-actions">
-                                <a class="button primary" [href]="download(book, file)" download [title]="'book.downloadHint' | t: { name: file.name }">
-                                    <svg libIcon="download"></svg>{{ 'book.download' | t: { format: file.format.toUpperCase() } }}
-                                </a>
+                                @if (first(); as file) {
+                                    <a class="button primary" [href]="download(book, file)" download [title]="'book.downloadHint' | t: { name: file.name }">
+                                        <svg libIcon="download"></svg>{{ 'book.download' | t: { format: file.format.toUpperCase() } }}
+                                    </a>
+                                }
+                                @if (book.canEdit || book.canTag) {
+                                    <button type="button" class="button" [title]="'book.editHint' | t" (click)="editing.set(true)">
+                                        <svg libIcon="edit"></svg>{{ 'book.edit' | t }}
+                                    </button>
+                                }
+                                @if (book.canEdit) {
+                                    <button type="button" class="button" [title]="'cover.editHint' | t" (click)="coverEditing.set(true)">
+                                        <svg libIcon="book"></svg>{{ 'cover.edit' | t }}
+                                    </button>
+                                }
                             </p>
                         }
                         @if (fields().length) {
@@ -77,7 +94,7 @@ interface FieldGroup {
                                         <dt>{{ fieldName(group) }}</dt>
                                         <dd>
                                             @for (tag of group.tags; track tag.id) {
-                                                <a class="chip" [routerLink]="['/tags', tag.id]">{{ catalog.value(tag.field, tag.name) }}</a>
+                                                <a class="chip" [routerLink]="link(tag)">{{ catalog.value(tag.field, tag.name) }}</a>
                                             }
                                         </dd>
                                     </div>
@@ -95,10 +112,22 @@ interface FieldGroup {
                 }
 
                 <section class="book-section" aria-labelledby="book-files">
-                    <h2 id="book-files">{{ 'book.files' | t }}</h2>
+                    <div class="book-section-head">
+                        <h2 id="book-files">{{ 'book.files' | t }}</h2>
+                        @if (canSplit() && !splitting()) {
+                            <button type="button" class="button" [title]="'book.splitHint' | t" (click)="startSplit()">{{ 'book.split' | t }}</button>
+                        }
+                    </div>
+                    @if (splitting()) {
+                        <p class="field-hint" id="book-split-hint">{{ 'book.splitIntro' | t }}</p>
+                    }
                     <ul class="book-files">
                         @for (file of book.files; track file.id) {
                             <li class="book-file" [class.missing]="file.missing">
+                                @if (splitting()) {
+                                    <input type="checkbox" class="book-file-check" [checked]="splitFiles().has(file.id)" (change)="chooseFile(file)"
+                                           [attr.aria-label]="'book.splitFile' | t: { name: file.name }" aria-describedby="book-split-hint">
+                                }
                                 <span class="badge">{{ file.format.toUpperCase() }}</span>
                                 <span class="book-file-text">
                                     <span class="book-file-name" [title]="file.name">{{ file.name }}</span>
@@ -121,6 +150,13 @@ interface FieldGroup {
                             </li>
                         }
                     </ul>
+                    @if (splitting()) {
+                        <div class="book-split-actions">
+                            <button type="button" class="button primary" [disabled]="busy() || !splitFiles().size || splitFiles().size === book.files.length"
+                                    (click)="split(book)">{{ 'book.splitAction' + (splitFiles().size === 1 ? '.one' : '') | t: { count: i18n.number(splitFiles().size) } }}</button>
+                            <button type="button" class="button" [disabled]="busy()" (click)="splitting.set(false)">{{ 'common.cancel' | t }}</button>
+                        </div>
+                    }
                     @if (!book.canDownload) {
                         <p class="book-note">{{ 'book.noDownload' | t }}</p>
                     }
@@ -148,7 +184,7 @@ interface FieldGroup {
                                 @let other = duplicate.book;
                                 <li>
                                     <a class="book-duplicate" [routerLink]="['/books', other.id]">
-                                        <span class="book-cover"><img [src]="cover(other.id, 's')" alt="" loading="lazy" decoding="async" width="80" height="120"></span>
+                                        <span class="book-cover"><img [src]="cover(other.id, 's', other.coverVersion)" alt="" loading="lazy" decoding="async" width="80" height="120"></span>
                                         <span class="book-text">
                                             <span class="book-title">{{ listTitle(other) }}</span>
                                             <span class="book-authors">{{ other.authors.join(', ') }}</span>
@@ -160,12 +196,27 @@ interface FieldGroup {
                                             }
                                         </span>
                                     </a>
+                                    @if (book.canMerge) {
+                                        <div class="book-duplicate-actions">
+                                            <button type="button" class="button" [title]="'compare.openHint' | t" (click)="comparing.set([book.id, other.id])">{{ 'compare.open' | t }}</button>
+                                            <button type="button" class="button" [title]="'compare.notHint' | t" [disabled]="busy()" (click)="notDuplicate(other)">{{ 'compare.not' | t }}</button>
+                                        </div>
+                                    }
                                 </li>
                             }
                         </ul>
                     </section>
                 }
             </article>
+            @if (editing()) {
+                <lib-book-editor [book]="book" (saved)="edited($event)" (closed)="editing.set(false)" />
+            }
+            @if (comparing(); as ids) {
+                <lib-book-compare [bookIds]="ids" (merged)="merged($event)" (closed)="comparing.set(null)" />
+            }
+            @if (coverEditing()) {
+                <lib-cover-editor [book]="book" (changed)="book$.set($event)" (closed)="coverEditing.set(false)" />
+            }
         } @else if (missing()) {
             <h1>{{ 'book.missingTitle' | t }}</h1>
             <p class="empty large" libEmpty="book">
@@ -185,6 +236,7 @@ export class BookPage {
     protected readonly catalog = inject(FieldCatalog);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
+    private readonly toasts = inject(ToastService);
     private readonly location = inject(Location);
     private readonly libraries = inject(LibraryContext);
 
@@ -196,6 +248,17 @@ export class BookPage {
     protected readonly duplicates = signal<BookDuplicate[]>([]);
     protected readonly missing = signal(false);
     protected readonly error = signal<string | null>(null);
+    protected readonly editing = signal(false);
+    protected readonly coverEditing = signal(false);
+    /** The books compared (this one and a possible duplicate), while Compare and merge is open. */
+    protected readonly comparing = signal<number[] | null>(null);
+    protected readonly busy = signal(false);
+    /** Split: files chosen to move out into a new book (stage 6 chunk 13). */
+    protected readonly splitting = signal(false);
+    protected readonly splitFiles = signal<ReadonlySet<number>>(new Set());
+    /** Split is offered with the merge right on a book of two files or more. */
+    protected readonly canSplit = computed(() => !!this.book()?.canMerge && (this.book()?.files.length ?? 0) >= 2);
+    protected readonly book$ = this.book;
     private requested = 0;
 
     protected readonly authors = computed(() => this.book()?.tags.filter(tag => tag.field === 'author') ?? []);
@@ -241,12 +304,77 @@ export class BookPage {
             void this.router.navigateByUrl('/');
     }
 
-    protected cover(id: number, size: 's' | 'l'): string {
-        return coverUrl(id, size);
+    /** The book as saved; its possible duplicates asked again (a title or first author may have changed). */
+    protected edited(book: BookDetail): void {
+        this.book.set(book);
+        void this.api.bookDuplicates(book.id).then(duplicates => this.book()?.id === book.id && this.duplicates.set(duplicates), () => { });
+    }
+
+    /** Merged: this page shows the kept book (another one's when this one was merged into it). */
+    protected merged(book: BookDetail): void {
+        if (book.id !== this.book()?.id)
+            void this.router.navigate(['/books', book.id], { replaceUrl: true });
+        else
+            this.edited(book);
+    }
+
+    protected startSplit(): void {
+        this.splitFiles.set(new Set());
+        this.splitting.set(true);
+    }
+
+    protected chooseFile(file: BookFile): void {
+        this.splitFiles.update(chosen => {
+            const next = new Set(chosen);
+            if (!next.delete(file.id))
+                next.add(file.id);
+            return next;
+        });
+    }
+
+    /** The chosen files moved out: the new book's page opens (this one is a step back). */
+    protected async split(book: BookDetail): Promise<void> {
+        this.busy.set(true);
+        try {
+            const created = await this.api.splitBook(book.id, [...this.splitFiles()]);
+            this.splitting.set(false);
+            this.toasts.show(this.i18n.t('book.splitDone', { title: created ? created.title || created.fileName || '' : '' }));
+            if (created)
+                void this.router.navigate(['/books', created.id]);
+            else
+                await this.load();
+        } catch (error) {
+            this.toasts.show(errorText(this.i18n, error));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    protected async notDuplicate(other: BookListItem): Promise<void> {
+        const book = this.book();
+        if (!book)
+            return;
+        this.busy.set(true);
+        try {
+            await this.api.notDuplicates([book.id, other.id]);
+            this.duplicates.update(list => list.filter(d => d.book.id !== other.id));
+        } catch (error) {
+            this.toasts.show(errorText(this.i18n, error));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    protected cover(id: number, size: 's' | 'l', version?: string | null): string {
+        return coverUrl(id, size, version);
     }
 
     protected download(book: BookDetail, file: BookFile): string {
         return fileUrl(book.id, file.id);
+    }
+
+    protected link(tag: BookTag): (string | number)[] {
+        return tagLink(tag);
     }
 
     protected title(book: BookDetail): string {

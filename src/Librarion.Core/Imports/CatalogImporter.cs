@@ -1,3 +1,4 @@
+using Librarion.Core.Merging;
 using System.IO.Hashing;
 using System.Text;
 using System.Text.Json;
@@ -18,9 +19,12 @@ namespace Librarion.Core.Imports;
 /// The same record again (its hash) is skipped without writing. Archives the import lists for the first time are
 /// written as done at its end, so a later scan skips them unchanged. Nothing is ever removed.
 /// </summary>
-public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
+public sealed class CatalogImporter(TenantDb tenantDb, DuplicateIndex duplicates, TagDuplicateIndex tagDuplicates, TimeProvider time)
 {
     public const int BatchSize = 1000;
+
+    /// <summary>Files asked of the disk at once while a batch's new files are read (<c>Run.Stat</c>).</summary>
+    private const int StatParallelism = 8;
     private const int KeptListings = 2;
     private static readonly JsonSerializerOptions HashJson = new() { IncludeFields = true };
 
@@ -32,19 +36,24 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
             ?? throw new InvalidOperationException($"Root {rootId} is not a root of library {libraryId}.");
         var run = new Run(db, root, new CatalogWriter(tenantId, libraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time), progress);
         using var source = open();
+        var completed = false;
         try
         {
             foreach (var batch in source.Read(run.Report, cancellationToken).Chunk(BatchSize))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                using var step = StepTimes.Step("batch (all but reading the source)");
                 await run.BatchAsync(source, batch, cancellationToken);
             }
 
             await run.FinishArchivesAsync(cancellationToken);
+            completed = true;
         }
         finally
         {
             await run.Writer.FlushCountsAsync(db, CancellationToken.None);
+            await duplicates.AfterRunAsync(tenantId, run.Writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
+            await tagDuplicates.AfterRunAsync(tenantId, run.Writer.NewTags, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return run.Result();
@@ -68,6 +77,7 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
     {
         private readonly Dictionary<string, ArchiveState> archives = new(StringComparer.Ordinal);
         private readonly LinkedList<ArchiveState> listed = new();
+        private Dictionary<Location, FileInfo> stats = [];
         private int seen, unchanged;
 
         public CatalogWriter Writer => writer;
@@ -77,6 +87,7 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
 
         public async Task BatchAsync(IImportSource source, IReadOnlyList<ImportRecord> records, CancellationToken cancellationToken)
         {
+            var match = StepTimes.Step("match (archives, files, identifiers, books)");
             // Where each file is, relative to the root; files outside it can't be books of this library.
             var locations = new List<Location>[records.Count];
             for (var i = 0; i < records.Count; i++)
@@ -89,10 +100,14 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
                         Report.Problem($"{records[i].SourceId}: {file.Path}{(file.Entry is null ? "" : "/" + file.Entry)} is not inside {root.Path}");
             }
 
-            foreach (var name in locations.SelectMany(l => l).Select(l => l.Archive).OfType<string>().Distinct())
-                await ArchiveAsync(name, cancellationToken);
+            using (StepTimes.Step("match: archives"))
+                foreach (var name in locations.SelectMany(l => l).Select(l => l.Archive).OfType<string>().Distinct())
+                    await ArchiveAsync(name, cancellationToken);
 
+            var lookup = StepTimes.Step("match: files looked up");
             var rows = await RowsAsync(locations.SelectMany(l => l).Distinct().ToList(), cancellationToken);
+            lookup.Dispose();
+            lookup = StepTimes.Step("match: identifiers and books looked up");
             var values = records.Select(r => Cut(r.SourceId)).Where(v => v.Length > 0).Distinct().ToList();
             // Two plain lookups, no join: while an import grows the tables, PostgreSQL's statistics lag behind and a join
             // was planned as a walk over every book of the tenant per identifier (30 s at 9,000 books).
@@ -104,6 +119,11 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
                 .ToDictionary(b => b.Id);
             var bySourceId = identified.Where(i => books.TryGetValue(i.BookId, out var b) && b.LibraryId == root.LibraryId)
                 .GroupBy(i => i.Value, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Min(i => books[i.BookId].MergedIntoId ?? i.BookId), StringComparer.Ordinal);
+            lookup.Dispose();
+            lookup = StepTimes.Step("match: new files read");
+            stats = Stat(locations.SelectMany(l => l).Where(l => l.Archive is null && !rows.ContainsKey(l) && BookFormats.Of(l.Path) is not null).Distinct().ToList());
+            lookup.Dispose();
+            lookup = StepTimes.Step("match: records (hashes)");
 
             var written = new List<CatalogWriter.ImportedBook>();
             var claimed = new HashSet<Location>();
@@ -159,10 +179,14 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
                 written.Add(new CatalogWriter.ImportedBook(bookId, files, path, metadata, source.Owner, hash, record.Cover));
             }
 
+            lookup.Dispose();
             if (foundAgain.Count > 0)
                 await db.BookFiles.Where(f => foundAgain.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, (DateTime?)null), cancellationToken);
-            await writer.ImportAsync(db, written, cancellationToken);
-            await writer.FlushCountsAsync(db, cancellationToken);
+            match.Dispose();
+            using (StepTimes.Step("write"))
+                await writer.ImportAsync(db, written, cancellationToken);
+            using (StepTimes.Step("counts"))
+                await writer.FlushCountsAsync(db, cancellationToken);
             progress?.Report(new ScanProgress(seen, 0, writer.Added, writer.Refreshed, 0, records[^1].SourceId, writer.Missing, writer.Returned, Report.Skipped));
         }
 
@@ -294,13 +318,33 @@ public sealed class CatalogImporter(TenantDb tenantDb, TimeProvider time)
         }
 
         /// <summary>A file of a record the library doesn't have: a row for it when it is there; null when it isn't.</summary>
+        /// <summary>
+        /// The batch's new loose files asked of the disk together, a few at a time: one by one, a library whose files'
+        /// entries aren't cached waits for each (2M books' files read cold took 7 of a Calibre import's 31 minutes).
+        /// </summary>
+        private Dictionary<Location, FileInfo> Stat(List<Location> loose)
+        {
+            var infos = new FileInfo[loose.Count];
+            Parallel.For(0, loose.Count, new ParallelOptions { MaxDegreeOfParallelism = StatParallelism }, i =>
+            {
+                var info = new FileInfo(Path.Combine(root.Path, loose[i].Path));
+                // Read now (FileInfo reads on its first property, then keeps what it read).
+                _ = info.Exists;
+                infos[i] = info;
+            });
+            var stats = new Dictionary<Location, FileInfo>(loose.Count);
+            for (var i = 0; i < loose.Count; i++)
+                stats[loose[i]] = infos[i];
+            return stats;
+        }
+
         private BookFile? NewFile(Location location)
         {
             if (BookFormats.Of(location.Path) is not { } format)
                 return null;
             if (location.Archive is null)
             {
-                var info = new FileInfo(Path.Combine(root.Path, location.Path));
+                var info = stats.GetValueOrDefault(location) ?? new FileInfo(Path.Combine(root.Path, location.Path));
                 if (!info.Exists || info.Attributes.HasFlag(FileAttributes.ReparsePoint))
                     return null;
                 return new BookFile { RootId = root.Id, Path = location.Path, PathKey = PathKeys.Of(location.Path), Format = format, Size = info.Length, Modified = Moment(info.LastWriteTimeUtc) };

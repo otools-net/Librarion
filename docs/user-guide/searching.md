@@ -22,8 +22,17 @@ like the library's (covers or list, sorted by title, author or newest), and **Ba
 - `series:` alone: books in any series.
 - `category:Fantasy` also finds the categories under it.
 - `tag:Favourites`: books with a tag, or with a tag under it; `tag:"category:Horror"` names a field's value.
+- `tag:"Freddy (FNAF)"`: when two tags share a name and one is told apart by another tag (shown in brackets), this
+  finds that one only; `tag:Freddy` finds both.
 - `format:epub`: books with an EPUB file.
 - `title:dune`: the word in the title only.
+
+## Special terms
+
+- `special:untagged`: books without a tag of their own. Authors, series, categories, languages and other fields don't
+  count: these are the books still to be tagged. `-special:untagged` finds those that have one.
+- `special:duplicates`: books that may be duplicates of others (the same file, identifier, or title and author; see
+  [Duplicates](../administration/duplicates.md)). Only for those who may merge books, in the libraries where they may.
 
 ## Leaving out
 
@@ -49,5 +58,6 @@ With more than 2,000 matches the counts are over the first 2,000 found, and the 
 While you type, the box suggests what the last word may be: a field (`author:`), then authors, series, tags and other
 values whose name has your words, those with the most books in the library first, with their count. Pick one with the
 arrows and **Enter**, or tap it: it takes the place of what you typed. After a field, its values are suggested.
+Typing `spec` offers the special terms.
 
 Books and tags your groups don't let you see are never found or suggested.

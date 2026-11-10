@@ -46,3 +46,18 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
 - The final layout check measures the page as the test leaves it: a test that ends scrolled (a row further down as the
   run's other specs add libraries) can put a small link against the sticky top bar's buttons. End such a test scrolled
   to the top; targets covered at their centre are not measured (`expectTapTargets`).
+- Two Ctrl-clicks on links in a row (`click({ modifiers: ['ControlOrMeta'] })`) made headless Chromium drop every
+  later input now and then (2 runs in 5 under load: no event reached the page at all, though the app prevents the
+  default): `selection.spec.ts` Ctrl-clicks one book and takes the next by its box; the client tests cover more.
+- After a press that opens another page, wait for its address (`toHaveURL`) or scope the check to its component
+  (`lib-book-page .chip`): a check the page left behind also passes (a tag chip in the folder's default tags line) let
+  `goBack` run before the book opened, and it left the folder instead (`folders.spec.ts`, 2026-11-06).
+- A `page.goto` right after `scannedLibrary` cuts off the library page's own calls (`api/fields`, `api/books`, facets),
+  which WebKit reports as "access control" page errors: wait for a book of it and `networkidle` first
+  (`imported-tags.spec.ts`, 2026-11-06).
+- A tag change (merge, ignore, an undo) answers 202 with a run whenever any run of the tenant goes, and in a full run
+  the other devices' scans always do: assert what the list shows once it has followed the run, never the inline toast.
+- Known flake (stage 6 close, 2026-11-10): `search.spec.ts` "the top bar finds books…" once on android in a full run,
+  an author suggestion without its `.suggestion-count` (the count is left out when the suggestion is asked before
+  the library is known to the box); 46 of 46 green on `--repeat-each 3` alone. Look at the box's library first if it
+  comes back.

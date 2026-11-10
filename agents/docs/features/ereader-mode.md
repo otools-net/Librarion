@@ -40,7 +40,7 @@ here, the device's own reader opens the downloaded file.
 
 ## Downloads
 
-- The same download route and rights as the app (`books.download`), streamed from loose files or container zips
+- The same download route and rights as the app (`library.download`), streamed from loose files or container zips
   ([archives](archives.md)); FB2 also offered as `fb2.zip`, as OPDS.
 - **Device formats:** the formats the device opens are listed first and the rest dimmed (Kindle: AZW3, MOBI, PDF,
   TXT; Kobo: EPUB, KEPUB, PDF, CBZ; PocketBook: FB2, EPUB, PDF, DJVU…), guessed from the User-Agent, changeable on the
@@ -56,7 +56,7 @@ here, the device's own reader opens the downloaded file.
 - Cookie session like the app, long-lived (typing a password on an e-ink keyboard is slow); forms carry the
   antiforgery token. Devices whose browser loses cookies can use a path API key (`/e/k/<key>/…`, opt-in per key,
   redacted from logs), as [opds-auth](opds-auth.md).
-- Rights: the existing `books.browse` and `books.download`, content filters (`Visible()`) and tenants as everywhere
+- Rights: the existing `library.browse` and `library.download`, content filters (`Visible()`) and tenants as everywhere
   ([rights](rights.md)); a tenant setting can turn the mode off.
 - Texts through the same translation keys (`en.json` read by the server), the UI language as the user's.
 

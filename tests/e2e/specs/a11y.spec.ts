@@ -62,6 +62,26 @@ test.describe('@a11y', () => {
         await expect(page.locator('.book-files')).toBeVisible();
         await expect(page.locator('.book-duplicate')).toBeVisible();
         await audit(page, 'a book');
+        await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+        await expect(page.getByRole('dialog', { name: 'Edit the book' })).toBeVisible();
+        await audit(page, 'the book editor');
+    });
+
+    test('a selection: the bar, its tags and Tag all', async ({ page }, testInfo) => {
+        await scannedLibrary(page, uniqueName('A11y selection', testInfo), folder => {
+            fs.writeFileSync(path.join(folder, 'One.fb2'), fb2('One', 'Ada Reader'));
+            fs.writeFileSync(path.join(folder, 'Two.fb2'), fb2('Two', 'Ada Reader'));
+        });
+        await page.locator('.book-select').first().tap();
+        await expect(page.getByRole('region', { name: 'Selected books' })).toBeVisible();
+        await audit(page, 'a selection');
+        await page.getByRole('region', { name: 'Selected books' }).getByRole('button', { name: 'Tags' }).tap();
+        await expect(page.getByRole('dialog', { name: 'Tags of 1 book' })).toBeVisible();
+        await audit(page, 'the tags of a selection');
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: 'Tag all' }).tap();
+        await expect(page.getByRole('dialog', { name: 'Tag every book of the list' })).toContainText('2 books');
+        await audit(page, 'tag all');
     });
 
     test('search: the suggestions open, the results and the help, Refine open', async ({ page }, testInfo) => {
@@ -110,7 +130,25 @@ test.describe('@a11y', () => {
             await page.goto('./admin/settings/server');
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
             await audit(page, 'settings (light)');
+            await page.goto('./admin/tags/tags');
+            await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+            await page.getByRole('button', { name: 'New tag' }).tap();
+            await expect(page.getByRole('dialog', { name: 'New tag' })).toBeVisible();
+            await audit(page, 'tag editor (light)');
         });
+    });
+
+    test('the tag manager: the list, the editor and the merges', async ({ page }) => {
+        await page.goto('./admin/tags/tags');
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+        await audit(page, 'tags');
+        await page.getByRole('button', { name: 'New tag' }).tap();
+        await expect(page.getByRole('dialog', { name: 'New tag' })).toBeVisible();
+        await audit(page, 'tag editor');
+        await page.keyboard.press('Escape');
+        await page.goto('./admin/tags/merges');
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+        await audit(page, 'merges');
     });
 
     test('the page not found', async ({ page }) => {

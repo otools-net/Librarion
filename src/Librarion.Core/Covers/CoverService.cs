@@ -19,7 +19,7 @@ public sealed record CoverFile(string Path, string ETag);
 /// from then on; a re-import tries again. A book imported from Calibre with a cover has Calibre's <c>cover.jpg</c>, next
 /// to its files (agents/docs/features/imports.md). The same cover asked for twice at once is made once.
 /// </summary>
-public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptions options, ILogger<CoverService> logger)
+public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploads uploads, CoverOptions options, ILogger<CoverService> logger)
 {
     /// <summary>Formats tried first when a book has several files: the richest covers first.</summary>
     private static readonly string[] Preference = ["epub", "kepub", "fb2", "azw3", "mobi", "azw", "cbz"];
@@ -35,12 +35,20 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptio
         var book = await visible.Where(b => b.Id == bookId)
             .Select(b => new
             {
-                b.Title, b.CoverSource, b.CoverState, b.GeneratedTemplate, b.GeneratedVariant, b.SeriesNumber, b.WorkKey,
+                b.Title, b.CoverSource, b.CoverState, b.GeneratedTemplate, b.GeneratedVariant, b.SeriesNumber, b.WorkKey, b.CoverFile,
                 Series = db.Tags.Where(t => t.Id == b.SeriesId).Select(t => t.Name).FirstOrDefault(),
             })
             .FirstOrDefaultAsync(cancellationToken);
         if (book is null)
-            return null;
+        {
+            // A merged book's cover is its kept book's (stage 6 chunk 12): one more look, only for an id not found.
+            return await Merging.BookMerger.CurrentAsync(db, bookId, cancellationToken) is { } current && current != bookId
+                ? await GetAsync(tenantId, visibility, current, size, cancellationToken)
+                : null;
+        }
+
+        if (book.CoverSource == CoverSource.Uploaded && book.CoverFile is { } upload && await UploadedAsync(upload, size, cancellationToken) is { } uploaded)
+            return uploaded;
 
         var files = await BookDownloads.StoredAsync(db.BookFiles.Where(f => f.BookId == bookId).OrderBy(f => f.Id), cancellationToken);
         if (book.CoverSource == CoverSource.Book && book.CoverState != CoverState.Failed)
@@ -56,13 +64,65 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptio
             && await CalibreAsync(db, bookId, loose, book.CoverState, size, cancellationToken) is { } calibre)
             return calibre;
 
+        var text = await TextAsync(db, bookId, book.Title, book.Series, book.SeriesNumber, files.Count > 0 ? files[0].Target.Name : null, cancellationToken);
+        var (template, variant) = book.GeneratedTemplate is { } t && book.GeneratedVariant is { } v ? (t, v) : GeneratedCovers.Assign(book.WorkKey ?? bookId);
+        return await GeneratedAsync(template, variant, text, size, cancellationToken);
+    }
+
+    /// <summary>
+    /// The book drawn in another template and palette (Change cover style's previews, stage 6 chunk 10), cached as any
+    /// generated cover; null when the book isn't visible or the style doesn't exist.
+    /// </summary>
+    public async Task<CoverFile?> PreviewAsync(int tenantId, BookVisibility visibility, int bookId, int template, int variant, CoverSize size,
+        CancellationToken cancellationToken = default)
+    {
+        if (template < 0 || template >= GeneratedCovers.Templates.Count || variant < 0 || variant >= GeneratedCovers.Palettes.Count)
+            return null;
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var visible = await BookQueries.VisibleAsync(db, visibility, null, cancellationToken);
+        var book = await visible.Where(b => b.Id == bookId)
+            .Select(b => new { b.Title, b.SeriesNumber, Series = db.Tags.Where(t => t.Id == b.SeriesId).Select(t => t.Name).FirstOrDefault() })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (book is null)
+            return null;
+        var files = await BookDownloads.StoredAsync(db.BookFiles.Where(f => f.BookId == bookId).OrderBy(f => f.Id), cancellationToken);
+        var text = await TextAsync(db, bookId, book.Title, book.Series, book.SeriesNumber, files.Count > 0 ? files[0].Target.Name : null, cancellationToken);
+        return await GeneratedAsync(template, variant, text, size, cancellationToken);
+    }
+
+    /// <summary>
+    /// A template and palette drawn with a sample text (Cover styles' previews, stage 6 chunk 10b), at
+    /// <see cref="CoverSize.M"/>: made in memory, not cached (the text comes from the caller's language), at most
+    /// <see cref="CoverOptions.MaxParallel"/> at a time. Null for a style that doesn't exist.
+    /// </summary>
+    public async Task<byte[]?> SampleAsync(int template, int variant, CoverText text, CancellationToken cancellationToken = default)
+    {
+        if (template < 0 || template >= GeneratedCovers.Templates.Count || variant < 0 || variant >= GeneratedCovers.Palettes.Count)
+            return null;
+        await slots.WaitAsync(cancellationToken);
+        try
+        {
+            return await Task.Run(() => GeneratedCovers.Render(template, variant, text, CoverSize.M), cancellationToken);
+        }
+        finally
+        {
+            slots.Release();
+        }
+    }
+
+    /// <summary>What a generated cover of the book says: its title (else its file's), first authors, series with number.</summary>
+    private static async Task<CoverText> TextAsync(LibrarionDbContext db, int bookId, string? title, string? series, double? seriesNumber, string? fileName,
+        CancellationToken cancellationToken)
+    {
         var authors = await db.BookTags.Where(l => l.BookId == bookId && l.Tag!.Field!.FieldKey == "author")
             .OrderBy(l => l.Ordinal).ThenBy(l => l.Tag!.SortName).Select(l => l.Tag!.Name).Take(3).ToListAsync(cancellationToken);
-        var title = book.Title ?? (files.Count > 0 ? FileTitles.FromPath(files[0].Target.Name) : "");
-        var series = book.Series is null ? null
-            : book.SeriesNumber is { } number ? $"{book.Series} #{number.ToString("0.##", CultureInfo.InvariantCulture)}" : book.Series;
-        var text = new CoverText(title, authors.Count > 0 ? string.Join(", ", authors) : null, series);
-        var (template, variant) = book.GeneratedTemplate is { } t && book.GeneratedVariant is { } v ? (t, v) : GeneratedCovers.Assign(book.WorkKey ?? bookId);
+        var shown = title ?? (fileName is null ? "" : FileTitles.FromPath(fileName));
+        var line = series is null ? null : seriesNumber is { } number ? $"{series} #{number.ToString("0.##", CultureInfo.InvariantCulture)}" : series;
+        return new CoverText(shown, authors.Count > 0 ? string.Join(", ", authors) : null, line);
+    }
+
+    private async Task<CoverFile> GeneratedAsync(int template, int variant, CoverText text, CoverSize size, CancellationToken cancellationToken)
+    {
         var key = CoverCache.Key($"g:{template}:{variant}:{text.Title}\n{text.Authors}\n{text.Series}");
         if (!cache.Has(key, size))
         {
@@ -74,6 +134,30 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverOptio
         }
 
         return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+    }
+
+    /// <summary>An uploaded cover at <paramref name="size"/> (every size made at once from the stored one); null when its file is gone.</summary>
+    private async Task<CoverFile?> UploadedAsync(string upload, CoverSize size, CancellationToken cancellationToken)
+    {
+        var key = CoverCache.Key($"u:{CoverUploads.HashOf(upload)}");
+        if (cache.Has(key, size))
+            return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+        var path = uploads.FullPath(upload);
+        var made = await OnceAsync(key, () =>
+        {
+            if (!File.Exists(path))
+            {
+                logger.LogWarning("An uploaded cover is missing: {Path}", path);
+                return false;
+            }
+
+            if (CoverImages.Thumbnails(File.ReadAllBytes(path)) is not { } thumbnails)
+                return false;
+            foreach (var (each, picture) in thumbnails)
+                cache.Write(key, each, picture);
+            return true;
+        }, cancellationToken);
+        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"") : null;
     }
 
     /// <summary>The book's own cover at <paramref name="size"/>, extracted the first time (every size at once); null when it has none.</summary>

@@ -99,6 +99,32 @@ public sealed class ApiTests
         Assert.AreEqual(SecurityHeaders.AppPolicy, string.Join(";", response.Headers.GetValues("Content-Security-Policy")));
     }
 
+    /// <summary>
+    /// A tag page's readable address ends with the tag's name (tag-link.ts), which may look like a file name: it still
+    /// gets the page, as does the form for keys that clash with a page; an API address never does.
+    /// </summary>
+    [TestMethod]
+    [DataRow("/series/88/The%20Dark%20Tower%20Vol.%202")]
+    [DataRow("/author/12/J.%20R.%20R.%20Tolkien")]
+    [DataRow("/fields/books/7/Owned.pdf")]
+    [DataRow("/tag/5/notes.txt")]
+    public async Task ATagAddressWithADottedNameGetsThePage(string address)
+    {
+        RepositoryFiles.WebRoot();
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        using var client = ApiClients.Create(factory);
+
+        using var response = await client.GetAsync(address, TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        StringAssert.Contains(await response.Content.ReadAsStringAsync(TestContext.CancellationToken), "<lib-root>");
+        // The API's own answer (here: not set up yet), never the client's page.
+        using var api = await client.GetAsync("/api/12/x.json", TestContext.CancellationToken);
+        Assert.AreNotEqual(HttpStatusCode.OK, api.StatusCode);
+        Assert.IsFalse((await api.Content.ReadAsStringAsync(TestContext.CancellationToken)).Contains("<lib-root>"));
+    }
+
     [TestMethod]
     public async Task TheOpenApiDocumentCarriesTheVersion()
     {

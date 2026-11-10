@@ -15,9 +15,23 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   `tenant.securityLog`, `account.*`, `system.*`), `library` (`library.browse`, `library.settings`).
 - **Kind** Read/Write: Write when any route it opens changes something (shown as "Changes things"); the server can
   switch every write off (`kind:write`).
-- **Built-in groups** per tenant: Administrators (every tenant and library right) and Users (`library.browse`,
-  `account.preferences`, `account.password`, `system.info`), given at tenant creation, then changed by hand. Built-in
-  groups can't be deleted (`group.builtIn`).
+- **Built-in groups** per tenant: Administrators (every tenant and library right), Users (`library.browse`,
+  `library.download`, `account.preferences`, `account.password`, `system.info`) and Curators (stage 6: the Users'
+  rights and the catalog area's), given at tenant creation, then changed by hand. Built-in groups can't be deleted
+  (`group.builtIn`). `RightCatalogTests` keeps Administrators ⊇ Curators ⊇ Users and Curators' tenant rights to
+  `tenant.tags`, `tenant.coverStyles` and the own-account / system ones. Tenants made before a new built-in group don't get it (no
+  upgrade before 1.0).
+- **Curation rights** (stage 6, confirmed by the user 2026-11-05), area
+  `catalog`, all Write: `library.tag` (plain tags on books), `library.edit` (a book's metadata and cover),
+  `library.merge` (merge, split, undo, not a duplicate), `library.importedTags` (the mappings page: read per
+  library, changed only with it in every library of the tenant, mapped only with `tenant.tags` too:
+  [imported-tags](imported-tags.md)),
+  `library.defaultTags` (library and folder default tags), `tenant.tags` (the tag and field vocabulary, per tenant:
+  D9), `tenant.coverStyles` (chunk 10b: Cover styles, [book-display](book-display.md#cover-styles-built-stage-6-chunk-10b)). The plan named them `tags.assign`, `books.edit`…; ids start with their scope (`EveryRightIsWellFormed`), so
+  they were named by scope.
+- `library.folders` (stage 6 chunk 8b, Read, area `library`, Administrators and Curators): the folder view
+  ([folders](folders.md)). Folder names and counts aren't narrowed by content filters (the user's answer,
+  2026-11-06), so it is for trusted groups; the books listed in a folder still are.
 - **Evaluation** (`RightsEvaluator.GetAsync`): union of the account's groups' rights in its tenant; library rights only
   in the group's libraries (`AllLibraries`, or `GroupLibraries` rows); minus the tenant's `TenantDisabledRights`;
   minus the server's `Librarion:Rights:Disabled` (ids, `prefix*`, `kind:write`), applied at each read so a
@@ -40,9 +54,8 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
 
 ## Planned
 
-- More library rights as features come: download, read, upload, edit metadata, delete; `books.convert` (needs
-  `books.download`; keeping the copy as a book file also needs `books.edit`): [conversion](conversion.md). Tag rights
-  (`tags.assign`, `tags.manage`, `tags.importMappings`, `tags.defaults`): [tags](tags.md).
+- More library rights as features come: read, upload, delete; `library.convert` (needs `library.download`; keeping
+  the copy as a book file also needs `library.edit`): [conversion](conversion.md).
 - `GuestAllowed` and a Guests group, once OPDS decides on anonymous access.
 - OPDS has its own right (`opds.access`) so an admin can allow the web UI without feeds or the reverse; API keys carry
   scopes that can only narrow the user's rights, never widen them ([opds-auth](opds-auth.md)).

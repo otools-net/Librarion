@@ -19,14 +19,19 @@ public enum BookSort
 /// <param name="LibraryId">One library; null = every library the account browses.</param>
 /// <param name="TagId">Only books with this tag or a descendant (a field value's page: an author, a category).</param>
 /// <param name="Query">A search in the search language (<see cref="Search.SearchQuery"/>); null or blank: no search.</param>
-public sealed record BookPageRequest(int? LibraryId = null, BookSort Sort = BookSort.Title, string? After = null, int Limit = 50, int? TagId = null, string? Query = null);
+/// <param name="FolderId">Only books with a present file directly in this folder of <paramref name="LibraryId"/>
+/// (agents/docs/features/folders.md).</param>
+public sealed record BookPageRequest(int? LibraryId = null, BookSort Sort = BookSort.Title, string? After = null, int Limit = 50, int? TagId = null, string? Query = null,
+    int? FolderId = null);
 
 /// <param name="Title">From the metadata; null when it gave none (<see cref="FileName"/> is shown).</param>
 /// <param name="FileName">The first file's name without its book extensions, for a book without a title.</param>
 /// <param name="Authors">In order; the first is the one on cards.</param>
+/// <param name="CoverVersion">Changes when the book does (<see cref="Book.Updated"/>): the cover's address carries it, so a
+/// browser's cached cover (a day) is not shown after an edit or a re-read.</param>
 public sealed record BookListItem(
     int Id, int LibraryId, string? Title, string? FileName, IReadOnlyList<string> Authors, string? Series, double? SeriesNumber,
-    IReadOnlyList<string> Formats, CoverSource CoverSource);
+    IReadOnlyList<string> Formats, CoverSource CoverSource, string? CoverVersion = null);
 
 /// <param name="Field">The field's key; null for a plain tag.</param>
 public sealed record BookTagItem(int Id, string? Field, string Name, double? Number);
@@ -42,7 +47,11 @@ public sealed record BookFileItem(int Id, string Format, long Size, string Name,
 public sealed record BookDetail(
     int Id, int LibraryId, string? Title, string? FileName, string? Description, byte? Rating, DateTime Added, CoverSource CoverSource,
     IReadOnlyList<BookTagItem> Tags, IReadOnlyList<BookFileItem> Files, IReadOnlyList<KeyValuePair<string, string>> Identifiers, int? MergedIntoId,
-    IReadOnlyList<KeyValuePair<string, string>>? Properties = null, bool CanDownload = false);
+    IReadOnlyList<KeyValuePair<string, string>>? Properties = null, bool CanDownload = false, bool CanTag = false, bool CanEdit = false, string? CoverVersion = null,
+    BookCoverInfo? Cover = null, bool CanMerge = false);
+
+/// <summary>How a book's cover is chosen (stage 6 chunk 10): the generated style it has, and whether a user chose the cover (an upload or a style over its own).</summary>
+public sealed record BookCoverInfo(short Template, short Variant, bool Chosen);
 
 /// <summary>Why another book may be the same one, strongest first.</summary>
 public enum DuplicateReason
@@ -66,6 +75,52 @@ public sealed class BookQueries(TenantDb tenantDb)
 {
     public const int MaxLimit = 200;
 
+    /// <summary>
+    /// The books of a list as a query (scope tagging walks it by id, a batch at a time): those the account sees in
+    /// <paramref name="libraryId"/> (null: every library it sees), with <paramref name="tagId"/> or a tag under it, matching
+    /// <paramref name="search"/>; the same rules as <see cref="ListAsync"/>. <paramref name="batch"/> sizes the plans as a page would.
+    /// </summary>
+    public static async Task<IQueryable<Book>> ScopeAsync(LibrarionDbContext db, BookVisibility visibility, int? libraryId, int? tagId, string? search, int batch,
+        CancellationToken cancellationToken, int? folderId = null)
+    {
+        if (libraryId is { } only && !visibility.Libraries.ContainsKey(only))
+            return db.Books.Where(b => false);
+        var query = await VisibleAsync(db, visibility, libraryId, cancellationToken, batch);
+        var libraries = libraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var fields = await BookSearch.KeysAsync(db, cancellationToken);
+            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(search, fields.ContainsKey), fields, libraries, visibility.Merging, batch, cancellationToken);
+        }
+
+        if (tagId is { } tag)
+        {
+            var tags = await DescendantsAsync(db, [tag], cancellationToken);
+            query = query.Where(await NarrowAsync(db, [tag], libraries, batch, cancellationToken) ? From(db, tags) : Probe(db, tags));
+        }
+
+        if (folderId is { } folder)
+            query = await InFolderAsync(db, query, folder, libraryId, batch, cancellationToken);
+        return query;
+    }
+
+    /// <summary>
+    /// Books with a present file directly in the folder (of <paramref name="libraryId"/>; none without one). As for a tag
+    /// (<see cref="NarrowAsync"/>): from the folder's files (index <c>(FolderId, BookId)</c>) when its stored count is
+    /// small next to the library, else each book of the sort index tested by its files (index <c>BookId</c>).
+    /// </summary>
+    private static async Task<IQueryable<Book>> InFolderAsync(LibrarionDbContext db, IQueryable<Book> query, int folderId, int? libraryId, int limit,
+        CancellationToken cancellationToken)
+    {
+        var files = await db.Folders.Where(f => f.Id == folderId && f.LibraryId == libraryId).Select(f => (int?)f.FileCount).FirstOrDefaultAsync(cancellationToken);
+        if (files is null)
+            return query.Where(b => false);
+        var books = await db.Libraries.Where(l => l.Id == libraryId).Select(l => (long)l.BookCount).FirstOrDefaultAsync(cancellationToken);
+        return files < Math.Sqrt((double)limit * Math.Max(books, 1))
+            ? query.Where(b => db.BookFiles.Where(f => f.FolderId == folderId && f.MissingSince == null).Select(f => f.BookId).Contains(b.Id))
+            : query.Where(b => db.BookFiles.Any(f => f.BookId == b.Id && f.FolderId == folderId && f.MissingSince == null));
+    }
+
     public async Task<Page<BookListItem>> ListAsync(int tenantId, BookVisibility visibility, BookPageRequest request, CancellationToken cancellationToken = default)
     {
         if (request.LibraryId is { } only && !visibility.Libraries.ContainsKey(only))
@@ -76,8 +131,8 @@ public sealed class BookQueries(TenantDb tenantDb)
         var libraries = request.LibraryId is { } library ? [library] : visibility.Libraries.Keys.ToList();
         if (!string.IsNullOrWhiteSpace(request.Query))
         {
-            var fields = await BookSearch.FieldsAsync(db, cancellationToken);
-            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(request.Query, fields.ContainsKey), fields, libraries, limit, cancellationToken);
+            var fields = await BookSearch.KeysAsync(db, cancellationToken);
+            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(request.Query, fields.ContainsKey), fields, libraries, visibility.Merging, limit, cancellationToken);
         }
 
         if (request is { Sort: BookSort.Number, TagId: { } numbered })
@@ -88,10 +143,12 @@ public sealed class BookQueries(TenantDb tenantDb)
             query = query.Where(await NarrowAsync(db, [tagId], libraries, limit, cancellationToken) ? From(db, tags) : Probe(db, tags));
         }
 
+        if (request.FolderId is { } folderId)
+            query = await InFolderAsync(db, query, folderId, request.LibraryId, limit, cancellationToken);
         var after = KeysetCursor.Decode(request.After);
         var rows = await Order(query, request.Sort, after)
             .Take(limit + 1)
-            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource))
+            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource, b.Updated))
             .ToListAsync(cancellationToken);
         var more = rows.Count > limit;
         if (more)
@@ -113,7 +170,20 @@ public sealed class BookQueries(TenantDb tenantDb)
         return new Page<BookListItem>(items, next);
     }
 
-    private sealed record BookRow(int Id, int LibraryId, string? Title, string SortTitle, string SortAuthor, DateTime Added, int? SeriesId, double? SeriesNumber, CoverSource CoverSource);
+    private sealed record BookRow(int Id, int LibraryId, string? Title, string SortTitle, string SortAuthor, DateTime Added, int? SeriesId, double? SeriesNumber, CoverSource CoverSource,
+        DateTime Updated);
+
+    /// <summary>The cover's version in its address: the book's last change.</summary>
+    public static string CoverVersion(DateTime updated) => updated.Ticks.ToString("x", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Books as list items, by id (the caller checked they may be seen), in no order: one query each for all of them.</summary>
+    public static async Task<List<BookListItem>> ItemsOfAsync(LibrarionDbContext db, IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
+    {
+        var rows = await db.Books.Where(b => ids.Contains(b.Id))
+            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource, b.Updated))
+            .ToListAsync(cancellationToken);
+        return await ItemsAsync(db, rows, cancellationToken);
+    }
 
     /// <summary>The page's rows with their authors, series and formats: one query each for the whole page.</summary>
     private static async Task<List<BookListItem>> ItemsAsync(LibrarionDbContext db, IReadOnlyList<BookRow> rows, CancellationToken cancellationToken)
@@ -136,7 +206,7 @@ public sealed class BookQueries(TenantDb tenantDb)
             return new BookListItem(
                 r.Id, r.LibraryId, r.Title, r.Title is null && bookFiles.Count > 0 ? FileTitles.FromPath(bookFiles[0].Path) : null,
                 authors.GetValueOrDefault(r.Id) ?? [], r.SeriesId is { } s ? series.GetValueOrDefault(s) : null, r.SeriesNumber,
-                bookFiles.Select(f => f.Format).Distinct().ToList(), r.CoverSource);
+                bookFiles.Select(f => f.Format).Distinct().ToList(), r.CoverSource, CoverVersion(r.Updated));
         }).ToList();
         return items;
     }
@@ -160,7 +230,7 @@ public sealed class BookQueries(TenantDb tenantDb)
             rows.RemoveAt(limit);
         var ids = rows.Select(r => r.BookId).ToList();
         var books = await db.Books.Where(b => ids.Contains(b.Id))
-            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource))
+            .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource, b.Updated))
             .ToDictionaryAsync(b => b.Id, cancellationToken);
         var page = await ItemsAsync(db, ids.Select(id => books[id]).ToList(), cancellationToken);
         return new Page<BookListItem>(page, more ? new KeysetCursor(null, null, rows[^1].BookId, rows[^1].Number).Encode() : null);
@@ -199,7 +269,8 @@ public sealed class BookQueries(TenantDb tenantDb)
             .Select(p => new KeyValuePair<string, string>(p.Name, p.Value)).ToListAsync(cancellationToken);
         return new BookDetail(
             book.Id, book.LibraryId, book.Title, book.Title is null && files.Count > 0 ? FileTitles.FromPath(files[0].Name) : null, book.Description,
-            book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null, properties);
+            book.Rating, book.Added, book.CoverSource, tags.DistinctBy(t => t.Id).ToList(), files, identifiers, null, properties, CoverVersion: CoverVersion(book.Updated),
+            Cover: new BookCoverInfo(book.GeneratedTemplate ?? 0, book.GeneratedVariant ?? 0, book.Edited.HasFlag(BookEdits.Cover)));
     }
 
     private static string LastSegment(string path) => path[(path.LastIndexOfAny(['/', '\\']) + 1)..];
@@ -214,7 +285,13 @@ public sealed class BookQueries(TenantDb tenantDb)
     private const int MaxKeys = 20;
 
     /// <summary>Identifiers naming a record of one source, not a book: INPX numbers collide between collections.</summary>
-    private static readonly string[] SourceSchemes = ["inpx"];
+    internal static readonly string[] SourceSchemes = ["inpx"];
+
+    /// <summary>
+    /// Identifiers whose makers reuse them: an FB2's document id is copied from template to template by hand-made files,
+    /// so a shared one counts only when the other book also has the same title or first author.
+    /// </summary>
+    internal static readonly string[] WeakSchemes = ["fb2-id"];
 
     /// <summary>
     /// Other books the caller can see that may be this one (agents/docs/features/merging.md; read only until merging is
@@ -226,7 +303,7 @@ public sealed class BookQueries(TenantDb tenantDb)
     {
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var visible = await VisibleAsync(db, visibility, null, cancellationToken);
-        var book = await visible.Where(b => b.Id == id).Select(b => new { b.WorkKey }).FirstOrDefaultAsync(cancellationToken);
+        var book = await visible.Where(b => b.Id == id).Select(b => new { b.WorkKey, b.SortTitle, b.SortAuthor }).FirstOrDefaultAsync(cancellationToken);
         if (book is null)
             return null;
 
@@ -245,16 +322,33 @@ public sealed class BookQueries(TenantDb tenantDb)
         var identifiers = await db.BookIdentifiers.Where(i => i.BookId == id && !SourceSchemes.Contains(i.Scheme))
             .OrderBy(i => i.Scheme).ThenBy(i => i.Value).Select(i => new { i.Scheme, i.Value }).Take(MaxKeys).ToListAsync(cancellationToken);
         foreach (var identifier in identifiers)
-            Add(await GroupAsync(db.BookIdentifiers.Where(i => i.Scheme == identifier.Scheme && i.Value == identifier.Value && i.BookId != id).Select(i => i.BookId), cancellationToken),
-                DuplicateReason.Identifier, identifier.Scheme);
+        {
+            var group = await GroupAsync(db.BookIdentifiers.Where(i => i.Scheme == identifier.Scheme && i.Value == identifier.Value && i.BookId != id).Select(i => i.BookId), cancellationToken);
+            // A weak key's group is already capped: the check reads at most MaxGroup books by key.
+            if (WeakSchemes.Contains(identifier.Scheme) && group.Count > 0)
+                group = await db.Books.Where(b => group.Contains(b.Id) && (b.SortTitle == book.SortTitle || (book.SortAuthor != "" && b.SortAuthor == book.SortAuthor)))
+                    .Select(b => b.Id).ToListAsync(cancellationToken);
+            Add(group, DuplicateReason.Identifier, identifier.Scheme);
+        }
         if (book.WorkKey is { } work)
             Add(await GroupAsync(db.Books.Where(b => b.WorkKey == work && b.Id != id).Select(b => b.Id), cancellationToken), DuplicateReason.Work, null);
+        if (found.Count == 0)
+            return [];
+        // Marked by a user: this book unique, another unique, or the two not duplicates (stage 6 chunk 11).
+        var candidates = found.Keys.ToList();
+        var marks = await db.NotDuplicates.Where(n => (n.BookId == id && (n.OtherId == id || candidates.Contains(n.OtherId)))
+                || (n.OtherId == id && candidates.Contains(n.BookId)) || (candidates.Contains(n.BookId) && n.OtherId == n.BookId))
+            .Select(n => new { n.BookId, n.OtherId }).ToListAsync(cancellationToken);
+        if (marks.Any(m => m.BookId == id && m.OtherId == id))
+            return [];
+        foreach (var mark in marks)
+            found.Remove(mark.BookId == id ? mark.OtherId : mark.BookId);
         if (found.Count == 0)
             return [];
 
         var ids = found.Keys.ToList();
         var rows = (await visible.Where(b => ids.Contains(b.Id))
-                .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource))
+                .Select(b => new BookRow(b.Id, b.LibraryId, b.Title, b.SortTitle, b.SortAuthor, b.Added, b.SeriesId, b.SeriesNumber, b.CoverSource, b.Updated))
                 .ToListAsync(cancellationToken))
             .OrderBy(r => found[r.Id].Reason).ThenBy(r => r.SortTitle, StringComparer.Ordinal).ThenBy(r => r.Id).Take(MaxDuplicates).ToList();
         return (await ItemsAsync(db, rows, cancellationToken)).Select(item => new BookDuplicate(item, found[item.Id].Reason, found[item.Id].Scheme)).ToList();

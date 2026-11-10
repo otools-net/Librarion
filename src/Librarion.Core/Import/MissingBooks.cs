@@ -1,3 +1,4 @@
+using Librarion.Core.Merging;
 using System.Text.Json;
 using Librarion.Core.Catalog;
 using Librarion.Core.Data;
@@ -24,7 +25,7 @@ public sealed record MissingRemoval(IReadOnlyList<int>? BookIds, DateTime? Missi
 /// metadata and curation, found again when a file comes back, and removed **only when a user accepts it**. The
 /// library's retention (<see cref="SettingCatalog.KeepMissingDays"/>) only says which ones are offered first.
 /// </summary>
-public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, TimeProvider time)
+public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, DuplicateIndex duplicates, TimeProvider time)
 {
     public const int BatchSize = 1000;
 
@@ -81,6 +82,9 @@ public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, Ti
         var writer = new CatalogWriter(tenantId, libraryId, await ImportTagResolver.CreateAsync(db, tenantId, cancellationToken), time);
         var ids = removal.BookIds?.Distinct().ToList();
         var afterId = 0;
+        // The folders the removed files were in: removed after them when nothing else is in them.
+        var left = new HashSet<int>();
+        var completed = false;
         try
         {
             while (true)
@@ -94,6 +98,7 @@ public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, Ti
                 var batch = await query.OrderBy(b => b.Id).Take(BatchSize).Select(b => b.Id).ToListAsync(cancellationToken);
                 if (batch.Count == 0)
                     break;
+                left.UnionWith(await db.BookFiles.Where(f => batch.Contains(f.BookId)).Select(f => f.FolderId).Distinct().ToListAsync(cancellationToken));
                 await db.BookFiles.Where(f => batch.Contains(f.BookId)).ExecuteDeleteAsync(cancellationToken);
                 await writer.RemoveEmptyBooksAsync(db, batch, cancellationToken);
                 afterId = batch[^1];
@@ -102,10 +107,13 @@ public sealed class MissingBooks(TenantDb tenantDb, SettingsService settings, Ti
 
             await db.Archives.Where(a => a.LibraryId == libraryId && a.MissingSince != null && !db.BookFiles.Any(f => f.ArchiveId == a.Id))
                 .ExecuteDeleteAsync(cancellationToken);
+            await writer.Folders.PruneAsync(db, left, cancellationToken);
+            completed = true;
         }
         finally
         {
             await writer.FlushCountsAsync(db, CancellationToken.None);
+            await duplicates.AfterRunAsync(tenantId, writer.Touched, completed, completed ? cancellationToken : CancellationToken.None);
         }
 
         return new ScanResult(0, 0, writer.Removed, 0, 0, 0, 0, [], []);

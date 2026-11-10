@@ -3,13 +3,104 @@
 Tables built (stage 2): `Tags`, `TagAliases`, `TagParents`, `TagClosure`, `BookTags`, `TagCounts`, built-in tags
 ([catalog](catalog.md)). Built (stage 3): imported tags at scan time (`Core/Import/ImportTagResolver`,
 `ImportTagMappings`; tests `LibraryScannerTests`): a source's mapping first, then a tag of that name or alias, else a
-new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. The
-tag services, the admin pages and the UI below are planned.
+new plain tag under the source's "Imported: <source>" category, a batch at a time with a bounded name cache. Built
+(stage 6): the tag service and merges (chunks 2-3), the tag manager (4), parents' totals (4a), the picker (5), tags
+edited on a book's page (6, [book-page](book-page.md)), tagging a selection or a scope (7), default tags (8c,
+[default-tags](default-tags.md)), the Imported tags page (9, [imported-tags](imported-tags.md)), possible duplicate
+tags (14, [merging](merging.md#possible-duplicate-tags-built-stage-6-chunk-14)), `tag:"name (parent)"` (15).
 
-Code (planned): `src/Librarion.Core/Tagging/` (`TagService`, `TagGraph`, `TagClosure`, `ImportedTags`, `ScopeTagger`,
-`BookTagRows`, `BuiltInTags`), entities in `Data/Entities/Tags/`; client `src/app/tags/`. Ported from SFE
+Code: `src/Librarion.Core/Tagging/` (`TagService`, `TagClosures`, `TagLinks`, `TagCountChanges`, `TagLists`,
+`TagPicker`, `BookTagger`, `DefaultTags`, `ImportedTags`, `PlainTags`, `NameKeys`, `BuiltInTags`), merges in
+`Core/Merging/TagMerger*.cs`, entities in `Data/Entities/Tags/`; client `app/admin/tags-section.ts`, `tag-editor.ts`,
+`tag-merge.ts`, `shared/tag-picker.ts`, `app/tags/` (tag pages). Ported from SFE
 (`agents/docs/features/tags.md`, `scope-tagging.md`, `default-tags.md` there; model from
 https://github.com/TagStudioDev/TagStudio), extended for tags that arrive with imported books.
+
+## The tag service (built, stage 6)
+
+Code: `Core/Tagging/TagService.cs` (definitions, delete), `TagClosures.cs` (closure upkeep), `TagLinks.cs` (counts and
+sort columns per batch), `Core/Merging/TagMerger.cs` (merges, undo: [merging](merging.md#duplicate-tags)),
+`Api/Endpoints/TagEndpoints.cs`; tests `TagCurationTests` (both providers).
+
+- Routes (`tenant.tags`): `GET api/tags/{id}/definition`, `POST api/tags`, `PUT api/tags/{id}`, `DELETE api/tags/{id}`,
+  `POST api/tags/{id}/merge`, `POST api/fields/{key}/merge`, `GET api/merges`, `POST api/merges/{id}/undo`. A change of
+  more than 10,000 links (D-6.4; the sum of the tag's `TagCounts`, never a count of links) or one asked while a run
+  goes in the tenant answers **202** with a tenant run ([tasks](tasks.md#runs)); otherwise 200 when done.
+- Definitions: name, sort name (people's fields: "Last, First" by default), shorthand, color (`#rgb` / `#rrggbb`),
+  category, hidden, aliases (at most 50; one equal to the name dropped), parents (at most 20) and a disambiguation
+  parent (one of the parents). A plain tag's parents are plain tags; a value's are values of its own field (the field
+  itself is its `FieldId`, no `TagParents` row); a field has no parents. Cycles refused through the closure. A value's
+  name is unique in its field unless a disambiguation parent tells them apart. Built-in fields keep their names (the
+  client translates them). A changed sort name rewrites `Books.SortAuthor` of its books in one statement.
+- **Closure upkeep** (`TagClosures.RebuildAsync`): after the parents of some roots change, the ancestors of everything
+  under them (D) are rebuilt set-based: pairs inside D kept, pairs from outside dropped, then made again from each
+  edge leaving D (a parent, or a value's field) times that parent's ancestors. Valid for several roots at once while
+  every changed edge points out of D (re-parenting, a delete's children, a merge's moved children). No tag graph is
+  kept in memory yet, so there is no version to bump; tag changes bump `AccessChanges` (cached visibility reads
+  closure-derived lists).
+- **Delete:** links removed a batch of 1,000 books at a time (`TagLinks`: counts by delta, sort columns refreshed),
+  then the tag (closure, counts, aliases, mappings by cascade), its children's closure rebuilt. Refused: built-in tags
+  (`tag.builtIn`), a field with values (`field.notEmpty`: merge it), a tag a content filter names (`tag.inFilter`:
+  deleting it would change who sees what). A deleted imported tag comes back with the next import of its books
+  (ignoring a raw name is the Imported tags page's job: [imported-tags](imported-tags.md)).
+- `TagCounts` hold two counts per library of present books (not missing): `BookCount`, the tag's **direct** links
+  (what search sizes a term by, what a delete or merge moves), and `TotalCount` (stage 6, 4a: the user asked
+  2026-11-05), its books **with those of every tag under it**, each once (a field's row: its books with any value).
+  Lists, a tag's page, suggestions, Refine and the tag manager show the total; the manager adds "N tagged with it"
+  when the two differ.
+- How the total is kept (`TagCountChanges`, `TagAncestors`, `TagClosures.CountAsync`): every change gives each
+  touched book's tags before and after; their ancestors come from `TagClosure` through a cache per import (cleared
+  past 200k tags, and when `TagClosures.Version` moved: a rebuild while a scan runs); a tag gains a book it is now
+  above and wasn't, loses one it no longer is. Both counts go in the one upsert per thousand tags the importer wrote
+  before. A closure rebuild records each changed tag's ancestors outside the subtree before and after; only the
+  ancestors that differ are recounted, over the present books under the changed tags (their other tags' ancestors
+  counted in), so the cost follows the books moved, never the size of a big category above them. Re-parenting a tag
+  with more books under it than the threshold rebuilds the closure at once and counts in a tenant run (`TagCounts`).
+- Known limit: a closure change while an import writes a batch can leave that batch counted with the old ancestors
+  (the version is read per batch). No full recount exists yet: a drift stays until the books are counted again.
+
+## The tag picker (built, stage 6 chunk 5)
+
+Code: `shared/tag-picker.ts` (`TagPicker`, `lib-tag-picker`), styles `styles/tags.css` (with the color dot); server
+`Core/Tagging/TagPicker.cs`, `GET api/tags/pick?field&q&limit` (`library.browse`; the caller's content filters apply);
+tests `shared/tag-picker.spec.ts`, `TagPickerTests` (both providers), e2e `specs/tags.spec.ts` (a tap on phones, the
+arrows and Enter on the desktop). A port of SFE's `tag-picker.component.ts`.
+
+- The same component wherever a tag is chosen: `field` scopes it (a field's key; null: plain tags), `exclude` leaves
+  out those already chosen, `allowCreate` adds "Create “name”" unless the server says a tag has that name (`exact`);
+  `picked` and `create` are the host's to act on (the host makes the tag, with its own right).
+- Matches, each capped at 100 candidates and read by index: the normalized name's prefix (`(TenantId, FieldId,
+  NormalizedName)`), another name's prefix (`TagAliases (TenantId, NormalizedName)`, then kept to the field), the
+  shorthand whole as typed or in either case (`(TenantId, Shorthand)`, filtered on not null), the name's words (the
+  tag-name index, last word a prefix). Ranked: the typed name first, then by books (the totals of 4a, every library),
+  then by name; nothing typed: the first by sort name (an arrow in an empty box lists them).
+- Each option: color dot, name, the disambiguating parent in brackets, "Also called …" when found only by another
+  name, the shorthand, the books. The list is in the flow under the box (not floating: dialogs and phone sheets scroll
+  with it), at most 8 options.
+- Behaviour from SFE: 150 ms after typing, a later answer wins (earlier ones dropped), Escape closes the list and not
+  the dialog (`stopPropagation`), a press elsewhere waits for its release before the list closes (else the tap misses
+  the option that moved), `mousedown` on an option keeps the focus in the box.
+
+## The tag manager (built, stage 6 chunk 4)
+
+Code: `admin/tags-section.ts` (Administration › Catalog › Tags: pages `tags` and `merges`), `admin/tag-editor.ts`,
+`admin/tag-merge.ts` (parents and a merge's target chosen with the shared [picker](#the-tag-picker-built-stage-6-chunk-5)),
+styles at the end of `styles/admin.css`; server `Core/Tagging/TagLists.cs`, routes `GET api/tags/manage/fields`, `GET api/tags/manage`;
+tests `tags.spec.ts` (client), `TagCurationTests.TheManagerListsEveryTagByKeyAndFindsThem`, e2e `specs/tags.spec.ts`
+(every device), axe on the list, the editor (both themes) and the merges.
+
+- A field chooser (a select: plain tags, then each field with its value count, capped at 10,000 as "10,000+"), the
+  list of every tag (books or not) by sort name 50 at a time by key, a search (name prefix on `NormalizedName`, then
+  words through the full-text index, one capped page). Each row: color dot, name, books (the sum of `TagCounts`
+  across libraries: direct links) and tags directly under it (a `GROUP BY` over `TagParents` for the page's ids).
+- Editor: the definition's fields, parents as chips added through `lib-tag-search` (same kind only), the
+  disambiguation parent among them; Delete and Merge in its footer, both asking with the number of books first. A
+  202 is followed by `TaskWatch.follow` and a toast. Merges: rows with Undo (asks first); a refusal (`merge.later`)
+  stays shown.
+- Texts `tagAdmin.*` (the `tags.*` keys are the browse pages'). The list is named "Tag list": the navigation's list of
+  the section's sub-pages is "Tags", and two lists of one name broke the e2e locators.
+- Seen once in a full e2e run (2026-11-05, iPhone): after saving a tag, the search for another one still showed the
+  first search's rows; passed alone 4 times and in the next full run. Watch for it.
 
 ## Model (as SFE)
 
@@ -48,16 +139,49 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
 - **Re-import** recomputes only `Imported` links of the books it reads: adds new ones, removes those the source no
   longer has. `Manual` and `Rule` links are never touched. A user removing an imported tag from a book writes a
   **suppression** (book, tag) so the next import doesn't bring it back (SFE's rule: a tag taken off stays off).
-- Admin page **Imported tags**: raw names with book counts, their mapping, bulk map/merge/ignore, sorted by count
-  (curating the top few hundred covers most books).
+- Admin page **Imported tags** (built, stage 6 chunk 9: [imported-tags](imported-tags.md)): the importer records each
+  raw name it meets as an automatic mapping (not for people and series); the page lists a library's tags with such
+  names by books, kept, mapped (merged) or ignored (logged, undone).
 - Writing tags back into book files or Calibre: not planned.
 
 ## Tagging (as SFE)
 
 - Book, selection, and **scope tagging** (a search, an author, a series, a whole library): counted with one
   `GROUP BY`, changed in batches of 1000 keyed on `Books.Id`, confirmed in the dialog, never listing the books.
-- **Default tags** of a library and, for folder-scanned libraries, of folders (inherited by sub-folders): given once
-  when a book enters the catalog or moves in, as `Rule` links; adding one asks "new books only or also those there".
+
+## Tagging many books (built, stage 6 chunk 7)
+
+Code: `Core/Tagging/BookTagger.cs`, `BookQueries.ScopeAsync` (a list's books as a query: the list's own visibility,
+search and tag rules); routes `POST api/books/tags/state`, `POST api/books/tags`, `GET api/books/scope`,
+`POST api/books/scope/tags` (all `library.tag`, checked per library); client `browse/book-list.ts` (selection, bar),
+`browse/selection-tags.ts`, `browse/scope-tags.ts`, styles at the end of `styles/browse.css`; tests
+`selection.spec.ts` (client), `BookTaggingTests` (both providers), e2e `selection.spec.ts` (every device), axe on the
+bar and both dialogs.
+
+- Plain tags only (fields are edited per book, [book-page](book-page.md#editing-a-book-built-stage-6-chunk-6-d-63)).
+  As there: a given tag is a `Manual` link (none added when the book has it from any source), a tag taken off deletes
+  `Imported` and `Manual` links and writes a suppression, a given tag deletes its suppression, `Rule` links stay;
+  counts by delta per batch (`TagLinks.SnapshotAsync` / `CountAsync`).
+- **Selection** (at most 1,000 ids, `books.tooMany` past it): only the books the caller sees in libraries where it
+  has `library.tag`; Missing when none is. `state` answers per plain tag how many of them have it: the dialog shows a
+  three-state box (all, some = left alone, none), cycling all → none → some (only when some had it at first) → all;
+  Save sends only the rows that changed (`add` the ones now all, `remove` the ones now none).
+- **Scope** (`library` + `tag` and / or `q`, as the list on screen): counted first, up to `BookTagger.MaxCounted`
+  (10,000, the inline threshold): a library seen whole from `Libraries.BookCount` (exact), a search sampled from its
+  narrowest term as Refine's facets are (`BookSearch.SampleAsync`), a tag or folder with a limit; past it `capped`
+  and the dialog says "at least N" and "Apply to every book of the list", and the change always runs in the
+  background. Confirmed as "Apply to N books"; links = books × changed tags decide inline or a **library run** of kind
+  `ScopeTags` (`BackgroundTasks.StartLibraryAsync`: waits for the library's scan and for tenant tag runs). Walked by
+  `Id > last` in batches of 1,000 with the scope asked again each time, so taking off the very tag the scope is about
+  still reaches every book (`BookTaggingTests`).
+- Runs: holders of `library.tag` follow their libraries' runs (`api/tasks/running`, history, a run) and may cancel a
+  `ScopeTags` run there, not a scan ([tasks](tasks.md)); the client's `TaskWatch` polls with that right too.
+- Measured at 2M (stage 6 close, [scale](../development/scale.md#measured)): the count unbounded took **over 30 s**
+  on PostgreSQL for a word on 2 % of the titles (each book tested against the search; a timeout), hence the cap; now
+  200 ms (100 on SQLite). The walk of a search scope asks the search again per batch with `Id > last`: a background
+  run, timed by the benchmark's `curation`.
+- **Default tags** of a library and of its folders (inherited by sub-folders), given once when a book enters the
+  catalog or moves in, as `Rule` links: built in stage 6 chunk 8c, [default-tags](default-tags.md).
 
 ## Scale
 
@@ -68,7 +192,7 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
   a task.
 - `TagGraph` (names, aliases, parents) in memory per tenant, reloaded on a version change (50k tags ≈ a few MB); the
   big fields' values (authors, series) stay in the database, looked up by index ([metadata-tags](metadata-tags.md)).
-- Picker suggestions by prefix on name/alias/shorthand with an index, capped.
+- Picker suggestions by prefix on name/alias, whole shorthand and words, each by an index and capped (`TagPicker`).
 - Tag names are not copied into the books' search documents: free text reaches tags through the tag-name index (D20,
   [metadata-tags](metadata-tags.md)), so a rename or merge never re-indexes books.
 - `TagCounts` changes are summed per batch and written once per tag and batch (no hot row for `category:Fiction`
@@ -76,18 +200,18 @@ PDF keywords, authors, series and every other metadata field, BISAC-like paths (
 
 ## Where tags show
 
-- Search ([search](search.md)): `tag:`, `-tag:`, the tags under it included, the hidden rule (built); `special:untagged` and
-  `tag:"name (parent)"` for disambiguation (planned).
+- Search ([search](search.md)): `tag:`, `-tag:`, the tags under it included, the hidden rule; `special:untagged` (no plain
+  tag, a stored flag) and `tag:"name (parent)"` for disambiguation ([special terms](search.md#special-terms-stage-6-chunk-15)).
 - Content filters ([rights](rights.md)): allowed / denied tags per group, through `TagClosure`, joined at query time
   (D22).
 - OPDS: a Tags navigation feed by category → children, only tags the user can see, counts from `TagCounts`; Atom
   `<category>` per book.
 - Web: chips on cards and the book page grouped by category, sidebar of tags, tag manager.
 
-## Rights (planned)
+## Rights (built in stage 6, chunk 1: [rights](rights.md))
 
-`tags.assign` (Write: tag books), `tags.manage` (Write: create, edit, merge, delete definitions),
-`tags.importMappings` (Write: imported tags page), `tags.defaults` (Write: library/folder default tags). Reading
+`library.tag` (Write: tag books), `tenant.tags` (Write: create, edit, merge, delete definitions),
+`library.importedTags` (Write: imported tags page), `library.defaultTags` (Write: library/folder default tags). Reading
 tags comes with browsing.
 
 ## Tests to have

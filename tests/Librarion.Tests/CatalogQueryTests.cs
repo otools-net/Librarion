@@ -232,7 +232,8 @@ public sealed class CatalogQueryTests
         await using var db = await _factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(_target.TenantId, Cancel);
         var link = await db.TagParents.OrderBy(p => p.ParentId).ThenBy(p => p.ChildId).FirstAsync(Cancel);
         var children = await db.TagParents.Where(p => p.ParentId == link.ParentId).Select(p => p.ChildId).ToListAsync(Cancel);
-        var count = await db.TagCounts.Where(c => c.TagId == link.ParentId && c.LibraryId == _target.LibraryId).Select(c => c.BookCount).FirstOrDefaultAsync(Cancel);
+        // A tag's page counts its books with those of the tags under it (stage 6, 4a).
+        var count = await db.TagCounts.Where(c => c.TagId == link.ParentId && c.LibraryId == _target.LibraryId).Select(c => c.TotalCount).FirstOrDefaultAsync(Cancel);
 
         var parent = (await queries.GetAsync(_target.TenantId, link.ParentId, _target.LibraryId, Everything(), Cancel))!;
         Assert.AreEqual("category", parent.Field);

@@ -72,12 +72,15 @@ public static class BulkRows
         }
     }
 
+    /// <summary>A tag's change of counts: its own links (<paramref name="Direct"/>) and its books with what is under it (<paramref name="Total"/>).</summary>
+    public readonly record struct CountDelta(int TagId, int Direct, int Total);
+
     /// <summary>
-    /// Adds each delta to its tag's <see cref="TagCount"/> in the library (a missing row is made with the delta; a count
+    /// Adds each delta to its tag's <see cref="TagCount"/> in the library (a missing row is made with the deltas; a count
     /// never goes below zero by an update), in one statement on PostgreSQL, one prepared upsert per tag on SQLite. Rows
-    /// left at zero or below are the caller's to delete.
+    /// left at zero or below in both counts are the caller's to delete.
     /// </summary>
-    public static async Task AddCountsAsync(LibrarionDbContext db, int tenantId, int libraryId, IReadOnlyCollection<KeyValuePair<int, int>> deltas,
+    public static async Task AddCountsAsync(LibrarionDbContext db, int tenantId, int libraryId, IReadOnlyCollection<CountDelta> deltas,
         CancellationToken cancellationToken)
     {
         if (deltas.Count == 0)
@@ -89,15 +92,18 @@ public static class BulkRows
             if (connection is NpgsqlConnection postgres)
             {
                 await using var command = new NpgsqlCommand("""
-                    INSERT INTO "TagCounts" ("TenantId", "LibraryId", "TagId", "BookCount")
-                    SELECT $1, $2, d.tag, d.delta FROM unnest($3::integer[], $4::integer[]) AS d(tag, delta)
-                    ON CONFLICT ("LibraryId", "TagId") DO UPDATE SET "BookCount" = GREATEST(0, "TagCounts"."BookCount" + EXCLUDED."BookCount")
+                    INSERT INTO "TagCounts" ("TenantId", "LibraryId", "TagId", "BookCount", "TotalCount")
+                    SELECT $1, $2, d.tag, d.direct, d.total FROM unnest($3::integer[], $4::integer[], $5::integer[]) AS d(tag, direct, total)
+                    ON CONFLICT ("LibraryId", "TagId") DO UPDATE SET
+                        "BookCount" = GREATEST(0, "TagCounts"."BookCount" + EXCLUDED."BookCount"),
+                        "TotalCount" = GREATEST(0, "TagCounts"."TotalCount" + EXCLUDED."TotalCount")
                     """, postgres);
                 command.Transaction = (NpgsqlTransaction?)db.Database.CurrentTransaction?.GetDbTransaction();
                 command.Parameters.Add(new NpgsqlParameter { Value = tenantId });
                 command.Parameters.Add(new NpgsqlParameter { Value = libraryId });
-                command.Parameters.Add(new NpgsqlParameter { Value = deltas.Select(d => d.Key).ToArray() });
-                command.Parameters.Add(new NpgsqlParameter { Value = deltas.Select(d => d.Value).ToArray() });
+                command.Parameters.Add(new NpgsqlParameter { Value = deltas.Select(d => d.TagId).ToArray() });
+                command.Parameters.Add(new NpgsqlParameter { Value = deltas.Select(d => d.Direct).ToArray() });
+                command.Parameters.Add(new NpgsqlParameter { Value = deltas.Select(d => d.Total).ToArray() });
                 await command.ExecuteNonQueryAsync(cancellationToken);
                 return;
             }
@@ -108,8 +114,8 @@ public static class BulkRows
                 await using var command = connection.CreateCommand();
                 command.Transaction = db.Database.CurrentTransaction!.GetDbTransaction();
                 command.CommandText = """
-                    INSERT INTO "TagCounts" ("TenantId", "LibraryId", "TagId", "BookCount") VALUES ($tenant, $library, $tag, $delta)
-                    ON CONFLICT ("LibraryId", "TagId") DO UPDATE SET "BookCount" = MAX(0, "BookCount" + excluded."BookCount")
+                    INSERT INTO "TagCounts" ("TenantId", "LibraryId", "TagId", "BookCount", "TotalCount") VALUES ($tenant, $library, $tag, $direct, $total)
+                    ON CONFLICT ("LibraryId", "TagId") DO UPDATE SET "BookCount" = MAX(0, "BookCount" + $direct), "TotalCount" = MAX(0, "TotalCount" + $total)
                     """;
                 DbParameter Add(string name, object value)
                 {
@@ -123,11 +129,13 @@ public static class BulkRows
                 Add("$tenant", tenantId);
                 Add("$library", libraryId);
                 var tag = Add("$tag", 0);
-                var delta = Add("$delta", 0);
-                foreach (var (tagId, value) in deltas)
+                var direct = Add("$direct", 0);
+                var total = Add("$total", 0);
+                foreach (var delta in deltas)
                 {
-                    tag.Value = tagId;
-                    delta.Value = value;
+                    tag.Value = delta.TagId;
+                    direct.Value = delta.Direct;
+                    total.Value = delta.Total;
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
 

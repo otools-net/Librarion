@@ -9,27 +9,41 @@ namespace Librarion.Core.Import;
 /// (agents/docs/features/tags.md#imported-tags, metadata-tags.md#import): the source's mapping first, then a tag of
 /// that name or alias within the field, else a new tag (a field value under its field; a plain tag under the source's
 /// "Imported: …" category). One query per kind and field for the whole batch, never one per book; a bounded cache
-/// keeps the names seen lately (most books of an archive share their authors and genres).
+/// keeps the names seen lately (most books of an archive share their authors and genres). A name settled without a
+/// mapping gets one (<see cref="ImportTagMapping.Reviewed"/> false: what the Imported tags page lists, stage 6 chunk 9),
+/// except the people's and series' names (600k at 2M books, curated by merges instead).
 /// </summary>
 public sealed class ImportTagResolver
 {
     private const int MaxCached = 200_000;
     private static readonly HashSet<string> PersonFields = ["author", "translator", "editor", "illustrator"];
 
+    /// <summary>Fields whose raw names get no mapping row of their own (<see cref="Recorded"/>).</summary>
+    public static readonly IReadOnlySet<string> UnrecordedFields = new HashSet<string>(PersonFields) { "series" };
+
     private readonly int tenantId;
     private readonly Dictionary<string, int> fields;
     private readonly Dictionary<(ImportTagSourceKind Source, int? Field, string Name), int?> cache = [];
     private readonly Dictionary<ImportTagSourceKind, int> categories = [];
+    private readonly HashSet<int> unrecorded;
+    private readonly List<ImportTagMapping> recorded = [];
+
+    /// <summary>The tags this resolver made, for the possible duplicate tags at the end of the run (<see cref="Merging.TagDuplicateIndex"/>).</summary>
+    public Merging.TouchedIds Created { get; } = new();
 
     private ImportTagResolver(int tenantId, Dictionary<string, int> fields)
     {
         this.tenantId = tenantId;
         this.fields = fields;
+        unrecorded = fields.Where(f => UnrecordedFields.Contains(f.Key)).Select(f => f.Value).ToHashSet();
     }
 
     public static async Task<ImportTagResolver> CreateAsync(LibrarionDbContext db, int tenantId, CancellationToken cancellationToken)
     {
         var fields = await db.Tags.Where(t => t.FieldKey != null).ToDictionaryAsync(t => t.FieldKey!, t => t.Id, cancellationToken);
+        // A field merged into another: its key names the other (a Calibre column `#genre` after `genre:` became `category:`).
+        foreach (var alias in await db.FieldKeyAliases.Select(a => new { a.Key, a.FieldId }).ToListAsync(cancellationToken))
+            fields.TryAdd(alias.Key, alias.FieldId);
         return new ImportTagResolver(tenantId, fields);
     }
 
@@ -65,7 +79,7 @@ public sealed class ImportTagResolver
                 ? db.ImportTagMappings.Where(m => m.Source == source && m.FieldId == fieldId && normalized.Contains(m.NormalizedName))
                 : db.ImportTagMappings.Where(m => m.Source == source && m.FieldId == null && normalized.Contains(m.NormalizedName));
             foreach (var mapping in await mappings.Select(m => new { m.NormalizedName, m.TagId, m.Ignored }).ToListAsync(cancellationToken))
-                Settle((source, field, mapping.NormalizedName), mapping.Ignored ? null : mapping.TagId, pending);
+                Settle((source, field, mapping.NormalizedName), mapping.Ignored ? null : mapping.TagId, pending, record: false);
         }
 
         foreach (var group in pending.Keys.GroupBy(k => k.Field).ToList())
@@ -84,7 +98,7 @@ public sealed class ImportTagResolver
                 if (field is null && found.Count() > 1)
                     continue;
                 foreach (var key in group.Where(k => k.Name == found.Key))
-                    Settle(key, found.Min(t => t.Id), pending);
+                    Settle(key, found.Min(t => t.Id), pending, record: true);
             }
 
             var left = group.Where(pending.ContainsKey).Select(k => k.Name).Distinct().ToList();
@@ -95,11 +109,15 @@ public sealed class ImportTagResolver
                 .Where(a => a.FieldId == field).GroupBy(a => a.NormalizedName).Where(a => a.Count() == 1);
             foreach (var alias in aliases)
                 foreach (var key in group.Where(k => k.Name == alias.Key))
-                    Settle(key, alias.Single().TagId, pending);
+                    Settle(key, alias.Single().TagId, pending, record: true);
         }
 
         await CreateAsync(db, pending, cancellationToken);
+        await RecordAsync(db, cancellationToken);
     }
+
+    /// <summary>Whether a raw name of <paramref name="fieldId"/> (null: a plain tag) gets a mapping row.</summary>
+    private bool Recorded(int? fieldId) => fieldId is not { } id || !unrecorded.Contains(id);
 
     private (ImportTagSourceKind, int?, string)? Key(Name name)
     {
@@ -119,10 +137,27 @@ public sealed class ImportTagResolver
         return (name.Source, field, normalized);
     }
 
-    private void Settle((ImportTagSourceKind, int?, string) key, int? tagId, Dictionary<(ImportTagSourceKind, int?, string), Name> pending)
+    private void Settle((ImportTagSourceKind Source, int? Field, string Name) key, int? tagId, Dictionary<(ImportTagSourceKind, int?, string), Name> pending, bool record)
     {
-        if (pending.Remove(key))
-            cache[key] = tagId;
+        if (!pending.Remove(key, out var name))
+            return;
+        cache[key] = tagId;
+        if (record && tagId is { } id && Recorded(key.Field))
+            recorded.Add(Mapping(key, name, id));
+    }
+
+    private ImportTagMapping Mapping((ImportTagSourceKind Source, int? Field, string Name) key, Name name, int tagId) =>
+        new() { TenantId = tenantId, Source = key.Source, FieldId = key.Field, NormalizedName = key.Name, Name = Cut(name.Value.Trim()), TagId = tagId };
+
+    /// <summary>The mappings of the names settled without one, copied together (nothing reads their ids back).</summary>
+    private async Task RecordAsync(LibrarionDbContext db, CancellationToken cancellationToken)
+    {
+        if (recorded.Count == 0)
+            return;
+        await BulkRows.InsertAsync(db, "ImportTagMappings", ["TenantId", "Source", "FieldId", "NormalizedName", "Name", "TagId", "Ignored", "Reviewed"],
+            recorded.Select(m => new object?[] { m.TenantId, (byte)m.Source, m.FieldId, m.NormalizedName, m.Name, m.TagId, m.Ignored, m.Reviewed }).ToList(),
+            cancellationToken);
+        recorded.Clear();
     }
 
     /// <summary>New tags for what nothing matched: one per (field, name), whatever the sources that gave it.</summary>
@@ -131,6 +166,8 @@ public sealed class ImportTagResolver
         if (pending.Count == 0)
             return;
         var created = new Dictionary<(int? Field, string Name), Tag>();
+        // A plain tag's category ("Imported: FB2"); a field value's parent is its field (closure only).
+        var categoryOf = new Dictionary<Tag, int>();
         foreach (var ((source, field, normalized), name) in pending)
         {
             if (created.ContainsKey((field, normalized)))
@@ -145,23 +182,77 @@ public sealed class ImportTagResolver
                 SortName = Cut(name.SortName?.Trim() is { Length: > 0 } sort ? sort : person ? TagNames.PersonSortName(display) : display),
                 FieldId = field,
             };
-            db.Tags.Add(tag);
-            db.TagClosure.Add(new TagClosure { TenantId = tenantId, Ancestor = tag, Descendant = tag });
-            if (field is { } fieldId)
-                db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = fieldId, Descendant = tag, Depth = 1 });
-            else
-            {
-                var category = await CategoryAsync(db, source, cancellationToken);
-                db.TagParents.Add(new TagParent { TenantId = tenantId, Child = tag, ParentId = category });
-                db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = category, Descendant = tag, Depth = 1 });
-            }
-
+            NameKeys.Apply(tag);
+            if (field is null)
+                categoryOf[tag] = await CategoryAsync(db, source, cancellationToken);
             created[(field, normalized)] = tag;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
-        foreach (var key in pending.Keys)
-            cache[key] = created[(key.Field, key.Name)].Id;
+        await SaveAsync(db, created.Values, categoryOf, cancellationToken);
+        Created.Add(created.Values.Select(t => t.Id));
+        foreach (var (key, name) in pending)
+        {
+            var id = created[(key.Field, key.Name)].Id;
+            cache[key] = id;
+            if (Recorded(key.Field))
+                recorded.Add(Mapping(key, name, id));
+        }
+    }
+
+    private static readonly string[] TagColumns = ["Id", "TenantId", "Name", "NormalizedName", "SortName", "IsCategory", "IsHidden", "FieldId", "SoundKey", "InitialsKey"];
+
+    /// <summary>
+    /// New tags with their closure rows (itself, and its field or category above it) and a plain tag's parent. On
+    /// PostgreSQL the ids come from the table's sequence and the rows are copied in one transaction (EF's per-row cost
+    /// was most of the time of the 600k new tags of a Calibre 2M import: agents/docs/features/imports.md#scale); on SQLite
+    /// through EF, whose ids come from the insert.
+    /// </summary>
+    private async Task SaveAsync(LibrarionDbContext db, IReadOnlyCollection<Tag> tags, Dictionary<Tag, int> categoryOf, CancellationToken cancellationToken)
+    {
+        if (await BulkRows.ReserveIdsAsync(db, "Tags", tags.Count, cancellationToken) is not { } reserved)
+        {
+            foreach (var tag in tags)
+            {
+                db.Tags.Add(tag);
+                db.TagClosure.Add(new TagClosure { TenantId = tenantId, Ancestor = tag, Descendant = tag });
+                if (categoryOf.TryGetValue(tag, out var category))
+                {
+                    db.TagParents.Add(new TagParent { TenantId = tenantId, Child = tag, ParentId = category });
+                    db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = category, Descendant = tag, Depth = 1 });
+                }
+                else
+                    db.TagClosure.Add(new TagClosure { TenantId = tenantId, AncestorId = tag.FieldId!.Value, Descendant = tag, Depth = 1 });
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var i = 0;
+        foreach (var tag in tags)
+            tag.Id = checked((int)reserved[i++]);
+        var own = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
+        try
+        {
+            await BulkRows.InsertAsync(db, "Tags", TagColumns,
+                tags.Select(t => new object?[] { t.Id, t.TenantId, t.Name, t.NormalizedName, t.SortName, t.IsCategory, t.IsHidden, t.FieldId, t.SoundKey, t.InitialsKey }).ToList(),
+                cancellationToken);
+            await BulkRows.InsertAsync(db, "TagClosure", ["TenantId", "AncestorId", "DescendantId", "Depth"],
+                tags.SelectMany(t => new[]
+                {
+                    new object?[] { tenantId, t.Id, t.Id, 0 },
+                    [tenantId, categoryOf.TryGetValue(t, out var category) ? category : t.FieldId!.Value, t.Id, 1],
+                }).ToList(), cancellationToken);
+            await BulkRows.InsertAsync(db, "TagParents", ["TenantId", "ChildId", "ParentId"],
+                categoryOf.Select(c => new object?[] { tenantId, c.Key.Id, c.Value }).ToList(), cancellationToken);
+            if (own is not null)
+                await own.CommitAsync(cancellationToken);
+        }
+        finally
+        {
+            if (own is not null)
+                await own.DisposeAsync();
+        }
     }
 
     /// <summary>The category new plain tags of a source go under ("Imported: FB2"), made on first need.</summary>
