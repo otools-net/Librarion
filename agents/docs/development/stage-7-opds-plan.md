@@ -145,7 +145,8 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    showing a new key once, per scope: reader apps: the catalog address with the key in it (`…/opds/k/<key>`, with
    Copy) when the key allows the address, else the address with the user name and the key as the password; scripts:
    `Authorization: Bearer <key>` / `X-Api-Key: <key>`; user docs (account › API keys) and the client spec / e2e
-   updated. Whether a key as the Basic password with an empty user name is accepted: asked when the chunk starts.
+   updated. Basic stays as built (the password, or a key with its owner's name); an empty name is refused (the
+   user's answer, 2026-11-10: a key without the name goes in the address or the headers).
 9. [ ] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,
    rename, delete, add and remove books (one, a selection), order; lists by key under visibility; merges, undo and
    split keep shelf rows right; routes behind `account.shelves`. Tests on both providers.
