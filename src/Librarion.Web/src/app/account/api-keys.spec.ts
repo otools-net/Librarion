@@ -74,7 +74,7 @@ describe('ApiKeys', () => {
     it('makes a key and shows it once, with Copy', async () => {
         const api = mockApi();
         api.apiKeys.mockResolvedValue([]);
-        const made = { info: keyInfo({ name: 'Script', scopes: ['opds', 'api:read'], libraryIds: [1] }), key: 'lib_7_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG' };
+        const made = { info: keyInfo({ name: 'Script', scopes: ['opds', 'api:read'], libraryIds: [1], pathAllowed: true }), key: 'lib_7_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG' };
         api.createApiKey.mockResolvedValue(made);
         const writeText = vi.fn().mockResolvedValue(undefined);
         Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
@@ -97,9 +97,40 @@ describe('ApiKeys', () => {
         await stable();
         expect(writeText).toHaveBeenCalledWith(made.key);
 
+        // How to use it: the catalog's address holding the key (for reader apps), the headers (for scripts).
+        const address = element.querySelector<HTMLInputElement>('#api-key-address')!.value;
+        expect(address).toBe(`${new URL('opds', document.baseURI).href}/k/${made.key}`);
+        button(element, 'Copy address').click();
+        await stable();
+        expect(writeText).toHaveBeenLastCalledWith(address);
+        expect(element.querySelector('.api-key-headers')?.textContent).toContain(`Authorization: Bearer ${made.key}`);
+        expect(element.querySelector('.api-key-headers')?.textContent).toContain(`X-Api-Key: ${made.key}`);
+
         button(element, 'Done').click();
         await stable();
         expect(element.querySelector('#api-key-text')).toBeNull();
+    });
+
+    it('offers no key in the address when the tenant has switched that off: the name and the key as the password instead', async () => {
+        const api = mockApi();
+        api.apiKeys.mockResolvedValue([]);
+        const made = { info: keyInfo({ name: 'Reader' }), key: 'lib_7_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG' };
+        api.createApiKey.mockResolvedValue(made);
+        const { element, stable } = await render(api);
+        const session = sessionInfo(['account.apiKeys']);
+        TestBed.inject(SessionService).set({ ...session, preferences: { ...session.preferences, 'opds.pathKeys': 'off' } });
+
+        button(element, 'New key').click();
+        await stable();
+        expect(element.textContent).not.toContain('Can be used in the address');
+        type(element, '#api-key-name', 'Reader');
+        element.querySelector('form')!.dispatchEvent(new Event('submit'));
+        await stable();
+
+        expect(api.createApiKey).toHaveBeenCalledWith(expect.objectContaining({ pathAllowed: false }));
+        expect(element.querySelector('#api-key-address')).toBeNull();
+        expect(element.querySelector('.api-key-use')?.textContent).toContain('the key as the password');
+        expect(element.querySelector('.api-key-headers')).toBeNull();
     });
 
     it('says what is wrong with a key it was asked to make', async () => {

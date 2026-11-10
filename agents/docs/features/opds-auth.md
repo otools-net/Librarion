@@ -74,6 +74,29 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic),
 - e2e `api-keys.spec.ts` on every device: make a key, the reader app's Basic with it (200), Done, revoke (401); axe in
   both themes on android.
 
+## Built (stage 7 chunk 8b): keys in the address
+
+- **`OpdsPathKey`** (middleware before routing): `/opds/k/<key>/rest` goes on as `/opds/rest` (the raw target too), the
+  key in the request's items. `OpdsAuthenticationHandler` then signs in with that key alone (headers and Basic not
+  looked at), through `ApiKeySignIn` with `inPath`: `ApiKeys.VerifyAsync(…, inPath: true)` also needs the key's
+  `PathAllowed`, its `opds` scope, and its tenant's `opds.pathKeys` not off (`PathKeysAllowedAsync`, cached while
+  `AccessChanges` holds; a key without a tenant, a server administrator's, follows the server level). Refused: 401
+  with `Bearer realm="Librarion", error="invalid_token"` (`PathKeyChallenge`), not Basic: a password would not help.
+- **Links:** `OpdsLinks.Root` is `/opds/k/<key>` when the address carried one, so every link and redirect keeps it.
+- **Rate limit** per key id for such requests (`key:<id>`).
+- **Logs:** the hosting layer writes the address before any middleware: the logger factory redacts keys everywhere
+  ([sessions-and-pipeline](../architecture/sessions-and-pipeline.md)). Found: in the test host, "Microsoft.AspNetCore"
+  at Warning (appsettings) hides those lines; a provider-specific `LoggerFilterRule` (Trace) brings them back for the
+  test that reads them.
+- **The page** (`api-keys.ts`): under a new key, **How to use it**: with `opds` and `pathAllowed` (and the tenant's
+  setting on, from the session's `preferences`), the catalog address with the key and **Copy address**; else the
+  address, the user name and the key as the password; with an API scope, the two headers. The checkbox "Can be used
+  in the address" is hidden when the tenant has it off. Basic stays as built: a key as the password needs its owner's
+  name (the user's answer, 2026-11-10).
+- Tests: `OpdsPathKeyTests` (links keep the prefix down to a download; refused keys, the tenant switch, revoked; the
+  log read at Trace with scopes, nothing holds a secret; `Redact`), the client spec, e2e `api-keys.spec.ts` (the address
+  alone opens the catalog, 401 once revoked).
+
 ## Ways in
 
 - **Basic** (`Authorization: Basic user:secret`): what every OPDS client supports. `secret` is the password **or** an
@@ -104,4 +127,4 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic),
 
 - Built: each way in, wrong password / revoked / expired / malformed key / disabled user → 401, scopes and libraries
   narrow rights, a key can't manage keys, no cookie on `/opds`, throttles, the cache dropped on a password change.
-- Planned (chunk 8): the key in the path never in logs.
+- Built (chunk 8b): the key in the path never in logs (`OpdsPathKeyTests.TheKeyInTheAddressIsNeverInALog`).

@@ -35,7 +35,29 @@ export const scopeKey = (scope: ApiKeyScope) => `apiKeys.scope.${scope.replace('
                         <input id="api-key-text" type="text" class="api-key-text" readonly spellcheck="false" [value]="made.key" (focus)="select($event)">
                     </div>
                     <div class="form-actions">
-                        <button type="button" class="button primary" [title]="'apiKeys.copyHint' | t" (click)="copy(made.key)">{{ 'apiKeys.copy' | t }}</button>
+                        <button type="button" class="button primary" [title]="'apiKeys.copyHint' | t" (click)="copy(made.key, 'api-key-text', 'apiKeys.copied')">{{ 'apiKeys.copy' | t }}</button>
+                    </div>
+                    <h3>{{ 'apiKeys.useTitle' | t }}</h3>
+                    @if (made.info.scopes.includes('opds')) {
+                        @if (made.info.pathAllowed && pathKeysOn()) {
+                            <div class="field">
+                                <label class="field-label" for="api-key-address">{{ 'apiKeys.address' | t }}</label>
+                                <input id="api-key-address" type="text" class="api-key-text" readonly spellcheck="false" [value]="keyAddress(made.key)" (focus)="select($event)">
+                                <span class="field-hint">{{ 'apiKeys.useAddress' | t }}</span>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="button" [title]="'apiKeys.copyAddressHint' | t"
+                                        (click)="copy(keyAddress(made.key), 'api-key-address', 'apiKeys.addressCopied')">{{ 'apiKeys.copyAddress' | t }}</button>
+                            </div>
+                        } @else {
+                            <p class="field-hint api-key-use">{{ 'apiKeys.opdsAddress' | t: { address: opdsAddress, name: sessions.user()?.userName ?? '' } }}</p>
+                        }
+                    }
+                    @if (made.info.scopes.includes('api:read') || made.info.scopes.includes('api:write')) {
+                        <p class="field-hint api-key-use">{{ 'apiKeys.useHeaders' | t }}</p>
+                        <pre class="api-key-headers">{{ headers(made.key) }}</pre>
+                    }
+                    <div class="form-actions">
                         <button type="button" class="button" [title]="'apiKeys.doneHint' | t" (click)="madeState.set(null)">{{ 'apiKeys.done' | t }}</button>
                     </div>
                 </section>
@@ -89,7 +111,7 @@ export const scopeKey = (scope: ApiKeyScope) => `apiKeys.scope.${scope.replace('
                             <span class="field-error">{{ error }}</span>
                         }
                     </div>
-                    @if (scopes().includes('opds')) {
+                    @if (scopes().includes('opds') && pathKeysOn()) {
                         <label class="check">
                             <input type="checkbox" [checked]="pathAllowed()" (change)="pathAllowed.set(checkedOf($event))">
                             <span>{{ 'apiKeys.pathAllowed' | t }}<span class="field-hint">{{ 'apiKeys.pathAllowedHint' | t }}</span></span>
@@ -174,6 +196,19 @@ export class ApiKeys implements OnInit {
 
     /** Where reader apps find the catalog: the app's root + `opds`, behind a proxy's virtual folder too. */
     protected readonly opdsAddress = new URL('opds', document.baseURI).href;
+
+    /** The tenant lets keys be used in the catalog's address (the setting `opds.pathKeys`, in the session's values). */
+    protected readonly pathKeysOn = computed(() => this.sessions.session()?.preferences['opds.pathKeys'] !== 'off');
+
+    /** The headers a script sends the key in (protocol names, not texts to translate). */
+    protected headers(key: string): string {
+        return `Authorization: Bearer ${key}\nX-Api-Key: ${key}`;
+    }
+
+    /** The catalog's address holding the key: a reader app needs nothing else. */
+    protected keyAddress(key: string): string {
+        return `${this.opdsAddress}/k/${encodeURIComponent(key)}`;
+    }
     protected readonly tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
     async ngOnInit(): Promise<void> {
@@ -209,7 +244,7 @@ export class ApiKeys implements OnInit {
                 name: this.name().trim(),
                 scopes: this.scopes(),
                 libraryIds: this.libraryIds(),
-                pathAllowed: this.scopes().includes('opds') && this.pathAllowed(),
+                pathAllowed: this.scopes().includes('opds') && this.pathKeysOn() && this.pathAllowed(),
                 // The end of the day chosen, in the browser's time zone.
                 expires: this.expires() ? new Date(`${this.expires()}T23:59:59`).toISOString() : null,
             });
@@ -227,13 +262,14 @@ export class ApiKeys implements OnInit {
         }
     }
 
-    protected async copy(text: string): Promise<void> {
+    /** Copies a text shown in the field <paramref name="fieldId"/>; without a clipboard, selects it there. */
+    protected async copy(text: string, fieldId: string, done: string): Promise<void> {
         try {
             await navigator.clipboard.writeText(text);
-            this.toasts.show(this.i18n.t('apiKeys.copied'));
+            this.toasts.show(this.i18n.t(done));
         } catch {
             // No clipboard (plain http on another computer): the text is selected for the person to copy.
-            document.querySelector<HTMLInputElement>('#api-key-text')?.select();
+            document.querySelector<HTMLInputElement>(`#${fieldId}`)?.select();
             this.toasts.show(this.i18n.t('apiKeys.copyByHand'));
         }
     }

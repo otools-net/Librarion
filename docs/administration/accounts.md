@@ -32,6 +32,11 @@ used and from where. **Revoke** ends one at once (a lost phone, a key shared by 
 itself on its own page; a new password or disabling the account ends all of them. Making and revoking keys is in the
 [security log](security-log.md).
 
+A key may be made to work in the catalog's address (for reader apps that can't sign in): anyone who sees that address
+can use it. The setting **API keys in the address** (group **Reader apps**, tenant or server [settings](settings.md))
+switches that off for every key of the tenant at once; a server administrator's keys follow the server's setting. The
+key in an address is never written to the server's log.
+
 ## Server administrators
 
 Server administrators see **Server administrators** above the list: ticked, the list shows them instead of the

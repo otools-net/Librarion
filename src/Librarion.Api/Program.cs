@@ -27,6 +27,8 @@ builder.WebHost.UseStaticWebAssets();
 builder.Services.AddLibrarionCore(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddLibrarionSecurity(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton<ClientPage>();
+// API keys never in a log, whatever logs and scopes are on (the hosting layer logs a request's address).
+builder.Services.AddLogRedaction();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
@@ -45,6 +47,9 @@ app.Lifetime.ApplicationStopped.Register(() => (local.FileProvider as IDisposabl
 app.Logger.LogInformation("Librarion {Version} ({Commit})", AppVersion.Version, AppVersion.Commit ?? "unknown commit");
 
 app.UseForwardedHeaders();
+// A key in the catalog's address is taken out of the path before routing sees it (agents/docs/features/opds-auth.md).
+app.UseMiddleware<OpdsPathKey>();
+app.UseRouting();
 // First, so that every answer (errors too) carries them.
 app.UseMiddleware<SecurityHeaders>();
 app.UseExceptionHandler();

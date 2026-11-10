@@ -48,7 +48,8 @@ public static class ApiKeySignIn
     /// Checks <paramref name="key"/> (and, from Basic, that it is <paramref name="userName"/>'s); failures count in the
     /// sign-in throttle per address and go to the security log, never with the key.
     /// </summary>
-    public static async Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string scheme, string? key, string? userName = null)
+    /// <param name="inPath">The key came in the address (<c>/opds/k/…</c>): it must allow that (<see cref="ApiKeys.VerifyAsync"/>).</param>
+    public static async Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string scheme, string? key, string? userName = null, bool inPath = false)
     {
         var services = context.RequestServices;
         var throttle = services.GetRequiredService<SignInThrottle>();
@@ -58,7 +59,7 @@ public static class ApiKeySignIn
         if (throttle.LockedUntil(throttleName, address) is not null)
             return AuthenticateResult.Fail("Too many wrong keys.");
 
-        var grant = await services.GetRequiredService<ApiKeys>().VerifyAsync(key, context.RequestAborted);
+        var grant = await services.GetRequiredService<ApiKeys>().VerifyAsync(key, context.RequestAborted, inPath);
         var user = grant is null ? null : await services.GetRequiredService<AccessService>().GetSessionUserAsync(grant.UserId, context.RequestAborted);
         if (grant is null || user is null || (userName is not null && !string.Equals(userName.Trim(), user.UserName, StringComparison.OrdinalIgnoreCase)))
         {

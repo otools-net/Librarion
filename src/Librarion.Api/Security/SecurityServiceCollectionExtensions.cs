@@ -91,7 +91,8 @@ public static class SecurityServiceCollectionExtensions
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, security.SignInsPerMinute), Window = TimeSpan.FromMinutes(1) }));
             // Before authorization, so by what the request says it is: a feed page asks for its covers too (dozens a page).
             options.AddPolicy(OpdsRateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
-                Librarion.Api.Opds.OpdsAuthenticationHandler.ReadBasic(context.Request) is var (name, _) ? "user:" + name.Trim().ToUpperInvariant() : "address:" + context.Address(),
+                Librarion.Api.Opds.OpdsPathKey.Of(context) is { } pathKey ? "key:" + (ApiKeys.Parse(pathKey)?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?")
+                : Librarion.Api.Opds.OpdsAuthenticationHandler.ReadBasic(context.Request) is var (name, _) ? "user:" + name.Trim().ToUpperInvariant() : "address:" + context.Address(),
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, security.OpdsRequestsPerMinute), Window = TimeSpan.FromMinutes(1) }));
         });
 

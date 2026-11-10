@@ -94,4 +94,4 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
 
 ## Planned (stage 7)
 
-- Path keys `/opds/k/<key>/…` (8b), shelves (11).
+- Shelves (11). Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).

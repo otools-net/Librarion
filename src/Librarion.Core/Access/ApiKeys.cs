@@ -61,7 +61,7 @@ public sealed record ApiKeyGrant(int KeyId, int UserId, IReadOnlySet<string> Sco
 /// found once is kept in memory while <see cref="AccessChanges"/> doesn't move: every key change moves it, so a revoked
 /// key fails at the next request. Expiry and the account's state are checked at each use.
 /// </summary>
-public sealed class ApiKeys(TenantDb tenantDb, AccessChanges changes, AccessService accounts, TimeProvider time)
+public sealed class ApiKeys(TenantDb tenantDb, AccessChanges changes, AccessService accounts, Settings.SettingsService settings, TimeProvider time)
 {
     public const string Prefix = "lib_";
 
@@ -73,6 +73,7 @@ public sealed class ApiKeys(TenantDb tenantDb, AccessChanges changes, AccessServ
 
     private readonly ConcurrentDictionary<int, (long Version, ApiKey? Key)> _keys = new();
     private readonly ConcurrentDictionary<int, DateTimeOffset> _lastWritten = new();
+    private readonly ConcurrentDictionary<int, (long Version, bool Allowed)> _pathKeys = new();
 
     private DateTime Now => time.GetUtcNow().UtcDateTime;
 
@@ -144,7 +145,35 @@ public sealed class ApiKeys(TenantDb tenantDb, AccessChanges changes, AccessServ
     /// The key a request names, when it is valid now: well formed, its secret right, not revoked or expired, its
     /// account enabled and with the stamp the key was made with. Null otherwise (the caller doesn't tell why).
     /// </summary>
-    public async Task<ApiKeyGrant?> VerifyAsync(string? text, CancellationToken cancellationToken = default)
+    /// <param name="inPath">The key came in the catalog's address (<c>/opds/k/&lt;key&gt;</c>): it must allow that, be for
+    /// reader apps, and its tenant (the server's settings for a key without one) must not have switched path keys off.</param>
+    public async Task<ApiKeyGrant?> VerifyAsync(string? text, CancellationToken cancellationToken = default, bool inPath = false)
+    {
+        var grant = await GrantAsync(text, cancellationToken);
+        if (grant is null || !inPath)
+            return grant;
+        return grant.PathAllowed && grant.Scopes.Contains(ApiKeyScopes.Opds) && _keys.TryGetValue(grant.KeyId, out var cached)
+               && await PathKeysAllowedAsync(cached.Key!.TenantId, cancellationToken)
+            ? grant
+            : null;
+    }
+
+    /// <summary>The tenant's <see cref="Settings.SettingCatalog.OpdsPathKeys"/>, kept while <see cref="AccessChanges"/> holds (a saved setting moves it).</summary>
+    public async Task<bool> PathKeysAllowedAsync(int? tenantId, CancellationToken cancellationToken = default)
+    {
+        var version = changes.Version;
+        var slot = tenantId ?? 0;
+        if (_pathKeys.TryGetValue(slot, out var known) && known.Version == version)
+            return known.Allowed;
+        var owner = tenantId is { } id ? new Settings.SettingOwner(SettingLevel.Tenant, id) : new Settings.SettingOwner(SettingLevel.Server, 0);
+        var states = await settings.GetAsync(owner, tenantId, cancellationToken);
+        var allowed = states?.FirstOrDefault(s => s.Key == Settings.SettingCatalog.OpdsPathKeys)?.Value is not { ValueKind: System.Text.Json.JsonValueKind.String } value
+                      || value.GetString() != "off";
+        _pathKeys[slot] = (version, allowed);
+        return allowed;
+    }
+
+    private async Task<ApiKeyGrant?> GrantAsync(string? text, CancellationToken cancellationToken)
     {
         if (Parse(text) is not var (id, secret))
             return null;

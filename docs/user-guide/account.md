@@ -37,8 +37,17 @@ revoke one without changing your password.
 6. **Make the key**: the key is shown **this once**. **Copy** it and paste it where it goes; lost, revoke it and make
    another.
 
-In a reader app, add a catalog with the address shown on the page (it ends in `/opds`), your user name, and the key as
-the password. Scripts send it as `Authorization: Bearer <key>` or `X-Api-Key: <key>`.
+Under the key, **How to use it** says what to give the app or script:
+
+- **A reader app, with a key that can be used in the address:** the **catalog address with the key** (it ends in
+  `/opds/k/` and the key). **Copy address** and add it as a catalog in the app: nothing else is asked, no user name, no
+  password.
+- **A reader app, otherwise:** add a catalog with the address shown on the page (it ends in `/opds`), your user name,
+  and the key as the password.
+- **A script:** send the key in a header, `Authorization: Bearer <key>` or `X-Api-Key: <key>`.
+
+An administrator can switch keys in the address off for the whole tenant (the setting **API keys in the address**);
+**Can be used in the address** is then not offered, and keys made with it no longer work that way.
 
 The list shows what each key is for, when it was last used and from where. **Revoke** ends a key at once. A new
 password, or your account being disabled, ends **every** key: make new ones afterwards. Keys are managed only here,

@@ -28,10 +28,10 @@ internal sealed class Shelf : IAsyncDisposable
     public int TenantId { get; }
     public int LibraryId { get; }
 
-    public static async Task<Shelf> CreateAsync(CancellationToken cancellationToken)
+    public static async Task<Shelf> CreateAsync(CancellationToken cancellationToken, Action<IServiceCollection>? services = null)
     {
         var catalog = new TestCatalog();
-        var factory = ApiClients.CreateFactory(catalog);
+        var factory = ApiClients.CreateFactory(catalog, services: services);
         var (admin, session) = await ApiClients.SetUpAsync(factory, cancellationToken);
         var tenantId = session.Tenant!.Id;
         var root = Path.Combine(catalog.BasePath, "books");

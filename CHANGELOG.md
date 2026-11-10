@@ -31,6 +31,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   under it). **Search** from the reader app's search box, in the same search language as the web app (`author:`,
   `-` to leave out…), the results by title, 50 a page. FB2 books can also be downloaded as **`fb2.zip`** (zipped as
   they are sent, much smaller). A reader app still showing a book merged into another downloads its file and cover.
+- **API keys in the address:** a key made with **Can be used in the address** opens the catalog from
+  `…/opds/k/<key>` alone, for reader apps that can't sign in; every link of the catalog keeps it. Under a new key,
+  **How to use it** gives that address (with **Copy address**), or the user name and the key as the password, and
+  the headers for scripts. The tenant setting **API keys in the address** (Reader apps) switches it off. Keys are
+  never written to the server's log, whatever its log level.
 
 ## 0.7.0
 

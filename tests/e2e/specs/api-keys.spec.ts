@@ -1,6 +1,6 @@
-// API keys on every device (stage 7 chunk 4, agents/docs/features/opds-auth.md): an account makes a key on My account ›
-// API keys, sees it once, a reader app signs in to the catalog with it as the password, and once revoked it is
-// refused. axe audits the page with the key shown, in both themes, once per run.
+// API keys on every device (stage 7 chunks 4 and 8b, agents/docs/features/opds-auth.md): an account makes a key on My
+// account › API keys that may be used in the address, sees it once with the catalog's address holding it, a reader app
+// opens the catalog with it as the password and from that address alone, and once revoked both are refused. axe audits the page with the key shown, in both themes, once per run.
 import { request } from '@playwright/test';
 import { asAdmin, makeAccount, signIn } from '../fixtures/accounts';
 import { audit } from '../fixtures/axe';
@@ -18,6 +18,16 @@ async function catalogStatus(userName: string, key: string): Promise<number> {
     }
 }
 
+/** The catalog as a reader app that can't sign in asks for it: the address holding the key, nothing else. */
+async function addressStatus(address: string): Promise<number> {
+    const app = await request.newContext();
+    try {
+        return (await app.get(address)).status();
+    } finally {
+        await app.dispose();
+    }
+}
+
 test.describe('@api-keys', () => {
     test.use({ storageState: signedOut });
 
@@ -30,10 +40,13 @@ test.describe('@api-keys', () => {
 
         await press(page.getByRole('button', { name: 'New key' }), isMobile);
         await page.getByLabel('Name', { exact: true }).fill('Phone');
+        await press(page.getByRole('checkbox', { name: /Can be used in the address/ }), isMobile);
         await press(page.getByRole('button', { name: 'Make the key' }), isMobile);
         const shown = page.getByLabel('Key', { exact: true });
         await expect(shown).toHaveValue(/^lib_\d+_[A-Za-z0-9_-]{43}$/);
         const key = await shown.inputValue();
+        const address = page.getByLabel('Catalog address with the key');
+        await expect(address).toHaveValue(new URL(`opds/k/${key}`, baseURL).href);
         await expect(page.getByRole('list', { name: 'API keys' }).getByRole('listitem').filter({ hasText: 'Phone' })).toContainText('Reader apps (OPDS)');
         if (testInfo.project.name === 'android') {
             await audit(page, 'api keys (dark)');
@@ -43,6 +56,8 @@ test.describe('@api-keys', () => {
         }
 
         expect(await catalogStatus(account.userName, key)).toBe(200);
+        const keyAddress = await address.inputValue();
+        expect(await addressStatus(keyAddress)).toBe(200);
         const listed = await asAdmin<{ name: string }[]>('GET', `api/users/${account.id}/api-keys`);
         expect(listed.map(k => k.name)).toEqual(['Phone']);
 
@@ -53,5 +68,6 @@ test.describe('@api-keys', () => {
         await expect(page.getByRole('list', { name: 'API keys' }).getByRole('listitem').filter({ hasText: 'Phone' })).toContainText('Revoked');
 
         expect(await catalogStatus(account.userName, key)).toBe(401);
+        expect(await addressStatus(keyAddress)).toBe(401);
     });
 });

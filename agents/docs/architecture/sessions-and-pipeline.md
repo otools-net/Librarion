@@ -5,10 +5,15 @@ Code: `src/Librarion.Api/Program.cs`, `Security/` (`SecurityHeaders`, `RequestGu
 Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([opds-auth](../features/opds-auth.md),
 [opds](../features/opds.md)).
 
-- **Order:** `UseForwardedHeaders` (loopback proxies) → `SecurityHeaders` (first, so errors carry them too) →
+- **Order:** `UseForwardedHeaders` (loopback proxies) → `OpdsPathKey` (takes a key out of `/opds/k/<key>/…` before
+  routing sees it) → `UseRouting` (explicit since stage 7 chunk 8b; it was implicit at the very start) → `SecurityHeaders` (first, so errors carry them too) →
   exception handler, status code pages → `RequestGuard` → authorization → `/openapi`, static files
   (`UseDefaultFiles` + `MapStaticAssets`), `/api` group (its own 404 fallback), then `ClientPage` for every other
   address.
+- **Logs never hold an API key:** the logger factory is wrapped (`Security/LogRedaction.cs`, `AddLogRedaction`):
+  messages, structured values and scopes pass through `LogRedaction.Redact` (`lib_<id>_` + secret, anything after
+  `/opds/k/`), because the hosting layer logs a request's address and puts it in each entry's scope before any
+  middleware runs.
 - **CSP** `default-src 'self'` (`SecurityHeaders.AppPolicy`): only the app's own files load or run; styles allow
   `'unsafe-inline'` (Angular adds component styles as `<style>`). The built `index.html` must have no inline script or
   handler: `inlineCritical: false` in `angular.json` (Angular's critical CSS adds an `onload` handler);

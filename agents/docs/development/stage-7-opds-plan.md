@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 8b.
+**Next:** chunk 9.
 
 ## The user's answers (2026-11-10)
 
@@ -143,7 +143,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     merged books' old download and cover addresses still answer through `/opds` (tests). **Built:** `ZippedDownload`
     (buffered per chunk: `ZipArchive` writes synchronously), `application/fb2+zip`; merged addresses answered, not
     redirected; [opds](../features/opds.md#built-stage-7-chunk-8a-fb2zip-merged-books).
-8b. [ ] Path keys `/opds/k/<key>/…` (keys that allow them, the tenant setting) with every link keeping the prefix and
+8b. [x] Path keys `/opds/k/<key>/…` (keys that allow them, the tenant setting) with every link keeping the prefix and
    the key redacted from logs (a test reads the log).
    **The key page tells how to use a key without the user name** (the user's request, 2026-11-10): in the panel
    showing a new key once, per scope: reader apps: the catalog address with the key in it (`…/opds/k/<key>`, with
@@ -151,6 +151,9 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    `Authorization: Bearer <key>` / `X-Api-Key: <key>`; user docs (account › API keys) and the client spec / e2e
    updated. Basic stays as built (the password, or a key with its owner's name); an empty name is refused (the
    user's answer, 2026-11-10: a key without the name goes in the address or the headers).
+   **Built:** `OpdsPathKey` before an explicit `UseRouting`, `ApiKeys.VerifyAsync(inPath)`, the tenant setting
+   `opds.pathKeys`, the logger factory redacting keys (`LogRedaction`; the hosting layer logs the address before any
+   middleware), "How to use it" on the key page; [opds-auth](../features/opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).
 9. [ ] Shelves in Core: `Shelves`, `ShelfBooks` (both migrations, tenant filter, `NoQueryCrossesTenants`), create,
    rename, delete, add and remove books (one, a selection), order; lists by key under visibility; merges, undo and
    split keep shelf rows right; routes behind `account.shelves`. Tests on both providers.

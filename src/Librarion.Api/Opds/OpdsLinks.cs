@@ -8,8 +8,9 @@ namespace Librarion.Api.Opds;
 /// </summary>
 public sealed class OpdsLinks(HttpContext context)
 {
-    /// <summary>The catalog's root as this request reached it.</summary>
-    public string Root { get; } = context.Request.PathBase + OpdsEndpoints.Prefix;
+    /// <summary>The catalog's root as this request reached it: with the key when the address carried one (every link keeps it).</summary>
+    public string Root { get; } = context.Request.PathBase
+        + (OpdsPathKey.Of(context) is { } key ? OpdsPathKey.Prefix + "/" + Uri.EscapeDataString(key) : OpdsEndpoints.Prefix);
 
     public string Library(int library) => $"{Root}/l/{library}";
 
