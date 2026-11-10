@@ -12,6 +12,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - Reader apps sign in to `/opds` with the account's name and password (Basic). Wrong passwords count as on the sign-in
   page (five from one address and that address waits) and appear in the security log. Each account's reader apps may
   make `Librarion:Security:OpdsRequestsPerMinute` (600) requests a minute.
+- **API keys** (through the API for now; their page comes next): named keys for reader apps and scripts, each for
+  reader apps (OPDS), reading the API and/or changing through it, optionally limited to some libraries and to an end
+  date. A key is shown once; it works as the password in a reader app, or as `Authorization: Bearer` / `X-Api-Key`.
+  It ends when revoked, at its end date, or when the account's password changes or the account is disabled.
+  Administrators can see and revoke an account's keys. The security log notes keys made and revoked. A database made
+  by an earlier build must be deleted (before 1.0 the database is not upgraded).
 
 ## 0.7.0
 

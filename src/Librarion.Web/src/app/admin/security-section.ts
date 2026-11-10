@@ -12,6 +12,7 @@ export const SECURITY_EVENT_KINDS = [
     'signedIn', 'signInFailed', 'lockedOut', 'signedOut', 'passwordChanged', 'setupCompleted', 'recoveryRequested', 'recoveryCompleted',
     'userCreated', 'userChanged', 'userDeleted', 'groupCreated', 'groupChanged', 'groupDeleted', 'tenantCreated', 'tenantChanged',
     'tenantDeleted', 'libraryCreated', 'libraryChanged', 'libraryDeleted', 'settingsChanged',
+    'apiKeyCreated', 'apiKeyRevoked',
 ];
 
 /** The security log, newest first, 100 at a time; filtered by kind and name. Server administrators may see every tenant's. */

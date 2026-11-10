@@ -28,8 +28,9 @@ public sealed class RequestGuard(RequestDelegate next)
         }
 
         var method = context.Request.Method;
+        // A request with an API key carries no cookie's authority (the key decides: ApiKeySignIn), so no CSRF to guard.
         if (api && !HttpMethods.IsGet(method) && !HttpMethods.IsHead(method) && !HttpMethods.IsOptions(method)
-            && !context.Request.Headers.ContainsKey(Header))
+            && !context.Request.Headers.ContainsKey(Header) && !ApiKeySignIn.HasKeyHeader(context.Request))
         {
             await TypedResults.Problem($"Requests changing something need the {Header} header.", statusCode: StatusCodes.Status400BadRequest)
                 .ExecuteAsync(context);

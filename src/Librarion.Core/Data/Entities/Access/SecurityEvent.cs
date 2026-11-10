@@ -51,4 +51,6 @@ public enum SecurityEventKind
     LibraryChanged,
     LibraryDeleted,
     SettingsChanged,
+    ApiKeyCreated,
+    ApiKeyRevoked,
 }

@@ -15,7 +15,7 @@ namespace Librarion.Api.Opds;
 /// How reader apps sign in on <c>/opds</c> (agents/docs/features/opds-auth.md). The feeds' routes name this scheme
 /// only, so the request's user is what it finds: the web app's cookie is never accepted there (no CSRF surface). Without
 /// credentials the answer is 401 with a Basic challenge, which makes reader apps ask for a name and password.
-/// Basic carries the account's password (stage 7 chunk 2); API keys come in chunk 3.
+/// Basic carries the account's password or an API key; <c>Bearer</c> and <c>X-Api-Key</c> carry a key (<see cref="ApiKeySignIn"/>).
 /// </summary>
 public sealed class OpdsAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -38,8 +38,13 @@ public sealed class OpdsAuthenticationHandler(
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        if (ApiKeySignIn.HasKeyHeader(Request))
+            return await ApiKeySignIn.AuthenticateAsync(Context, Scheme, ApiKeySignIn.ReadKeyHeader(Request));
         if (ReadBasic(Request) is not var (userName, password))
             return AuthenticateResult.NoResult();
+        // An API key as the password (what most reader apps can send): the name must be its owner's.
+        if (ApiKeys.LooksLikeKey(password))
+            return await ApiKeySignIn.AuthenticateAsync(Context, Scheme, password, userName);
 
         var address = Context.Address();
         if (throttle.LockedUntil(userName, address) is not null)

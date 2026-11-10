@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 3.
+**Next:** chunk 4.
 
 ## The user's answers (2026-11-10)
 
@@ -110,10 +110,12 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    password, locked and disabled account, cache dropped on a password change, the cookie refused on `/opds`.
    **Built:** `BasicVerificationCache`, the `opds` rate limit (`OpdsRequestsPerMinute`, 600);
    [opds-auth](../features/opds-auth.md#built-stage-7-chunk-2-basic-with-the-password).
-3. [ ] API keys in Core: `ApiKeys` (both migrations, tenant filter), create, list, revoke, expire; scopes and
+3. [x] API keys in Core: `ApiKeys` (both migrations, tenant filter), create, list, revoke, expire; scopes and
    libraries narrowing `EffectiveAccess`; a key as the Basic secret on `/opds`, `Bearer` and `X-Api-Key` on `/api`
    (D-7.2), last used, security events; routes `api/account/api-keys` (own, `account.apiKeys`) and a user's keys for
    `tenant.users`. Tests on both providers (scopes narrow, revoked / expired / new stamp → 401).
+   **Built:** a policy scheme choosing key or cookie, narrowing in `CurrentAccess`, keys can't manage keys, the
+   throttle per key id; [opds-auth](../features/opds-auth.md#built-stage-7-chunk-3-api-keys).
 4. [ ] API keys UI: My account › API keys (create: name, scopes, libraries, path key, expiry; the key shown once with
    Copy; list with last used; revoke, asking first); Administration › Users: a user's keys, revoke; phones; client
    specs, e2e on every device, axe in both themes.

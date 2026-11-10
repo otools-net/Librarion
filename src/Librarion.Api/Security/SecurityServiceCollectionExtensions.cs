@@ -12,6 +12,9 @@ public static class SecurityServiceCollectionExtensions
 {
     public const string SignInRateLimit = "sign-in";
 
+    /// <summary>The default scheme: an API key when the request names one, else the session cookie.</summary>
+    public const string DefaultScheme = "Librarion";
+
     /// <summary>Reader apps' requests per minute, by the Basic name (else the address): <see cref="SecurityOptions.OpdsRequestsPerMinute"/>.</summary>
     public const string OpdsRateLimit = "opds";
 
@@ -30,7 +33,11 @@ public static class SecurityServiceCollectionExtensions
         services.AddSingleton<SignInThrottle>();
         services.AddSingleton<Librarion.Api.Opds.BasicVerificationCache>();
 
-        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        // A request naming an API key is the key's, whatever cookie it carries (no CSRF through a key); others the cookie's.
+        services.AddAuthentication(DefaultScheme)
+            .AddPolicyScheme(DefaultScheme, null, options => options.ForwardDefaultSelector = context =>
+                ApiKeySignIn.HasKeyHeader(context.Request) ? ApiKeyAuthenticationHandler.Scheme : CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.Scheme, null)
             .AddCookie(options =>
             {
                 options.Cookie.Name = LibrarionSession.CookieName;

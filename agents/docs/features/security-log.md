@@ -17,4 +17,6 @@ endpoints; client `admin/security-section.ts`.
 - Reader apps (stage 7): a wrong Basic password on `/opds` writes `SignInFailed` / `LockedOut` with the detail `opds`
   (`, disabled` for a disabled account); successful Basic sign-ins are not logged (a reader app signs in with every
   request).
+- API keys (stage 7): `ApiKeyCreated`, `ApiKeyRevoked`; a refused key `SignInFailed` / `LockedOut` with the detail
+  `api key`.
 - Separate from the application log (loggers): that one is for the operator, this one is shown in the app.

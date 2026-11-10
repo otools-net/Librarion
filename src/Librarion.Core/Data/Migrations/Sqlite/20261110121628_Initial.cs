@@ -727,6 +727,36 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
+                name: "ApiKeys",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    SecretHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Stamp = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Scopes = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    PathAllowed = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Expires = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Revoked = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    LastUsed = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    LastAddress = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApiKeys", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApiKeys_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GroupMembers",
                 columns: table => new
                 {
@@ -930,6 +960,31 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
+                name: "ApiKeyLibraries",
+                columns: table => new
+                {
+                    ApiKeyId = table.Column<int>(type: "INTEGER", nullable: false),
+                    LibraryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TenantId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApiKeyLibraries", x => new { x.ApiKeyId, x.LibraryId });
+                    table.ForeignKey(
+                        name: "FK_ApiKeyLibraries_ApiKeys_ApiKeyId",
+                        column: x => x.ApiKeyId,
+                        principalTable: "ApiKeys",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ApiKeyLibraries_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Folders",
                 columns: table => new
                 {
@@ -1057,6 +1112,21 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApiKeyLibraries_LibraryId",
+                table: "ApiKeyLibraries",
+                column: "LibraryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApiKeys_TenantId_UserId",
+                table: "ApiKeys",
+                columns: new[] { "TenantId", "UserId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApiKeys_UserId_Id",
+                table: "ApiKeys",
+                columns: new[] { "UserId", "Id" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Archives_LibraryId",
@@ -1480,6 +1550,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "ApiKeyLibraries");
+
+            migrationBuilder.DropTable(
                 name: "BookFiles");
 
             migrationBuilder.DropTable(
@@ -1561,13 +1634,13 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 name: "TenantDisabledRights");
 
             migrationBuilder.DropTable(
+                name: "ApiKeys");
+
+            migrationBuilder.DropTable(
                 name: "Folders");
 
             migrationBuilder.DropTable(
                 name: "DuplicateGroups");
-
-            migrationBuilder.DropTable(
-                name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Groups");
@@ -1583,6 +1656,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
 
             migrationBuilder.DropTable(
                 name: "Tags");
+
+            migrationBuilder.DropTable(
+                name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Archives");

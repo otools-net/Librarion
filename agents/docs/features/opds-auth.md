@@ -1,7 +1,9 @@
 # OPDS and API authentication
 
-Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme); planned: Basic checks, API keys in
-`src/Librarion.Core/Access/ApiKeys`. Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.2–D-7.5). Feeds:
+Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic), `BasicVerificationCache.cs`;
+`Api/Security/ApiKeyAuthentication.cs` (`ApiKeySignIn`, the `ApiKey` scheme), `CurrentAccess.cs` (narrowing);
+`Core/Access/ApiKeys.cs`, `Core/Data/Entities/Access/ApiKey.cs`; `Api/Endpoints/ApiKeyEndpoints.cs`. Tests: `OpdsTests`,
+`ApiKeyTests`. Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.2–D-7.5). Feeds:
 [opds](opds.md).
 
 ## Built (stage 7 chunk 1)
@@ -30,6 +32,31 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme); planne
 - Tests: `OpdsTests` (right password and case of the name, wrong ones throttled and logged, new password and disabled
   account, the right disabled → 403, malformed headers, the rate limit).
 
+## Built (stage 7 chunk 3): API keys
+
+- **Stored** in `ApiKeys` (`TenantId` nullable as `Users`: a server administrator's keys have none; the tenant filter)
+  and `ApiKeyLibraries` (the optional subset, with the library's `TenantId`). Text `lib_<id>_<secret>`: 32 random bytes
+  base64url (43 characters); kept as the SHA-256 hex of the secret, compared with `PasswordHashing.SameSecret`; the
+  whole text only in the create answer. Each key keeps the account's **stamp** at creation: a new password, disabling
+  or enabling the account ends its keys (the user's D-7.3), as its sessions.
+- `ApiKeys.VerifyAsync` keeps the row found per id while `AccessChanges.Version` holds (create and revoke move it):
+  a revoke counts at the next request; expiry and the account's state are checked at each use. Last use (time and
+  address) written at most once a minute per key (`UsedAsync`). At most 50 keys per account (`apiKey.tooMany`).
+- **Ways in:** the default scheme is a policy scheme (`Librarion`): a request with `Authorization: Bearer` or
+  `X-Api-Key` is the `ApiKey` scheme's, whatever cookie it has; others the cookie's. On `/opds` the `Opds` scheme
+  takes the same headers, and a Basic secret shaped like a key (`ApiKeys.LooksLikeKey`) as a key, the Basic name
+  having to be its owner's. A key request needs no `X-Librarion-Request` (no ambient credential, no CSRF).
+- **Narrowing** in one place, `CurrentAccess`: the handler puts the `ApiKeyGrant` in the request's items, the
+  principal carries `librarion:key`; out of scope (`opds` for `/opds`, `api:read` for GET / HEAD / OPTIONS on `/api`,
+  `api:write` for all of `/api`) the account keeps no right (403); a library subset keeps library rights only there
+  (`ApiKeyGrant.Narrow`). `AccessState.KeyId` says a key signed the request.
+- **Managing keys needs the web session** (`apiKey.needsSession`, 403): a key could otherwise make a wider key.
+  Routes: `api/account/api-keys` (GET, POST, DELETE `{id}`: own, `account.apiKeys`), `api/users/{userId}/api-keys` (GET,
+  DELETE `{id}`: `tenant.users` / `server.users`, the account routes' tenant rule).
+- **Failures:** throttled per Basic name, else **per key id** (a stale key left in a reader app locks out itself, not
+  the other keys used from that address), logged `SignInFailed` / `LockedOut` with the detail `api key`; never the key.
+  Security events `ApiKeyCreated` (name and scopes) and `ApiKeyRevoked` (name; "of <user>" by an administrator).
+
 ## Ways in
 
 - **Basic** (`Authorization: Basic user:secret`): what every OPDS client supports. `secret` is the password **or** an
@@ -56,7 +83,8 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme); planne
 - Rate limit per key / user on feeds and downloads.
 - Security events (failed sign-ins, key created/revoked, lockouts) logged without the secret.
 
-## Tests (planned)
+## Tests
 
-- Each way in signs in; wrong password / revoked key / disabled user → 401; key scopes narrow rights; key in path
-  never in logs; no cookie on `/opds`; throttle after N failures; cache dropped on password change.
+- Built: each way in, wrong password / revoked / expired / malformed key / disabled user → 401, scopes and libraries
+  narrow rights, a key can't manage keys, no cookie on `/opds`, throttles, the cache dropped on a password change.
+- Planned (chunk 8): the key in the path never in logs.

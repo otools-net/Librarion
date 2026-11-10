@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librarion.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresLibrarionDbContext))]
-    [Migration("20261110084644_Initial")]
+    [Migration("20261110121638_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -24,6 +24,86 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Librarion.Core.Data.ApiKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("Expires")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LastUsed")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("PathAllowed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("Revoked")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Stamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.HasIndex("UserId", "Id");
+
+                    b.ToTable("ApiKeys");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.ApiKeyLibrary", b =>
+                {
+                    b.Property<int>("ApiKeyId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ApiKeyId", "LibraryId");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("ApiKeyLibraries");
+                });
 
             modelBuilder.Entity("Librarion.Core.Data.Archive", b =>
                 {
@@ -1451,6 +1531,32 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     b.ToTable("Groups", (string)null);
                 });
 
+            modelBuilder.Entity("Librarion.Core.Data.ApiKey", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.ApiKeyLibrary", b =>
+                {
+                    b.HasOne("Librarion.Core.Data.ApiKey", "ApiKey")
+                        .WithMany("Libraries")
+                        .HasForeignKey("ApiKeyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Librarion.Core.Data.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApiKey");
+                });
+
             modelBuilder.Entity("Librarion.Core.Data.Archive", b =>
                 {
                     b.HasOne("Librarion.Core.Data.Library", "Library")
@@ -1973,6 +2079,11 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Librarion.Core.Data.ApiKey", b =>
+                {
+                    b.Navigation("Libraries");
                 });
 
             modelBuilder.Entity("Librarion.Core.Data.Book", b =>

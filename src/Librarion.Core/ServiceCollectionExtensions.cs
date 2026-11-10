@@ -42,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RightsEvaluator>();
         services.AddSingleton<IUserDirectory, LocalUserDirectory>();
         services.AddSingleton<SignInService>();
+        services.AddSingleton<ApiKeys>();
         services.AddSingleton<SetupService>();
         services.AddSingleton<SecurityLog>();
         services.AddHostedService<SecurityLogCleanup>();

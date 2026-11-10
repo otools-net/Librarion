@@ -30,6 +30,9 @@ Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([
   challenged with `WWW-Authenticate: Basic`. `RequestGuard`'s setup 503 covers it; its own `{**path}` fallback (404,
   file-like addresses too); `opds` excluded from `ClientPage`'s `{key}/{id}/{name}` route; `EveryRouteNamesARight`
   covers it.
+- **Default scheme `Librarion` (stage 7 chunk 3):** a policy scheme; a request with `Authorization: Bearer` or
+  `X-Api-Key` goes to the `ApiKey` scheme (its cookie ignored), others to the cookie. `RequestGuard` lets key requests
+  change things without `X-Librarion-Request` (a key is no ambient credential) ([opds-auth](../features/opds-auth.md)).
 - `builder.WebHost.UseStaticWebAssets()` in Program.cs: `dotnet run` without a launch profile runs as Production and
   otherwise warned "Static Web Assets are not enabled" and couldn't serve the built client.
 - `appsettings.json` `Urls` (5090) wins over `ASPNETCORE_URLS`: pass `--urls` to run on another port.

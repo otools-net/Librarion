@@ -4,7 +4,8 @@ namespace Librarion.Api.Security;
 
 /// <param name="TenantId">The tenant the request works in; null for nobody signed in, or a server administrator before any tenant exists.</param>
 /// <param name="User">The signed-in account; null for a visitor without one.</param>
-public sealed record AccessState(int? TenantId, SessionUser? User, EffectiveAccess Access)
+/// <param name="KeyId">The API key the request signed in with; null for a password or the cookie.</param>
+public sealed record AccessState(int? TenantId, SessionUser? User, EffectiveAccess Access, int? KeyId = null)
 {
     public bool Has(string right) => Access.Has(right);
 }
@@ -38,6 +39,16 @@ public sealed class CurrentAccess(IHttpContextAccessor accessor, AccessService a
             tenantId = context.User.TenantId() is { } chosen && tenants.Any(t => t.Id == chosen) ? chosen : tenants.FirstOrDefault()?.Id;
         }
 
-        return new AccessState(tenantId, user, await rights.GetAsync(new AccessSubject(tenantId, user.Id), cancellationToken));
+        var access = await rights.GetAsync(new AccessSubject(tenantId, user.Id), cancellationToken);
+        if (!context.User.HasClaim(c => c.Type == ApiKeySignIn.KeyClaim))
+            return new AccessState(tenantId, user, access);
+
+        // An API key: its scopes and libraries narrow the account's rights (D-7.2); out of its scope, none at all (403).
+        if (ApiKeySignIn.Grant(context) is not { } grant || grant.UserId != user.Id)
+            return new AccessState(tenantId, user, EffectiveAccess.None);
+        var method = context.Request.Method;
+        var allowed = grant.Allows(context.Request.Path.StartsWithSegments(Opds.OpdsEndpoints.Prefix),
+            HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method));
+        return new AccessState(tenantId, user, allowed ? grant.Narrow(access) : EffectiveAccess.None, grant.KeyId);
     }
 }

@@ -46,6 +46,8 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
     public DbSet<TenantDisabledRight> TenantDisabledRights => Set<TenantDisabledRight>();
     public DbSet<Setting> Settings => Set<Setting>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+    public DbSet<ApiKeyLibrary> ApiKeyLibraries => Set<ApiKeyLibrary>();
     public DbSet<Book> Books => Set<Book>();
     public DbSet<BookFile> BookFiles => Set<BookFile>();
     public DbSet<Archive> Archives => Set<Archive>();
@@ -181,6 +183,28 @@ public abstract partial class LibrarionDbContext(DbContextOptions options) : DbC
             entity.HasIndex(e => new { e.TenantId, e.Id });
             entity.HasIndex(e => e.Time);
             Filter(entity, e => e.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            entity.Property(k => k.Name).HasMaxLength(MaxNameLength);
+            entity.Property(k => k.SecretHash).HasMaxLength(64);
+            entity.Property(k => k.Stamp).HasMaxLength(64);
+            entity.Property(k => k.Scopes).HasMaxLength(ApiKey.MaxScopesLength);
+            entity.Property(k => k.LastAddress).HasMaxLength(64);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(k => k.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(k => new { k.UserId, k.Id });
+            entity.HasIndex(k => new { k.TenantId, k.UserId });
+            Filter(entity, k => k.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<ApiKeyLibrary>(entity =>
+        {
+            entity.HasKey(l => new { l.ApiKeyId, l.LibraryId });
+            entity.HasOne(l => l.ApiKey).WithMany(k => k.Libraries).HasForeignKey(l => l.ApiKeyId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Library>().WithMany().HasForeignKey(l => l.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(l => l.LibraryId);
+            Filter(entity, l => l.TenantId == CurrentTenantId);
         });
 
         ConfigureCatalog(modelBuilder);

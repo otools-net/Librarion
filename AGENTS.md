@@ -158,4 +158,4 @@ note rather than inventing a new one.
 | [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
 | [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |
 | [opds](agents/docs/features/opds.md) | the OPDS catalog for reader apps: the `/opds` group, its 404 and setup rules, feeds (planned) | `Api/Opds/` |
-| [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: the `Opds` scheme (never the cookie); Basic, API keys, key-in-URL (planned) | `Api/Opds/`, `Api/Security/` |
+| [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: the `Opds` scheme (never the cookie), Basic with the verification cache, API keys (scopes, libraries, the policy scheme, narrowing in `CurrentAccess`); key-in-URL (planned) | `Api/Opds/`, `Api/Security/`, `Core/Access/ApiKeys.cs` |
