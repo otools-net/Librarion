@@ -2,7 +2,7 @@ namespace Librarion.Core.Covers;
 
 /// <summary>
 /// Uploaded covers on disk (stage 6 chunk 10, the user's answers 2026-11-06): in the data folder
-/// (<see cref="DataOptions"/>), <c>covers/&lt;tenant&gt;/ab/&lt;hash&gt;.webp</c>, each made again from what was sent
+/// (<see cref="DataOptions"/>), <c>covers/&lt;tenant&gt;/ab/&lt;hash&gt;.jpg</c>, each made again from what was sent
 /// (<see cref="CoverImages.Remake"/>) and named by its content, so the same picture uploaded twice is one file. A book
 /// keeps the path relative to the folder (<see cref="Data.Book.CoverFile"/>).
 /// </summary>
@@ -19,16 +19,16 @@ public sealed class CoverUploads(string directory)
     /// <summary>The picture checked and made again, written; its path relative to the folder, or null when it isn't a cover Librarion takes.</summary>
     public string? Store(int tenantId, byte[] source)
     {
-        if (CoverImages.Remake(source, MaxWidth, MaxBytes) is not { } webp)
+        if (CoverImages.Remake(source, MaxWidth, MaxBytes) is not { } jpeg)
             return null;
-        var hash = System.IO.Hashing.XxHash64.HashToUInt64(webp).ToString("x16");
-        var relative = $"{tenantId}/{hash[..2]}/{hash}.webp";
+        var hash = System.IO.Hashing.XxHash64.HashToUInt64(jpeg).ToString("x16");
+        var relative = $"{tenantId}/{hash[..2]}/{hash}{CoverImages.Extension}";
         var path = FullPath(relative);
         if (File.Exists(path))
             return relative;
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = $"{path}.{Guid.NewGuid():N}.tmp";
-        File.WriteAllBytes(temp, webp);
+        File.WriteAllBytes(temp, jpeg);
         try
         {
             File.Move(temp, path, overwrite: false);

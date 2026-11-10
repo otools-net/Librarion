@@ -137,10 +137,10 @@ public static class BookEndpoints
                     return Results.NotFound();
                 // A day in the browser, then a revalidation (the tag changes with the cover: a re-import, an edit).
                 context.Response.Headers.CacheControl = "private, max-age=86400";
-                return Results.File(cover.Path, "image/webp", entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
+                return Results.File(cover.Path, CoverImages.ContentType, entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
             })
             .WithName("GetBookCover")
-            .WithSummary("A book's cover as WebP: `s` (80 px wide), `m` (240) or `l` (600); its own cover, else the generated one. Never missing.");
+            .WithSummary("A book's cover as JPEG: `s` (80 px wide), `m` (240) or `l` (600); its own cover, else the generated one. Never missing.");
 
         books.MapGet("/{id:int}/files/{fileId:int}", async (int id, int fileId, HttpContext context, CurrentAccess current, BookVisibilities visibilities,
                 BookDownloads downloads) =>

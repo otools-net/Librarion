@@ -133,7 +133,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
             }, cancellationToken);
         }
 
-        return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+        return new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size));
     }
 
     /// <summary>An uploaded cover at <paramref name="size"/> (every size made at once from the stored one); null when its file is gone.</summary>
@@ -141,7 +141,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
     {
         var key = CoverCache.Key($"u:{CoverUploads.HashOf(upload)}");
         if (cache.Has(key, size))
-            return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+            return new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size));
         var path = uploads.FullPath(upload);
         var made = await OnceAsync(key, () =>
         {
@@ -157,7 +157,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
                 cache.Write(key, each, picture);
             return true;
         }, cancellationToken);
-        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"") : null;
+        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size)) : null;
     }
 
     /// <summary>The book's own cover at <paramref name="size"/>, extracted the first time (every size at once); null when it has none.</summary>
@@ -165,7 +165,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
     {
         var key = CoverCache.Key($"x:{source.FileId}:{source.Crc}:{source.Size}:{source.Modified?.Ticks}");
         if (cache.Has(key, size))
-            return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+            return new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size));
 
         bool? found = null;
         var made = await OnceAsync(key, () =>
@@ -200,7 +200,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
         // Only the request that looked records what it found; a file that couldn't be opened records nothing.
         if (found is { } present && state != (present ? CoverState.Present : CoverState.Failed))
             await db.Books.Where(b => b.Id == bookId).ExecuteUpdateAsync(s => s.SetProperty(b => b.CoverState, present ? CoverState.Present : CoverState.Failed), cancellationToken);
-        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"") : null;
+        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size)) : null;
     }
 
     /// <summary>Calibre's <c>cover.jpg</c> in the folder of the book's file, at <paramref name="size"/> (every size made at once).</summary>
@@ -217,7 +217,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
 
         var key = CoverCache.Key($"c:{info.FullName}:{info.Length}:{info.LastWriteTimeUtc.Ticks}");
         if (cache.Has(key, size))
-            return new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"");
+            return new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size));
 
         bool? found = null;
         var made = await OnceAsync(key, () =>
@@ -233,7 +233,7 @@ public sealed class CoverService(TenantDb tenantDb, CoverCache cache, CoverUploa
 
         if (found is { } present && state != (present ? CoverState.Present : CoverState.Failed))
             await db.Books.Where(b => b.Id == bookId).ExecuteUpdateAsync(s => s.SetProperty(b => b.CoverState, present ? CoverState.Present : CoverState.Failed), cancellationToken);
-        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), $"\"{key}-{size}\"") : null;
+        return made && cache.Has(key, size) ? new CoverFile(cache.PathOf(key, size), CoverCache.ETag(key, size)) : null;
     }
 
     /// <summary>Runs <paramref name="make"/> once for concurrent askers of the same key, at most <see cref="CoverOptions.MaxParallel"/> at a time.</summary>

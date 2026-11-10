@@ -88,7 +88,7 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   What you change stays when the book's file is read again or the library is imported again, and a tag you took off
   stays off.
 - **Cover** (for those allowed to edit books there) changes the book's cover: **Upload a picture…** (JPEG, PNG or
-  WebP, at most 5 MB; it is checked and stored at most 1,200 pixels wide), or pick a **drawn cover** among the book
+  WebP, at most 5 MB; it is checked and stored as a JPEG at most 1,200 pixels wide), or pick a **drawn cover** among the book
   drawn in each style turned on (and the book's own) and set of colors, also over a cover the book came with. **Use the book's cover** goes back to
   the one it came with (or its drawn one when it has none). What you choose stays when the book is read or imported
   again.

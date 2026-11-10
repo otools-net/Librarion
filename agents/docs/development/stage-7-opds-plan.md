@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 4a.
+**Next:** chunk 5.
 
 ## The user's answers (2026-11-10)
 
@@ -120,11 +120,12 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    Copy; list with last used; revoke, asking first); Administration › Users: a user's keys, revoke; phones; client
    specs, e2e on every device, axe in both themes. **Built:** one `ApiKeys` component, own and an account's;
    [opds-auth](../features/opds-auth.md#built-stage-7-chunk-4-the-pages), user docs (account, administration › accounts).
-4a. [ ] Covers as JPEG everywhere (D-7.8, Q5–Q6): `CoverImages` (thumbnails, `Remake`), `GeneratedCovers`,
+4a. [x] Covers as JPEG everywhere (D-7.8, Q5–Q6): `CoverImages` (thumbnails, `Remake`), `GeneratedCovers`,
     `CoverCache` (`.jpg`), `CoverUploads` (`.jpg`), the cover routes in `BookEndpoints` / `CoverEndpoints`
     (`image/jpeg`, OpenAPI summaries); quality chosen against size (measured on sample covers); tests (a JPEG comes
     back at every size, hostile images still refused); notes [book-display](../features/book-display.md), user docs
-    if they name WebP.
+    if they name WebP. **Built:** quality 75 for the cache (85 for uploads), baseline, transparency on white, ETags
+    ending in `.jpg`; [book-display](../features/book-display.md).
 5. [ ] Feed writer and first feeds: a streaming OPDS / Atom writer (`XmlWriter`), navigation and acquisition feeds,
    links (start, up, self, next, search), book entries (D-7.7) with batched files; root and library list, Recent,
    All by title; acquisition through `BookDownloads` (Range, ETag), the right per library; cover links (D-7.8).

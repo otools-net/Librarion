@@ -4,6 +4,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ## Unreleased
 
+### Changed
+
+- **Covers are JPEG** everywhere (they were WebP), so every reader app can show them. Covers already made are made
+  again when next shown; covers uploaded before are kept and shown as JPEG too.
+
 ### Added
 
 - New rights, given to every built-in group: **Reader apps (OPDS)** (per library, for the coming OPDS catalog at
