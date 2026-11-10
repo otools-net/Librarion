@@ -114,7 +114,7 @@ public sealed class OpdsTests
 
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, name);
             Assert.AreEqual("opds-catalog", response.Content.Headers.ContentType?.Parameters.Single(p => p.Name == "profile").Value, name);
-            StringAssert.Contains(await response.Content.ReadAsStringAsync(Cancel), "<feed xmlns=\"http://www.w3.org/2005/Atom\">");
+            Assert.AreEqual(System.Xml.Linq.XName.Get("feed", OpdsFeed.AtomNamespace), System.Xml.Linq.XDocument.Parse(await response.Content.ReadAsStringAsync(Cancel)).Root!.Name);
         }
         // Remembered: the next request needs no PBKDF2.
         Assert.IsNotNull(factory.Services.GetRequiredService<BasicVerificationCache>().Find("reader", ApiClients.Password));

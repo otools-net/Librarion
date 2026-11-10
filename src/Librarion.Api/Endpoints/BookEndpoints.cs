@@ -133,11 +133,7 @@ public static class BookEndpoints
                     return Results.NotFound();
                 var state = await current.GetAsync();
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
-                if (await covers.GetAsync(state.TenantId!.Value, visibility, id, coverSize, context.RequestAborted) is not { } cover)
-                    return Results.NotFound();
-                // A day in the browser, then a revalidation (the tag changes with the cover: a re-import, an edit).
-                context.Response.Headers.CacheControl = "private, max-age=86400";
-                return Results.File(cover.Path, CoverImages.ContentType, entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
+                return await CoverAsync(context, covers, state.TenantId!.Value, visibility, id, coverSize);
             })
             .WithName("GetBookCover")
             .WithSummary("A book's cover as JPEG: `s` (80 px wide), `m` (240) or `l` (600); its own cover, else the generated one. Never missing.");
@@ -149,24 +145,7 @@ public static class BookEndpoints
                 var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
                 if (await downloads.FindAsync(state.TenantId!.Value, visibility, id, fileId, context.RequestAborted) is not { } target)
                     return Results.NotFound();
-                if (!state.Access.HasIn(Rights.Download, target.LibraryId))
-                    return Results.Forbid();
-                var (content, problem) = BookDownloads.Open(target);
-                if (content is null)
-                {
-                    return problem switch
-                    {
-                        BookFileProblem.Gone => TypedResults.Problem("The file is no longer where the last scan found it.", statusCode: StatusCodes.Status410Gone, type: FileGoneType),
-                        BookFileProblem.Changed => TypedResults.Problem("The file changed since the last scan: scan the library again.", statusCode: StatusCodes.Status409Conflict, type: FileChangedType),
-                        _ => TypedResults.Problem("The archive can't give this file.", statusCode: StatusCodes.Status409Conflict, type: FileUnreadableType),
-                    };
-                }
-
-                // A compressed entry is not seekable: its length is known all the same (the stream is held to it).
-                if (!content.Seekable)
-                    context.Response.ContentLength = content.Length;
-                return Results.File(content.Stream, Librarion.Core.Formats.BookFormats.ContentType(target.Format), target.Name,
-                    target.Modified is { } modified ? new DateTimeOffset(modified, TimeSpan.Zero) : null, EntityTag(target), enableRangeProcessing: content.Seekable);
+                return state.Access.HasIn(Rights.Download, target.LibraryId) ? Download(context, target) : Results.Forbid();
             })
             .RequireRight(Rights.Download)
             .WithName("DownloadBookFile")
@@ -270,6 +249,42 @@ public static class BookEndpoints
     public const string FileGoneType = "file.gone";
     public const string FileChangedType = "file.changed";
     public const string FileUnreadableType = "file.unreadable";
+
+    /// <summary>
+    /// A book's cover at a size (the API's and the feeds'): a day in the browser, then a revalidation (the tag changes
+    /// with the cover: a re-import, an edit). 404 when the book isn't there for the caller.
+    /// </summary>
+    internal static async Task<IResult> CoverAsync(HttpContext context, CoverService covers, int tenantId, BookVisibility visibility, int bookId, CoverSize size)
+    {
+        if (await covers.GetAsync(tenantId, visibility, bookId, size, context.RequestAborted) is not { } cover)
+            return Results.NotFound();
+        context.Response.Headers.CacheControl = "private, max-age=86400";
+        return Results.File(cover.Path, CoverImages.ContentType, entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
+    }
+
+    /// <summary>
+    /// A book's file streamed (the API's and the feeds'; the caller checked the right): Range where the bytes can be
+    /// sought, the length always; 410 / 409 when the library no longer gives it as the scan saw it.
+    /// </summary>
+    internal static IResult Download(HttpContext context, BookFileTarget target)
+    {
+        var (content, problem) = BookDownloads.Open(target);
+        if (content is null)
+        {
+            return problem switch
+            {
+                BookFileProblem.Gone => TypedResults.Problem("The file is no longer where the last scan found it.", statusCode: StatusCodes.Status410Gone, type: FileGoneType),
+                BookFileProblem.Changed => TypedResults.Problem("The file changed since the last scan: scan the library again.", statusCode: StatusCodes.Status409Conflict, type: FileChangedType),
+                _ => TypedResults.Problem("The archive can't give this file.", statusCode: StatusCodes.Status409Conflict, type: FileUnreadableType),
+            };
+        }
+
+        // A compressed entry is not seekable: its length is known all the same (the stream is held to it).
+        if (!content.Seekable)
+            context.Response.ContentLength = content.Length;
+        return Results.File(content.Stream, Librarion.Core.Formats.BookFormats.ContentType(target.Format), target.Name,
+            target.Modified is { } modified ? new DateTimeOffset(modified, TimeSpan.Zero) : null, EntityTag(target), enableRangeProcessing: content.Seekable);
+    }
 
     /// <summary>The CRC and size of an entry (the bytes themselves); size and time for a loose file whose CRC isn't known.</summary>
     private static Microsoft.Net.Http.Headers.EntityTagHeaderValue EntityTag(BookFileTarget target) =>

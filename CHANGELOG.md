@@ -24,6 +24,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   The page shows the catalog's address for reader apps. Administrators can see and revoke an account's keys on its
   page in Administration → Users. The security log notes keys made and revoked. A database made
   by an earlier build must be deleted (before 1.0 the database is not upgraded).
+- **The OPDS catalog** at `/opds` for reader apps: the libraries the account may read (with one, its catalog at
+  once), each with its books **recently added** and **by title**, 50 a page, each book with its authors, language,
+  categories, series, description, cover and a download link per file. More ways to browse come next.
 
 ## 0.7.0
 

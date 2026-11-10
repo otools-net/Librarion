@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 5.
+**Next:** chunk 6.
 
 ## The user's answers (2026-11-10)
 
@@ -126,9 +126,11 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     back at every size, hostile images still refused); notes [book-display](../features/book-display.md), user docs
     if they name WebP. **Built:** quality 75 for the cache (85 for uploads), baseline, transparency on white, ETags
     ending in `.jpg`; [book-display](../features/book-display.md).
-5. [ ] Feed writer and first feeds: a streaming OPDS / Atom writer (`XmlWriter`), navigation and acquisition feeds,
+5. [x] Feed writer and first feeds: a streaming OPDS / Atom writer (`XmlWriter`), navigation and acquisition feeds,
    links (start, up, self, next, search), book entries (D-7.7) with batched files; root and library list, Recent,
    All by title; acquisition through `BookDownloads` (Range, ETag), the right per library; cover links (D-7.8).
+   **Built:** `OpdsFeed` (buffered per page, not streamed: a page is small), `OpdsLinks`, `BookQueries.EntriesAsync`,
+   a server administrator's tenant from the library's address; [opds](../features/opds.md#built-stage-7-chunk-5-the-first-feeds).
 6. [ ] Fields and tags: each field A–Z → values → books (series by number), categories as a tree, plain tags by
    category; values hidden by content filters left out (`TagQueries`' deny rule), counts from `TagCounts`.
 7. [ ] OpenSearch: the description document, the search feed through `BookQueries.ListAsync` (`q`, the search

@@ -37,6 +37,9 @@ public sealed class CurrentAccess(IHttpContextAccessor accessor, AccessService a
         {
             var tenants = await accounts.ListTenantsAsync(cancellationToken);
             tenantId = context.User.TenantId() is { } chosen && tenants.Any(t => t.Id == chosen) ? chosen : tenants.FirstOrDefault()?.Id;
+            // A reader app's address names a library: its tenant, whichever (no cookie there to have chosen one).
+            if (Opds.OpdsLinks.LibraryOf(context) is { } libraryId && await accounts.LibraryTenantAsync(libraryId, cancellationToken) is { } libraryTenant)
+                tenantId = libraryTenant;
         }
 
         var access = await rights.GetAsync(new AccessSubject(tenantId, user.Id), cancellationToken);

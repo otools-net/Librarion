@@ -46,6 +46,7 @@ Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic),
   `X-Api-Key` is the `ApiKey` scheme's, whatever cookie it has; others the cookie's. On `/opds` the `Opds` scheme
   takes the same headers, and a Basic secret shaped like a key (`ApiKeys.LooksLikeKey`) as a key, the Basic name
   having to be its owner's. A key request needs no `X-Librarion-Request` (no ambient credential, no CSRF).
+- A server administrator's tenant on `/opds/l/<library>` is the library's ([opds](opds.md#built-stage-7-chunk-5-the-first-feeds)).
 - **Narrowing** in one place, `CurrentAccess`: the handler puts the `ApiKeyGrant` in the request's items, the
   principal carries `librarion:key`; out of scope (`opds` for `/opds`, `api:read` for GET / HEAD / OPTIONS on `/api`,
   `api:write` for all of `/api`) the account keeps no right (403); a library subset keeps library rights only there

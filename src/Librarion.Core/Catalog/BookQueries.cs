@@ -41,6 +41,11 @@ public sealed record BookTagItem(int Id, string? Field, string Name, double? Num
 /// <param name="Missing">Not where the last scan found it: listed, not downloadable (agents/docs/features/missing-books.md).</param>
 public sealed record BookFileItem(int Id, string Format, long Size, string Name, bool InArchive, string? Archive = null, bool Missing = false);
 
+/// <summary>What a feed entry shows beside a list item (OPDS, stage 7): read for a whole page at once.</summary>
+/// <param name="Files">The files present (missing ones left out), oldest first.</param>
+public sealed record BookEntryExtras(string? Description, DateTime Updated, IReadOnlyList<BookFileItem> Files, IReadOnlyList<string> Languages,
+    IReadOnlyList<string> Categories);
+
 /// <param name="MergedIntoId">Set when the book was merged into another: the client goes there.</param>
 /// <param name="Properties">Imported values that are neither tags nor columns (Calibre custom columns), by name.</param>
 /// <param name="CanDownload">Whether the caller may download in the book's library (set by the route).</param>
@@ -234,6 +239,41 @@ public sealed class BookQueries(TenantDb tenantDb)
             .ToDictionaryAsync(b => b.Id, cancellationToken);
         var page = await ItemsAsync(db, ids.Select(id => books[id]).ToList(), cancellationToken);
         return new Page<BookListItem>(page, more ? new KeysetCursor(null, null, rows[^1].BookId, rows[^1].Number).Encode() : null);
+    }
+
+    /// <summary>
+    /// The feed entries' extras of a page of books the caller was shown (their ids from a list): descriptions, files,
+    /// languages and categories, one query each for the whole page (never one per book). Ids of other tenants aren't found.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<int, BookEntryExtras>> EntriesAsync(int tenantId, IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return new Dictionary<int, BookEntryExtras>();
+        await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
+        var books = await db.Books.Where(b => ids.Contains(b.Id)).Select(b => new { b.Id, b.Description, b.Updated }).ToListAsync(cancellationToken);
+        var files = (await db.BookFiles.Where(f => ids.Contains(f.BookId) && f.MissingSince == null)
+                .Select(f => new { f.BookId, f.Id, f.Format, f.Size, f.Path, f.ArchiveId, Archive = f.Archive!.Path })
+                .ToListAsync(cancellationToken))
+            .GroupBy(f => f.BookId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(f => f.Id)
+                .Select(f => new BookFileItem(f.Id, f.Format, f.Size, LastSegment(f.Path), f.ArchiveId != null, f.ArchiveId != null ? LastSegment(f.Archive) : null))
+                .ToList());
+        // The fields by key: the unique index (TenantId, FieldKey) finds them.
+        var fields = await db.Tags.Where(t => t.FieldKey == "language" || t.FieldKey == "category").Select(t => new { t.Id, t.FieldKey }).ToListAsync(cancellationToken);
+        var fieldIds = fields.Select(f => (int?)f.Id).ToList();
+        var language = fields.FirstOrDefault(f => f.FieldKey == "language")?.Id;
+        var values = (await db.BookTags.Where(l => ids.Contains(l.BookId) && fieldIds.Contains(l.Tag!.FieldId))
+                .Select(l => new { l.BookId, l.Tag!.FieldId, l.Ordinal, l.Tag.Name })
+                .ToListAsync(cancellationToken))
+            .GroupBy(v => v.BookId).ToDictionary(g => g.Key, g => g.OrderBy(v => v.Ordinal).ThenBy(v => v.Name, StringComparer.Ordinal).ToList());
+
+        return books.ToDictionary(b => b.Id, b =>
+        {
+            var tags = values.GetValueOrDefault(b.Id) ?? [];
+            return new BookEntryExtras(b.Description, b.Updated, files.GetValueOrDefault(b.Id) ?? [],
+                tags.Where(t => t.FieldId == language).Select(t => t.Name).Distinct().ToList(),
+                tags.Where(t => t.FieldId != language).Select(t => t.Name).Distinct().ToList());
+        });
     }
 
     /// <summary>One book with its tags by field, files and identifiers; null when it doesn't exist or the account can't see it.</summary>
