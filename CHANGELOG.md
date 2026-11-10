@@ -6,6 +6,12 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
+- **Search: `special:untagged`** finds the books without a tag of their own (fields such as authors and series don't
+  count), to see what is left to tag; `-special:untagged` the others. **`special:duplicates`** finds books that may be
+  duplicates, for those who may merge books. **`tag:"Freddy (FNAF)"`** finds one of two tags of the same name, told
+  apart by the tag in brackets; Refine and the suggestions name such tags that way. Typing `spec` in the search box
+  offers the special terms; the search page's help lists them. A database made by an earlier build must be deleted
+  and the libraries scanned again (before 1.0 the database is not upgraded).
 - **Tags → Possible duplicates** (with the Manage tags right): tags of one field that may be the same, with most books
   first: the same words in another order or alphabet ("King, Stephen", "Кинг Стивен" spelled alike), names that sound
   alike ("Steven" / "Stephen" / "Стивен"), or a name and its initials ("S. King"). Keep one and merge the others into

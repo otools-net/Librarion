@@ -192,8 +192,8 @@ bar and both dialogs.
 
 ## Where tags show
 
-- Search ([search](search.md)): `tag:`, `-tag:`, the tags under it included, the hidden rule (built); `special:untagged` and
-  `tag:"name (parent)"` for disambiguation (planned).
+- Search ([search](search.md)): `tag:`, `-tag:`, the tags under it included, the hidden rule; `special:untagged` (no plain
+  tag, a stored flag) and `tag:"name (parent)"` for disambiguation ([special terms](search.md#special-terms-stage-6-chunk-15)).
 - Content filters ([rights](rights.md)): allowed / denied tags per group, through `TagClosure`, joined at query time
   (D22).
 - OPDS: a Tags navigation feed by category → children, only tags the user can see, counts from `TagCounts`; Atom

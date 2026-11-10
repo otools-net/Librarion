@@ -297,9 +297,12 @@ export interface BookEdit {
     fields?: { field: string | null; tags: BookTagEdit[] }[] | null;
 }
 
-/** What the search box offers for the term being typed: a field to type a value of, or a value as a whole term. */
+/**
+ * What the search box offers for the term being typed: a field to type a value of, a value as a whole term, or a
+ * special term (`special:untagged`; `name` is `untagged`).
+ */
 export interface SearchSuggestion {
-    kind: 'field' | 'value';
+    kind: 'field' | 'value' | 'special';
     /** The term put in place of the one being typed (`author:"Stephen King"`, `author:`). */
     insert: string;
     /** The value's name, or the field's key. */

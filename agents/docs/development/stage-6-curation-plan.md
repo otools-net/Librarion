@@ -196,7 +196,13 @@ A session may end early: this list is the state of the work. Tick a chunk when i
         **initials** ("S. King" with "Stephen King"); no matching across fields (people in two roles are not
         duplicates); spelling distance **not now**. **Built:**
         [merging](../features/merging.md#possible-duplicate-tags-built-stage-6-chunk-14).
-15. [ ] Search additions: `special:untagged`, `special:duplicates` (curators), `tag:"name (parent)"`.
+15. [x] Search additions: `special:untagged`, `special:duplicates` (curators), `tag:"name (parent)"`. **The user's
+        answers (2026-11-10):** untagged = **no plain tag** (fields don't count); kept as a **stored flag**
+        `Books.Untagged` with a partial index of the untagged books, set wherever plain links change (a test checks
+        it agrees with the links), so the search starts from the index when few are left (a per-book test walked
+        ~100k books a page at 0.1 % untagged, all 2M for none). **Built:**
+        [search](../features/search.md#special-terms-stage-6-chunk-15); measured at 2M within budget on both providers
+        after a fix for short start lists ([scale](scale.md#measured)).
 15a. [x] **Readable addresses for tag pages** (asked by the user 2026-11-05): a field value's page at
        `/<field key>/<id>/<name>` (`/author/1234/Stephen King`, `/series/88/The Dark Tower`, `/category/9/Horror`), a
        plain tag at `/tag/<id>/<name>`, instead of `/tags/1234` today (`app.routes.ts`, `tags/tag-page.ts`). The id

@@ -85,6 +85,12 @@ public sealed class Book
     /// <summary>The columns a user edited (stage 6, D-6.3): a re-read or re-import keeps them.</summary>
     public BookEdits Edited { get; set; }
 
+    /// <summary>
+    /// No plain tag (one outside the fields), what <c>special:untagged</c> finds (stage 6 chunk 15): set when the book is
+    /// written and wherever its plain links change (<see cref="Tagging.TagLinks.UntaggedAsync"/>). A new book has no tags.
+    /// </summary>
+    public bool Untagged { get; set; } = true;
+
     public List<BookFile> Files { get; set; } = [];
     public List<BookTag> Tags { get; set; } = [];
     public List<BookIdentifier> Identifiers { get; set; } = [];

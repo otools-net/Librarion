@@ -5,7 +5,7 @@ Code: `Core/Search/` (`SearchQuery` the language, `SearchText` folding, `ISearch
 (`q`), `Books.SearchText`; routes `GET api/books?q=`, `GET api/search/suggestions`, `GET api/search/facets`
 (`BookEndpoints.cs`); client `shell/search-box.ts` (`SearchBox`), `search/search-page.ts` (`search?q=`),
 `search/facets.ts` (`Facets`, Refine), `BookList` (`query`, `[listTools]`). Tests `SearchTests`,
-`CatalogQueryTests.ASearchWalksEveryMatchOnceInOrderWhereverItStarts` (both providers), `search/search.spec.ts`, e2e
+`CatalogQueryTests.ASearchWalksEveryMatchOnceInOrderWhereverItStarts`, `SpecialSearchTests` (both providers), `search/search.spec.ts`, e2e
 `search.spec.ts`, `a11y.spec.ts`; benchmark scenarios `search: …`, `suggestions: …`, `facets: …`.
 Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), D-5.7 and D-5.8 under
 [Decisions](#decisions-stage-5-confirmed-by-the-user-2026-11-01). User guide: `docs/user-guide/searching.md`.
@@ -13,8 +13,8 @@ Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), 
 ## The language (`SearchQuery.Parse`)
 
 - Terms split on spaces outside quotes, at most 20, 500 characters. `-` before a term negates it.
-- `key:value` when `key` is `title`, `tag`, `format` or one of the tenant's fields (`FieldKey`); any other key is
-  text ("Re:Zero" is a title). `field:` alone = any value of the field (`-series:` = none).
+- `key:value` when `key` is `title`, `tag`, `format`, `special` or one of the tenant's fields (`FieldKey`); any other
+  key is text ("Re:Zero" is a title). `field:` alone = any value of the field (`-series:` = none).
 - A bare word of free text is a prefix (it may be being typed); `"phrases"` are not unless followed by `*`; values
   are prefixes only with `*` (or an unclosed quote).
 
@@ -56,6 +56,38 @@ Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), 
 - Hidden tags (`IsHidden`, a filtered index finds them) keep their books out unless the search names the tag or
   one above it. Content filters apply as in every list (`VisibleAsync`).
 - The library asked about must be one the caller browses (else 404).
+
+## Special terms (stage 6 chunk 15)
+
+- **`special:untagged`**: books without a plain tag (a tag outside the fields: authors, series, categories, languages…
+  don't count; hidden ones such as Archived do). The user's answers (2026-11-10): that meaning, and a **stored flag**
+  `Books.Untagged` with a partial index `IX_Books_LibraryId_Id_Untagged` (`(LibraryId, Id) WHERE Untagged`), because a
+  test of each book walked costs nothing while untagged books are common and walks the whole catalog when curation has
+  left few (an empty result: every book).
+- `BookSearch.SpecialAsync` reads up to the threshold (√(page × books)) of untagged ids from the partial index: fewer,
+  they are the start list; more, the flag is tested on each book the sort index walks (cheap: they are common).
+- **Kept** wherever plain links change: new books from the links they are written with (`CatalogWriter`, the tag kinds
+  read by key once through `PlainTags`), re-reads and re-imports the same (`ReplaceAsync`, books tracked), and
+  `TagLinks.UntaggedAsync` (one statement per 1,000 books, writing only the wrong flags) after selection and scope
+  tagging (`BookTagger`), default tags (`DefaultTags`, `CatalogWriter.MovedAsync`), and through
+  `TagLinks.SortColumnsAsync`, which every other change of links already calls (tag delete, tag and field merges and
+  their undo, Imported tags map and ignore, book edits, book merges, undo, split). A tag's kind is fixed when it is
+  made, so the flag only follows links. `SpecialSearchTests` checks the flag agrees with the links after each path.
+- **`special:duplicates`**: books in a stored duplicate group (`DuplicateMembers`, index `(TenantId, BookId)`), only in
+  the libraries where the caller holds `library.merge` (`BookVisibility.Merging`, computed with the visibility);
+  elsewhere it finds nothing, and the suggestions don't offer it. Any other `special:` value finds nothing.
+- **`tag:"name (parent)"`**: when the whole value names no tag or alias, a value ending in `(…)` is a name and a
+  disambiguation parent's name: the tags of that name (the name index) whose `DisambiguationParentId` is a tag of the
+  other name (by key). Facets and suggestions show such a tag as `Freddy (FNAF)` and give that term
+  (`SearchFacets.ShownNamesAsync`), so choosing it finds that tag only.
+- Suggestions offer `special:untagged` (and `special:duplicates` to those who may merge) when the term typed starts
+  `special` or after `special:` (kind `special`; the client names them, `search.special.*`). The search page's help
+  lists `tag:"Freddy (FNAF)"` and `special:untagged`, and `special:duplicates` to those with the right.
+- **A short start list with other terms** (any start list, found with `special:untagged` at 0.1 %): up to a quarter
+  of the threshold, its books passing every term are read first (unordered, by key) and become the list; from the list
+  and a common word in one sorted query PostgreSQL walked the whole title index (324 ms). Longer lists keep the one
+  query: read by key first, an author's books by word took 287 ms instead of 116.
+- Measured at 2M: [scale](../development/scale.md#measured).
 
 ## Suggestions (`SearchSuggestions`)
 

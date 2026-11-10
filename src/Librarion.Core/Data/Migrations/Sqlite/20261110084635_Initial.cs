@@ -365,7 +365,8 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                     MetadataSource = table.Column<byte>(type: "INTEGER", nullable: false),
                     ImportHash = table.Column<long>(type: "INTEGER", nullable: true),
                     WorkKey = table.Column<long>(type: "INTEGER", nullable: true),
-                    Edited = table.Column<byte>(type: "INTEGER", nullable: false)
+                    Edited = table.Column<byte>(type: "INTEGER", nullable: false),
+                    Untagged = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1107,6 +1108,12 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                 name: "IX_Books_LibraryId_Added_Id",
                 table: "Books",
                 columns: new[] { "LibraryId", "Added", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Books_LibraryId_Id_Untagged",
+                table: "Books",
+                columns: new[] { "LibraryId", "Id" },
+                filter: "\"Untagged\"");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Books_LibraryId_MissingSince_Id",

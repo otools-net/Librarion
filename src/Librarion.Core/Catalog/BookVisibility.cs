@@ -17,7 +17,9 @@ public sealed record FilterProfile(IReadOnlyList<int> Allowed, IReadOnlyList<int
 /// of those groups admits it; a group without filters admits every book of its libraries.
 /// </summary>
 /// <param name="Libraries">Library id → the profiles of the groups giving browse there; an open profile = every book.</param>
-public sealed record BookVisibility(IReadOnlyDictionary<int, IReadOnlyList<FilterProfile>> Libraries)
+/// <param name="Merging">Of those, the libraries where it may merge books (<see cref="Rights.MergeBooks"/>): where
+/// <c>special:duplicates</c> finds books (stage 6 chunk 15). None when not given.</param>
+public sealed record BookVisibility(IReadOnlyDictionary<int, IReadOnlyList<FilterProfile>> Libraries, IReadOnlySet<int>? Merging = null)
 {
     public static readonly BookVisibility None = new(new Dictionary<int, IReadOnlyList<FilterProfile>>());
 
@@ -46,8 +48,9 @@ public sealed class BookVisibilities(TenantDb tenantDb, AccessChanges changes, R
         if (libraries.Count == 0 || subject.TenantId is not { } tenantId)
             return BookVisibility.None;
         var open = new FilterProfile([], []);
+        var merging = access.LibrariesWith(Rights.MergeBooks).Where(libraries.Contains).ToHashSet();
         if (access.IsServerAdmin)
-            return new BookVisibility(libraries.ToDictionary(id => id, IReadOnlyList<FilterProfile> (_) => [open]));
+            return new BookVisibility(libraries.ToDictionary(id => id, IReadOnlyList<FilterProfile> (_) => [open]), merging);
 
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         var groups = await db.Groups.AsNoTracking()
@@ -71,6 +74,6 @@ public sealed class BookVisibilities(TenantDb tenantDb, AccessChanges changes, R
         }
 
         return new BookVisibility(result.Where(r => r.Value.Count > 0)
-            .ToDictionary(r => r.Key, IReadOnlyList<FilterProfile> (r) => r.Value.Any(p => p.IsOpen) ? [open] : r.Value.Distinct().ToList()));
+            .ToDictionary(r => r.Key, IReadOnlyList<FilterProfile> (r) => r.Value.Any(p => p.IsOpen) ? [open] : r.Value.Distinct().ToList()), merging);
     }
 }

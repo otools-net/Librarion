@@ -237,7 +237,7 @@ public sealed class CatalogGenerator
     public static readonly string[] BookColumns =
     [
         "Id", "TenantId", "LibraryId", "Title", "SortTitle", "SearchText", "SortAuthor", "SeriesId", "SeriesNumber", "Description", "Rating", "Added",
-        "Updated", "CoverSource", "GeneratedTemplate", "GeneratedVariant", "CoverState", "MergedIntoId", "WorkKey", "MetadataSource", "Edited",
+        "Updated", "CoverSource", "GeneratedTemplate", "GeneratedVariant", "CoverState", "MergedIntoId", "WorkKey", "MetadataSource", "Edited", "Untagged",
     ];
 
     public IEnumerable<object?[]> Books()
@@ -252,7 +252,7 @@ public sealed class CatalogGenerator
                 book.Series is { } s ? SeriesTag(s) : null, book.SeriesNumber, book.Description, book.Rating, book.Added, book.Added,
                 (int)(book.GeneratedCover ? CoverSource.Generated : CoverSource.Book),
                 book.GeneratedCover ? (short)(id % 5) : null, book.GeneratedCover ? (short)(id / 5 % 8) : null,
-                (int)CoverState.Unknown, null, book.WorkKey, (short)MetadataSource.Heads, (short)BookEdits.None,
+                (int)CoverState.Unknown, null, book.WorkKey, (short)MetadataSource.Heads, (short)BookEdits.None, book.PlainTags.Length == 0 && !book.Filters.Any(f => f),
             ];
         }
     }

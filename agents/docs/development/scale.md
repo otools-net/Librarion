@@ -153,6 +153,24 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   Calibre 2M on PostgreSQL with the keys and their two indexes and both first builds at its end: **28.8 min** (27.1
   before; budget 30), unchanged re-import 2.6 min; making the new tags 359 s (316 profiled before). The margin left is
   1.2 min: the plan's next import speed-up (new tags copied in bulk on PostgreSQL) is due before more import work.
+  Done 2026-11-10: **Calibre 2M 24.5 min**, making the new tags 165 s ([imports](../features/imports.md#scale)).
+- Special search terms (stage 6 chunk 15, 2026-11-10, 2M, warm, p95 in ms, budget 300; catalogs generated again for
+  `Books.Untagged`; [search](../features/search.md#special-terms-stage-6-chunk-15)):
+
+  | Search | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | `special:untagged`, 30 % untagged (the generator's), by title / newest | 24 / 19 | 34 / 39 |
+  | `-special:untagged` | 24 | 35 |
+  | `special:untagged`, 0.1 % untagged, by title / newest | 37 / 56 | 55 / 54 |
+  | `special:untagged`, 0.1 %, and a common word | 112 | 208–234 |
+  | `special:duplicates` (who may merge) / and a common word | 44 / 139 | 31 / 162–178 |
+
+  The 0.1 % case with a word first took **324 ms on PostgreSQL**: its 2,000 untagged ids were the start list, and in
+  one sorted query with the word PostgreSQL walked the whole title index testing each book against the list. A short
+  start list (up to a quarter of the threshold) with other terms is now read first, unordered by key, and the books
+  passing them are the list (`BookSearch.ApplyAsync`). For every list it cost more than the walk ("an author by word
+  and a title word" 116 → 287 ms), hence the bound (148 ms with it). The machine ran ~25 % slower than at stage 5
+  during these runs (1.4 GB free with Docker): the untouched searches measured 94–139 ms where stage 5 had 103–131.
 - Generation with the search index (2026-11-03): 2M SQLite 7.5 min (3.2 before: the FTS5 triggers on every insert),
   PostgreSQL 15 min (the GIN indexes rebuilt after the load; other work ran on the machine meanwhile).
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by

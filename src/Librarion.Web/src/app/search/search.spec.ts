@@ -59,6 +59,20 @@ describe('Search', () => {
         expect(element.querySelector<HTMLDetailsElement>('.search-help')?.open).toBe(true);
         const field = [...element.querySelectorAll('.search-help a')].find(a => a.textContent === 'author:"Stephen King"');
         expect(field?.getAttribute('href')).toBe('/search?q=author:%22Stephen%20King%22');
+        const examples = [...element.querySelectorAll('.search-help code')].map(c => c.textContent);
+        expect(examples).toContain('special:untagged');
+        expect(examples).toContain('tag:"Freddy (FNAF)"');
+        expect(examples).not.toContain('special:duplicates');
+    });
+
+    it('shows the duplicates term to those who may merge books', async () => {
+        const api = mockApi();
+        const { element, harness, stable } = await open('/search', api);
+        TestBed.inject(SessionService).set(sessionInfo(['library.browse', 'library.merge']));
+        harness.detectChanges();
+        await stable();
+
+        expect([...element.querySelectorAll('.search-help code')].map(c => c.textContent)).toContain('special:duplicates');
     });
 
     describe('refine', () => {
@@ -153,6 +167,21 @@ describe('Search', () => {
             await stable();
             expect(box.value).toBe('guards author:"Terry Pratchett" ');
             expect(element.querySelector('[role="listbox"]')).toBeNull();
+        });
+
+        it('offers a special term by its name and ends it when chosen', async () => {
+            const api = mockApi();
+            api.suggestions.mockResolvedValue({ from: 0, items: [{ kind: 'special', insert: 'special:untagged', name: 'untagged', field: null, bookCount: null }] });
+            const { element, stable } = await open('/host', api);
+            await TestBed.inject(LibraryContext).load();
+            await type(element, stable, 'spec');
+
+            const option = element.querySelector('[role="option"]')!;
+            expect(option.querySelector('.suggestion-name')?.textContent).toBe('Books without tags');
+            expect(option.querySelector('.suggestion-kind')?.textContent).toBe('special:untagged');
+            (option as HTMLElement).click();
+            await stable();
+            expect(element.querySelector<HTMLInputElement>('lib-search-box input')!.value).toBe('special:untagged ');
         });
 
         it('asks for a field\'s values once the field is chosen', async () => {

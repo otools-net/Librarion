@@ -90,7 +90,7 @@ public sealed class BookQueries(TenantDb tenantDb)
         if (!string.IsNullOrWhiteSpace(search))
         {
             var fields = await BookSearch.KeysAsync(db, cancellationToken);
-            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(search, fields.ContainsKey), fields, libraries, batch, cancellationToken);
+            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(search, fields.ContainsKey), fields, libraries, visibility.Merging, batch, cancellationToken);
         }
 
         if (tagId is { } tag)
@@ -132,7 +132,7 @@ public sealed class BookQueries(TenantDb tenantDb)
         if (!string.IsNullOrWhiteSpace(request.Query))
         {
             var fields = await BookSearch.KeysAsync(db, cancellationToken);
-            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(request.Query, fields.ContainsKey), fields, libraries, limit, cancellationToken);
+            query = await BookSearch.ApplyAsync(db, query, SearchQuery.Parse(request.Query, fields.ContainsKey), fields, libraries, visibility.Merging, limit, cancellationToken);
         }
 
         if (request is { Sort: BookSort.Number, TagId: { } numbered })

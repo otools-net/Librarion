@@ -143,6 +143,9 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Untagged")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("Updated")
                         .HasColumnType("TEXT");
 
@@ -150,6 +153,10 @@ namespace Librarion.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "Id")
+                        .HasDatabaseName("IX_Books_LibraryId_Id_Untagged")
+                        .HasFilter("\"Untagged\"");
 
                     b.HasIndex("TenantId", "CoverFile")
                         .HasFilter("\"CoverFile\" IS NOT NULL");

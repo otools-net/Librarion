@@ -14,6 +14,11 @@ public enum SearchTermKind
     Tag,
     /// <summary><c>format:epub</c>: a file of the format.</summary>
     Format,
+    /// <summary>
+    /// <c>special:untagged</c> (no plain tag), <c>special:duplicates</c> (in a stored duplicate group; only where the
+    /// caller may merge books): a property of the book, not a name (stage 6 chunk 15).
+    /// </summary>
+    Special,
 }
 
 /// <param name="Key">The field's key for <see cref="SearchTermKind.Field"/>; null otherwise.</param>
@@ -24,7 +29,7 @@ public sealed record SearchTerm(SearchTermKind Kind, bool Negated, string? Key, 
 
 /// <summary>
 /// The search language (agents/docs/features/search.md, D-5.7): words and "quoted phrases"; <c>key:value</c> for
-/// every field and for <c>tag:</c>, <c>format:</c>, <c>title:</c>; <c>-</c> before a term leaves its books out;
+/// every field and for <c>tag:</c>, <c>format:</c>, <c>title:</c>, <c>special:</c>; <c>-</c> before a term leaves its books out;
 /// <c>*</c> after a value matches names starting with it. A key that is no field is text ("Re:Zero" is a title).
 /// </summary>
 public sealed record SearchQuery(IReadOnlyList<SearchTerm> Terms)
@@ -37,6 +42,7 @@ public sealed record SearchQuery(IReadOnlyList<SearchTerm> Terms)
         ["title"] = SearchTermKind.Title,
         ["tag"] = SearchTermKind.Tag,
         ["format"] = SearchTermKind.Format,
+        ["special"] = SearchTermKind.Special,
     };
 
     public bool IsEmpty => Terms.Count == 0;

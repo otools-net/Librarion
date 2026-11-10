@@ -202,7 +202,11 @@ public sealed class DefaultTags(TenantDb tenantDb, TagService tags, BookTagger t
         }
 
         if (changed > 0)
+        {
             await TagLinks.CountAsync(db, tenantId, before, await TagLinks.SnapshotAsync(db, books, cancellationToken), cancellationToken);
+            await TagLinks.UntaggedAsync(db, books, cancellationToken);
+        }
+
         await transaction.CommitAsync(cancellationToken);
         db.ChangeTracker.Clear();
         return changed;

@@ -59,6 +59,11 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
   library. The Imported tags page (stage 6 chunk 9, `--only "imported"`): plain tags by books (first page, the page
   after the 5,000th, a status none has: the walk's bound), languages and categories (small fields), the coverage
   line, the fields; the run also reports how much of the imported links the first 500 plain tags and categories hold.
+  Special terms (stage 6 chunk 15; alone with `--only untagged` or `--only "possible duplicates"`):
+  `special:untagged` with the generated 30 % (by title and newest), `-special:untagged`, `special:duplicates` for a
+  caller who may merge (alone and with a common word; the groups of the `duplicates` command); then the few case:
+  all but 0.1 % of the books unflagged for three scenarios (alone, newest, with a common word), the flags put back
+  from the links afterwards (a minute or so at 2M).
 - `--only <text>`: only the scenarios whose name contains it (a slow one measured with its plans, alone).
 - Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms, a
   figure asked once and kept 500 ms).

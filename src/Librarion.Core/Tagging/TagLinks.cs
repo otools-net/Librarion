@@ -7,7 +7,8 @@ namespace Librarion.Core.Tagging;
 /// <summary>
 /// What a change of links (a delete, a merge, an undo) keeps up for a batch of books: <see cref="TagCount"/> by delta
 /// from the books' tags before and after (never recounted whole, agents/docs/features/tags.md#scale) and the books'
-/// sort columns that copy a link (the first author's sort name, the first series).
+/// sort columns that copy a link (the first author's sort name, the first series), and whether a book has a plain tag
+/// (<see cref="Book.Untagged"/>).
 /// </summary>
 public static class TagLinks
 {
@@ -36,7 +37,20 @@ public static class TagLinks
     }
 
     /// <summary>
-    /// Sets <see cref="Book.SortAuthor"/>, <see cref="Book.SeriesId"/> / <see cref="Book.SeriesNumber"/> and the work key
+    /// Sets <see cref="Book.Untagged"/> of <paramref name="books"/> from their links (a plain tag: no field, not a field's
+    /// own row), a statement per 1,000 books writing only those whose flag is wrong. Every change of links calls it for
+    /// the books it touched (<see cref="SortColumnsAsync"/> does).
+    /// </summary>
+    public static async Task UntaggedAsync(LibrarionDbContext db, IEnumerable<int> books, CancellationToken cancellationToken)
+    {
+        foreach (var chunk in books.Distinct().Chunk(1000))
+            await db.Books.Where(b => chunk.Contains(b.Id)
+                    && b.Untagged == db.BookTags.Any(l => l.BookId == b.Id && l.Tag!.FieldId == null && l.Tag.FieldKey == null))
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.Untagged, b => !b.Untagged), cancellationToken);
+    }
+
+    /// <summary>
+    /// <see cref="UntaggedAsync"/>, then sets <see cref="Book.SortAuthor"/>, <see cref="Book.SeriesId"/> / <see cref="Book.SeriesNumber"/> and the work key
     /// (<see cref="Book.WorkKey"/>: title, else file name, and first author) of <paramref name="books"/> from their links
     /// (the first by ordinal), writing only the books whose values change.
     /// </summary>
@@ -45,6 +59,7 @@ public static class TagLinks
         var fields = await db.Tags.Where(t => t.FieldKey == "author" || t.FieldKey == "series").Select(t => new { t.Id, t.FieldKey }).ToListAsync(cancellationToken);
         var author = fields.FirstOrDefault(f => f.FieldKey == "author")?.Id;
         var series = fields.FirstOrDefault(f => f.FieldKey == "series")?.Id;
+        await UntaggedAsync(db, books, cancellationToken);
         var keysMoved = new List<int>();
         foreach (var chunk in books.Distinct().Chunk(1000))
         {

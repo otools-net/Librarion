@@ -152,6 +152,9 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool>("Untagged")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("Updated")
                         .HasColumnType("timestamp with time zone");
 
@@ -159,6 +162,10 @@ namespace Librarion.Core.Data.Migrations.Postgres
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "Id")
+                        .HasDatabaseName("IX_Books_LibraryId_Id_Untagged")
+                        .HasFilter("\"Untagged\"");
 
                     b.HasIndex("TenantId", "CoverFile")
                         .HasFilter("\"CoverFile\" IS NOT NULL");

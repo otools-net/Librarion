@@ -11,6 +11,8 @@ public enum SuggestionKind
     Field,
     /// <summary>A field's value or a plain tag, as a term (<c>author:"Stephen King"</c>, <c>tag:"Favourites"</c>).</summary>
     Value,
+    /// <summary>A special term (<c>special:untagged</c>); its name is the value (<c>untagged</c>), named by the client.</summary>
+    Special,
 }
 
 /// <param name="Insert">The term put in place of the one being typed.</param>
@@ -54,12 +56,15 @@ public sealed class SearchSuggestions(TenantDb tenantDb)
 
         var colon = term.IndexOf(':', StringComparison.Ordinal);
         var key = colon > 0 ? term[..colon].ToLowerInvariant() : null;
+        if (key == "special")
+            return new SuggestionList(from, Specials(term[(colon + 1)..].Trim('"', '*', ' ').ToLowerInvariant(), libraryId, visibility, sign));
         var known = key is null || fields.ContainsKey(key) ? fields : await BookSearch.KeysAsync(db, cancellationToken);
         if (key is not null && (key == "tag" || known.ContainsKey(key)))
         {
             var value = term[(colon + 1)..].Trim('"', '*', ' ');
             var fieldId = key == "tag" ? (int?)null : known[key];
             var values = await ValuesAsync(db, fieldId, value, libraryId, visibility, cancellationToken);
+            values = await ShownAsync(db, values, cancellationToken);
             return new SuggestionList(from, values.Select(v => Suggestion(v, keys, sign)).ToList());
         }
 
@@ -68,12 +73,35 @@ public sealed class SearchSuggestions(TenantDb tenantDb)
             return new SuggestionList(from, []);
         var items = fields.Keys.Where(k => k.StartsWith(words.ToLowerInvariant(), StringComparison.Ordinal)).Order(StringComparer.Ordinal).Take(MaxFields)
             .Select(k => new SearchSuggestion(SuggestionKind.Field, $"{sign}{k}:", k, null, null)).ToList();
+        if ("special".StartsWith(words.ToLowerInvariant(), StringComparison.Ordinal))
+            items.AddRange(Specials("", libraryId, visibility, sign));
         var matched = await NamedAsync(db, db.Tags.Where(t => t.FieldKey == null), words, libraryId, visibility, cancellationToken);
-        items.AddRange(matched.Select(v => Suggestion(v, keys, sign)));
+        items.AddRange((await ShownAsync(db, matched, cancellationToken)).Select(v => Suggestion(v, keys, sign)));
         return new SuggestionList(from, items);
     }
 
     private sealed record Candidate(int Id, string Name, int? FieldId, int? BookCount);
+
+    /// <summary>
+    /// The special terms starting with <paramref name="prefix"/>: <c>untagged</c>, and <c>duplicates</c> where the caller
+    /// may merge books (in the library asked about, or in one at least).
+    /// </summary>
+    private static List<SearchSuggestion> Specials(string prefix, int? libraryId, BookVisibility visibility, string sign)
+    {
+        var merging = libraryId is { } library ? visibility.Merging?.Contains(library) == true : visibility.Merging is { Count: > 0 };
+        string[] names = merging ? ["untagged", "duplicates"] : ["untagged"];
+        return names.Where(n => n.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(n => new SearchSuggestion(SuggestionKind.Special, $"{sign}special:{n}", n, null, null)).ToList();
+    }
+
+    /// <summary>The candidates named as shown: "Freddy (FNAF)" for one told apart (<see cref="SearchFacets.ShownNamesAsync"/>).</summary>
+    private static async Task<List<Candidate>> ShownAsync(LibrarionDbContext db, List<Candidate> candidates, CancellationToken cancellationToken)
+    {
+        if (candidates.Count == 0)
+            return candidates;
+        var names = await SearchFacets.ShownNamesAsync(db, candidates.Select(c => c.Id).ToList(), cancellationToken);
+        return candidates.Select(c => c with { Name = names.GetValueOrDefault(c.Id) ?? c.Name }).ToList();
+    }
 
     /// <summary>A field's values (null: plain tags): by prefix of the name and by its words; the field's first ones when nothing is typed.</summary>
     private static async Task<List<Candidate>> ValuesAsync(LibrarionDbContext db, int? fieldId, string value, int? libraryId, BookVisibility visibility, CancellationToken cancellationToken)

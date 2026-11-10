@@ -34,6 +34,8 @@ public abstract partial class LibrarionDbContext
             // An uploaded cover's other users, found before its file is deleted (stage 6 chunk 10): few rows.
             entity.Property(b => b.CoverFile).HasMaxLength(100);
             entity.HasIndex(b => new { b.TenantId, b.CoverFile }).HasFilter("\"CoverFile\" IS NOT NULL");
+            // special:untagged (stage 6 chunk 15): the few untagged books of a curated library, without walking the rest.
+            entity.HasIndex(b => new { b.LibraryId, b.Id }).HasFilter("\"Untagged\"").HasDatabaseName("IX_Books_LibraryId_Id_Untagged");
             Filter(entity, b => b.TenantId == CurrentTenantId);
         });
 

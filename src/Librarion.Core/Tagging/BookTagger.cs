@@ -217,6 +217,7 @@ public sealed class BookTagger(TenantDb tenantDb, TagService tags, BackgroundTas
 
         await db.SaveChangesAsync(cancellationToken);
         await TagLinks.CountAsync(db, tenantId, before, await TagLinks.SnapshotAsync(db, books, cancellationToken), cancellationToken);
+        await TagLinks.UntaggedAsync(db, books, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         db.ChangeTracker.Clear();
         return changed;

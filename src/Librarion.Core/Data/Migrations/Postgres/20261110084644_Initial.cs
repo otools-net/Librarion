@@ -366,7 +366,8 @@ namespace Librarion.Core.Data.Migrations.Postgres
                     MetadataSource = table.Column<byte>(type: "smallint", nullable: false),
                     ImportHash = table.Column<long>(type: "bigint", nullable: true),
                     WorkKey = table.Column<long>(type: "bigint", nullable: true),
-                    Edited = table.Column<byte>(type: "smallint", nullable: false)
+                    Edited = table.Column<byte>(type: "smallint", nullable: false),
+                    Untagged = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1108,6 +1109,12 @@ namespace Librarion.Core.Data.Migrations.Postgres
                 name: "IX_Books_LibraryId_Added_Id",
                 table: "Books",
                 columns: new[] { "LibraryId", "Added", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Books_LibraryId_Id_Untagged",
+                table: "Books",
+                columns: new[] { "LibraryId", "Id" },
+                filter: "\"Untagged\"");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Books_LibraryId_MissingSince_Id",
