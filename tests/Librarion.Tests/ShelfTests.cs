@@ -169,6 +169,56 @@ public sealed class ShelfTests
         Assert.IsEmpty(await admin.GetAsync<List<int>>($"/api/books/{books["Echo"]}/shelves", Cancel));
     }
 
+    /// <summary>
+    /// A selection moves in one call, in the order given, before a book or to the end (renumbering when the gap is too
+    /// narrow); a page's key follows the last book listed, so a move or a renumbering between pages repeats none and
+    /// skips none.
+    /// </summary>
+    [TestMethod]
+    public async Task ASelectionMovesTogetherAndPagesFollowTheMoves()
+    {
+        await using var library = await LibraryAsync("Alpha", "Bravo", "Charlie", "Delta", "Echo");
+        var books = await BooksAsync(library);
+        var admin = library.Admin;
+        var shelf = await CreateAsync(admin, "Mine");
+        await AddAsync(admin, shelf.Id, books["Alpha"], books["Bravo"], books["Charlie"], books["Delta"], books["Echo"]);
+
+        async Task MoveManyAsync(int? before, params string[] titles)
+        {
+            using var response = await admin.PostAsJsonAsync($"/api/shelves/{shelf.Id}/books/move",
+                new ShelfEndpoints.ShelfMoveManyInput(titles.Select(t => books[t]).ToList(), before), ApiClients.Json, Cancel);
+            Assert.AreEqual(HttpStatusCode.NoContent, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
+        }
+
+        await MoveManyAsync(books["Alpha"], "Echo", "Charlie");
+        CollectionAssert.AreEqual(new[] { "Echo", "Charlie", "Alpha", "Bravo", "Delta" }, await TitlesAsync(admin, shelf.Id));
+        await MoveManyAsync(null, "Echo", "Alpha");
+        CollectionAssert.AreEqual(new[] { "Charlie", "Bravo", "Delta", "Echo", "Alpha" }, await TitlesAsync(admin, shelf.Id));
+
+        // Squeezed between Bravo and Delta until there is no room: renumbered, the order kept.
+        for (var i = 0; i < 6; i++)
+            await MoveManyAsync(books["Delta"], "Echo", "Alpha");
+        CollectionAssert.AreEqual(new[] { "Charlie", "Bravo", "Echo", "Alpha", "Delta" }, await TitlesAsync(admin, shelf.Id));
+        using (var refused = await admin.PostAsJsonAsync($"/api/shelves/{shelf.Id}/books/move",
+                   new ShelfEndpoints.ShelfMoveManyInput([books["Echo"]], books["Echo"]), ApiClients.Json, Cancel))
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "before one of those moved");
+
+        // A first page, then the shelf renumbered by a move: the next page goes on from the last book listed.
+        var first = await admin.GetAsync<Page<BookListItem>>($"/api/shelves/{shelf.Id}/books?sort=shelf&limit=2", Cancel);
+        CollectionAssert.AreEqual(new[] { "Charlie", "Bravo" }, first.Items.Select(b => b.Title).ToArray());
+        await using (var db = await library.DbAsync(Cancel))
+            await db.ShelfBooks.Where(s => s.ShelfId == shelf.Id).ExecuteUpdateAsync(u => u.SetProperty(s => s.Position, s => s.Position * 7 + 5), Cancel);
+        await MoveManyAsync(null, "Charlie");
+        var rest = new List<string>();
+        for (var after = first.Next; after is not null;)
+        {
+            var page = await admin.GetAsync<Page<BookListItem>>($"/api/shelves/{shelf.Id}/books?sort=shelf&limit=2&after={after}", Cancel);
+            rest.AddRange(page.Items.Select(b => b.Title!));
+            after = page.Next;
+        }
+        CollectionAssert.AreEqual(new[] { "Echo", "Alpha", "Delta", "Charlie" }, rest, "Charlie moved to the end comes again there, nothing skipped");
+    }
+
     [TestMethod]
     public async Task AShelfSortsByAuthorAndDateAddedToo()
     {

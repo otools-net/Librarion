@@ -6,6 +6,9 @@ import { LibraryContext } from '../core/library-context';
 import { Media } from '../core/media';
 import { ADMIN_RIGHTS, Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
+import { ShelfStore } from '../core/shelf-store';
+import { ShelfInfo } from '../core/models';
+import { shelfLink } from '../shelves/shelf-link';
 import { ThemeService } from '../core/theme.service';
 import { Icon, IconName } from '../shared/icon';
 import { Logo } from '../shared/logo';
@@ -40,6 +43,7 @@ export class Shell {
     protected readonly theme = inject(ThemeService);
     protected readonly sessions = inject(SessionService);
     protected readonly libraries = inject(LibraryContext);
+    protected readonly shelves = inject(ShelfStore);
     private readonly router = inject(Router);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
@@ -75,6 +79,12 @@ export class Shell {
     /** A navigation item is lit on its own page only (a tag's page is under none; "Go to" keeps Authors lit). */
     protected readonly exactPath: IsActiveMatchOptions = { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
 
+    /** One's own shelves under the browse navigation (`account.shelves`). */
+    protected readonly canShelve = computed(() => {
+        this.sessions.session();
+        return this.sessions.can(Rights.shelves);
+    });
+
     protected readonly canAdmin = computed(() => {
         this.sessions.session();
         return this.sessions.canAny(...ADMIN_RIGHTS);
@@ -109,8 +119,16 @@ export class Shell {
                     this.loadedFor = key;
                     void this.libraries.load();
                 }
+                if (this.sessions.can(Rights.shelves))
+                    void this.shelves.load();
+                else
+                    this.shelves.clear();
             });
         });
+    }
+
+    protected shelfLink(shelf: ShelfInfo): (string | number)[] {
+        return shelfLink(shelf);
     }
 
     protected toggle(popup: Popup): void {

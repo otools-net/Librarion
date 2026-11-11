@@ -7,6 +7,9 @@ import { errorText } from '../core/errors';
 import { I18n, TranslatePipe } from '../core/i18n.service';
 import { LibraryContext } from '../core/library-context';
 import { ToastService } from '../core/toast.service';
+import { Rights } from '../core/rights';
+import { SessionService } from '../core/session.service';
+import { ShelfPicker } from '../shelves/shelf-picker';
 import { BookDetail, BookDuplicate, BookFile, BookListItem, BookTag } from '../core/models';
 import { Icon } from '../shared/icon';
 import { EmptyState, Skeleton } from '../shared/placeholders';
@@ -27,11 +30,12 @@ interface FieldGroup {
  * metadata gave none, marked), authors and series linking to their pages, the other fields as chips, the description,
  * its files with Download (when the session may download in its library), details (added, identifiers, imported
  * properties), and other books that may be the same one (read only until merging comes). A merged book goes to the
- * book it now lives in. Edit (with `library.edit` or `library.tag` in its library) opens `BookEditor`.
+ * book it now lives in. Edit (with `library.edit` or `library.tag` in its library) opens `BookEditor`; Add to shelf
+ * (`account.shelves`) the account's shelves (`ShelfPicker`).
  */
 @Component({
     selector: 'lib-book-page',
-    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor, CoverEditor, BookCompare],
+    imports: [TranslatePipe, Icon, EmptyState, Skeleton, RouterLink, BookEditor, CoverEditor, BookCompare, ShelfPicker],
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'book-page' },
     template: `
@@ -68,7 +72,7 @@ interface FieldGroup {
                                 <svg libIcon="star"></svg>{{ 'book.rating' | t: { stars: i18n.number(book.rating / 2) } }}
                             </p>
                         }
-                        @if (first() || book.canEdit || book.canTag) {
+                        @if (first() || book.canEdit || book.canTag || canShelve()) {
                             <p class="book-actions">
                                 @if (first(); as file) {
                                     <a class="button primary" [href]="download(book, file)" download [title]="'book.downloadHint' | t: { name: file.name }">
@@ -83,6 +87,11 @@ interface FieldGroup {
                                 @if (book.canEdit) {
                                     <button type="button" class="button" [title]="'cover.editHint' | t" (click)="coverEditing.set(true)">
                                         <svg libIcon="book"></svg>{{ 'cover.edit' | t }}
+                                    </button>
+                                }
+                                @if (canShelve()) {
+                                    <button type="button" class="button" [title]="'book.shelvesHint' | t" (click)="shelving.set(true)">
+                                        <svg libIcon="shelf"></svg>{{ 'book.shelves' | t }}
                                     </button>
                                 }
                             </p>
@@ -217,6 +226,9 @@ interface FieldGroup {
             @if (coverEditing()) {
                 <lib-cover-editor [book]="book" (changed)="book$.set($event)" (closed)="coverEditing.set(false)" />
             }
+            @if (shelving()) {
+                <lib-shelf-picker [books]="[book.id]" [subtitle]="title(book)" (closed)="shelving.set(false)" />
+            }
         } @else if (missing()) {
             <h1>{{ 'book.missingTitle' | t }}</h1>
             <p class="empty large" libEmpty="book">
@@ -239,6 +251,7 @@ export class BookPage {
     private readonly toasts = inject(ToastService);
     private readonly location = inject(Location);
     private readonly libraries = inject(LibraryContext);
+    private readonly session = inject(SessionService);
 
     /** Opened from another page of the app (not as the first page loaded): back is the browser's back. */
     private readonly fromApp = this.router.navigated;
@@ -250,6 +263,8 @@ export class BookPage {
     protected readonly error = signal<string | null>(null);
     protected readonly editing = signal(false);
     protected readonly coverEditing = signal(false);
+    protected readonly shelving = signal(false);
+    protected readonly canShelve = computed(() => this.session.can(Rights.shelves));
     /** The books compared (this one and a possible duplicate), while Compare and merge is open. */
     protected readonly comparing = signal<number[] | null>(null);
     protected readonly busy = signal(false);

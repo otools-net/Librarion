@@ -5,7 +5,7 @@ export const ICON_NAMES = [
     // The shell
     'menu', 'close', 'search', 'sun', 'moon', 'home', 'logout',
     // Books and their fields
-    'library', 'book', 'author', 'series', 'tag', 'category', 'language', 'publisher', 'calendar', 'star', 'folder', 'zip', 'tag-auto', 'image',
+    'library', 'shelf', 'book', 'author', 'series', 'tag', 'category', 'language', 'publisher', 'calendar', 'star', 'folder', 'zip', 'tag-auto', 'image',
     // Actions
     'plus', 'minus', 'check', 'edit', 'trash', 'download', 'import', 'refresh', 'copy', 'external', 'more', 'filter', 'sort',
     'grid', 'list', 'hidden', 'grip',
@@ -48,6 +48,7 @@ export class Icon {
             <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10" /></symbol>
 
             <symbol id="icon-library" viewBox="0 0 24 24"><path d="M5 4h3v16H5zM10 4h3v16h-3zM15.5 5.2l2.9-.8 3.6 15-2.9.8z" /></symbol>
+            <symbol id="icon-shelf" viewBox="0 0 24 24"><path d="M3 20.5h18M5.5 20.5V8h3v12.5M10 20.5V5.5h3v15M14.4 9l2.9-.8 3 11.6" /></symbol>
             <symbol id="icon-book" viewBox="0 0 24 24"><path d="M5 17.5V7a2.5 2.5 0 0 1 2.5-2.5H19V15H7.5A2.5 2.5 0 0 0 5 17.5 2.5 2.5 0 0 0 7.5 20H19v-5" /></symbol>
             <symbol id="icon-author" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.8 3.6-5.5 7-5.5s6.2 1.7 7 5.5" /></symbol>
             <symbol id="icon-series" viewBox="0 0 24 24"><path d="M4 6h11v14H4zM8 3h12v14" /></symbol>

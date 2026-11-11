@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 10.
+**Next:** chunk 11.
 
 ## The user's answers (2026-11-10)
 
@@ -159,9 +159,11 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
    split keep shelf rows right; routes behind `account.shelves`. Tests on both providers. **Built:** caps: shelves per account the
    setting `shelves.maxPerAccount` (100, the user's answer 2026-11-10), 10,000 books a shelf, spaced positions (`Gap` 1,024, renumbered when neighbours touch), stored counts, `BookMergeData.Shelves`;
    the test helper `Shelf` renamed `TestLibrary`; [shelves](../features/shelves.md).
-10. [ ] Shelves UI: Add to shelf on the book page and in the selection bar, Shelves in the sidebar, a shelf's page
+10. [x] Shelves UI: Add to shelf on the book page and in the selection bar, Shelves in the sidebar, a shelf's page
     (the book list as the library's, reorder, remove, rename, delete); phones; client specs, e2e on every device,
-    axe in both themes.
+    axe in both themes. **Built:** `ShelfStore`, `ShelfPicker`, `BookList` with `shelf`; reorder by drag (pointer
+    events), keys and Move; `POST …/books/move` for a selection, the shelf order's cursor following its book;
+    selection with `account.shelves` alone; user docs `user-guide/shelves.md`; [shelves](../features/shelves.md#built-stage-7-chunk-10-the-pages).
 11. [ ] Shelves in OPDS: the shelf list and each shelf's feed (in the shelf's order).
 12. [ ] HTTP-level e2e as a reader app (Playwright request context): Basic, key, path key; root → a field → a value →
     books → download (also from inside a zip); search; a shelf; 401 without credentials, and with a cookie only.

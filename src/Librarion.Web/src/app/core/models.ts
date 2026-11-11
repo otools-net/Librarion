@@ -352,8 +352,27 @@ export interface KeysetPage<T> {
     next: string | null;
 }
 
-/** `number`: by the number on the tag's link (a series' order; books without one are left out), only with a tag. */
-export type BookSort = 'title' | 'author' | 'added' | 'number';
+/**
+ * `number`: by the number on the tag's link (a series' order; books without one are left out), only with a tag;
+ * `shelf`: a shelf's own order, only on a shelf (`added` there: put on the shelf last, first).
+ */
+export type BookSort = 'title' | 'author' | 'added' | 'number' | 'shelf';
+
+/** One of the account's shelves (agents/docs/features/shelves.md); `bookCount` counts rows, seen now or not. */
+export interface ShelfInfo {
+    id: number;
+    name: string;
+    bookCount: number;
+    created: string;
+    updated: string;
+}
+
+/** What putting books on a shelf did: those put on, and those it had already. */
+export interface ShelfAdded {
+    shelf: ShelfInfo;
+    added: number;
+    already: number;
+}
 
 /** A field of the tenant (`api/fields`): a built-in one's name is translated from its key. */
 export interface FieldInfo {

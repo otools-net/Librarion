@@ -145,41 +145,71 @@ public sealed class Shelves(TenantDb tenantDb, Settings.SettingsService settings
     /// Moves a book of the shelf to just before <paramref name="beforeBookId"/> (another of its books), or to the end
     /// (null): one row written, unless its neighbours touch (then the shelf is renumbered first).
     /// </summary>
-    public async Task<AccessResult<bool>> MoveAsync(int tenantId, int userId, int shelfId, int bookId, int? beforeBookId, CancellationToken cancellationToken = default)
+    public Task<AccessResult<bool>> MoveAsync(int tenantId, int userId, int shelfId, int bookId, int? beforeBookId, CancellationToken cancellationToken = default) =>
+        beforeBookId == bookId
+            ? Task.FromResult(AccessResult<bool>.Ok(true))
+            : MoveAsync(tenantId, userId, shelfId, [bookId], beforeBookId, cancellationToken);
+
+    /// <summary>
+    /// Moves books of the shelf (at most <see cref="BookTagger.MaxSelection"/>), in the order given, to just before
+    /// <paramref name="beforeBookId"/> (a book of the shelf not among them), or to the end (null): one row written per
+    /// book, spread over the gap before it; the shelf is renumbered first when the gap is too narrow. Books the shelf
+    /// doesn't have are ignored; none of them: not found.
+    /// </summary>
+    public async Task<AccessResult<bool>> MoveAsync(int tenantId, int userId, int shelfId, IReadOnlyCollection<int> bookIds, int? beforeBookId,
+        CancellationToken cancellationToken = default)
     {
-        if (beforeBookId == bookId)
-            return AccessResult<bool>.Ok(true);
+        var ids = bookIds.Distinct().ToList();
+        if (ids.Count == 0 || ids.Count > BookTagger.MaxSelection)
+            return AccessResult<bool>.Invalid("bookIds", "shelf.selection");
+        if (beforeBookId is { } excluded && ids.Contains(excluded))
+            return AccessResult<bool>.Invalid("before", "shelf.selection");
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
         if (await db.Shelves.FirstOrDefaultAsync(s => s.Id == shelfId && s.UserId == userId, cancellationToken) is not { } shelf)
             return AccessResult<bool>.Missing();
         var rows = db.ShelfBooks.Where(s => s.ShelfId == shelfId);
-        if (await rows.FirstOrDefaultAsync(s => s.BookId == bookId, cancellationToken) is not { } moving)
+        var found = (await rows.Where(s => ids.Contains(s.BookId)).ToListAsync(cancellationToken)).ToDictionary(s => s.BookId);
+        var moving = ids.Where(found.ContainsKey).Select(id => found[id]).ToList();
+        if (moving.Count == 0)
             return AccessResult<bool>.Missing();
+        var movingIds = moving.Select(s => s.BookId).ToList();
 
         for (var attempt = 0; attempt < 2; attempt++)
         {
-            long? position;
+            // The first position and the step between the books moved; null: no room.
+            (long First, long Step)? room;
             if (beforeBookId is not { } before)
             {
-                position = (await rows.MaxAsync(s => (long?)s.Position, cancellationToken) ?? 0) + Gap;
+                var last = await rows.MaxAsync(s => (long?)s.Position, cancellationToken) ?? 0;
+                room = (last + Gap, Gap);
             }
             else
             {
                 if (await rows.Where(s => s.BookId == before).Select(s => (long?)s.Position).FirstOrDefaultAsync(cancellationToken) is not { } next)
                     return AccessResult<bool>.Missing();
-                var previous = await rows.Where(s => s.Position < next && s.BookId != bookId).MaxAsync(s => (long?)s.Position, cancellationToken);
-                position = previous is null ? next - Gap : next - previous.Value >= 2 ? previous.Value + (next - previous.Value) / 2 : null;
+                var previous = await rows.Where(s => s.Position < next && !movingIds.Contains(s.BookId)).MaxAsync(s => (long?)s.Position, cancellationToken);
+                if (previous is null)
+                    room = (next - Gap * moving.Count, Gap);
+                else if (next - previous.Value > moving.Count)
+                {
+                    var step = (next - previous.Value) / (moving.Count + 1);
+                    room = (previous.Value + step, step);
+                }
+                else
+                    room = null;
             }
 
-            if (position is { } found)
+            if (room is { } place)
             {
-                moving.Position = found;
+                for (var i = 0; i < moving.Count; i++)
+                    moving[i].Position = place.First + place.Step * i;
                 shelf.Updated = time.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken);
                 return AccessResult<bool>.Ok(true);
             }
 
-            // The neighbours touch: spread the shelf out again (at most MaxBooks rows), then place it.
+            // The neighbours touch: spread the shelf out again (at most MaxBooks rows; Gap is wider than a selection),
+            // then place them.
             var ordered = await rows.OrderBy(s => s.Position).ThenBy(s => s.BookId).ToListAsync(cancellationToken);
             for (var i = 0; i < ordered.Count; i++)
                 ordered[i].Position = Gap * (i + 1);
@@ -213,8 +243,13 @@ public sealed class Shelves(TenantDb tenantDb, Settings.SettingsService settings
         {
             case ShelfSort.Shelf:
             {
-                if (cursor?.Number is { } position)
+                // From where the last book listed is now (a move or a renumbering since leaves no gap and no repeat),
+                // or where it was when it has been taken off since.
+                if (cursor?.Number is { } kept)
+                {
+                    var position = await rows.Where(s => s.BookId == cursor.Id).Select(s => (long?)s.Position).FirstOrDefaultAsync(cancellationToken) ?? kept;
                     rows = rows.Where(s => s.Position > position || (s.Position == position && s.BookId > cursor.Id));
+                }
                 var page = await rows.OrderBy(s => s.Position).ThenBy(s => s.BookId).Where(s => visible.Any(b => b.Id == s.BookId))
                     .Select(s => new { s.BookId, s.Position }).Take(limit + 1).ToListAsync(cancellationToken);
                 if (page.Count > limit)

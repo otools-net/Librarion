@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-    ApiKeyInfo, ApiKeyInput, NewApiKey, BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
+    ApiKeyInfo, ApiKeyInput, NewApiKey, ShelfAdded, ShelfInfo, BookDetail, BookDuplicate, BookListItem, BookSort, FacetList, FieldInfo, FieldValue, GroupInfo, GroupInput, ImportInput, KeysetPage, LibraryInfo,
     LibraryRootInfo, ManagedFields, ManagedPage, MergeLogInfo, MissingBookPage, MissingRemoval, RightInfo, ScheduleInfo, ScheduleInput,
     SecurityEventInfo, SessionInfo, SettingChanges, SettingInfo, SettingLevel, SettingState, SetupInput, SetupState, SuggestionList, SystemInfo,
     PickedTags, TagDefinition, TagDetail, TagRef, TagInput, TagWork, TaskOverview, TaskRunInfo, TenantInfo, TenantInput, UserInfo, UserInput, BookEdit,
@@ -147,6 +147,21 @@ export class Api {
             library: query.library, sort: query.sort, tag: query.tag ?? undefined, q: query.q || undefined, folder: query.folder ?? undefined,
             after: query.after ?? undefined, limit: query.limit,
         });
+    /** One's own shelves (agents/docs/features/shelves.md, `account.shelves`). */
+    shelves = () => this.get<ShelfInfo[]>('api/shelves');
+    shelf = (id: number) => this.get<ShelfInfo>(`api/shelves/${id}`);
+    createShelf = (name: string) => this.post<ShelfInfo>('api/shelves', { name });
+    renameShelf = (id: number, name: string) => this.put<ShelfInfo>(`api/shelves/${id}`, { name });
+    deleteShelf = (id: number) => this.delete<void>(`api/shelves/${id}`);
+    /** A shelf's books the account may see now, a page at a time by key. */
+    shelfBooks = (id: number, query: { sort: BookSort; after?: string | null; limit?: number }) =>
+        this.get<KeysetPage<BookListItem>>(`api/shelves/${id}/books`, { sort: query.sort, after: query.after ?? undefined, limit: query.limit });
+    addToShelf = (id: number, bookIds: number[]) => this.post<ShelfAdded>(`api/shelves/${id}/books`, { bookIds });
+    removeFromShelf = (id: number, bookIds: number[]) => this.post<ShelfInfo>(`api/shelves/${id}/books/remove`, { bookIds });
+    /** Moves books, in the order given, to just before `before` (a book of the shelf not among them), or to the end (null). */
+    moveOnShelf = (id: number, bookIds: number[], before: number | null) => this.post<void>(`api/shelves/${id}/books/move`, { bookIds, before });
+    /** The ids of the account's shelves holding the book. */
+    bookShelves = (bookId: number) => this.get<number[]>(`api/books/${bookId}/shelves`);
     /** The folder view (agents/docs/features/folders.md, `library.folders`): a library's roots, a folder, its folders by key. */
     libraryFolders = (library: number) => this.get<FolderItem[]>(`api/libraries/${library}/folders`);
     folder = (id: number) => this.get<FolderDetail>(`api/folders/${id}`);

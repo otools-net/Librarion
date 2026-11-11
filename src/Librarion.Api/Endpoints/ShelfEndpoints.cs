@@ -19,6 +19,10 @@ public static class ShelfEndpoints
     /// <param name="Before">The book to go just before; null: to the end.</param>
     public sealed record ShelfMoveInput(int? Before);
 
+    /// <param name="BookIds">The books to move, in the order they take.</param>
+    /// <param name="Before">The book (not among them) to go just before; null: to the end.</param>
+    public sealed record ShelfMoveManyInput(IReadOnlyList<int>? BookIds, int? Before);
+
     public static void MapShelfEndpoints(this IEndpointRouteBuilder api)
     {
         var shelves = api.MapGroup("/shelves").WithTags("Shelves").RequireRight(Rights.Shelves);
@@ -96,6 +100,13 @@ public static class ShelfEndpoints
                     : Results.NotFound())
             .WithName("MoveShelfBook")
             .WithSummary("Moves a book of a shelf to just before another of its books (`before`), or to the end (none).");
+
+        shelves.MapPost("/{id:int}/books/move", async (int id, ShelfMoveManyInput input, HttpContext context, CurrentAccess current, Shelves store) =>
+                await current.GetAsync() is { TenantId: { } tenantId } state
+                    ? ApiResults.From(await store.MoveAsync(tenantId, state.User!.Id, id, input.BookIds ?? [], input.Before, context.RequestAborted), _ => Results.NoContent())
+                    : Results.NotFound())
+            .WithName("MoveShelfBooks")
+            .WithSummary($"Moves books of a shelf (at most {BookTagger.MaxSelection}), in the order given, to just before another of its books (`before`), or to the end (none).");
 
         api.MapGet("/books/{id:int}/shelves", async (int id, HttpContext context, CurrentAccess current, Shelves store) =>
                 await current.GetAsync() is { TenantId: { } tenantId } state
