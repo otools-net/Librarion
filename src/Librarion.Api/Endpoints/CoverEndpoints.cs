@@ -88,7 +88,7 @@ public static class CoverEndpoints
                 if (await service.PreviewAsync(state.TenantId!.Value, visibility, id, template, variant, CoverSize.S, context.RequestAborted) is not { } cover)
                     return Results.NotFound();
                 context.Response.Headers.CacheControl = "private, max-age=86400";
-                return Results.File(cover.Path, "image/webp", entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
+                return Results.File(cover.Path, CoverImages.ContentType, entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue(cover.ETag));
             })
             .WithName("PreviewCoverStyle")
             .WithSummary("The book drawn in a generated style, small (80 px wide): the previews of Change cover style.");
@@ -134,7 +134,7 @@ public static class CoverEndpoints
                 if (await service.SampleAsync(template, variant, text, context.RequestAborted) is not { } picture)
                     return Results.NotFound();
                 context.Response.Headers.CacheControl = "private, max-age=86400";
-                return Results.File(picture, "image/webp");
+                return Results.File(picture, CoverImages.ContentType);
             })
             .WithName("PreviewCoverTemplate")
             .WithSummary($"A template and palette drawn with a sample `title` and `author` (at most {MaxSampleLength} characters each), 240 px wide: Cover styles' previews.");

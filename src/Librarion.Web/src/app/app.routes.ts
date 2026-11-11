@@ -11,6 +11,7 @@ import { Shell } from './shell/shell';
 
 const tagPage = () => import('./tags/tag-page').then(m => m.TagPage);
 const folderPage = () => import('./folders/folder-page').then(m => m.FolderPage);
+const shelfPage = () => import('./shelves/shelf-page').then(m => m.ShelfPage);
 
 export const routes: Routes = [
     { path: 'setup', component: SetupPage, title: 'Librarion' },
@@ -36,6 +37,10 @@ export const routes: Routes = [
             { path: 'folders', loadComponent: folderPage, title: 'Librarion' },
             { path: 'folders/:id', loadComponent: folderPage, title: 'Librarion' },
             { path: 'folders/:id/:name', loadComponent: folderPage, title: 'Librarion' },
+            // One's own shelves (account.shelves): the list, then a shelf by id (its name only for reading).
+            { path: 'shelves', loadComponent: () => import('./shelves/shelves-page').then(m => m.ShelvesPage), title: 'Librarion' },
+            { path: 'shelves/:id', loadComponent: shelfPage, title: 'Librarion' },
+            { path: 'shelves/:id/:name', loadComponent: shelfPage, title: 'Librarion' },
             { path: 'books/:id', loadComponent: () => import('./books/book-page').then(m => m.BookPage), title: 'Librarion' },
             { path: 'search', loadComponent: () => import('./search/search-page').then(m => m.SearchPage), title: 'Librarion' },
             // My account is a section of the administration (as SFE's); the old address still opens it.

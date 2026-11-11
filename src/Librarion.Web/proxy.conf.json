@@ -6,5 +6,9 @@
   "/openapi": {
     "target": "http://localhost:5090",
     "secure": false
+  },
+  "/opds": {
+    "target": "http://localhost:5090",
+    "secure": false
   }
 }

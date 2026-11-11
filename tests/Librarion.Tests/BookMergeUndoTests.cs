@@ -34,7 +34,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task AnUndoPutsTheWholeMergeBack()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", text: "one"));
         shelf.Write("dune (scan).fb2", Fb2("DUNE: the complete edition", "Frank Herbert", isbn: "9780441172719", text: "two", keywords: "classic"));
         shelf.Write("dune (old).fb2", Fb2("Dune", "Frank Herbert", text: "three", keywords: "classic, desert"));
@@ -80,7 +80,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task AValueChangedSinceTheMergeStays()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Twin", "Ann Writer", text: "a"));
         shelf.Write("b.fb2", Fb2("Twin, the second edition", "Ann Writer", text: "b"));
         await shelf.ScanAsync(Cancel);
@@ -96,7 +96,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task ALaterMergeOfTheKeptBookIsUndoneFirst()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("A", "Ann Writer", text: "a"));
         shelf.Write("b.fb2", Fb2("B", "Ann Writer", text: "b"));
         shelf.Write("c.fb2", Fb2("C", "Ann Writer", text: "c"));
@@ -123,7 +123,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task BulkMergesTakeOnlyTheConfidentLevelsAndLeaveBooksMarkedApart()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         await using (var db = await shelf.DbAsync(Cancel))
         {
             db.Settings.Add(new Setting { Level = SettingLevel.Tenant, OwnerId = shelf.TenantId, TenantId = shelf.TenantId, Key = SettingCatalog.MergeSameFiles, Value = "\"off\"" });
@@ -174,7 +174,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task ASplitReadsItsFilesAndSetsTheBooksApart()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Dune.fb2", Fb2("Dune", "Frank Herbert", text: "one"));
         shelf.Write("Emma.fb2", Fb2("Emma", "Jane Austen", isbn: "9780141439587", text: "two", keywords: "classic"));
         await shelf.ScanAsync(Cancel);
@@ -209,7 +209,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task ASplitOfAnImportedBookCopiesItsMetadata()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Read from the file", "Ann Writer", text: "a"));
         shelf.Write("b.fb2", Fb2("Another file", "Bob Writer", text: "b", keywords: "kept"));
         await shelf.ScanAsync(Cancel);
@@ -233,7 +233,7 @@ public sealed class BookMergeUndoTests
     [TestMethod]
     public async Task OnlyThoseWhoMergeBooksUndoSplitOrMergeInBulk()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Twin", "Ann Writer", text: "a"));
         shelf.Write("b.fb2", Fb2("Twin", "Ann Writer", text: "b"));
         await shelf.ScanAsync(Cancel);
@@ -269,7 +269,7 @@ public sealed class BookMergeUndoTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
     }
 
-    private async Task<long> LastMergeAsync(Shelf shelf) =>
+    private async Task<long> LastMergeAsync(TestLibrary shelf) =>
         (await shelf.Admin.GetAsync<List<BookMergeInfo>>($"/api/duplicates/merges?library={shelf.LibraryId}", Cancel))[0].Id;
 
     private async Task<TaskRunInfo> BulkAsync(HttpClient client, DuplicateEndpoints.BulkMergeInput input)
@@ -289,27 +289,27 @@ public sealed class BookMergeUndoTests
         return null!;
     }
 
-    private async Task<int> BookOfAsync(Shelf shelf, string path)
+    private async Task<int> BookOfAsync(TestLibrary shelf, string path)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.BookFiles.Where(f => f.Path == path || f.Path.EndsWith("/" + path)).Select(f => f.BookId).SingleAsync(Cancel);
     }
 
-    private async Task<int> LibraryCountAsync(Shelf shelf)
+    private async Task<int> LibraryCountAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Libraries.Where(l => l.Id == shelf.LibraryId).Select(l => l.BookCount).SingleAsync(Cancel);
     }
 
     /// <summary>Every tag count as "tag:direct/total".</summary>
-    private async Task<List<string>> TagCountsAsync(Shelf shelf)
+    private async Task<List<string>> TagCountsAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return (await db.TagCounts.Where(c => c.BookCount > 0 || c.TotalCount > 0).Select(c => new { c.TagId, c.BookCount, c.TotalCount }).ToListAsync(Cancel))
             .Select(c => $"{c.TagId}:{c.BookCount}/{c.TotalCount}").ToList();
     }
 
-    private async Task<List<string>> GroupsAsync(Shelf shelf)
+    private async Task<List<string>> GroupsAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var groups = await db.DuplicateGroups.Where(g => !g.Noise).Select(g => new { g.Level, Members = g.Members.Select(m => m.BookId).ToList() }).ToListAsync(Cancel);

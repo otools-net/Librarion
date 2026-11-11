@@ -25,6 +25,18 @@ signs it out everywhere. **Unlock** clears a lock left by too many wrong passwor
 The tenant always keeps at least one administrator: a change that would leave its Administrators group without an
 enabled member is refused.
 
+## API keys
+
+An account's page also lists its [API keys](../user-guide/account.md#api-keys): what each is for, when it was last
+used and from where. **Revoke** ends one at once (a lost phone, a key shared by mistake). Keys are made by the account
+itself on its own page; a new password or disabling the account ends all of them. Making and revoking keys is in the
+[security log](security-log.md).
+
+A key may be made to work in the catalog's address (for reader apps that can't sign in): anyone who sees that address
+can use it. The setting **API keys in the address** (group **Reader apps**, tenant or server [settings](settings.md))
+switches that off for every key of the tenant at once; a server administrator's keys follow the server's setting. The
+key in an address is never written to the server's log.
+
 ## Server administrators
 
 Server administrators see **Server administrators** above the list: ticked, the list shows them instead of the

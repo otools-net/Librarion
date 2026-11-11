@@ -10,7 +10,7 @@ public sealed class CoverOptions
 }
 
 /// <summary>
-/// Covers on disk, sharded as SFE's thumbnail cache (<c>ab/cd/&lt;key&gt;-&lt;size&gt;.webp</c>): a key is a hash of what
+/// Covers on disk, sharded as SFE's thumbnail cache (<c>ab/cd/&lt;key&gt;-&lt;size&gt;.jpg</c>): a key is a hash of what
 /// the picture is made from, so a changed book gets a new key and the old file is simply never asked for again.
 /// Written to a temp name and moved, so a reader never sees half a file.
 /// </summary>
@@ -19,7 +19,13 @@ public sealed class CoverCache(string directory)
     public string Directory { get; } = directory;
 
     public string PathOf(string key, CoverSize size) =>
-        System.IO.Path.Combine(Directory, key[..2], key[2..4], $"{key}-{size.ToString().ToLowerInvariant()}.webp");
+        System.IO.Path.Combine(Directory, key[..2], key[2..4], $"{key}-{size.ToString().ToLowerInvariant()}{CoverImages.Extension}");
+
+    /// <summary>
+    /// A cover's entity tag: its key, size and format (<c>.jpg</c> since stage 7, so a browser's cached WebP of the same
+    /// key isn't taken for it).
+    /// </summary>
+    public static string ETag(string key, CoverSize size) => $"\"{key}-{size}{CoverImages.Extension}\"";
 
     public bool Has(string key, CoverSize size) => File.Exists(PathOf(key, size));
 

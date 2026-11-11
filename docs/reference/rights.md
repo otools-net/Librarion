@@ -7,6 +7,7 @@ libraries; the others tenant-wide (Manage tags too: a tenant's libraries share i
 |---|---|---|---|---|
 | Browse | Libraries | | Administrators, Users, Curators | see the library and its books |
 | Download | Libraries | | Administrators, Users, Curators | download the books' files |
+| Reader apps (OPDS) | Libraries | | Administrators, Users, Curators | browse, search and download the library's books from a reader app (OPDS), signing in with the password or an API key; downloads also need Download |
 | Browse by folder | Libraries | | Administrators, Curators | browse the library by its folders and ZIP files and see how many files each holds; folder names are shown even when content filters hide the books in them |
 | Scan | Libraries | yes | Administrators | scan the library's folders now, cancel a scan, schedule scans |
 | Library settings | Libraries | yes | Administrators | change the library's settings |
@@ -24,6 +25,8 @@ libraries; the others tenant-wide (Manage tags too: a tenant's libraries share i
 | Security log | Tenant | | Administrators | read the tenant's sign-ins and access changes |
 | Own preferences | Own account | yes | Administrators, Users, Curators | keep one's own colors, density and page size on the server |
 | Change own password | Own account | yes | Administrators, Users, Curators | change the password of one's own account |
+| Own API keys | Own account | yes | Administrators, Users, Curators | create and revoke one's own API keys, for reader apps and scripts |
+| Own shelves | Own account | yes | Administrators, Users, Curators | keep one's own shelves of books |
 | System information | System | | Administrators, Users, Curators | see the server's version and database |
 | API documentation | System | | Administrators | read the API's description (OpenAPI, at `/openapi/v1.json`) |
 

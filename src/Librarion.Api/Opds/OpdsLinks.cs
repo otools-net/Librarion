@@ -1,0 +1,70 @@
+using System.Globalization;
+
+namespace Librarion.Api.Opds;
+
+/// <summary>
+/// Every address a feed links to, from one place (agents/docs/features/opds.md): under the app's root (a proxy's folder
+/// too), so a path key's prefix (chunk 8) is added here and every link keeps it.
+/// </summary>
+public sealed class OpdsLinks(HttpContext context)
+{
+    /// <summary>The catalog's root as this request reached it: with the key when the address carried one (every link keeps it).</summary>
+    public string Root { get; } = context.Request.PathBase
+        + (OpdsPathKey.Of(context) is { } key ? OpdsPathKey.Prefix + "/" + Uri.EscapeDataString(key) : OpdsEndpoints.Prefix);
+
+    public string Library(int library) => $"{Root}/l/{library}";
+
+    public string Recent(int library, string? after = null) => Library(library) + "/recent" + After(after);
+
+    public string Titles(int library, string? after = null) => Library(library) + "/titles" + After(after);
+
+    /// <summary>A field's values (<paramref name="key"/>), or the plain tags (null): from a letter, or after a cursor.</summary>
+    public string Values(int library, string? key, string? from = null, string? after = null) =>
+        Library(library) + (key is null ? "/tags" : "/fields/" + Uri.EscapeDataString(key)) + Query(("from", from), ("after", after));
+
+    /// <summary>A tag's page: its books, or (under it are other tags) its books and those tags.</summary>
+    public string Tag(int library, int tag) => $"{Library(library)}/tags/{tag}";
+
+    public string TagBooks(int library, int tag, string? after = null) => $"{Library(library)}/tags/{tag}/books" + After(after);
+
+    /// <summary>The account's shelves, as a library's catalog lists them.</summary>
+    public string Shelves(int library) => Library(library) + "/shelves";
+
+    /// <summary>A shelf's books in the library, in the shelf's own order.</summary>
+    public string Shelf(int library, int shelf, string? after = null) => $"{Shelves(library)}/{shelf}" + After(after);
+
+    /// <summary>The library's OpenSearch description (where reader apps learn the search address).</summary>
+    public string OpenSearch(int library) => Library(library) + "/opensearch.xml";
+
+    /// <summary>A search in the library; <paramref name="query"/> null gives the template, <c>{searchTerms}</c> left as it is.</summary>
+    public string Search(int library, string? query, string? after = null) =>
+        query is null ? Library(library) + "/search?q={searchTerms}" : Library(library) + "/search" + Query(("q", query), ("after", after));
+
+    /// <summary>The library the request's address names, if any (a feed's search links point there).</summary>
+    public int? CurrentLibrary { get; } = LibraryOf(context);
+
+    public string File(int library, int book, int file) => $"{Library(library)}/books/{book}/files/{file}";
+
+    /// <summary>A file zipped while it is sent (an FB2 as <c>fb2.zip</c>).</summary>
+    public string ZippedFile(int library, int book, int file) => File(library, book, file) + "/zip";
+
+    /// <summary>A cover; <paramref name="version"/> changes with the book, so a reader app's cached picture isn't shown after an edit.</summary>
+    public string Cover(int library, int book, string size, string? version) =>
+        $"{Library(library)}/books/{book}/cover/{size}" + (version is null ? "" : "?v=" + Uri.EscapeDataString(version));
+
+    private static string After(string? after) => Query(("after", after));
+
+    private static string Query(params (string Name, string? Value)[] parameters)
+    {
+        var given = parameters.Where(p => p.Value is not null).Select(p => p.Name + "=" + Uri.EscapeDataString(p.Value!)).ToList();
+        return given.Count == 0 ? "" : "?" + string.Join('&', given);
+    }
+
+    /// <summary>The library a feed's address names (<c>/opds/l/&lt;id&gt;/…</c>), for the request's tenant; null for others.</summary>
+    public static int? LibraryOf(HttpContext context) =>
+        context.Request.Path.StartsWithSegments(OpdsEndpoints.Prefix)
+        && context.GetRouteValue("library") is string text
+        && int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+            ? id
+            : null;
+}

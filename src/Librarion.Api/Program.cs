@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Librarion.Api;
 using Librarion.Api.Endpoints;
+using Librarion.Api.Opds;
 using Librarion.Api.Security;
 using Librarion.Core;
 using Librarion.Core.Access;
@@ -26,6 +27,8 @@ builder.WebHost.UseStaticWebAssets();
 builder.Services.AddLibrarionCore(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddLibrarionSecurity(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton<ClientPage>();
+// API keys never in a log, whatever logs and scopes are on (the hosting layer logs a request's address).
+builder.Services.AddLogRedaction();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
@@ -44,6 +47,9 @@ app.Lifetime.ApplicationStopped.Register(() => (local.FileProvider as IDisposabl
 app.Logger.LogInformation("Librarion {Version} ({Commit})", AppVersion.Version, AppVersion.Commit ?? "unknown commit");
 
 app.UseForwardedHeaders();
+// A key in the catalog's address is taken out of the path before routing sees it (agents/docs/features/opds-auth.md).
+app.UseMiddleware<OpdsPathKey>();
+app.UseRouting();
 // First, so that every answer (errors too) carries them.
 app.UseMiddleware<SecurityHeaders>();
 app.UseExceptionHandler();
@@ -73,15 +79,20 @@ api.MapDuplicateEndpoints();
 api.MapTagDuplicateEndpoints();
 api.MapTaskEndpoints();
 api.MapUserEndpoints();
+api.MapApiKeyEndpoints();
+api.MapShelfEndpoints();
 api.MapGroupEndpoints();
 api.MapSettingsEndpoints();
 api.MapSecurityEventEndpoints();
 api.MapFallback(() => TypedResults.NotFound()).AllowAnonymous();
 
+// Reader apps (OPDS): their own sign-in, never the cookie.
+app.MapOpdsEndpoints();
+
 // Addresses the client routes itself: its page, with the app's root as its base (ClientPage).
 // A tag page's readable address ends with its name, which may look like a file ("Vol. 2"): the fallback leaves those
 // to the static files, so they are routed here (tag-link.ts in the client).
-app.MapGet("{key:regex(^(?!api$|openapi$)[a-z0-9-]+$)}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
+app.MapGet("{key:regex(^(?!api$|openapi$|opds$)[a-z0-9-]+$)}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
 app.MapGet("fields/{key}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
 app.MapFallback((HttpContext context, ClientPage page) => page.Serve(context));
 

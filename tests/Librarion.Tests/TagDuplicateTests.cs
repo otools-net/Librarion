@@ -57,13 +57,15 @@ public sealed class TagDuplicateTests
     [TestMethod]
     public async Task TheFirstScanFindsLookAlikesRankedByBooks()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Carrie", "Stephen", "King", "a"));
         shelf.Write("b.fb2", Fb2("It", "Stephen", "King", "b"));
         shelf.Write("c.fb2", Fb2("Misery", "Стивен", "Кинг", "c"));
         shelf.Write("d.fb2", Fb2("Cujo", "S.", "King", "d"));
-        shelf.Write("e.fb2", Fb2("Solaris", "Stanislaw", "Lem", "e"));
-        shelf.Write("f.fb2", Fb2("Eden", "Станислав", "Лем", "f"));
+        // The Cyrillic one scanned first (a lower id): a tie in books goes by name, not by the order files were met
+        // (directory order on Linux, by name on Windows).
+        shelf.Write("e.fb2", Fb2("Eden", "Станислав", "Лем", "e"));
+        shelf.Write("f.fb2", Fb2("Solaris", "Stanislaw", "Lem", "f"));
         shelf.Write("g.fb2", Fb2("Matilda", "Roald", "Dahl", "g"));
         await shelf.ScanAsync(Cancel);
 
@@ -72,7 +74,7 @@ public sealed class TagDuplicateTests
         var groups = page.Items.Select(Describe).ToList();
         CollectionAssert.AreEqual(new[]
         {
-            "Initials: Stephen King, Стивен Кинг, S. King",
+            "Initials: Stephen King, S. King, Стивен Кинг",
             "Sound: Stephen King, Стивен Кинг",
             "Sound: Stanislaw Lem, Станислав Лем",
         }, groups, string.Join(" | ", groups));
@@ -91,7 +93,7 @@ public sealed class TagDuplicateTests
     [TestMethod]
     public async Task MergesAndNotTheSameLeaveTheList()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", Fb2("Carrie", "Stephen", "King", "a"));
         shelf.Write("b.fb2", Fb2("Misery", "Steven", "King", "b"));
         shelf.Write("e.fb2", Fb2("Solaris", "Stanislaw", "Lem", "e"));
@@ -119,7 +121,7 @@ public sealed class TagDuplicateTests
     [TestMethod]
     public async Task OnlyThoseWhoManageTagsSeeThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var groups = await shelf.Admin.GetAsync<List<GroupInfo>>("/api/groups", Cancel);
         await ApiClients.CreateUserAsync(shelf.Admin, new NewUser("reader", Password: ApiClients.Password, GroupIds: [groups.Single(g => g.BuiltIn == BuiltInGroup.Users).Id]), Cancel);
         using var reader = await ApiClients.SignInAsync(shelf.Factory, "reader", ApiClients.Password, Cancel);
@@ -137,13 +139,13 @@ public sealed class TagDuplicateTests
 
     private static string Describe(TagDuplicateItem group) => $"{group.Level}: {string.Join(", ", group.Tags.Select(t => t.Name))}";
 
-    private async Task<int> TagAsync(Shelf shelf, string name)
+    private async Task<int> TagAsync(TestLibrary shelf, string name)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Tags.Where(t => t.Name == name).Select(t => t.Id).SingleAsync(Cancel);
     }
 
-    private async Task<int> FieldAsync(Shelf shelf, string key)
+    private async Task<int> FieldAsync(TestLibrary shelf, string key)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Tags.Where(t => t.FieldKey == key).Select(t => t.Id).SingleAsync(Cancel);

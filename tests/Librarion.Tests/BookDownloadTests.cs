@@ -31,7 +31,7 @@ public sealed class BookDownloadTests
     [TestMethod]
     public async Task ALooseFileComesWholeOrByRangeWithItsNameAndTag()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Fantasy/The Hobbit.fb2", Long);
         await shelf.ScanAsync(Cancel);
         var url = await shelf.UrlOfAsync("Fantasy/The Hobbit.fb2", Cancel);
@@ -56,7 +56,7 @@ public sealed class BookDownloadTests
     [TestMethod]
     public async Task AZipEntryIsStreamedFromTheArchiveWithItsLengthAndCrcAsTag()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Zip("lib/fb2-000.zip", CompressionLevel.Optimal, ("first.fb2", "first"), ("sub/second.epub", Long));
         await shelf.ScanAsync(Cancel);
         var url = await shelf.UrlOfAsync("sub/second.epub", Cancel);
@@ -79,7 +79,7 @@ public sealed class BookDownloadTests
     [TestMethod]
     public async Task AStoredEntryIsServedByRange()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Zip("stored.zip", CompressionLevel.NoCompression, ("a.pdf", "%PDF-1.4 first"), ("b.pdf", Long));
         await shelf.ScanAsync(Cancel);
         var url = await shelf.UrlOfAsync("b.pdf", Cancel);
@@ -95,7 +95,7 @@ public sealed class BookDownloadTests
     [TestMethod]
     public async Task AFileGoneOrChangedSinceTheScanIsSaidSo()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var loose = shelf.Write("gone.fb2", "soon gone");
         shelf.Write("edited.fb2", "short");
         shelf.Zip("rebuilt.zip", CompressionLevel.Optimal, ("one.fb2", "one"), ("two.fb2", "two"));
@@ -120,7 +120,7 @@ public sealed class BookDownloadTests
     [TestMethod]
     public async Task APathLeavingItsRootIsNeverOpened()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("book.fb2", "inside");
         await File.WriteAllTextAsync(Path.Combine(shelf.Root, "..", "secret.fb2"), "inside", Cancel);
         await shelf.ScanAsync(Cancel);
@@ -134,7 +134,7 @@ public sealed class BookDownloadTests
     [TestMethod]
     public async Task OnlyThoseWhoSeeTheBookAndMayDownloadInItsLibraryGetIt()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("a.fb2", "a");
         shelf.Write("b.fb2", "b");
         await shelf.ScanAsync(Cancel);

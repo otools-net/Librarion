@@ -7,11 +7,12 @@ import { Rights } from '../core/rights';
 import { SessionService } from '../core/session.service';
 import { ThemeService } from '../core/theme.service';
 import { SettingsPanel } from '../settings/settings-panel';
+import { ApiKeys } from './api-keys';
 
-/** My account in the administration (SFE's AccountSection): own preferences, or the password of a local account. */
+/** My account in the administration (SFE's AccountSection): own preferences, the password of a local account, own API keys. */
 @Component({
     selector: 'lib-account-section',
-    imports: [TranslatePipe, SettingsPanel],
+    imports: [TranslatePipe, SettingsPanel, ApiKeys],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         @if (sessions.user(); as user) {
@@ -53,6 +54,10 @@ import { SettingsPanel } from '../settings/settings-panel';
                         </div>
                     </form>
                 </section>
+            }
+
+            @if (page() === 'apiKeys' && sessions.can(rights.apiKeys)) {
+                <lib-api-keys />
             }
 
             @if (page() === 'preferences' && sessions.can(rights.ownPreferences)) {

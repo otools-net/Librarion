@@ -121,6 +121,7 @@ public sealed partial class BookMerger
 
             var suppressed = (await db.BookTagSuppressions.Where(s => s.BookId == source.Id).Select(s => s.TagId).ToListAsync(cancellationToken)).ToHashSet();
             db.BookTagSuppressions.AddRange(data.Suppressed.Where(suppressed.Add).Select(tagId => new BookTagSuppression { TenantId = tenantId, BookId = source.Id, TagId = tagId }));
+            await ShelvesBackAsync(db, tenantId, target.Id, source.Id, data.Shelves ?? [], cancellationToken);
 
             source.MergedIntoId = null;
             source.Updated = now;
@@ -143,6 +144,34 @@ public sealed partial class BookMerger
 
         await transaction.CommitAsync(cancellationToken);
         return AccessResult<int>.Ok(restored);
+    }
+
+    /// <summary>
+    /// The source back on its shelves where it was: a place the kept book took goes back to it (when the kept book is
+    /// still there: taken off since, it stays off); a shelf that had the kept book already gets the source again. A
+    /// shelf deleted since is skipped.
+    /// </summary>
+    private static async Task ShelvesBackAsync(LibrarionDbContext db, int tenantId, int targetId, int sourceId, IReadOnlyList<ShelfData> shelves,
+        CancellationToken cancellationToken)
+    {
+        if (shelves.Count == 0)
+            return;
+        var shelfIds = shelves.Select(s => s.ShelfId).ToList();
+        var existing = (await db.Shelves.Where(s => shelfIds.Contains(s.Id)).Select(s => s.Id).ToListAsync(cancellationToken)).ToHashSet();
+        var holding = (await db.ShelfBooks.Where(s => s.BookId == sourceId).Select(s => s.ShelfId).ToListAsync(cancellationToken)).ToHashSet();
+        foreach (var shelf in shelves.Where(s => existing.Contains(s.ShelfId) && !holding.Contains(s.ShelfId)))
+        {
+            if (shelf.Moved)
+            {
+                if (await db.ShelfBooks.Where(s => s.ShelfId == shelf.ShelfId && s.BookId == targetId).ExecuteDeleteAsync(cancellationToken) == 0)
+                    continue;
+            }
+            else
+            {
+                await db.Shelves.Where(s => s.Id == shelf.ShelfId).ExecuteUpdateAsync(s => s.SetProperty(x => x.BookCount, x => x.BookCount + 1), cancellationToken);
+            }
+            db.ShelfBooks.Add(new ShelfBook { TenantId = tenantId, ShelfId = shelf.ShelfId, BookId = sourceId, Position = shelf.Position, Added = shelf.Added });
+        }
     }
 
     /// <summary>The kept book's single values as they were before the merge, each only when still what the merge made it.</summary>

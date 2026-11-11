@@ -10,6 +10,7 @@ public static class Rights
 {
     public const string Browse = "library.browse";
     public const string Download = "library.download";
+    public const string Opds = "library.opds";
     public const string Folders = "library.folders";
     public const string Scan = "library.scan";
     public const string LibrarySettings = "library.settings";
@@ -27,6 +28,8 @@ public static class Rights
     public const string TenantSecurityLog = "tenant.securityLog";
     public const string OwnPreferences = "account.preferences";
     public const string OwnPassword = "account.password";
+    public const string ApiKeys = "account.apiKeys";
+    public const string Shelves = "account.shelves";
     public const string SystemInfo = "system.info";
     public const string ApiDocs = "system.apiDocs";
     public const string ManageTenants = "server.tenants";
@@ -71,6 +74,8 @@ public static class RightCatalog
     [
         new(Rights.Browse, RightScope.Library, R, Members, "library"),
         new(Rights.Download, RightScope.Library, R, Members, "library"),
+        // Reader apps (stage 7): feeds by password or API key, never the web cookie (opds-auth.md).
+        new(Rights.Opds, RightScope.Library, R, Members, "library"),
         // Folder names and counts aren't narrowed by content filters (the user's answer, 2026-11-06): trusted groups only.
         new(Rights.Folders, RightScope.Library, R, Curators, "library"),
         new(Rights.Scan, RightScope.Library, W, Administrators, "library"),
@@ -89,6 +94,8 @@ public static class RightCatalog
         new(Rights.TenantSecurityLog, RightScope.Tenant, R, Administrators, "tenant"),
         new(Rights.OwnPreferences, RightScope.Tenant, W, Members, "account"),
         new(Rights.OwnPassword, RightScope.Tenant, W, Members, "account"),
+        new(Rights.ApiKeys, RightScope.Tenant, W, Members, "account"),
+        new(Rights.Shelves, RightScope.Tenant, W, Members, "account"),
         new(Rights.SystemInfo, RightScope.Tenant, R, Members, "system"),
         new(Rights.ApiDocs, RightScope.Tenant, R, Administrators, "system"),
         new(Rights.ManageTenants, RightScope.Server, W, [], "server"),

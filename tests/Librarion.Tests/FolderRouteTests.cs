@@ -64,12 +64,12 @@ public sealed class FolderRouteTests
     public async Task OnlyBrowseByFolderOpensTheFolders()
     {
         await using var library = await ScannedLibrary.CreateAsync(Cancel);
-        library.Write("Shelf/book.fb2", "book");
+        library.Write("TestLibrary/book.fb2", "book");
         await library.ScanAsync(Cancel);
         var (admin, _) = await library.AdminAsync(Cancel);
         int folderId;
         await using (var db = await library.DbAsync(Cancel))
-            folderId = await db.Folders.Where(f => f.Path == "Shelf").Select(f => f.Id).SingleAsync(Cancel);
+            folderId = await db.Folders.Where(f => f.Path == "TestLibrary").Select(f => f.Id).SingleAsync(Cancel);
 
         using (var created = await admin.PostAsJsonAsync("/api/groups", new GroupInput("Readers", AllLibraries: true, Rights: [Rights.Browse]), ApiClients.Json, Cancel))
         {

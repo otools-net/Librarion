@@ -30,7 +30,8 @@ console (also in `src/Librarion.Api/data/setup-code.txt`) and makes the first ad
 
 ## Documentation
 
-- [docs/](docs/README.md): installation, first start, configuration, accounts and administration.
+- [docs/](docs/README.md): installation, first start, configuration, accounts, browsing, shelves, reader apps (OPDS)
+  and administration.
 - Contributors and AI agents: [AGENTS.md](AGENTS.md).
 
 ## License

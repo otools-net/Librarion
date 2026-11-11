@@ -29,6 +29,7 @@ client `account/` (sign-in, account page), `admin/users-section.ts`, `admin/grou
 - **Throttle** (`SignInThrottle`, memory): `MaxFailedSignIns` (5) wrong passwords for one name from one address →
   that address waits `LockoutMinutes` (15) for that name; unknown names count the same. The **account** locks in the
   database after `AccountLockoutFailures` (20) in a row from all addresses; an administrator unlocks it.
+- Reader apps' Basic sign-ins on `/opds` go through the same throttle and account lockout ([opds-auth](opds-auth.md)).
 - **Rate limit** `SignInsPerMinute` (20) per address on sign-in, setup, recovery and password change (429).
 - Answers never tell a wrong name from a wrong password (`sign-in-failed`); `locked-out` carries `until`.
 

@@ -286,8 +286,8 @@ public sealed class CatalogQueryTests
     [TestMethod]
     public async Task TheRoutesAnswerWhatTheCallerMayBrowse()
     {
-        var (admin, _) = await ApiClients.SetUpAsync(_factory, Cancel);
-        // The setup made a tenant of its own and works there: over to the generated one.
+        // The generated catalog has its server administrator already (the API is set up): signed in, over to its tenant.
+        using var admin = await ApiClients.SignInAsync(_factory, "admin", GenerateCommand.Password, Cancel);
         using (var switched = await admin.PostAsJsonAsync("/api/session/tenant", new TenantChoice(_target.TenantId), ApiClients.Json, Cancel))
             switched.EnsureSuccessStatusCode();
         var page = await admin.GetAsync<Page<BookListItem>>("/api/books?sort=author&limit=10", Cancel);

@@ -25,6 +25,51 @@ public sealed class CoverTests
 
     private CancellationToken Cancel => TestContext.CancellationToken;
 
+    /// <summary>
+    /// Every cover is a baseline JPEG (every reader app decodes those; older ones no progressive JPEG and no WebP), and a
+    /// picture's transparent parts come out white, not black (JPEG has no transparency).
+    /// </summary>
+    [TestMethod]
+    public void CoversAreBaselineJpegsWithTransparencyOnWhite()
+    {
+        using var source = new SKBitmap(new SKImageInfo(300, 450, SKColorType.Rgba8888, SKAlphaType.Premul));
+        source.Erase(SKColors.Transparent);
+        using (var canvas = new SKCanvas(source))
+        using (var paint = new SKPaint { Color = SKColors.Navy })
+            canvas.DrawRect(0, 0, 300, 100, paint);
+        var png = SKImage.FromBitmap(source).Encode(SKEncodedImageFormat.Png, 100).ToArray();
+
+        var thumbnails = CoverImages.Thumbnails(png)!;
+        var uploaded = CoverImages.Remake(png, CoverUploads.MaxWidth, CoverUploads.MaxBytes)!;
+        var drawn = GeneratedCovers.Render(0, 0, new CoverText("Title", "Author", null), CoverSize.S);
+        // An upload stored as WebP before stage 7 still gives JPEG thumbnails.
+        var fromWebp = CoverImages.Thumbnails(SKImage.FromBitmap(source).Encode(SKEncodedImageFormat.Webp, 80).ToArray())!;
+
+        foreach (var jpeg in thumbnails.Values.Append(uploaded).Append(drawn).Concat(fromWebp.Values))
+        {
+            using var codec = SKCodec.Create(SKData.CreateCopy(jpeg));
+            Assert.AreEqual(SKEncodedImageFormat.Jpeg, codec.EncodedFormat);
+            Assert.IsTrue(HasMarker(jpeg, 0xC0), "baseline (SOF0)");
+            Assert.IsFalse(HasMarker(jpeg, 0xC2), "not progressive (SOF2)");
+        }
+        using var large = SKBitmap.Decode(thumbnails[CoverSize.L]);
+        var below = large.GetPixel(150, 300);
+        Assert.IsTrue(below.Red > 240 && below.Green > 240 && below.Blue > 240, $"transparent became white: {below}");
+        var above = large.GetPixel(150, 40);
+        Assert.IsTrue(above.Blue > 90 && above.Red < 40, $"the picture kept: {above}");
+        Assert.AreEqual(".jpg", Path.GetExtension(new CoverCache("x").PathOf("0123456789abcdef", CoverSize.M)));
+        Assert.AreEqual("\"0123456789abcdef-M.jpg\"", CoverCache.ETag("0123456789abcdef", CoverSize.M));
+    }
+
+    /// <summary>A JPEG marker (0xFF, <paramref name="code"/>): in the coded data a 0xFF is followed by 0 or a restart, never these.</summary>
+    private static bool HasMarker(byte[] jpeg, byte code)
+    {
+        for (var i = 0; i + 1 < jpeg.Length; i++)
+            if (jpeg[i] == 0xFF && jpeg[i + 1] == code)
+                return true;
+        return false;
+    }
+
     [TestMethod]
     public void AnFb2sCoverIsItsCoverpageBinary()
     {
@@ -150,8 +195,8 @@ public sealed class CoverTests
         for (var template = 0; template < GeneratedCovers.Templates.Count; template++)
             for (var variant = 0; variant < GeneratedCovers.Palettes.Count; variant++)
             {
-                var webp = GeneratedCovers.Render(template, variant, new CoverText(title, authors, series), CoverSize.M);
-                using var bitmap = SKBitmap.Decode(webp);
+                var jpeg = GeneratedCovers.Render(template, variant, new CoverText(title, authors, series), CoverSize.M);
+                using var bitmap = SKBitmap.Decode(jpeg);
                 Assert.AreEqual(240, bitmap.Width);
                 Assert.AreEqual(360, bitmap.Height);
                 if (samples is not null && variant == template % GeneratedCovers.Palettes.Count)
@@ -204,12 +249,13 @@ public sealed class CoverTests
         {
             using var response = await admin.GetAsync($"/api/books/{id}/cover/l", Cancel);
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            Assert.AreEqual("image/webp", response.Content.Headers.ContentType?.MediaType);
+            Assert.AreEqual("image/jpeg", response.Content.Headers.ContentType?.MediaType);
+            StringAssert.EndsWith(response.Headers.ETag!.Tag, ".jpg\"", "a browser's cached WebP of the same key isn't taken for it");
             using var bitmap = SKBitmap.Decode(await response.Content.ReadAsByteArrayAsync(Cancel));
             Assert.AreEqual(600, bitmap.Width);
             if (color is { } expected)
             {
-                // WebP is lossy: the colour comes back close, not exact.
+                // JPEG is lossy: the colour comes back close, not exact.
                 var pixel = bitmap.GetPixel(300, 450);
                 Assert.IsTrue(Math.Abs(pixel.Red - expected.Red) + Math.Abs(pixel.Green - expected.Green) + Math.Abs(pixel.Blue - expected.Blue) < 30,
                     $"the book's own picture: {pixel} against {expected}");
@@ -227,7 +273,7 @@ public sealed class CoverTests
             Assert.AreEqual(CoverState.Failed, (await db.Books.SingleAsync(b => b.Id == broken, Cancel)).CoverState, "looked at once, not again");
         }
 
-        var cached = Directory.GetFiles(library.CacheDirectory, "*.webp", SearchOption.AllDirectories);
+        var cached = Directory.GetFiles(library.CacheDirectory, "*.jpg", SearchOption.AllDirectories);
         Assert.AreEqual(3 + 1 + 1, cached.Length, "the book's own cover at every size, the generated ones at the size asked");
         Assert.IsTrue(cached.All(f => f.StartsWith(Path.Combine(library.CacheDirectory, "covers"), StringComparison.Ordinal)), "under the configured cache folder");
 

@@ -43,6 +43,8 @@ Merge all, the Merges sub-page), the book page's Split; tests `BookMergeUndoTest
 `admin/duplicates.spec.ts`, `books/book-page.spec.ts`, e2e `specs/duplicates.spec.ts`. The user's answers (2026-11-09)
 are the rules below.
 
+- **Shelves** (stage 7 chunk 9): a merge moves shelf rows to the kept book (or drops a place where the shelf had it),
+  logged in `BookMergeData.Shelves`; undo puts them back; a split leaves them: [shelves](shelves.md).
 - **One merge, one undo:** a merge writes a log per source, the first the parent of the others (`ParentId`); the
   Merges list shows parents only, and undoing a child undoes its parent's whole merge. `BookMergeData` keeps, besides
   what moved, the kept book's values before (`Target`) and after (`After`), and per identifier and property whether it
@@ -293,6 +295,10 @@ answers (2026-11-09) are marked below.
   else `Sound`; an initials group is kept only with a name of initials only (`NameKeys.IsInitials`) and one written
   out. 20 tags or more on a key (`MaxGroup`) = noise, kept without members, skipped until a rebuild. `BookCount` = the
   members' direct links summed over libraries when written (what the page ranks by; stale until written again).
+- **Order inside a group** (the list and a tag's look-alikes): most books first, then the **name** (ordinal, the same
+  on every system), then the id. Never by id alone: ids follow the order a scan met the files, which is the
+  directory's order on Linux and by name on Windows (found by CI on Linux, 2026-11-11; `TheFirstScanFindsLookAlikesRankedByBooks`
+  writes the files so the scan order and the name order disagree).
 - **Not the same:** `NotSameTags (TagId < OtherId)`; a group whose every pair is marked isn't stored.
 - **Build** (`BuildAsync`): per field (and plain tags) and per key kind, the tags walked in key order on their index,
   pages of 5,000; a page's last key is read again in the next page unless it fills the page. The first one runs at the

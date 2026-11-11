@@ -57,7 +57,7 @@ public sealed class CoverEditTests
     [TestMethod]
     public async Task AnUploadIsServedKeptThroughAReReadAndLetGo()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One"));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf, "One");
@@ -89,7 +89,7 @@ public sealed class CoverEditTests
     [TestMethod]
     public async Task OnePictureIsOneFile()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One"));
         shelf.Write("two.fb2", Fb2("Two"));
         await shelf.ScanAsync(Cancel);
@@ -107,7 +107,7 @@ public sealed class CoverEditTests
     [TestMethod]
     public async Task WrongPicturesAreRefused()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One"));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf, "One");
@@ -135,7 +135,7 @@ public sealed class CoverEditTests
     [TestMethod]
     public async Task AStyleOverridesTheBooksOwnCoverThroughAReRead()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One"));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf, "One");
@@ -159,7 +159,7 @@ public sealed class CoverEditTests
     [TestMethod]
     public async Task OnlyThoseWhoEditBooksChooseCovers()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One"));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf, "One");
@@ -189,19 +189,19 @@ public sealed class CoverEditTests
         return (await response.Content.ReadFromJsonAsync<BookDetail>(ApiClients.Json, Cancel))!;
     }
 
-    private async Task<int> BookIdAsync(Shelf shelf, string title)
+    private async Task<int> BookIdAsync(TestLibrary shelf, string title)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Where(b => b.Title == title).Select(b => b.Id).SingleAsync(Cancel);
     }
 
-    private async Task<string?> CoverFileAsync(Shelf shelf, int id)
+    private async Task<string?> CoverFileAsync(TestLibrary shelf, int id)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Where(b => b.Id == id).Select(b => b.CoverFile).SingleAsync(Cancel);
     }
 
-    private async Task<CoverSource> SourceAsync(Shelf shelf, int id)
+    private async Task<CoverSource> SourceAsync(TestLibrary shelf, int id)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Where(b => b.Id == id).Select(b => b.CoverSource).SingleAsync(Cancel);

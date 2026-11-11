@@ -293,6 +293,27 @@ public abstract partial class LibrarionDbContext
             Filter(entity, m => m.TenantId == CurrentTenantId);
         });
 
+        modelBuilder.Entity<Shelf>(entity =>
+        {
+            entity.Property(s => s.Name).HasMaxLength(MaxNameLength);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(s => s.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(s => new { s.UserId, s.TenantId });
+            Filter(entity, s => s.TenantId == CurrentTenantId);
+        });
+
+        modelBuilder.Entity<ShelfBook>(entity =>
+        {
+            entity.HasKey(s => new { s.ShelfId, s.BookId });
+            entity.HasOne<Shelf>().WithMany().HasForeignKey(s => s.ShelfId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Book>().WithMany().HasForeignKey(s => s.BookId).OnDelete(DeleteBehavior.Cascade);
+            // A shelf's books in its own order and by date added, walked by key; a book's shelves (merges, removals).
+            entity.HasIndex(s => new { s.ShelfId, s.Position, s.BookId });
+            entity.HasIndex(s => new { s.ShelfId, s.Added, s.BookId });
+            entity.HasIndex(s => s.BookId);
+            Filter(entity, s => s.TenantId == CurrentTenantId);
+        });
+
         modelBuilder.Entity<NotDuplicate>(entity =>
         {
             entity.HasKey(n => new { n.BookId, n.OtherId });

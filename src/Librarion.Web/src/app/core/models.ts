@@ -352,8 +352,27 @@ export interface KeysetPage<T> {
     next: string | null;
 }
 
-/** `number`: by the number on the tag's link (a series' order; books without one are left out), only with a tag. */
-export type BookSort = 'title' | 'author' | 'added' | 'number';
+/**
+ * `number`: by the number on the tag's link (a series' order; books without one are left out), only with a tag;
+ * `shelf`: a shelf's own order, only on a shelf (`added` there: put on the shelf last, first).
+ */
+export type BookSort = 'title' | 'author' | 'added' | 'number' | 'shelf';
+
+/** One of the account's shelves (agents/docs/features/shelves.md); `bookCount` counts rows, seen now or not. */
+export interface ShelfInfo {
+    id: number;
+    name: string;
+    bookCount: number;
+    created: string;
+    updated: string;
+}
+
+/** What putting books on a shelf did: those put on, and those it had already. */
+export interface ShelfAdded {
+    shelf: ShelfInfo;
+    added: number;
+    already: number;
+}
 
 /** A field of the tenant (`api/fields`): a built-in one's name is translated from its key. */
 export interface FieldInfo {
@@ -417,6 +436,41 @@ export interface LibraryInfo {
     created: string;
     /** Books in it (kept by scans). */
     bookCount?: number;
+}
+
+/** What an API key may be used for: the feeds, reading the API, everything in the API. */
+export type ApiKeyScope = 'opds' | 'api:read' | 'api:write';
+
+export const API_KEY_SCOPES: ApiKeyScope[] = ['opds', 'api:read', 'api:write'];
+
+/** An API key as listed (never its secret). */
+export interface ApiKeyInfo {
+    id: number;
+    name: string;
+    scopes: ApiKeyScope[];
+    /** The libraries it is limited to; empty = every library its account may reach. */
+    libraryIds: number[];
+    pathAllowed: boolean;
+    created: string;
+    expires: string | null;
+    revoked: string | null;
+    lastUsed: string | null;
+    lastAddress: string | null;
+}
+
+export interface ApiKeyInput {
+    name: string;
+    scopes: ApiKeyScope[];
+    libraryIds: number[];
+    pathAllowed: boolean;
+    /** UTC; null = until revoked. */
+    expires: string | null;
+}
+
+/** A key just made: its whole text, shown this once. */
+export interface NewApiKey {
+    info: ApiKeyInfo;
+    key: string;
 }
 
 export interface UserInfo {

@@ -128,7 +128,7 @@ describe('BrowsePage', () => {
         api.books.mockResolvedValue(page(1, 3, null));
         const first = await render(api);
         first.fixture.destroy();
-        const kept = TestBed.inject(BrowseState).restore('books|5||title||');
+        const kept = TestBed.inject(BrowseState).restore('books|5|||title||');
         expect(kept?.items).toHaveLength(3);
 
         const fixture = TestBed.createComponent(BrowsePage);

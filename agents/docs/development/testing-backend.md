@@ -2,6 +2,15 @@
 
 Rules and infrastructure: [testing](testing.md). Code: `tests/Librarion.Tests/Infrastructure/`.
 
+- **Linux run on this machine:** the CI's Linux-only failures (directory order, case-sensitive paths) reproduce in
+  a container: `docker run --rm -v C:/workspace/Librarion:/src:ro mcr.microsoft.com/dotnet/sdk:10.0 bash -c "mkdir
+  /work && cd /src && tar --exclude=./.git --exclude=./tests/e2e --exclude='*/node_modules' --exclude='*/bin'
+  --exclude='*/obj' -cf - . | tar -xf - -C /work && cd /work && dotnet test -p:LibrarionSkipWebClient=true"` (the
+  client already built in `wwwroot` comes along; `MSYS_NO_PATHCONV=1` from Git Bash; Docker Desktop must be allowed
+  through the firewall to `mcr.microsoft.com`). About 5 minutes.
+- **OPDS schemas:** `OpdsFeedTests.EveryFeedKindMatchesTheOpdsSchemas` checks one feed of every kind with jing when
+  `LIBRARION_OPDS_SCHEMAS` names the cache of `agents/tools/opds-validate` (its `fetch`, once); without it the test
+  ends inconclusive (skipped), never passed. CI sets it on every backend job.
 - **Two runs, one per provider:** `dotnet test` uses SQLite; with `LIBRARION_TEST_POSTGRES` set to a server
   connection string (a user that may create databases) every `TestCatalog` makes its own database there and drops it
   (`WITH (FORCE)`) at the end. Local server: `agents/tools/postgres-dev/` (Docker). CI runs both.

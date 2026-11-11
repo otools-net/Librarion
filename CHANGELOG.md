@@ -2,6 +2,59 @@
 
 User-visible changes per version (agents/docs/development/versioning-and-changelog.md).
 
+## 0.8.0
+
+### Fixed
+
+- **Plain tags A–Z** and other lists of values open faster on PostgreSQL with very many tags (70 ms → 11 ms at 2M
+  books); a reader app's first letters of authors and tags come in one query.
+- **Tags → Possible duplicates**: tags with as many books are listed by name; their order depended on the order the
+  files were found, which differs between Linux and Windows.
+
+### Changed
+
+- **Covers are JPEG** everywhere (they were WebP), so every reader app can show them. Covers already made are made
+  again when next shown; covers uploaded before are kept and shown as JPEG too.
+
+### Added
+
+- New rights, given to every built-in group: **Reader apps (OPDS)** (per library, for the coming OPDS catalog at
+  `/opds`), **Own API keys** and **Own shelves**. Reader apps sign in with a password or an API key; the web app's
+  sign-in never opens the catalog. The catalog itself comes in the next changes.
+- Reader apps sign in to `/opds` with the account's name and password (Basic). Wrong passwords count as on the sign-in
+  page (five from one address and that address waits) and appear in the security log. Each account's reader apps may
+  make `Librarion:Security:OpdsRequestsPerMinute` (600) requests a minute.
+- **API keys** (My account → API keys): named keys for reader apps and scripts, each for
+  reader apps (OPDS), reading the API and/or changing through it, optionally limited to some libraries and to an end
+  date. A key is shown once; it works as the password in a reader app, or as `Authorization: Bearer` / `X-Api-Key`.
+  It ends when revoked, at its end date, or when the account's password changes or the account is disabled.
+  The page shows the catalog's address for reader apps. Administrators can see and revoke an account's keys on its
+  page in Administration → Users. The security log notes keys made and revoked. A database made
+  by an earlier build must be deleted (before 1.0 the database is not upgraded).
+- **The OPDS catalog** at `/opds` for reader apps: the libraries the account may read (with one, its catalog at
+  once), each with its books **recently added** and **by title**, 50 a page, each book with its authors, language,
+  categories, series, description, cover and a download link per file; **authors, series, categories, languages and
+  the other fields** and **tags**, by first letter when there are many (a series in its order, a tag with the tags
+  under it). **Search** from the reader app's search box, in the same search language as the web app (`author:`,
+  `-` to leave out…), the results by title, 50 a page. FB2 books can also be downloaded as **`fb2.zip`** (zipped as
+  they are sent, much smaller). A reader app still showing a book merged into another downloads its file and cover.
+- **Shelves**: personal lists of books, up to 100 per account (the setting **Shelves per account**, server or
+  tenant, 1 to 1,000), 10,000 books each, showing only the books the account may see. A merged book's places on
+  shelves go to the book it was merged into, and back on undo. **Add to shelf** on a book's page and in the
+  selection bar (tick a shelf to put the books on it, clear it to take them off; **New shelf** makes one);
+  **Shelves** in the navigation, a **Shelves** page (`/shelves`), and a page per shelf (`/shelves/<id>/<name>`) with
+  its books in **its own order** (or by title, author, date added). The order changes by **dragging** a book's grip
+  (mouse or finger), by the **arrow keys, Home and End** on it, or with **Move** (a click on the grip: to the start,
+  up, down, to the end); a selected book moves with its selection. **Remove from shelf**, **Rename** and **Delete**
+  (asking first; the books stay). Through the API too (`api/shelves`; `POST …/books/move` moves a selection at
+  once). In the **OPDS catalog**, each library lists **My shelves** once the account has one: each shelf's books of
+  that library, in the shelf's own order.
+- **API keys in the address:** a key made with **Can be used in the address** opens the catalog from
+  `…/opds/k/<key>` alone, for reader apps that can't sign in; every link of the catalog keeps it. Under a new key,
+  **How to use it** gives that address (with **Copy address**), or the user name and the key as the password, and
+  the headers for scripts. The tenant setting **API keys in the address** (Reader apps) switches it off. Keys are
+  never written to the server's log, whatever its log level.
+
 ## 0.7.0
 
 ### Added

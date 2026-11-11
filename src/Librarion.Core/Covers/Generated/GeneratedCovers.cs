@@ -45,7 +45,7 @@ public static class GeneratedCovers
         return on.Count > 0 ? on : Enumerable.Range(0, Templates.Count).ToList();
     }
 
-    /// <summary>The cover drawn at <paramref name="size"/> (2:3), as WebP. An unknown index falls back to the first.</summary>
+    /// <summary>The cover drawn at <paramref name="size"/> (2:3), as JPEG. An unknown index falls back to the first.</summary>
     public static byte[] Render(int template, int variant, CoverText text, CoverSize size)
     {
         var width = CoverImages.Width(size);

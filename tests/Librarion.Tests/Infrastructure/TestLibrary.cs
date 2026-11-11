@@ -8,11 +8,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Librarion.Tests.Infrastructure;
 
 /// <summary>A set-up server whose first library has one root, a temp folder, and its administrator's client.</summary>
-internal sealed class Shelf : IAsyncDisposable
+internal sealed class TestLibrary : IAsyncDisposable
 {
     private readonly TestCatalog catalog;
 
-    private Shelf(TestCatalog catalog, WebApplicationFactory<Program> factory, HttpClient admin, string root, int tenantId, int libraryId)
+    private TestLibrary(TestCatalog catalog, WebApplicationFactory<Program> factory, HttpClient admin, string root, int tenantId, int libraryId)
     {
         this.catalog = catalog;
         Factory = factory;
@@ -28,10 +28,10 @@ internal sealed class Shelf : IAsyncDisposable
     public int TenantId { get; }
     public int LibraryId { get; }
 
-    public static async Task<Shelf> CreateAsync(CancellationToken cancellationToken)
+    public static async Task<TestLibrary> CreateAsync(CancellationToken cancellationToken, Action<IServiceCollection>? services = null)
     {
         var catalog = new TestCatalog();
-        var factory = ApiClients.CreateFactory(catalog);
+        var factory = ApiClients.CreateFactory(catalog, services: services);
         var (admin, session) = await ApiClients.SetUpAsync(factory, cancellationToken);
         var tenantId = session.Tenant!.Id;
         var root = Path.Combine(catalog.BasePath, "books");
@@ -40,7 +40,7 @@ internal sealed class Shelf : IAsyncDisposable
         var library = await db.Libraries.SingleAsync(cancellationToken);
         db.LibraryRoots.Add(new LibraryRoot { TenantId = tenantId, LibraryId = library.Id, Path = root, Created = DateTime.UtcNow });
         await db.SaveChangesAsync(cancellationToken);
-        return new Shelf(catalog, factory, admin, root, tenantId, library.Id);
+        return new TestLibrary(catalog, factory, admin, root, tenantId, library.Id);
     }
 
     public Task<ScanResult> ScanAsync(CancellationToken cancellationToken) =>

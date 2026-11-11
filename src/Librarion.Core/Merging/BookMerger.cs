@@ -33,9 +33,13 @@ public sealed partial class BookMerger(TenantDb tenantDb, TimeProvider time)
     /// What a book merge moved, what the kept book had before (<see cref="Target"/>) and after (<see cref="After"/>: a
     /// value the undo finds unchanged since goes back) (<see cref="MergeLog.Data"/>).
     /// </summary>
+    /// <param name="Shelves">The source's places on shelves (null in logs written before shelves).</param>
     public sealed record BookMergeData(
         IReadOnlyList<int> Files, IReadOnlyList<LinkData> Links, IReadOnlyList<ValueData> Identifiers, IReadOnlyList<ValueData> Properties, IReadOnlyList<int> Suppressed,
-        TargetData Target, TargetData After);
+        TargetData Target, TargetData After, IReadOnlyList<ShelfData>? Shelves = null);
+
+    /// <summary>The source on a shelf, where; <paramref name="Moved"/>: the kept book took its place (else the shelf had the kept book already: dropped).</summary>
+    public sealed record ShelfData(int ShelfId, long Position, DateTime Added, bool Moved);
 
     /// <param name="Moved">Given to the kept book; false when it had the tag already (dropped).</param>
     public sealed record LinkData(int TagId, TagSource Source, int? Ordinal, double? Number, bool Moved);
@@ -117,11 +121,21 @@ public sealed partial class BookMerger(TenantDb tenantDb, TimeProvider time)
             var suppressed = await db.BookTagSuppressions.Where(s => s.BookId == sourceId).Select(s => s.TagId).ToListAsync(cancellationToken);
             await db.BookTagSuppressions.Where(s => s.BookId == sourceId).ExecuteDeleteAsync(cancellationToken);
 
+            // Shelves (every account's): the kept book takes the source's place, or the shelf had it already (one fewer).
+            var onShelves = (await db.ShelfBooks.Where(s => s.BookId == input.TargetId).Select(s => s.ShelfId).ToListAsync(cancellationToken)).ToHashSet();
+            var shelved = (await db.ShelfBooks.Where(s => s.BookId == sourceId).Select(s => new { s.ShelfId, s.Position, s.Added }).ToListAsync(cancellationToken))
+                .Select(s => new ShelfData(s.ShelfId, s.Position, s.Added, !onShelves.Contains(s.ShelfId))).ToList();
+            await db.ShelfBooks.Where(s => s.BookId == sourceId).ExecuteDeleteAsync(cancellationToken);
+            db.ShelfBooks.AddRange(shelved.Where(s => s.Moved)
+                .Select(s => new ShelfBook { TenantId = tenantId, ShelfId = s.ShelfId, BookId = input.TargetId, Position = s.Position, Added = s.Added }));
+            foreach (var dropped in shelved.Where(s => !s.Moved))
+                await db.Shelves.Where(s => s.Id == dropped.ShelfId).ExecuteUpdateAsync(s => s.SetProperty(x => x.BookCount, x => x.BookCount - 1), cancellationToken);
+
             source.MergedIntoId = input.TargetId;
             source.Updated = now;
             // Saved before the next source: its links and identifiers are checked against what the kept book has now.
             await db.SaveChangesAsync(cancellationToken);
-            moves.Add((sourceId, sourceName, after => new BookMergeData(files, logged, givenIds, givenProperties, suppressed, targetData, after), logged.Count(l => l.Moved)));
+            moves.Add((sourceId, sourceName, after => new BookMergeData(files, logged, givenIds, givenProperties, suppressed, targetData, after, shelved), logged.Count(l => l.Moved)));
         }
 
         Choose(target, input.TitleFrom, books, (to, from) => { to.Title = from.Title; to.SortTitle = from.SortTitle; to.SearchText = from.SearchText; to.Edited |= BookEdits.Title; });

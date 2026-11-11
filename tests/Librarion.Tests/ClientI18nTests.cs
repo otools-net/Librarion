@@ -92,13 +92,13 @@ public sealed partial class ClientI18nTests
 
         var named = RightCatalog.All.Select(r => r.Id).Concat(SettingCatalog.All.Select(s => s.Key)).ToHashSet(StringComparer.Ordinal);
         foreach (var source in new[] { "Access/AccessService.cs", "Access/SetupService.cs", "Access/AccountRecovery.cs", "Settings/SettingsService.cs", "Settings/SettingCatalog.cs",
-                     "Tagging/TagService.cs", "Merging/TagMerger.cs", "Catalog/BookEditor.cs", "Tagging/BookTagger.cs" })
+                     "Tagging/TagService.cs", "Merging/TagMerger.cs", "Catalog/BookEditor.cs", "Tagging/BookTagger.cs", "Access/ApiKeys.cs" })
         {
             var text = File.ReadAllText(RepositoryFiles.PathOf("src/Librarion.Core/" + source));
             wanted.AddRange(ErrorCode().Matches(text).Select(m => m.Groups[1].Value).Where(code => !named.Contains(code)).Select(code => $"error.{code}"));
         }
 
-        foreach (var endpoints in new[] { "TaskEndpoints.cs", "BookEndpoints.cs" })
+        foreach (var endpoints in new[] { "TaskEndpoints.cs", "BookEndpoints.cs", "ApiKeyEndpoints.cs" })
             wanted.AddRange(ErrorCode().Matches(File.ReadAllText(RepositoryFiles.PathOf($"src/Librarion.Api/Endpoints/{endpoints}"))).Select(m => $"error.{m.Groups[1].Value}"));
 
         var kinds = File.ReadAllText(Path.Combine(AppFolder, "admin", "security-section.ts"));

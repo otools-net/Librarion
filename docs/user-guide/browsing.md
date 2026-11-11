@@ -27,6 +27,8 @@ If you may tag books in the library (Curators and Administrators may), you can g
   books, or a search's results. It says how many books that is first ("at least 10,000" for a longer list); choose the tags to give and to take away, then
   **Apply**. A big change runs in the background, shown in the panel under the top bar.
 - A tag you take away stays away when the library is scanned or imported again.
+- **Add to shelf** in the bar puts the selected books on your shelves ([Shelves](shelves.md)); with that right only
+  (and not the right to tag), you can select books for it too.
 
 ## Authors, series, tags and other fields
 
@@ -88,7 +90,7 @@ A cover or row opens the book's page; **Back** returns to where you were, scroll
   What you change stays when the book's file is read again or the library is imported again, and a tag you took off
   stays off.
 - **Cover** (for those allowed to edit books there) changes the book's cover: **Upload a picture…** (JPEG, PNG or
-  WebP, at most 5 MB; it is checked and stored at most 1,200 pixels wide), or pick a **drawn cover** among the book
+  WebP, at most 5 MB; it is checked and stored as a JPEG at most 1,200 pixels wide), or pick a **drawn cover** among the book
   drawn in each style turned on (and the book's own) and set of colors, also over a cover the book came with. **Use the book's cover** goes back to
   the one it came with (or its drawn one when it has none). What you choose stays when the book is read or imported
   again.

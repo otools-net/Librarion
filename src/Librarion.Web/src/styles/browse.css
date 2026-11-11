@@ -29,9 +29,10 @@
     gap: var(--space-2);
 }
 
-/* On a phone a tool shows its icon only (Tag all), its name kept for screen readers: the row fits 360 px. */
+/* On a phone a tool shows its icon only (Tag all, the selection bar's), its name kept for screen readers: the row fits 360 px. */
 @media (max-width: 480px) {
-    .browse-tools .tool-label {
+    .browse-tools .tool-label,
+    .selection-bar .tool-label {
         position: absolute;
         width: 1px;
         height: 1px;
@@ -782,6 +783,175 @@
 .scope-count {
     margin: 0;
     font-weight: 600;
+}
+
+/* A shelf's own order (browse/shelf-order.ts, agents/docs/features/shelves.md): a grip on each book, at the top
+   right, always shown (touch has no hover); the books dragged faded, a bar where they will go. */
+.book-move {
+    position: absolute;
+    inset: var(--space-1) var(--space-1) auto auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.book-move:hover,
+.book-move:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.books.list .book-move {
+    inset: 50% var(--space-2) auto auto;
+    transform: translateY(-50%);
+}
+
+@media (pointer: coarse) {
+    .book-move {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+.books.sorting {
+    cursor: grabbing;
+    user-select: none;
+}
+
+.book.dragging {
+    opacity: 0.45;
+}
+
+.book.drop-before::after,
+.book.drop-after::after {
+    position: absolute;
+    border-radius: 2px;
+    background: var(--accent);
+    content: "";
+    pointer-events: none;
+}
+
+.books.grid .book.drop-before::after {
+    inset: 0 auto 0 -6px;
+    width: 4px;
+}
+
+.books.grid .book.drop-after::after {
+    inset: 0 -6px 0 auto;
+    width: 4px;
+}
+
+.books.list .book.drop-before::after {
+    inset: -2px 0 auto;
+    height: 4px;
+}
+
+.books.list .book.drop-after::after {
+    inset: auto 0 -2px;
+    height: 4px;
+}
+
+.shelf-move-place {
+    margin: 0 0 var(--space-3);
+    font-weight: 600;
+}
+
+.shelf-move-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+/* Add to shelf (shelves/shelf-picker.ts) and the Shelves page (shelves/shelves-page.ts). */
+.shelf-pick-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    list-style: none;
+}
+
+.shelf-pick-rows .check {
+    align-items: center;
+    min-height: 40px;
+}
+
+.shelf-pick-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.shelf-new {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+
+.shelf-new .field {
+    flex: 1 1 14rem;
+    margin: 0;
+}
+
+.shelf-list {
+    display: flex;
+    flex-direction: column;
+    max-width: 40rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    list-style: none;
+}
+
+.shelf-list li + li {
+    border-top: 1px solid var(--border);
+}
+
+.shelf-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.shelf-row:hover {
+    background: var(--surface-2);
+}
+
+.shelf-row > .icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.shelf-row-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.shelf-row-count {
+    color: var(--text-muted);
+    white-space: nowrap;
 }
 
 /* The bar never covers the last row. */

@@ -74,7 +74,7 @@ test.describe('@library', () => {
 
         const cover = await api.get(`api/books/${book.id}/cover/m`, { headers });
         expect(cover.status()).toBe(200);
-        expect(cover.headers()['content-type']).toBe('image/webp');
+        expect(cover.headers()['content-type']).toBe('image/jpeg');
     });
 
     test('a schedule says what it runs: chosen first in its dialog, then when, and turned off by its switch @desktop', async ({ page, isMobile }, testInfo) => {

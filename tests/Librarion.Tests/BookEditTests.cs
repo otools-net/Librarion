@@ -30,7 +30,7 @@ public sealed class BookEditTests
     [TestMethod]
     public async Task EditsStayWhenTheFileIsReadAgain()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var file = shelf.Write("one.fb2", Fb2("Teh Shining", ["Stephen King", "Peter Straub"], "Horror, Typo tag", "Dark", "Imported text"));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf);
@@ -90,7 +90,7 @@ public sealed class BookEditTests
     [TestMethod]
     public async Task EditsAreChecked()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", ["Ann Writer"]));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf);
@@ -115,7 +115,7 @@ public sealed class BookEditTests
     [TestMethod]
     public async Task TaggingAndEditingNeedTheirRightsInTheLibrary()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", ["Ann Writer"]));
         await shelf.ScanAsync(Cancel);
         var id = await BookIdAsync(shelf);
@@ -138,21 +138,21 @@ public sealed class BookEditTests
 
     // ---- Helpers ----
 
-    private async Task<BookDetail> EditAsync(Shelf shelf, int id, BookEdit edit)
+    private async Task<BookDetail> EditAsync(TestLibrary shelf, int id, BookEdit edit)
     {
         using var response = await shelf.Admin.PutAsJsonAsync($"/api/books/{id}", edit, Cancel);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
         return (await response.Content.ReadFromJsonAsync<BookDetail>(ApiClients.Json, Cancel))!;
     }
 
-    private async Task AssertInvalidAsync(Shelf shelf, int id, BookEdit edit, string code)
+    private async Task AssertInvalidAsync(TestLibrary shelf, int id, BookEdit edit, string code)
     {
         using var response = await shelf.Admin.PutAsJsonAsync($"/api/books/{id}", edit, Cancel);
         Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
         StringAssert.Contains(await response.Content.ReadAsStringAsync(Cancel), code);
     }
 
-    private async Task AssertBookAsync(Shelf shelf, int id, string sortAuthor, string title)
+    private async Task AssertBookAsync(TestLibrary shelf, int id, string sortAuthor, string title)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var book = await db.Books.SingleAsync(b => b.Id == id, Cancel);
@@ -162,25 +162,25 @@ public sealed class BookEditTests
         Assert.AreEqual(PathKeys.Of(TagNames.Normalize(book.Title ?? "one"), author is null ? "" : TagNames.Normalize(author)), book.WorkKey);
     }
 
-    private async Task<int> BookIdAsync(Shelf shelf)
+    private async Task<int> BookIdAsync(TestLibrary shelf)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Select(b => b.Id).SingleAsync(Cancel);
     }
 
-    private async Task<int> TagIdAsync(Shelf shelf, string name)
+    private async Task<int> TagIdAsync(TestLibrary shelf, string name)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Tags.Where(t => t.Name == name).Select(t => t.Id).SingleAsync(Cancel);
     }
 
-    private async Task<(int, int)> CountsAsync(Shelf shelf, int tagId)
+    private async Task<(int, int)> CountsAsync(TestLibrary shelf, int tagId)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var row = await db.TagCounts.SingleOrDefaultAsync(c => c.TagId == tagId && c.LibraryId == shelf.LibraryId, Cancel);
         return row is null ? (0, 0) : (row.BookCount, row.TotalCount);
     }
 
-    private async Task<int> CountAsync(Shelf shelf, string q) =>
+    private async Task<int> CountAsync(TestLibrary shelf, string q) =>
         (await shelf.Admin.GetAsync<Page<BookListItem>>($"/api/books?library={shelf.LibraryId}&limit=50&q={Uri.EscapeDataString(q)}", Cancel)).Items.Count;
 }

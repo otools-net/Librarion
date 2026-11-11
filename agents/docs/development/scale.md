@@ -203,3 +203,29 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
 - What the benchmark found: the tenant filter as an `OR` (now two models), no index for sorting every library by
   author or date, fields found by scanning `BuiltIn`, tag pages joined one way for every size (before: Fiction 2.9 s, a
   0.1 % filter 0.8 s), parallel workers on PostgreSQL, a big series by number walked from its title.
+- **OPDS** (stage 7 chunk 14, 2026-11-11, 2M, warm, p95 in ms, budget 150 a feed page; `run --only opds` for the
+  queries and their plans, `opds` for the whole feeds over HTTP from the real server, Basic as a Users account):
+
+  | Feed (over HTTP) | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | root / a library's catalog | 5.7 / 5.7 | 27 / 27 |
+  | recent / by title, first and deep page | 12–15 | 23–30 |
+  | authors: first letters (kept) / from a letter | 6.4 / 6.0 | 22 / 16 |
+  | the most prolific author's books | 40 | 51 |
+  | the biggest series by number | 18 | 33 |
+  | plain tags (first letters, kept) | 4.6 | 8.2 |
+  | search a word in many titles | 84 | 126 |
+  | my shelves / a shelf of 10,000 books, first and middle page | 1.5 / 16–20 | 2.6 / 28–33 |
+
+  Queries alone (`run`): the letters **uncached** 3–4 ms on SQLite, 6 / 21 ms on PostgreSQL (authors / plain tags),
+  a page's entries (files, languages, categories of 50 books) 13 / 18 ms; the whole `run` (101 queries) within budget
+  on PostgreSQL with no full scan. **Basic:** an account's first request (its password hashed) p50 188 / 236 ms, p95
+  246 / 341 ms; then from the verification cache as any other request. **Memory:** the server 132 / 139 MB once
+  started, **162 / 214 MB idle** after the run (budget 500).
+- What the OPDS run found first (PostgreSQL): the fields with values as one `EXISTS` per field, answered by a scan of
+  `Tags` from its start (95 ms; now ordered on the index); the first letters as ~90 queries (186 ms for authors) and,
+  for plain tags, `FieldKey IS NULL` turning to another index and a sort of 50k rows per letter (**1.7 s**; now one
+  query, a `VALUES` list with a correlated `LIMIT 1` each, the fields' rows stepped over); and `FieldId IS NULL`
+  not taken as a fixed value for the index's order (a sort: plain tags A–Z 70 ms, now 11, ordered by `FieldId`
+  first). On SQLite `FieldKey IS NOT NULL` alone scanned `Tags` (ordered by `FieldKey`, as `FieldsAsync` already
+  was). The plan checker counted EF's `WHERE 0` (an empty list) as a scan on SQLite: no longer.

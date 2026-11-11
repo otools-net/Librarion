@@ -18,6 +18,7 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
     public const string DefaultLibraryName = "Library";
 
     private readonly ConcurrentDictionary<int, (long Version, SessionUser? User)> _sessionUsers = new();
+    private readonly ConcurrentDictionary<int, (long Version, int? TenantId)> _libraryTenants = new();
 
     private DateTime Now => time.GetUtcNow().UtcDateTime;
 
@@ -36,6 +37,22 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
             .FirstOrDefaultAsync(cancellationToken);
         _sessionUsers[userId] = (version, user);
         return user;
+    }
+
+    /// <summary>
+    /// The tenant a library belongs to (null when it doesn't exist), for server-wide code that is given a library alone
+    /// (a server administrator's OPDS address). Cached until the next change of accounts or libraries.
+    /// </summary>
+    public async Task<int?> LibraryTenantAsync(int libraryId, CancellationToken cancellationToken = default)
+    {
+        var version = changes.Version;
+        if (_libraryTenants.TryGetValue(libraryId, out var cached) && cached.Version == version)
+            return cached.TenantId;
+
+        await using var db = await tenantDb.ForServerAsync(cancellationToken);
+        var tenantId = await db.Libraries.AsNoTracking().Where(l => l.Id == libraryId).Select(l => (int?)l.TenantId).FirstOrDefaultAsync(cancellationToken);
+        _libraryTenants[libraryId] = (version, tenantId);
+        return tenantId;
     }
 
     public async Task<bool> HasServerAdminAsync(CancellationToken cancellationToken = default)
@@ -217,6 +234,8 @@ public sealed class AccessService(TenantDb tenantDb, AccessChanges changes, IOpt
         if (library is null)
             return false;
         await db.Settings.Where(s => s.Level == SettingLevel.Library && s.OwnerId == libraryId).ExecuteDeleteAsync(cancellationToken);
+        // Its books go with it (the database's cascade): the shelves holding some count them out first.
+        await Catalog.Shelves.BooksLeavingAsync(db, db.ShelfBooks.Where(s => db.Books.Any(b => b.Id == s.BookId && b.LibraryId == libraryId)), cancellationToken);
         db.Libraries.Remove(library);
         await db.SaveChangesAsync(cancellationToken);
         changes.Changed();

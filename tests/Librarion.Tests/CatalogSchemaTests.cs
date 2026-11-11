@@ -21,7 +21,7 @@ public sealed class CatalogSchemaTests
         using var catalog = new TestCatalog();
         await using var factory = ApiClients.CreateFactory(catalog);
         using (ApiClients.Create(factory)) { }
-        var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("Shelf"), Cancel)).Value!;
+        var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("TestLibrary"), Cancel)).Value!;
 
         await using var db = await factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(tenant.Id, Cancel);
         var tags = await db.Tags.ToListAsync(Cancel);
@@ -41,7 +41,7 @@ public sealed class CatalogSchemaTests
         using var catalog = new TestCatalog();
         await using var factory = ApiClients.CreateFactory(catalog);
         using (ApiClients.Create(factory)) { }
-        var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("Shelf"), Cancel)).Value!;
+        var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("TestLibrary"), Cancel)).Value!;
         await using var db = await factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(tenant.Id, Cancel);
         var bookId = await CatalogRows.AddAsync(db, tenant.Id, Cancel);
         var author = await db.Tags.SingleAsync(t => t.BuiltIn == BuiltInTag.Author, Cancel);

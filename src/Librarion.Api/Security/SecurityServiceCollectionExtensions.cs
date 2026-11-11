@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Librarion.Core.Access;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -10,6 +11,12 @@ namespace Librarion.Api.Security;
 public static class SecurityServiceCollectionExtensions
 {
     public const string SignInRateLimit = "sign-in";
+
+    /// <summary>The default scheme: an API key when the request names one, else the session cookie.</summary>
+    public const string DefaultScheme = "Librarion";
+
+    /// <summary>Reader apps' requests per minute, by the Basic name (else the address): <see cref="SecurityOptions.OpdsRequestsPerMinute"/>.</summary>
+    public const string OpdsRateLimit = "opds";
 
     /// <summary>Sign-in cookie, rights, sign-in limits and forwarded headers (agents/docs/architecture/sessions-and-pipeline.md).</summary>
     public static IServiceCollection AddLibrarionSecurity(this IServiceCollection services, IConfiguration configuration, string contentRoot)
@@ -24,8 +31,13 @@ public static class SecurityServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<CurrentAccess>();
         services.AddSingleton<SignInThrottle>();
+        services.AddSingleton<Librarion.Api.Opds.BasicVerificationCache>();
 
-        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        // A request naming an API key is the key's, whatever cookie it carries (no CSRF through a key); others the cookie's.
+        services.AddAuthentication(DefaultScheme)
+            .AddPolicyScheme(DefaultScheme, null, options => options.ForwardDefaultSelector = context =>
+                ApiKeySignIn.HasKeyHeader(context.Request) ? ApiKeyAuthenticationHandler.SchemeName : CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null)
             .AddCookie(options =>
             {
                 options.Cookie.Name = LibrarionSession.CookieName;
@@ -48,7 +60,9 @@ public static class SecurityServiceCollectionExtensions
                     return Task.CompletedTask;
                 };
                 options.Events.OnValidatePrincipal = LibrarionSession.ValidateAsync;
-            });
+            })
+            // Reader apps on /opds: Basic or API keys, never the cookie (Opds/OpdsAuthentication.cs).
+            .AddScheme<AuthenticationSchemeOptions, Librarion.Api.Opds.OpdsAuthenticationHandler>(Librarion.Api.Opds.OpdsAuthenticationHandler.SchemeName, null);
 
         services.AddAuthorization();
         services.AddSingleton<IAuthorizationPolicyProvider, RightPolicyProvider>();
@@ -75,6 +89,11 @@ public static class SecurityServiceCollectionExtensions
             options.AddPolicy(SignInRateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? string.Empty,
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, security.SignInsPerMinute), Window = TimeSpan.FromMinutes(1) }));
+            // Before authorization, so by what the request says it is: a feed page asks for its covers too (dozens a page).
+            options.AddPolicy(OpdsRateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
+                Librarion.Api.Opds.OpdsPathKey.Of(context) is { } pathKey ? "key:" + (ApiKeys.Parse(pathKey)?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?")
+                : Librarion.Api.Opds.OpdsAuthenticationHandler.ReadBasic(context.Request) is var (name, _) ? "user:" + name.Trim().ToUpperInvariant() : "address:" + context.Address(),
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, security.OpdsRequestsPerMinute), Window = TimeSpan.FromMinutes(1) }));
         });
 
         return services;

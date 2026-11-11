@@ -43,8 +43,15 @@ public sealed class TenancyTests
             await settings.SaveAsync(new SettingOwner(SettingLevel.User, user.Id), null,
                 new SettingChanges(new() { [SettingCatalog.PageSize] = System.Text.Json.JsonDocument.Parse("100").RootElement }), Cancel);
             await services.GetRequiredService<SecurityLog>().WriteAsync(SecurityEventKind.UserCreated, tenant.Id, null, "x", null, cancellationToken: Cancel);
+            var owner = (await accounts.GetSessionUserAsync(user.Id, Cancel))!;
+            Assert.AreEqual(AccessStatus.Ok, (await services.GetRequiredService<ApiKeys>().CreateAsync(owner, new ApiKeyInput("key", [ApiKeyScopes.Opds], [library.Id]), Cancel)).Status);
             await using var tenantRows = await tenantDb.ForTenantAsync(tenant.Id, Cancel);
             await CatalogRows.AddAsync(tenantRows, tenant.Id, Cancel);
+            var shelf = new Shelf { TenantId = tenant.Id, UserId = user.Id, Name = "Mine", Created = DateTime.UtcNow, Updated = DateTime.UtcNow, BookCount = 1 };
+            tenantRows.Shelves.Add(shelf);
+            await tenantRows.SaveChangesAsync(Cancel);
+            tenantRows.ShelfBooks.Add(new ShelfBook { TenantId = tenant.Id, ShelfId = shelf.Id, BookId = await tenantRows.Books.Select(b => b.Id).FirstAsync(Cancel), Position = 1024, Added = DateTime.UtcNow });
+            await tenantRows.SaveChangesAsync(Cancel);
         }
 
         await using var db = await tenantDb.ForTenantAsync(a.Id, Cancel);
@@ -76,6 +83,10 @@ public sealed class TenancyTests
             ["BookTags"] = await db.BookTags.CountAsync(x => x.TenantId != a.Id, Cancel),
             ["TagCounts"] = await db.TagCounts.CountAsync(x => x.TenantId != a.Id, Cancel),
             ["GroupTagFilters"] = await db.GroupTagFilters.CountAsync(x => x.Tag!.TenantId != a.Id, Cancel),
+            ["ApiKeys"] = await db.ApiKeys.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["ApiKeyLibraries"] = await db.ApiKeyLibraries.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["Shelves"] = await db.Shelves.CountAsync(x => x.TenantId != a.Id, Cancel),
+            ["ShelfBooks"] = await db.ShelfBooks.CountAsync(x => x.TenantId != a.Id, Cancel),
         };
         var seenOfA = await db.Users.CountAsync(Cancel) + await db.GroupLibraries.CountAsync(Cancel) + await db.Settings.CountAsync(Cancel);
         Assert.AreEqual(1, await db.Books.CountAsync(Cancel), "The tenant's own book is seen");

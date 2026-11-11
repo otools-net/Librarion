@@ -42,12 +42,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RightsEvaluator>();
         services.AddSingleton<IUserDirectory, LocalUserDirectory>();
         services.AddSingleton<SignInService>();
+        services.AddSingleton<ApiKeys>();
         services.AddSingleton<SetupService>();
         services.AddSingleton<SecurityLog>();
         services.AddHostedService<SecurityLogCleanup>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<BookVisibilities>();
         services.AddSingleton<BookQueries>();
+        services.AddSingleton<Shelves>();
         services.AddSingleton<FolderQueries>();
         services.AddSingleton<Librarion.Core.Tagging.DefaultTags>();
         services.AddSingleton<TagQueries>();

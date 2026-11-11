@@ -42,7 +42,8 @@ npx playwright show-report <tmp>/librarion-e2e/report   # the HTML report, trace
 | `fixtures/press.ts` | `press(locator, isMobile)`: tap on phones, click on the desktop |
 | `fixtures/accounts.ts` | `makeAccount` (a new account per test, through the API as the administrator), `asAdmin`, `uniqueName`, `signIn` (through the page) |
 | `fixtures/axe.ts` | `audit(page, screen)`: axe WCAG 2.2 AA, serious and critical fail |
-| `specs/` | `smoke` (`@smoke`), `a11y` (`@a11y`), `accounts` (`@accounts`: sign-in, sign-out, recovery), `admin` (`@admin`: account, group, right used), `harness` |
+| `fixtures/opds.ts` | `ReaderApp` (HTTP only: Basic, or nothing for a key in the address), `parseFeed` (titles and links of an Atom feed), `entryOf`, `linkOf` |
+| `specs/` | `smoke` (`@smoke`), `a11y` (`@a11y`), `accounts` (`@accounts`: sign-in, sign-out, recovery), `admin` (`@admin`: account, group, right used), `opds` (`@opds`: the catalog as a reader app, desktop project only), `harness` |
 
 ## Writing a spec
 

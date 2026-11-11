@@ -361,7 +361,7 @@ public sealed class AccessTests
         using var catalog = new TestCatalog();
         await using var factory = ApiClients.CreateFactory(catalog);
         using var admin = (await ApiClients.SetUpAsync(factory, Cancel)).Client;
-        var other = await Created<TenantInfo>(await admin.PostAsJsonAsync("/api/tenants", new TenantInput("Other", LibraryName: "Shelf"), ApiClients.Json, Cancel));
+        var other = await Created<TenantInfo>(await admin.PostAsJsonAsync("/api/tenants", new TenantInput("Other", LibraryName: "TestLibrary"), ApiClients.Json, Cancel));
 
         using var switched = await admin.PostAsJsonAsync("/api/session/tenant", new TenantChoice(other.Id), ApiClients.Json, Cancel);
         var session = await switched.Content.ReadFromJsonAsync<SessionInfo>(ApiClients.Json, Cancel);
@@ -369,7 +369,7 @@ public sealed class AccessTests
 
         Assert.AreEqual("Other", session!.Tenant!.Name);
         Assert.AreEqual(2, session.Tenants.Count);
-        Assert.AreEqual("Shelf", libraries.Single().Name);
+        Assert.AreEqual("TestLibrary", libraries.Single().Name);
         Assert.AreEqual("other", other.Slug);
     }
 

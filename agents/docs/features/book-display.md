@@ -1,7 +1,7 @@
 # How a book is shown: cover and title
 
 Built (stage 2): `Title` / `SortTitle`, the cover columns, `BookTitles` and `FileTitles` ([catalog](catalog.md)).
-Built (stage 3): `Core/Covers/` (`CoverExtractor` per format, `CoverImages` decode / resize / WebP, `CoverCache`,
+Built (stage 3): `Core/Covers/` (`CoverExtractor` per format, `CoverImages` decode / resize / JPEG, `CoverCache`,
 `CoverService`, `Generated/` fonts, layout, templates), route `GET api/books/{id}/cover/{s|m|l}` (`library.browse`),
 assignment at import (`CatalogWriter.Apply`); tests `CoverTests`. Built (stage 6 chunk 10a): upload, Change cover
 style, back to the book's own ([below](#a-books-cover-chosen-built-stage-6-chunk-10a)). Built (10b): Cover styles,
@@ -38,7 +38,7 @@ Every list, grid, search result, book page and OPDS entry shows a book the same 
   - CBZ/CBR: the first image in natural name order (`ComicInfo.xml` `FrontCover` page when set);
   - PDF, DJVU: no page renderer on the server in v1 → a generated cover (below); a first-page render can come later.
   - Calibre import: `cover.jpg` of the book's folder.
-- **Thumbnails** at fixed sizes, made from the cover once and kept in a sharded disk cache (`covers/ab/cd/<hash>-<size>.webp`,
+- **Thumbnails** at fixed sizes, made from the cover once and kept in a sharded disk cache (`covers/ab/cd/<hash>-<size>.jpg`,
   as SFE's thumbnail cache): `s` (list rows, ~64 px high), `m` (grid cards, ~240 px), `l` (book page, ~600 px), plus
   the original. Served with a long `Cache-Control` and an `ETag` from the cover hash, so scrolling 2M books costs one
   small request per visible card, then none.
@@ -81,12 +81,17 @@ the book** (decided 2026-10-31).
   `CoverState.Failed` is extracted from its best file (EPUB, KEPUB, FB2, AZW3, MOBI, AZW, CBZ in that order), else the
   generated one. Extraction that finds nothing or a refused picture marks `Failed` (looked at once); a file that can't
   be opened (unplugged disk) marks nothing. A re-read book is `Unknown` again.
-- **Sizes** by width: `s` 80, `m` 240, `l` 600 px (height by aspect; generated 2:3); never enlarged; WebP quality 80.
+- **Sizes** by width: `s` 80, `m` 240, `l` 600 px (height by aspect; generated 2:3); never enlarged; **JPEG** quality 75, baseline,
+  transparency flattened on white (stage 7 chunk 4a, the user's answer 2026-11-10: **JPEG everywhere**, the web app
+  too: reader apps often don't decode WebP, older ones no progressive JPEG). Measured: a drawn cover 600 px 26 KB
+  (WebP 80 was 12), a photo-like one 47 KB (35); 240 px 8 and 13 KB. Covers made before (`.webp`) are left in the
+  cache, never asked for again (the user's answer: not converted); the ETag ends in `.jpg` (`CoverCache.ETag`), so a
+  browser's cached WebP isn't revalidated as the same picture. Served as `image/jpeg` (`CoverImages.ContentType`).
   An extracted cover is decoded once (JPEG scaled while decoding) and all three sizes written; a generated one only
   at the size asked (drawing is cheap).
 - **Limits before decoding:** at most 16 MB of picture, 50 M pixels, 16 384 px a side, aspect at most 4:1; an FB2
   over 128 MB is not read for its cover.
-- **Cache:** `<Librarion:Cache:Directory>/covers/ab/cd/<key>-<size>.webp` (configurable, [config-files](../architecture/config-files.md));
+- **Cache:** `<Librarion:Cache:Directory>/covers/ab/cd/<key>-<size>.jpg` (configurable, [config-files](../architecture/config-files.md));
   key = XxHash64 of what the picture is made of (file id + CRC + size + time; or template, palette, title, authors,
   series), so a change makes a new key and old files are just never asked for (no eviction yet: the folder can be
   deleted). Written to a temp name and moved. The same key asked twice at once is made once; at most
@@ -119,9 +124,9 @@ Code: `Core/Covers/CoverEditor.cs`, `CoverUploads.cs`, `CoverImages.Remake`, `Co
   `GET …/cover/preview/{template}/{variant}` (the book drawn small, cached as any generated cover), `GET
   api/covers/styles` (template names, palette count). Each change answers the book as `GET api/books/{id}`.
 - **Upload:** at most 5 MB (`cover.tooBig`), JPEG, PNG or WebP within the extraction's limits (`cover.invalid`: other
-  formats, too many pixels, sides past 16,384, aspect past 4:1), decoded and made again at most 1,200 px wide as WebP
-  (quality 85): nothing a stranger sent is kept as it was. Stored by content hash in the data folder,
-  `covers/<tenant>/ab/<hash>.webp` (`Librarion:Data:Directory`, [config-files](../architecture/config-files.md)), so
+  formats, too many pixels, sides past 16,384, aspect past 4:1), decoded and made again at most 1,200 px wide as JPEG
+  (quality 85; uploads stored as WebP before stage 7 stay so, and their thumbnails are JPEG: `Thumbnails` decodes any format): nothing a stranger sent is kept as it was. Stored by content hash in the data folder,
+  `covers/<tenant>/ab/<hash>.jpg` (`Librarion:Data:Directory`, [config-files](../architecture/config-files.md)), so
   one picture on several books is one file; `Books.CoverFile` keeps the path (a filtered index finds its other users
   before the file is deleted). Served through the cover cache as `u:<hash>` at every size.
 - **Style:** a template and palette (the book's `GeneratedTemplate` / `GeneratedVariant`) with `CoverSource =

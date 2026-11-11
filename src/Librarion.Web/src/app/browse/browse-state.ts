@@ -5,11 +5,13 @@ import { readPreference, writePreference } from '../core/preferences';
 export type BrowseView = 'grid' | 'list';
 
 /** Which lists share a sort: the library and the pages of tags, and series (by number by default). */
-export type SortScope = 'library' | 'series';
+export type SortScope = 'library' | 'series' | 'shelf';
 
 const VIEW = 'librarion.browse.view';
-const SORT_KEYS: Record<SortScope, string> = { library: 'librarion.browse.sort', series: 'librarion.browse.sort.series' };
-const DEFAULT_SORT: Record<SortScope, BookSort> = { library: 'title', series: 'number' };
+const SORT_KEYS: Record<SortScope, string> = {
+    library: 'librarion.browse.sort', series: 'librarion.browse.sort.series', shelf: 'librarion.browse.sort.shelf',
+};
+const DEFAULT_SORT: Record<SortScope, BookSort> = { library: 'title', series: 'number', shelf: 'shelf' };
 /** Lists kept for the way back: the library, a value list, a tag page and a few more. */
 const KEPT = 6;
 
@@ -51,6 +53,11 @@ export class BrowseState {
     /** The list left under `key` (what it listed and how), if it was one of the last ones. */
     restore<T>(key: string): BrowseSnapshot<T> | null {
         return (this.snapshots.find(s => s.key === key) as BrowseSnapshot<T> | undefined) ?? null;
+    }
+
+    /** Drops the list kept under `key` (it changed: it is loaded again). */
+    forget(key: string): void {
+        this.snapshots = this.snapshots.filter(s => s.key !== key);
     }
 
     keep<T>(snapshot: BrowseSnapshot<T>): void {

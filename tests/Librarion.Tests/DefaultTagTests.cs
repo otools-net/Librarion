@@ -33,7 +33,7 @@ public sealed class DefaultTagTests
     [TestMethod]
     public async Task BooksThatComeInGetTheLibrarysAndTheirFoldersDefaults()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("Fantasy/Old.fb2", Fb2("Old"));
         await shelf.ScanAsync(Cancel);
         var fantasy = await FolderAsync(shelf, "Fantasy");
@@ -61,12 +61,12 @@ public sealed class DefaultTagTests
     [TestMethod]
     public async Task TheBooksThereGetItWhenAskedAndLoseOnlyItsRuleLinks()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
-        shelf.Write("Shelf/One.fb2", Fb2("One"));
-        shelf.Write("Shelf/Sub/Two.fb2", Fb2("Two"));
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
+        shelf.Write("TestLibrary/One.fb2", Fb2("One"));
+        shelf.Write("TestLibrary/Sub/Two.fb2", Fb2("Two"));
         shelf.Write("Elsewhere/Three.fb2", Fb2("Three"));
         await shelf.ScanAsync(Cancel);
-        var folder = await FolderAsync(shelf, "Shelf");
+        var folder = await FolderAsync(shelf, "TestLibrary");
 
         // One has Read by hand, Two had it taken off: neither gets a rule link.
         var read = (await shelf.Admin.PostAsJsonAsync("/api/books/tags", new BookEndpoints.SelectionInput([await BookIdAsync(shelf, "One"), await BookIdAsync(shelf, "Two")],
@@ -105,7 +105,7 @@ public sealed class DefaultTagTests
     [TestMethod]
     public async Task AMovedBookGetsItsNewFoldersDefaultsAndAFolderWithDefaultsIsKept()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
         var path = shelf.Write("Inbox/Book.fb2", Fb2("Book"));
         shelf.Write("Done/Placeholder.fb2", Fb2("Placeholder"));
         await shelf.ScanAsync(Cancel);
@@ -122,10 +122,10 @@ public sealed class DefaultTagTests
     [TestMethod]
     public async Task AMergeCarriesTheDefaultsAndItsUndoBringsThemBack()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
-        shelf.Write("Shelf/One.fb2", Fb2("One"));
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
+        shelf.Write("TestLibrary/One.fb2", Fb2("One"));
         await shelf.ScanAsync(Cancel);
-        var folder = await FolderAsync(shelf, "Shelf");
+        var folder = await FolderAsync(shelf, "TestLibrary");
         await AddAsync(shelf, folder, "Scifi");
         await AddAsync(shelf, null, "Science fiction");
         var (scifi, full) = (await TagIdAsync(shelf, "Scifi"), await TagIdAsync(shelf, "Science fiction"));
@@ -146,10 +146,10 @@ public sealed class DefaultTagTests
     [TestMethod]
     public async Task OnlyDefaultTagsChangesThem()
     {
-        await using var shelf = await Shelf.CreateAsync(Cancel);
-        shelf.Write("Shelf/One.fb2", Fb2("One"));
+        await using var shelf = await TestLibrary.CreateAsync(Cancel);
+        shelf.Write("TestLibrary/One.fb2", Fb2("One"));
         await shelf.ScanAsync(Cancel);
-        var folder = await FolderAsync(shelf, "Shelf");
+        var folder = await FolderAsync(shelf, "TestLibrary");
         await AddAsync(shelf, folder, "Given");
         using (var created = await shelf.Admin.PostAsJsonAsync("/api/groups", new GroupInput("Viewers", AllLibraries: true, Rights: [Rights.Browse, Rights.Folders]), ApiClients.Json, Cancel))
         {
@@ -169,7 +169,7 @@ public sealed class DefaultTagTests
         Assert.AreEqual(HttpStatusCode.NotFound, elsewhere.StatusCode);
     }
 
-    private async Task<TagWork> AddAsync(Shelf shelf, int? folder, string name, bool existing = false)
+    private async Task<TagWork> AddAsync(TestLibrary shelf, int? folder, string name, bool existing = false)
     {
         using var response = await shelf.Admin.PostAsJsonAsync($"/api/libraries/{shelf.LibraryId}/default-tags",
             new FolderEndpoints.DefaultTagInput(folder, new BookTagEdit(Name: name), existing), ApiClients.Json, Cancel);
@@ -177,45 +177,45 @@ public sealed class DefaultTagTests
         return (await response.Content.ReadFromJsonAsync<TagWork>(ApiClients.Json, Cancel))!;
     }
 
-    private async Task<TagWork> RemoveAsync(Shelf shelf, int? folder, int tagId, bool books)
+    private async Task<TagWork> RemoveAsync(TestLibrary shelf, int? folder, int tagId, bool books)
     {
         using var response = await shelf.Admin.DeleteAsync($"/api/libraries/{shelf.LibraryId}/default-tags/{tagId}?folder={folder}&books={books}", Cancel);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync(Cancel));
         return (await response.Content.ReadFromJsonAsync<TagWork>(ApiClients.Json, Cancel))!;
     }
 
-    private async Task<int> FolderAsync(Shelf shelf, string path)
+    private async Task<int> FolderAsync(TestLibrary shelf, string path)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Folders.Where(f => f.Path == path).Select(f => f.Id).SingleAsync(Cancel);
     }
 
-    private async Task<int> BookIdAsync(Shelf shelf, string title)
+    private async Task<int> BookIdAsync(TestLibrary shelf, string title)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Books.Where(b => b.Title == title).Select(b => b.Id).SingleAsync(Cancel);
     }
 
-    private async Task<int> TagIdAsync(Shelf shelf, string name)
+    private async Task<int> TagIdAsync(TestLibrary shelf, string name)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.Tags.Where(t => t.Name == name && t.FieldId == null).Select(t => t.Id).SingleAsync(Cancel);
     }
 
-    private async Task<List<string>> RuleTagsAsync(Shelf shelf, string title)
+    private async Task<List<string>> RuleTagsAsync(TestLibrary shelf, string title)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.BookTags.Where(l => l.Book!.Title == title && l.Source == TagSource.Rule).Select(l => l.Tag!.Name).ToListAsync(Cancel);
     }
 
-    private async Task<List<string>> TitlesWithAsync(Shelf shelf, string tag)
+    private async Task<List<string>> TitlesWithAsync(TestLibrary shelf, string tag)
     {
         await using var db = await shelf.DbAsync(Cancel);
         return await db.BookTags.Where(l => l.Tag!.Name == tag && l.Tag.FieldId == null).Select(l => l.Book!.Title!).Distinct().ToListAsync(Cancel);
     }
 
     /// <summary>The tag's stored count in the library (what lists show), against the links themselves.</summary>
-    private async Task<int> BooksWithAsync(Shelf shelf, string tag)
+    private async Task<int> BooksWithAsync(TestLibrary shelf, string tag)
     {
         await using var db = await shelf.DbAsync(Cancel);
         var id = await db.Tags.Where(t => t.Name == tag && t.FieldId == null).Select(t => t.Id).SingleAsync(Cancel);

@@ -347,7 +347,7 @@ internal sealed class ScannedLibrary : IAsyncDisposable
         var catalog = new TestCatalog();
         var factory = ApiClients.CreateFactory(catalog, services: services);
         using (ApiClients.Create(factory)) { }
-        var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("Shelf"), cancellationToken)).Value!;
+        var tenant = (await factory.Services.GetRequiredService<AccessService>().CreateTenantAsync(new TenantInput("TestLibrary"), cancellationToken)).Value!;
         var root = Path.Combine(catalog.BasePath, "books");
         Directory.CreateDirectory(root);
         await using var db = await factory.Services.GetRequiredService<TenantDb>().ForTenantAsync(tenant.Id, cancellationToken);

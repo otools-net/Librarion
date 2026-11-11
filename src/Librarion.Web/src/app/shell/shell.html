@@ -144,6 +144,29 @@
                     }
                 </ul>
             </div>
+            @if (canShelve()) {
+                <div class="nav-group">
+                    <p class="group-label">{{ 'shelves.title' | t }}</p>
+                    <ul>
+                        @for (shelf of shelves.shelves(); track shelf.id) {
+                            <li>
+                                <a class="nav-item" [routerLink]="shelfLink(shelf)" routerLinkActive="active" [routerLinkActiveOptions]="exactPath"
+                                   [title]="'shell.nav.shelf' | t: { name: shelf.name, count: shelf.bookCount }">
+                                    <svg libIcon="shelf"></svg>
+                                    <span class="nav-text">{{ shelf.name }}</span>
+                                    <span class="nav-count">{{ shelf.bookCount }}</span>
+                                </a>
+                            </li>
+                        }
+                        <li>
+                            <a class="nav-item" routerLink="/shelves" routerLinkActive="active" [routerLinkActiveOptions]="exactPath" [title]="'shell.nav.shelvesHint' | t">
+                                <svg [libIcon]="shelves.shelves().length ? 'list' : 'plus'"></svg>
+                                <span>{{ (shelves.shelves().length ? 'shell.nav.shelves' : 'shell.nav.newShelf') | t }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            }
             @if (canAdmin()) {
                 <div class="nav-foot">
                     <a class="nav-item" routerLink="/admin" [title]="'shell.nav.adminHint' | t">
