@@ -22,6 +22,9 @@ public sealed record SessionInfo(
     SessionAccount? User, SessionTenant? Tenant, IReadOnlyList<SessionTenant> Tenants, IReadOnlyList<string> Rights, bool SetupRequired,
     IReadOnlyDictionary<string, JsonElement> Preferences);
 
+/// <summary>A sign-in's result: the account signed in, or none, and till when it is locked out when it is.</summary>
+public sealed record SignInOutcome(SessionUser? User, DateTimeOffset? LockedUntil);
+
 public sealed record SignInRequest(string? UserName, string? Password, bool Remember = false);
 
 public sealed record TenantChoice(int TenantId);
@@ -116,39 +119,63 @@ public static class SessionEndpoints
 
     private static SessionTenant ToSession(TenantInfo tenant) => new(tenant.Id, tenant.Slug, tenant.Name);
 
-    private static async Task<Results<Ok<SessionInfo>, ProblemHttpResult>> SignIn(
-        SignInRequest request, HttpContext context, SignInService signIn, SignInThrottle throttle, SecurityLog log)
+    private static async Task<Results<Ok<SessionInfo>, ProblemHttpResult>> SignIn(SignInRequest request, HttpContext context)
     {
-        var address = context.Address();
-        if (throttle.LockedUntil(request.UserName, address) is { } waiting)
-            return LockedOut(waiting);
+        var outcome = await TrySignInAsync(context, request.UserName, request.Password, request.Remember);
+        if (outcome.User is not null)
+            return TypedResults.Ok(await DescribeAsync(context));
+        return outcome.LockedUntil is { } lockedUntil
+            ? LockedOut(lockedUntil)
+            : TypedResults.Problem("Wrong name or password.", statusCode: StatusCodes.Status400BadRequest, type: SignInFailedType);
+    }
 
-        var result = await signIn.SignInAsync(request.UserName, request.Password, context.RequestAborted);
+    /// <summary>
+    /// Signs in with a name and password, as the app and the e-reader pages both do: the address's throttle and the
+    /// account's lockout, the security log, then the session cookie (<paramref name="remember"/>: kept after the browser
+    /// closes). Refused: no user, and when it is locked out, till when.
+    /// </summary>
+    internal static async Task<SignInOutcome> TrySignInAsync(HttpContext context, string? userName, string? password, bool remember)
+    {
+        var services = context.RequestServices;
+        var throttle = services.GetRequiredService<SignInThrottle>();
+        var log = services.GetRequiredService<SecurityLog>();
+        var address = context.Address();
+        if (throttle.LockedUntil(userName, address) is { } waiting)
+            return new SignInOutcome(null, waiting);
+
+        var result = await services.GetRequiredService<SignInService>().SignInAsync(userName, password, context.RequestAborted);
         if (result.Status != SignInStatus.Ok)
         {
-            var until = result.Status == SignInStatus.LockedOut ? result.LockedUntil : throttle.Failed(request.UserName, address)?.UtcDateTime;
-            await log.WriteAsync(until is null ? SecurityEventKind.SignInFailed : SecurityEventKind.LockedOut, null, null, request.UserName?.Trim(), address,
+            DateTimeOffset? until = result.Status == SignInStatus.LockedOut ? result.LockedUntil : throttle.Failed(userName, address)?.UtcDateTime;
+            await log.WriteAsync(until is null ? SecurityEventKind.SignInFailed : SecurityEventKind.LockedOut, null, null, userName?.Trim(), address,
                 result.Status == SignInStatus.Disabled ? "disabled" : null, context.RequestAborted);
-            return until is { } lockedUntil ? LockedOut(lockedUntil) : TypedResults.Problem("Wrong name or password.", statusCode: StatusCodes.Status400BadRequest, type: SignInFailedType);
+            return new SignInOutcome(null, until);
         }
 
-        throttle.Succeeded(request.UserName, address);
+        throttle.Succeeded(userName, address);
         var user = result.User!;
-        await LibrarionSession.SignInAsync(context, user, user.TenantId, request.Remember);
+        await LibrarionSession.SignInAsync(context, user, user.TenantId, remember);
         await log.WriteAsync(SecurityEventKind.SignedIn, user.TenantId, user.Id, user.UserName, address, null, context.RequestAborted);
-        return TypedResults.Ok(await DescribeAsync(context));
+        return new SignInOutcome(user, null);
+    }
+
+    /// <summary>Signs the request's account out (the security log first); nothing when nobody is signed in.</summary>
+    internal static async Task SignOutAsync(HttpContext context)
+    {
+        var state = await context.RequestServices.GetRequiredService<CurrentAccess>().GetAsync();
+        if (state.User is { } user)
+            await context.RequestServices.GetRequiredService<SecurityLog>().LogAsync(context, state, SecurityEventKind.SignedOut, user.TenantId, null);
+        await LibrarionSession.SignOutAsync(context);
     }
 
     private static ProblemHttpResult LockedOut(DateTimeOffset until) =>
         TypedResults.Problem("Too many wrong passwords: try again later.", statusCode: StatusCodes.Status400BadRequest, type: LockedOutType,
             extensions: new Dictionary<string, object?> { ["until"] = until.UtcDateTime });
 
-    private static async Task<Ok<SessionInfo>> SignOut(HttpContext context, CurrentAccess current, SecurityLog log)
+    // The token keeps the lambda from binding as a RequestDelegate (HttpContext alone), which would drop its result.
+    private static async Task<Ok<SessionInfo>> SignOut(HttpContext context, CancellationToken _)
     {
-        var state = await current.GetAsync();
-        if (state.User is { } user)
-            await log.LogAsync(context, state, SecurityEventKind.SignedOut, user.TenantId, null);
-        await LibrarionSession.SignOutAsync(context);
+        await SignOutAsync(context);
         return TypedResults.Ok(await DescribeAsync(context));
     }
 

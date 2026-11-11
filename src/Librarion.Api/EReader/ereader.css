@@ -108,6 +108,43 @@ button {
     font-weight: bold;
 }
 
+.account {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.field label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.field input {
+    width: 100%;
+    max-width: 420px;
+}
+
+.check {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+}
+
+.check input {
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    margin: 0;
+}
+
+.error {
+    border: 2px solid #000;
+    padding: 8px 12px;
+    font-weight: bold;
+}
+
 input,
 select {
     padding: 0 8px;

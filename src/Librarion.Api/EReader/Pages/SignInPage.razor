@@ -1,0 +1,41 @@
+@*
+    Signing in (D-8.4): the app's accounts, throttle and lockout (SessionEndpoints.TrySignInAsync), a plain form.
+    "Stay signed in" is ticked to begin with (Q6: typing on an e-ink keyboard is slow); the name typed is kept after
+    a refusal, never the password.
+*@
+<EPage Frame="Frame" Title="@(Texts["signIn.title"])">
+    @if (Error is not null)
+    {
+        <p class="error" role="alert">@Error</p>
+    }
+    <form method="post" action="@Frame.Links.SignIn()">
+        <FormToken Token="Frame.Token!" />
+        <input type="hidden" name="return" value="@ReturnTo">
+        <p class="field">
+            <label for="userName">@Texts["signIn.name"]</label>
+            <input id="userName" name="userName" value="@UserName" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </p>
+        <p class="field">
+            <label for="password">@Texts["signIn.password"]</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </p>
+        <p>
+            <label class="check"><input type="checkbox" name="remember" value="on" checked="@Remember"> @Texts["signIn.remember"]</label>
+        </p>
+        <p><button type="submit">@Texts["signIn.submit"]</button></p>
+    </form>
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    /// <summary>Where to go once signed in: a path under /e (checked by the endpoint).</summary>
+    [Parameter] public string ReturnTo { get; set; } = "";
+
+    [Parameter] public string? UserName { get; set; }
+
+    [Parameter] public bool Remember { get; set; } = true;
+
+    /// <summary>Why the last try was refused (wrong name or password, locked out); null at first.</summary>
+    [Parameter] public string? Error { get; set; }
+}

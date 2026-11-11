@@ -30,6 +30,9 @@ client `account/` (sign-in, account page), `admin/users-section.ts`, `admin/grou
   that address waits `LockoutMinutes` (15) for that name; unknown names count the same. The **account** locks in the
   database after `AccountLockoutFailures` (20) in a row from all addresses; an administrator unlocks it.
 - Reader apps' Basic sign-ins on `/opds` go through the same throttle and account lockout ([opds-auth](opds-auth.md)).
+- The e-reader pages' sign-in form (`/e/signin`) is the same sign-in: `SessionEndpoints.TrySignInAsync` (throttle,
+  lockout, security log, cookie) serves both, and `SessionEndpoints.SignOutAsync` both sign-outs
+  ([ereader-mode](ereader-mode.md#built-stage-8-chunk-2-sign-in-and-out)).
 - **Rate limit** `SignInsPerMinute` (20) per address on sign-in, setup, recovery and password change (429).
 - Answers never tell a wrong name from a wrong password (`sign-in-failed`); `locked-out` carries `until`.
 

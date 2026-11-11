@@ -2,7 +2,7 @@
     The home page. Stage 8 chunk 1: the frame only (the libraries one may browse); search, recently added and the
     links to browse come with chunk 3.
 *@
-<EPage Links="Links" Title="@(Texts["ereader.home.title"])">
+<EPage Frame="Frame" Title="@(Texts["ereader.home.title"])">
     <p>@Texts["ereader.home.intro"]</p>
     @if (Libraries.Count > 0)
     {
@@ -21,7 +21,7 @@
 </EPage>
 
 @code {
-    [Parameter, EditorRequired] public EReaderLinks Links { get; set; } = null!;
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
 
     /// <summary>The names of the libraries the account may browse, in the app's order.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<string> Libraries { get; set; } = [];

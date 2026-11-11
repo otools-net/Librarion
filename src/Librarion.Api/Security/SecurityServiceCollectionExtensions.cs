@@ -71,6 +71,14 @@ public static class SecurityServiceCollectionExtensions
             // Reader apps on /opds: Basic or API keys, never the cookie (Opds/OpdsAuthentication.cs).
             .AddScheme<AuthenticationSchemeOptions, Librarion.Api.Opds.OpdsAuthenticationHandler>(Librarion.Api.Opds.OpdsAuthenticationHandler.SchemeName, null);
 
+        // The e-reader pages' forms (/e, D-8.4): plain forms can't send X-Librarion-Request, so they carry this token
+        // (checked by EReaderGuard). Our own X-Frame-Options (DENY) stays: the antiforgery's SAMEORIGIN is suppressed.
+        services.AddAntiforgery(options =>
+        {
+            options.Cookie.Name = "librarion.antiforgery";
+            options.Cookie.SecurePolicy = security.RequireHttps ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
+            options.SuppressXFrameOptionsHeader = true;
+        });
         services.AddAuthorization();
         services.AddSingleton<IAuthorizationPolicyProvider, RightPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, RightHandler>();

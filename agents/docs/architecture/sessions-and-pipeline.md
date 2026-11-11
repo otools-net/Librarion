@@ -48,5 +48,7 @@ Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([
   error without a body (route 404, the rights' 403, 405, 400) becomes a plain page, so `/e` never answers problem JSON
   or the client's page. The stylesheet `/e/ereader.css` skips the guard (the pages link it). Its own CSP
   `SecurityHeaders.EReaderPolicy` (`default-src 'none'`: no script at all), chosen by path. The cookie scheme's
-  `OnRedirectToLogin` answers `/e` with a 302 to `/e/signin?return=<path>` instead of 401. Its `{**path}` fallback;
+  `OnRedirectToLogin` answers `/e` with a 302 to `/e/signin?return=<path>` instead of 401. Every `/e` request but GET
+  and HEAD needs a valid antiforgery token (`EReaderGuard`, the `librarion.antiforgery` cookie): plain forms can't
+  send `X-Librarion-Request`. Its `{**path}` fallback;
   `e` excluded from `ClientPage`'s `{key}/{id}/{name}` route; `EveryRouteNamesARight` covers it.

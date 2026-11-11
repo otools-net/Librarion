@@ -14,6 +14,9 @@ public sealed class EReaderLinks(HttpContext context)
 
     public string Stylesheet => _root + EReaderEndpoints.StylesheetPath + "?v=" + EReaderStylesheet.Version;
 
+    /// <summary>Where the sign-out form posts.</summary>
+    public string SignOut => _root + "/signout";
+
     /// <summary>The sign-in page, coming back to <paramref name="returnTo"/> (a path under <c>/e</c>) afterwards.</summary>
     public string SignIn(string? returnTo = null) =>
         _root + "/signin" + (string.IsNullOrEmpty(returnTo) ? "" : "?return=" + Uri.EscapeDataString(returnTo));

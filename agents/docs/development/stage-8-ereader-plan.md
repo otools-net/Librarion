@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 2.
+**Next:** chunk 3.
 
 ## The user's answers (2026-11-11)
 
@@ -116,9 +116,11 @@ is the note's; nothing to port.
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-1-the-frame),
    [sessions-and-pipeline](../architecture/sessions-and-pipeline.md), [settings](../features/settings.md); errors
    (400/403/404/405) rendered as pages by `EReaderGuard`, a visitor redirected to `/e/signin` (chunk 2 builds it).
-2. [ ] Sign in and out (D-8.4): plain form, antiforgery, `SignInService` (throttle, lockout, events), Stay signed in,
+2. [x] Sign in and out (D-8.4): plain form, antiforgery, `SignInService` (throttle, lockout, events), Stay signed in,
    return address, sign out by POST; the same cookie as the app. Tests: right and wrong password, lockout, the
-   token refused when missing, a disabled account.
+   token refused when missing, a disabled account. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-2-sign-in-and-out),
+   [accounts](../features/accounts.md); the app's sign-in moved into `SessionEndpoints.TrySignInAsync` for both.
 3. [ ] Home and the book list: search box, recently added, links to browse; one list component (small cover,
    title with the file-name fallback, authors, series and number), Next / First by key (D-8.6). Tests: the keys
    walk without repeats, hidden books absent.

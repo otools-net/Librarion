@@ -1,7 +1,7 @@
 # E-reader mode: a plain gray site for e-ink devices (planned)
 
 Code: `src/Librarion.Api/EReader/` (`EReaderEndpoints`, `EReaderGuard`, `EReaderSwitch`, `EReaderLinks`,
-`ServerTexts`, `EReaderStylesheet` + `ereader.css`, `Pages/*.razor`), the same `Core/Catalog/` and `Core/Search/`
+`EReaderFrame`, `ServerTexts`, `EReaderStylesheet` + `ereader.css`, `Pages/*.razor`), the same `Core/Catalog/` and `Core/Search/`
 services as the app; tests `EReaderTests`. Decision D23 in [foundation-plan](../development/foundation-plan.md); being
 built in stage 8 ([stage-8-ereader-plan](../development/stage-8-ereader-plan.md)).
 
@@ -84,6 +84,29 @@ here, the device's own reader opens the downloaded file.
   `/e/signin?return=…` by the cookie's `OnRedirectToLogin` (the sign-in page itself is chunk 2).
 - **Switch:** `ereader.enabled` (tenant, on), read by `EReaderSwitch` (cached per tenant until `AccessChanges` moves).
 - The home page lists the libraries the account may browse (a placeholder until chunk 3); `library.browse` needed.
+
+## Built (stage 8 chunk 2): sign in and out
+
+- **One sign-in:** `/e/signin` posts a plain form (`userName`, `password`, `remember`, `return`: the app's field
+  names) to `SessionEndpoints.TrySignInAsync`, the app's own path (throttle by address, account lockout, security log,
+  the session cookie), so a session from either opens both. Refused: the form again, 400, the name kept, never the
+  password; locked out: "try again in N minutes" (the device's clock and zone are unknown, so no time of day). The
+  `sign-in` rate limit applies as on the API (a 429 page). A disabled account reads as a wrong password.
+- **Stay signed in** (`signIn.remember`) is ticked to begin with (Q6): the cookie then outlives the browser
+  (`Librarion:Security:SessionDays`); unticked, a browser-session cookie.
+- **Return address:** the cookie challenge sends `/e/signin?return=<path>`; `EReaderEndpoints.SafeReturn` keeps only
+  `/e`, `/e/…`, `/e?…` (no `//`, no backslash, no control characters, not the sign-in or sign-out itself), else
+  `/e/`. Already signed in, the sign-in page goes straight on.
+- **Sign out** is a POST form in every page's header (with the account's name): GET never changes anything; then
+  the sign-in page.
+- **Form tokens (D-8.4):** `EReaderFrame` carries the antiforgery token set (`IAntiforgery.GetAndStoreTokens`, cookie
+  `librarion.antiforgery`, its `X-Frame-Options` suppressed so ours stays DENY); `FormToken.razor` writes the hidden
+  field. `EReaderGuard` checks every `/e` request but GET and HEAD (`IsRequestValidAsync`) before any route: refused, a
+  "The form has expired" page (400). Handlers read the form themselves (`ReadFormAsync`): `[FromForm]` binding would
+  ask for `UseAntiforgery`'s metadata check, which the app doesn't use.
+- **Gotcha:** a minimal API handler taking only `HttpContext` and returning `Task<IResult>` binds as a
+  `RequestDelegate` and its result is dropped (a 200 with no body): add a `CancellationToken` parameter (as
+  `SessionEndpoints` does).
 
 ## Scale and privacy
 

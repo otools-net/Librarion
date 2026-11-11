@@ -1,0 +1,8 @@
+@*
+    The antiforgery token of a form (D-8.4), as a hidden field: EReaderGuard refuses an /e POST without it.
+*@
+<input type="hidden" name="@Token.FormFieldName" value="@Token.RequestToken">
+
+@code {
+    [Parameter, EditorRequired] public Microsoft.AspNetCore.Antiforgery.AntiforgeryTokenSet Token { get; set; } = null!;
+}

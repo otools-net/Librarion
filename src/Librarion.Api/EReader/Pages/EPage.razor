@@ -1,5 +1,6 @@
 @*
-    The frame of every e-reader page (D-8.1): plain HTML, one stylesheet, no script; the app's name as the way home.
+    The frame of every e-reader page (D-8.1): plain HTML, one stylesheet, no script; the app's name as the way home,
+    and for a signed-in account its name and a Sign out button (a form: GET never changes anything, D-8.4).
 *@
 <!DOCTYPE html>
 <html lang="en">
@@ -7,11 +8,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@Title – @Texts["app.name"]</title>
-    <link rel="stylesheet" href="@Links.Stylesheet">
+    <link rel="stylesheet" href="@Frame.Links.Stylesheet">
 </head>
 <body>
 <header class="top">
-    <a class="brand" href="@Links.Home">@Texts["app.name"]</a>
+    <a class="brand" href="@Frame.Links.Home">@Texts["app.name"]</a>
+    @if (Frame is { UserName: { } name, Token: { } token })
+    {
+        <form class="account" method="post" action="@Frame.Links.SignOut">
+            <FormToken Token="token" />
+            <span class="muted">@name</span>
+            <button type="submit">@Texts["account.signOut"]</button>
+        </form>
+    }
 </header>
 <main>
     <h1>@Title</h1>
@@ -21,7 +30,7 @@
 </html>
 
 @code {
-    [Parameter, EditorRequired] public EReaderLinks Links { get; set; } = null!;
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
 
     [Parameter, EditorRequired] public string Title { get; set; } = "";
 

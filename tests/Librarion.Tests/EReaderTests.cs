@@ -238,6 +238,222 @@ public sealed partial class EReaderTests
         Assert.IsEmpty(missing, "Missing from src/i18n/en.json:" + Environment.NewLine + string.Join(Environment.NewLine, missing));
     }
 
+    // ---- Sign in and out (chunk 2) ----
+
+    /// <summary>The page's form token (the hidden field), as a browser would send it back.</summary>
+    internal static async Task<string> FormTokenAsync(HttpClient browser, string address, CancellationToken cancellationToken)
+    {
+        using var page = await browser.GetAsync(address, cancellationToken);
+        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode, address);
+        var match = TokenField().Match(await page.Content.ReadAsStringAsync(cancellationToken));
+        Assert.IsTrue(match.Success, $"{address} has a form token");
+        return WebUtility.HtmlDecode(match.Groups[1].Value);
+    }
+
+    /// <summary>Posts the sign-in form as a browser does (its token from the page first, unless <paramref name="token"/> says otherwise).</summary>
+    internal static async Task<HttpResponseMessage> SignInAsync(HttpClient browser, string userName, string password, CancellationToken cancellationToken,
+        bool remember = true, string returnTo = "/e/", string? token = null)
+    {
+        token ??= await FormTokenAsync(browser, "/e/signin", cancellationToken);
+        var fields = new Dictionary<string, string> { ["userName"] = userName, ["password"] = password, ["return"] = returnTo };
+        if (token.Length > 0)
+            fields["__RequestVerificationToken"] = token;
+        if (remember)
+            fields["remember"] = "on";
+        return await browser.PostAsync("/e/signin", new FormUrlEncodedContent(fields), cancellationToken);
+    }
+
+    /// <summary>A browser signed in through the e-reader's own form.</summary>
+    internal static async Task<HttpClient> SignedInBrowserAsync(WebApplicationFactory<Program> factory, string userName, CancellationToken cancellationToken)
+    {
+        var browser = Browser(factory);
+        using var response = await SignInAsync(browser, userName, ApiClients.Password, cancellationToken);
+        Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode, await response.Content.ReadAsStringAsync(cancellationToken));
+        return browser;
+    }
+
+    /// <summary>The form: the app's field names, "Stay signed in" ticked to begin with (Q6), a token, the return address kept.</summary>
+    [TestMethod]
+    public async Task TheSignInPageIsAPlainForm()
+    {
+        using var catalog = new TestCatalog();
+        await using var factory = ApiClients.CreateFactory(catalog);
+        (await ApiClients.SetUpAsync(factory, Cancel)).Client.Dispose();
+        using var browser = Browser(factory);
+
+        using var response = await browser.GetAsync("/e/signin?return=%2Fe%2F%3Fq%3Dx", Cancel);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var html = await PlainPageAsync(response, Cancel);
+        StringAssert.Contains(html, "<form method=\"post\" action=\"/e/signin\">");
+        StringAssert.Contains(html, "name=\"userName\"");
+        StringAssert.Contains(html, "type=\"password\"");
+        StringAssert.Matches(html, new Regex("<input type=\"checkbox\" name=\"remember\" value=\"on\" checked"));
+        StringAssert.Contains(html, "name=\"return\" value=\"/e/?q=x\"");
+        StringAssert.Matches(html, TokenField());
+        Assert.IsTrue(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.StartsWith("librarion.antiforgery=", StringComparison.Ordinal)));
+        Assert.IsFalse(html.Contains("Sign out", StringComparison.Ordinal), "nobody to sign out");
+    }
+
+    /// <summary>
+    /// The right password signs in with the app's cookie (one sign-in for both), logged; back to the return address;
+    /// "Stay signed in" makes the cookie outlive the browser, unticked it doesn't.
+    /// </summary>
+    [TestMethod]
+    public async Task TheRightPasswordSignsInAndGoesBack()
+    {
+        using var catalog = new TestCatalog();
+        var (factory, admin, _) = await OpdsTests.ServerWithReaderAsync(catalog, Cancel);
+        await using var _f = factory;
+        using var _a = admin;
+
+        foreach (var remember in new[] { true, false })
+        {
+            using var browser = Browser(factory);
+            using var response = await SignInAsync(browser, "reader", ApiClients.Password, Cancel, remember, returnTo: "/e/?from=test");
+
+            Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.AreEqual("/e/?from=test", response.Headers.Location?.OriginalString);
+            var session = response.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith(LibrarionSession.CookieName, StringComparison.Ordinal));
+            Assert.AreEqual(remember, session.Contains("expires=", StringComparison.OrdinalIgnoreCase), $"remember {remember}: {session}");
+
+            using var home = await browser.GetAsync("/e/", Cancel);
+            Assert.AreEqual(HttpStatusCode.OK, home.StatusCode);
+            var html = await PlainPageAsync(home, Cancel);
+            StringAssert.Contains(html, "<span class=\"muted\">reader</span>");
+            StringAssert.Contains(html, "action=\"/e/signout\"");
+            using var app = await browser.GetAsync("/api/session", Cancel);
+            StringAssert.Contains(await app.Content.ReadAsStringAsync(Cancel), "\"reader\"", "the app's session too");
+
+            using var again = await browser.GetAsync("/e/signin?return=%2Fe", Cancel);
+            Assert.AreEqual(HttpStatusCode.Redirect, again.StatusCode, "already signed in: on to the return address");
+            Assert.AreEqual("/e", again.Headers.Location?.OriginalString);
+        }
+
+        var events = await factory.Services.GetRequiredService<SecurityLog>().ListAsync(new SecurityEventQuery(null, ServerWide: true, UserName: "reader"), Cancel);
+        Assert.AreEqual(2, events.Count(e => e.Kind == SecurityEventKind.SignedIn));
+    }
+
+    /// <summary>
+    /// A wrong password or a disabled account: the form again (400) with the name kept and never the password, logged;
+    /// five wrong ones from an address lock it out, the right password too, with the wait in minutes.
+    /// </summary>
+    [TestMethod]
+    public async Task WrongPasswordsAreRefusedLoggedAndLockedOut()
+    {
+        using var catalog = new TestCatalog();
+        var (factory, admin, _) = await OpdsTests.ServerWithReaderAsync(catalog, Cancel);
+        await using var _f = factory;
+        using var _a = admin;
+        await ApiClients.CreateUserAsync(admin, new NewUser("gone", Password: ApiClients.Password, Disabled: true), Cancel);
+        using var browser = Browser(factory);
+
+        using (var disabled = await SignInAsync(browser, "gone", ApiClients.Password, Cancel))
+        {
+            Assert.AreEqual(HttpStatusCode.BadRequest, disabled.StatusCode);
+            StringAssert.Contains(await PlainPageAsync(disabled, Cancel), "Wrong name or password.", "a disabled account is not told apart");
+        }
+
+        for (var i = 0; i < 4; i++)
+        {
+            using var refused = await SignInAsync(browser, "reader", "not the password", Cancel);
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
+            var html = await PlainPageAsync(refused, Cancel);
+            StringAssert.Contains(html, "Wrong name or password.");
+            StringAssert.Contains(html, "value=\"reader\"");
+            Assert.IsFalse(html.Contains("not the password", StringComparison.Ordinal), "the password is never sent back");
+            Assert.IsFalse(refused.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.StartsWith(LibrarionSession.CookieName, StringComparison.Ordinal)));
+        }
+        using (var fifth = await SignInAsync(browser, "reader", "not the password", Cancel))
+            StringAssert.Contains(await PlainPageAsync(fifth, Cancel), "Too many wrong passwords: try again in");
+        using (var locked = await SignInAsync(browser, "reader", ApiClients.Password, Cancel))
+        {
+            Assert.AreEqual(HttpStatusCode.BadRequest, locked.StatusCode, "the address waits, even with the right password");
+            StringAssert.Contains(await PlainPageAsync(locked, Cancel), "Too many wrong passwords: try again in");
+        }
+
+        var events = await factory.Services.GetRequiredService<SecurityLog>().ListAsync(new SecurityEventQuery(null, ServerWide: true), Cancel);
+        Assert.AreEqual(4, events.Count(e => e is { Kind: SecurityEventKind.SignInFailed, UserName: "reader" }));
+        Assert.IsGreaterThanOrEqualTo(1, events.Count(e => e is { Kind: SecurityEventKind.LockedOut, UserName: "reader" }));
+        Assert.AreEqual(1, events.Count(e => e is { Kind: SecurityEventKind.SignInFailed, UserName: "gone", Detail: "disabled" }));
+    }
+
+    /// <summary>
+    /// Every <c>/e</c> post needs the page's token (D-8.4): without it, or with a made-up one, a plain 400 page and nothing
+    /// done: not signed in with the right password, not signed out.
+    /// </summary>
+    [TestMethod]
+    public async Task APostWithoutTheTokenIsRefused()
+    {
+        using var catalog = new TestCatalog();
+        var (factory, admin, _) = await OpdsTests.ServerWithReaderAsync(catalog, Cancel);
+        await using var _f = factory;
+        using var _a = admin;
+
+        foreach (var token in new[] { "", "CfDJ8made-up" })
+        {
+            using var browser = Browser(factory);
+            await FormTokenAsync(browser, "/e/signin", Cancel);
+            using var response = await SignInAsync(browser, "reader", ApiClients.Password, Cancel, token: token);
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, token);
+            StringAssert.Contains(await PlainPageAsync(response, Cancel), "The form has expired", token);
+            Assert.IsFalse(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.StartsWith(LibrarionSession.CookieName, StringComparison.Ordinal)), token);
+        }
+
+        using var signedIn = await SignedInBrowserAsync(factory, "reader", Cancel);
+        using (var refused = await signedIn.PostAsync("/e/signout", new FormUrlEncodedContent(new Dictionary<string, string>()), Cancel))
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
+        using var still = await signedIn.GetAsync("/e/", Cancel);
+        Assert.AreEqual(HttpStatusCode.OK, still.StatusCode, "still signed in");
+    }
+
+    /// <summary>Sign out is a form on every page; afterwards the pages send to the sign-in page again; logged.</summary>
+    [TestMethod]
+    public async Task SignOutEndsTheSession()
+    {
+        using var catalog = new TestCatalog();
+        var (factory, admin, _) = await OpdsTests.ServerWithReaderAsync(catalog, Cancel);
+        await using var _f = factory;
+        using var _a = admin;
+        using var browser = await SignedInBrowserAsync(factory, "reader", Cancel);
+        var token = await FormTokenAsync(browser, "/e/", Cancel);
+
+        using var response = await browser.PostAsync("/e/signout",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["__RequestVerificationToken"] = token }), Cancel);
+
+        Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.AreEqual("/e/signin", response.Headers.Location?.OriginalString);
+        using var home = await browser.GetAsync("/e/", Cancel);
+        Assert.AreEqual(HttpStatusCode.Redirect, home.StatusCode, "signed out");
+        var events = await factory.Services.GetRequiredService<SecurityLog>().ListAsync(new SecurityEventQuery(null, ServerWide: true, UserName: "reader"), Cancel);
+        Assert.AreEqual(1, events.Count(e => e.Kind == SecurityEventKind.SignedOut));
+    }
+
+    /// <summary>The return address is a page of the mode, or the home page: never another site, never the sign-in itself.</summary>
+    [TestMethod]
+    [DataRow(null, "/e/")]
+    [DataRow("", "/e/")]
+    [DataRow("/e", "/e")]
+    [DataRow("/e/", "/e/")]
+    [DataRow("/e/books/12?x=1", "/e/books/12?x=1")]
+    [DataRow("/e?x=1", "/e?x=1")]
+    [DataRow("//evil.example/e/", "/e/")]
+    [DataRow("/e//evil.example", "/e/")]
+    [DataRow("/e/\\evil.example", "/e/")]
+    [DataRow("https://evil.example/e/", "/e/")]
+    [DataRow("/api/session", "/e/")]
+    [DataRow("/eve", "/e/")]
+    [DataRow("/e/signin", "/e/")]
+    [DataRow("/e/signin/?return=/e/", "/e/")]
+    [DataRow("/e/signout", "/e/")]
+    [DataRow("/e/\r\nSet-Cookie: x", "/e/")]
+    public void TheReturnAddressStaysInTheMode(string? value, string expected) =>
+        Assert.AreEqual(expected, EReaderEndpoints.SafeReturn(value));
+
+    [GeneratedRegex("<input type=\"hidden\" name=\"__RequestVerificationToken\" value=\"([^\"]+)\"")]
+    private static partial Regex TokenField();
+
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
     [GeneratedRegex(@"<script|\son[a-z]+\s*=|javascript:", RegexOptions.IgnoreCase)]

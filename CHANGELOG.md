@@ -10,6 +10,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   with no script. So far its frame: the home page (signed in with the app's session), plain pages for "not found",
   "not allowed" and a server not set up yet. A new setting **E-reader mode** (Settings → Reader apps and e-readers,
   on by default) turns it off.
+- E-reader mode: **signing in and out** with a plain form, the same accounts, wrong-password limits and security log
+  as the app; **Stay signed in** is ticked to begin with. Signing in on either opens both.
 
 ## 0.8.0
 
