@@ -1,0 +1,21 @@
+@*
+    A page that only says something: not found, not allowed, the server not set up yet. A way home under it.
+*@
+<EPage Links="Links" Title="@Title">
+    <p>@Text</p>
+    @if (Home)
+    {
+        <p><a href="@Links.Home">@Texts["ereader.home.link"]</a></p>
+    }
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderLinks Links { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    /// <summary>A link to the home page (not while the server waits for its setup: there is none).</summary>
+    [Parameter] public bool Home { get; set; } = true;
+}

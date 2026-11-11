@@ -51,6 +51,13 @@ public static class SecurityServiceCollectionExtensions
                 // An API answers with a status; the client shows its own sign-in page.
                 options.Events.OnRedirectToLogin = context =>
                 {
+                    // The e-reader pages are plain pages: to their sign-in page, back here afterwards.
+                    if (Librarion.Api.EReader.EReaderEndpoints.IsEReader(context.Request))
+                    {
+                        var request = context.Request;
+                        context.Response.Redirect(new Librarion.Api.EReader.EReaderLinks(context.HttpContext).SignIn(request.Path + request.QueryString));
+                        return Task.CompletedTask;
+                    }
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     return Task.CompletedTask;
                 };

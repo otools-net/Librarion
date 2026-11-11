@@ -84,6 +84,7 @@ export function settingCatalog(): SettingInfo[] {
         { key: 'library.keepMissingDays', section: 'libraries', kind: 'integer', choices: null, min: 0, max: 3650, lowestLevel: 'library' },
         { key: 'import.mergeSameFiles', section: 'libraries', kind: 'choice', choices: ['on', 'off'], min: 0, max: 0, lowestLevel: 'tenant' },
         { key: 'opds.pathKeys', section: 'readerApps', kind: 'choice', choices: ['on', 'off'], min: 0, max: 0, lowestLevel: 'tenant' },
+        { key: 'ereader.enabled', section: 'readerApps', kind: 'choice', choices: ['on', 'off'], min: 0, max: 0, lowestLevel: 'tenant' },
         { key: 'shelves.maxPerAccount', section: 'shelves', kind: 'integer', choices: null, min: 1, max: 1000, lowestLevel: 'tenant' },
     ];
 }

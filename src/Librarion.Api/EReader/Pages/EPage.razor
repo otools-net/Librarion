@@ -1,0 +1,29 @@
+@*
+    The frame of every e-reader page (D-8.1): plain HTML, one stylesheet, no script; the app's name as the way home.
+*@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@Title – @Texts["app.name"]</title>
+    <link rel="stylesheet" href="@Links.Stylesheet">
+</head>
+<body>
+<header class="top">
+    <a class="brand" href="@Links.Home">@Texts["app.name"]</a>
+</header>
+<main>
+    <h1>@Title</h1>
+    @ChildContent
+</main>
+</body>
+</html>
+
+@code {
+    [Parameter, EditorRequired] public EReaderLinks Links { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

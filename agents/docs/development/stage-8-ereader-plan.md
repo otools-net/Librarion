@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 1.
+**Next:** chunk 2.
 
 ## The user's answers (2026-11-11)
 
@@ -109,10 +109,13 @@ is the note's; nothing to port.
 
 0. [x] The user answers Q1–Q7; D-8.1–D-8.10 updated and marked confirmed. **Built:** answers recorded above; Q4
    changed to a server-side redirect of e-ink browsers (D-8.11); [ereader-mode](../features/ereader-mode.md) updated.
-1. [ ] The `/e` frame: route group and fallback, `ClientPage` exclusion, setup page (503 as HTML), the `/e` CSP
+1. [x] The `/e` frame: route group and fallback, `ClientPage` exclusion, setup page (503 as HTML), the `/e` CSP
    (D-8.3), the rendering (D-8.1: layout, `ereader.css`), `ServerTexts` (D-8.10), the tenant setting
    `ereader.enabled` (D-8.5); a placeholder home behind `library.browse`. Tests: every route names a right, no
-   `<script>` in any page, the stylesheet has no colour, headers (CSP), the switch, 404 page.
+   `<script>` in any page, the stylesheet has no colour, headers (CSP), the switch, 404 page. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-1-the-frame),
+   [sessions-and-pipeline](../architecture/sessions-and-pipeline.md), [settings](../features/settings.md); errors
+   (400/403/404/405) rendered as pages by `EReaderGuard`, a visitor redirected to `/e/signin` (chunk 2 builds it).
 2. [ ] Sign in and out (D-8.4): plain form, antiforgery, `SignInService` (throttle, lockout, events), Stay signed in,
    return address, sign out by POST; the same cookie as the app. Tests: right and wrong password, lockout, the
    token refused when missing, a disabled account.

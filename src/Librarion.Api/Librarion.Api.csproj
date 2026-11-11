@@ -14,6 +14,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The e-reader pages' texts (the client's, ServerTexts) and stylesheet (EReaderStylesheet), read from the assembly. -->
+    <EmbeddedResource Include="..\Librarion.Web\src\i18n\en.json" LogicalName="Librarion.i18n.en.json" Link="EReader\en.json" />
+    <EmbeddedResource Include="EReader\ereader.css" LogicalName="Librarion.EReader.ereader.css" />
+    <Content Remove="EReader\ereader.css" />
+    <None Remove="EReader\ereader.css" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Development's local database and caches (git-ignored): never part of a build or a publish. -->
     <Content Update="data/**" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>

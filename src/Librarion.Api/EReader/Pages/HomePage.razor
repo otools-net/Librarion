@@ -1,0 +1,28 @@
+@*
+    The home page. Stage 8 chunk 1: the frame only (the libraries one may browse); search, recently added and the
+    links to browse come with chunk 3.
+*@
+<EPage Links="Links" Title="@(Texts["ereader.home.title"])">
+    <p>@Texts["ereader.home.intro"]</p>
+    @if (Libraries.Count > 0)
+    {
+        <h2>@Texts["ereader.home.libraries"]</h2>
+        <ul class="plain">
+            @foreach (var library in Libraries)
+            {
+                <li>@library</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="muted">@Texts["ereader.home.noLibraries"]</p>
+    }
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderLinks Links { get; set; } = null!;
+
+    /// <summary>The names of the libraries the account may browse, in the app's order.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Libraries { get; set; } = [];
+}

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Librarion.Api;
+using Librarion.Api.EReader;
 using Librarion.Api.Endpoints;
 using Librarion.Api.Opds;
 using Librarion.Api.Security;
@@ -27,6 +28,10 @@ builder.WebHost.UseStaticWebAssets();
 builder.Services.AddLibrarionCore(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddLibrarionSecurity(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton<ClientPage>();
+// The e-reader pages (/e): Razor components rendered on the server, no Blazor runtime sent (D-8.1).
+builder.Services.AddRazorComponents();
+builder.Services.AddSingleton<ServerTexts>();
+builder.Services.AddSingleton<EReaderSwitch>();
 // API keys never in a log, whatever logs and scopes are on (the hosting layer logs a request's address).
 builder.Services.AddLogRedaction();
 
@@ -56,6 +61,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseMiddleware<RequestGuard>();
+app.UseMiddleware<EReaderGuard>();
 app.UseRateLimiter();
 app.UseAuthorization();
 
@@ -89,10 +95,13 @@ api.MapFallback(() => TypedResults.NotFound()).AllowAnonymous();
 // Reader apps (OPDS): their own sign-in, never the cookie.
 app.MapOpdsEndpoints();
 
+// E-ink browsers (/e): plain pages, the app's cookie session.
+app.MapEReaderEndpoints();
+
 // Addresses the client routes itself: its page, with the app's root as its base (ClientPage).
 // A tag page's readable address ends with its name, which may look like a file ("Vol. 2"): the fallback leaves those
 // to the static files, so they are routed here (tag-link.ts in the client).
-app.MapGet("{key:regex(^(?!api$|openapi$|opds$)[a-z0-9-]+$)}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
+app.MapGet("{key:regex(^(?!api$|openapi$|opds$|e$)[a-z0-9-]+$)}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
 app.MapGet("fields/{key}/{id:int}/{**name}", (HttpContext context, ClientPage page) => page.Serve(context)).ExcludeFromDescription();
 app.MapFallback((HttpContext context, ClientPage page) => page.Serve(context));
 

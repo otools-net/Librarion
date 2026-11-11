@@ -1,0 +1,114 @@
+/*
+ * The e-reader mode's only stylesheet (agents/docs/features/ereader-mode.md, D-8.9): e-ink first. Grayscale only (a
+ * test reads this file: hex grays, no other colour), system fonts, large text, targets of 44 px and more, 600 x 800
+ * portrait first. No dark theme, shadows, gradients, transitions, animations or hover effects: they smear on e-ink.
+ */
+
+html {
+    font-family: serif;
+    font-size: 20px;
+    line-height: 1.45;
+    color: #000;
+    background: #fff;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0 12px 24px;
+    max-width: 760px;
+}
+
+a {
+    color: #000;
+}
+
+a:focus,
+button:focus,
+input:focus,
+select:focus {
+    outline: 3px solid #000;
+    outline-offset: 2px;
+}
+
+.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 2px solid #000;
+    margin-bottom: 16px;
+}
+
+.top a {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+    padding: 0 4px;
+}
+
+.brand {
+    font-weight: bold;
+    font-size: 1.2rem;
+    text-decoration: none;
+}
+
+h1 {
+    font-size: 1.4rem;
+    line-height: 1.25;
+    margin: 0 0 12px;
+}
+
+h2 {
+    font-size: 1.15rem;
+    margin: 20px 0 8px;
+}
+
+p {
+    margin: 0 0 12px;
+}
+
+.muted {
+    color: #555;
+}
+
+ul.plain {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul.plain > li {
+    border-bottom: 1px solid #999;
+}
+
+ul.plain > li > a {
+    display: block;
+    min-height: 44px;
+    padding: 10px 4px;
+    box-sizing: border-box;
+}
+
+button,
+input,
+select {
+    font: inherit;
+    color: #000;
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 0;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 0 16px;
+    font-weight: bold;
+}
+
+input,
+select {
+    padding: 0 8px;
+}

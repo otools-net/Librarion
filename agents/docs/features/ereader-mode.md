@@ -1,8 +1,9 @@
 # E-reader mode: a plain gray site for e-ink devices (planned)
 
-Code (planned): `src/Librarion.Api/EReader/` (`EReaderEndpoints`, page templates, `ereader.css`), the same
-`Core/Catalog/` and `Core/Search/` services as the app. Decision D23 in
-[foundation-plan](../development/foundation-plan.md).
+Code: `src/Librarion.Api/EReader/` (`EReaderEndpoints`, `EReaderGuard`, `EReaderSwitch`, `EReaderLinks`,
+`ServerTexts`, `EReaderStylesheet` + `ereader.css`, `Pages/*.razor`), the same `Core/Catalog/` and `Core/Search/`
+services as the app; tests `EReaderTests`. Decision D23 in [foundation-plan](../development/foundation-plan.md); being
+built in stage 8 ([stage-8-ereader-plan](../development/stage-8-ereader-plan.md)).
 
 A second, **basic face of the library for the browsers of e-ink readers** (Kindle, Kobo, PocketBook, Boox, Tolino):
 find a book, look at it, download it to the device. Not the in-app reader ([reader](reader.md)): nothing is read
@@ -63,6 +64,26 @@ here, the device's own reader opens the downloaded file.
 - Rights: the existing `library.browse` and `library.download`, content filters (`Visible()`) and tenants as everywhere
   ([rights](rights.md)); a tenant setting can turn the mode off.
 - Texts through the same translation keys (`en.json` read by the server), the UI language as the user's.
+
+## Built (stage 8 chunk 1): the frame
+
+- **Pages** are Razor components (`Pages/`) returned as `RazorComponentResult` by minimal API routes; `EPage` is the
+  frame (doctype, `<title>`, the stylesheet, the app's name as the link home, the `<h1>`), `MessagePage` a page that
+  only says something. Links come from `EReaderLinks` (absolute, from `PathBase`): never write an address by hand,
+  chunk 8 adds the key prefix there. Pages get it as a parameter; texts by `@inject ServerTexts Texts` (`_Imports.razor`).
+- **No script:** Razor's static rendering adds nothing (no Blazor markers, no `blazor.web.js`: `MapRazorComponents` is
+  not used); `EReaderTests.PlainPageAsync` checks every page for `<script`, `on…=` handlers, `javascript:`, the CSP.
+- **Texts:** `en.json` is embedded in the API assembly (`Librarion.i18n.en.json`, the csproj links the client's file),
+  read by `ServerTexts` (`Texts["key"]`, `Format` for `{name}`); `EveryTextKeyTheModeUsesExists` reads the keys used
+  in `EReader/`. Keys of the mode: `ereader.*`; shared ones reused (`app.name`, `error.forbidden`).
+- **Stylesheet:** `ereader.css` embedded (`Librarion.EReader.ereader.css`), served at `/e/ereader.css?v=<hash>`,
+  immutable, ETag; `TheStylesheetHasNoColour` allows hex grays only and no shadow, gradient, transition, animation,
+  hover, filter, `url(`, `@import`, dark theme. Fonts: `serif` (the device's own).
+- **Errors as pages:** `EReaderGuard` (see [sessions-and-pipeline](../architecture/sessions-and-pipeline.md)): setup
+  503, switch 404, and any bodiless 400/403/404/405 rendered as a plain page; a visitor without a session is sent to
+  `/e/signin?return=…` by the cookie's `OnRedirectToLogin` (the sign-in page itself is chunk 2).
+- **Switch:** `ereader.enabled` (tenant, on), read by `EReaderSwitch` (cached per tenant until `AccessChanges` moves).
+- The home page lists the libraries the account may browse (a placeholder until chunk 3); `library.browse` needed.
 
 ## Scale and privacy
 

@@ -3,7 +3,8 @@
 Code: `src/Librarion.Api/Program.cs`, `Security/` (`SecurityHeaders`, `RequestGuard`), `ClientPage.cs`. Sessions:
 `Security/LibrarionSession.cs` (cookie), `CurrentAccess.cs`, `RightMetadata.cs` (`RequireRight`), `SignInThrottle.cs`;
 Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([opds-auth](../features/opds-auth.md),
-[opds](../features/opds.md)).
+[opds](../features/opds.md)). E-ink browsers on `/e`: `EReader/EReaderGuard.cs`, `EReader/EReaderEndpoints.cs`
+([ereader-mode](../features/ereader-mode.md)).
 
 - **Order:** `UseForwardedHeaders` (loopback proxies) → `OpdsPathKey` (takes a key out of `/opds/k/<key>/…` before
   routing sees it) → `UseRouting` (explicit since stage 7 chunk 8b; it was implicit at the very start) → `SecurityHeaders` (first, so errors carry them too) →
@@ -41,3 +42,11 @@ Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([
 - `builder.WebHost.UseStaticWebAssets()` in Program.cs: `dotnet run` without a launch profile runs as Production and
   otherwise warned "Static Web Assets are not enabled" and couldn't serve the built client.
 - `appsettings.json` `Urls` (5090) wins over `ASPNETCORE_URLS`: pass `--urls` to run on another port.
+- **`/e` (stage 8):** the e-reader pages, server-rendered Razor components (`AddRazorComponents`, `RazorComponentResult`;
+  no `MapRazorComponents`, no Blazor script). `EReaderGuard` right after `RequestGuard`: setup required → a plain 503
+  page; `ereader.enabled` off for the tenant (the server's value without a session) → 404 page; on the way back, an
+  error without a body (route 404, the rights' 403, 405, 400) becomes a plain page, so `/e` never answers problem JSON
+  or the client's page. The stylesheet `/e/ereader.css` skips the guard (the pages link it). Its own CSP
+  `SecurityHeaders.EReaderPolicy` (`default-src 'none'`: no script at all), chosen by path. The cookie scheme's
+  `OnRedirectToLogin` answers `/e` with a 302 to `/e/signin?return=<path>` instead of 401. Its `{**path}` fallback;
+  `e` excluded from `ClientPage`'s `{key}/{id}/{name}` route; `EveryRouteNamesARight` covers it.

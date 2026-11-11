@@ -54,6 +54,9 @@ public static class SettingCatalog
     /// </summary>
     public const string OpdsPathKeys = "opds.pathKeys";
 
+    /// <summary>The e-reader mode (<c>/e</c>, D-8.5): on by default; off, its every address is not found.</summary>
+    public const string EReaderEnabled = "ereader.enabled";
+
     /// <summary>
     /// Shelves an account may hold in a tenant (agents/docs/features/shelves.md; the user's answer, 2026-11-10): set by
     /// the server or the tenant, never by the account; at most 1,000, as a list of shelves is never paged.
@@ -69,6 +72,7 @@ public static class SettingCatalog
         new(KeepMissingDays, SettingKind.Integer, Json("30"), SettingLevel.Library, "libraries", Min: 0, Max: 3650),
         new(MergeSameFiles, SettingKind.Choice, Json("\"on\""), SettingLevel.Tenant, "libraries", Choices: ["on", "off"]),
         new(OpdsPathKeys, SettingKind.Choice, Json("\"on\""), SettingLevel.Tenant, "readerApps", Choices: ["on", "off"]),
+        new(EReaderEnabled, SettingKind.Choice, Json("\"on\""), SettingLevel.Tenant, "readerApps", Choices: ["on", "off"]),
         new(MaxShelves, SettingKind.Integer, Json("100"), SettingLevel.Tenant, "shelves", Min: 1, Max: 1000),
     ];
 

@@ -10,7 +10,7 @@ namespace Librarion.Tests;
 public sealed class RouteRightsTests
 {
     /// <summary>
-    /// Every route of the API, of its document and of the reader apps' feeds names the right(s) it needs, or says it is anonymous
+    /// Every route of the API, of its document, of the reader apps' feeds and of the e-reader pages names the right(s) it needs, or says it is anonymous
     /// (agents/docs/features/rights.md). Stage 1 adds: every named right is in the catalog.
     /// </summary>
     [TestMethod]
@@ -23,7 +23,7 @@ public sealed class RouteRightsTests
         var routes = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>()
             .Where(e => e.RoutePattern.RawText?.TrimStart('/') is { } path
                         && (path.StartsWith("api/", StringComparison.Ordinal) || path.StartsWith("openapi", StringComparison.Ordinal)
-                            || path.StartsWith("opds", StringComparison.Ordinal)))
+                            || path.StartsWith("opds", StringComparison.Ordinal) || path == "e" || path.StartsWith("e/", StringComparison.Ordinal)))
             .ToList();
         var unnamed = routes
             .Where(e => e.Metadata.GetMetadata<RightMetadata>() is null && e.Metadata.GetMetadata<IAllowAnonymous>() is null)
@@ -31,6 +31,7 @@ public sealed class RouteRightsTests
             .ToList();
 
         Assert.IsGreaterThanOrEqualTo(2, routes.Count, "The check found the routes");
+        Assert.IsTrue(routes.Any(e => e.RoutePattern.RawText!.Trim('/') == "e"), "The check found the e-reader's routes");
         Assert.IsEmpty(unnamed, "Routes without a right: " + string.Join(", ", unnamed));
     }
 }

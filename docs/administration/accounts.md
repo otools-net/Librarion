@@ -33,7 +33,7 @@ itself on its own page; a new password or disabling the account ends all of them
 [security log](security-log.md).
 
 A key may be made to work in the catalog's address (for reader apps that can't sign in): anyone who sees that address
-can use it. The setting **API keys in the address** (group **Reader apps**, tenant or server [settings](settings.md))
+can use it. The setting **API keys in the address** (group **Reader apps and e-readers**, tenant or server [settings](settings.md))
 switches that off for every key of the tenant at once; a server administrator's keys follow the server's setting. The
 key in an address is never written to the server's log.
 
