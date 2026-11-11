@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** the user's by-hand checks (chunk 15), then the merge.
+**Next:** the user's by-hand checks (chunk 15: Moon+ works, 2026-11-11; KOReader and Thorium left), then the merge.
 
 ## The user's answers (2026-11-10)
 

@@ -142,7 +142,7 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
 
 ## Checked by hand (the stage's exit criterion: the user, before the merge)
 
-Not yet done (2026-11-11). For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
+**Moon+ Reader: works** (the user, 2026-11-11, over the home WLAN). KOReader and Thorium: not yet. For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
 [docs/opds.md](../../../docs/opds.md):
 
 1. Add the catalog with the user name and the **password**: the root opens (one library: its catalog; several: the list).
