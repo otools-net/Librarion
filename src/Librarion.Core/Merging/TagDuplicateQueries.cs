@@ -74,7 +74,10 @@ public sealed class TagDuplicateQueries(TenantDb tenantDb, TimeProvider time)
 
         var shown = await TagsAsync(db, found.SelectMany(f => f.Tags).Distinct().ToList(), cancellationToken);
         var page = found.Select(f => new TagDuplicateItem(f.Id, f.Level, f.Books,
-                f.Tags.Where(shown.ContainsKey).Select(id => shown[id]).OrderByDescending(t => t.Books).ThenBy(t => t.Id).ToList()))
+                f.Tags.Where(shown.ContainsKey).Select(id => shown[id])
+                // A tie in books goes by name (ordinal: the same on every system), never by id alone: ids follow the order a
+                // scan met the files, which is the directory's order on Linux and by name on Windows.
+                .OrderByDescending(t => t.Books).ThenBy(t => t.Name, StringComparer.Ordinal).ThenBy(t => t.Id).ToList()))
             .Where(i => i.Tags.Count >= 2).ToList();
         var next = ended || cursor is null ? null : new KeysetCursor(null, cursor.Value.Id, cursor.Value.Count).Encode();
         return new TagDuplicatePage(page, next, built);
@@ -97,7 +100,7 @@ public sealed class TagDuplicateQueries(TenantDb tenantDb, TimeProvider time)
             level == TagDuplicateLevel.Sound && NameKeys.WordsText(tags[other].Name) == words ? TagDuplicateLevel.Words : level;
         // The strongest reason of each: the same words, then sounds alike, then initials.
         return others.Where(o => tags.ContainsKey(o.TagId)).GroupBy(o => o.TagId).Select(g => new TagLookAlike(g.Min(o => Level(o.Level, g.Key)), tags[g.Key]))
-            .OrderBy(l => l.Level).ThenByDescending(l => l.Tag.Books).ThenBy(l => l.Tag.Id).ToList();
+            .OrderBy(l => l.Level).ThenByDescending(l => l.Tag.Books).ThenBy(l => l.Tag.Name, StringComparer.Ordinal).ThenBy(l => l.Tag.Id).ToList();
     }
 
     /// <summary>The tags said not the same as each other (every pair), their groups written again. The caller checked they exist.</summary>

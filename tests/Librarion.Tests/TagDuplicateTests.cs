@@ -62,8 +62,10 @@ public sealed class TagDuplicateTests
         shelf.Write("b.fb2", Fb2("It", "Stephen", "King", "b"));
         shelf.Write("c.fb2", Fb2("Misery", "Стивен", "Кинг", "c"));
         shelf.Write("d.fb2", Fb2("Cujo", "S.", "King", "d"));
-        shelf.Write("e.fb2", Fb2("Solaris", "Stanislaw", "Lem", "e"));
-        shelf.Write("f.fb2", Fb2("Eden", "Станислав", "Лем", "f"));
+        // The Cyrillic one scanned first (a lower id): a tie in books goes by name, not by the order files were met
+        // (directory order on Linux, by name on Windows).
+        shelf.Write("e.fb2", Fb2("Eden", "Станислав", "Лем", "e"));
+        shelf.Write("f.fb2", Fb2("Solaris", "Stanislaw", "Lem", "f"));
         shelf.Write("g.fb2", Fb2("Matilda", "Roald", "Dahl", "g"));
         await shelf.ScanAsync(Cancel);
 
@@ -72,7 +74,7 @@ public sealed class TagDuplicateTests
         var groups = page.Items.Select(Describe).ToList();
         CollectionAssert.AreEqual(new[]
         {
-            "Initials: Stephen King, Стивен Кинг, S. King",
+            "Initials: Stephen King, S. King, Стивен Кинг",
             "Sound: Stephen King, Стивен Кинг",
             "Sound: Stanislaw Lem, Станислав Лем",
         }, groups, string.Join(" | ", groups));

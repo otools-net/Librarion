@@ -295,6 +295,10 @@ answers (2026-11-09) are marked below.
   else `Sound`; an initials group is kept only with a name of initials only (`NameKeys.IsInitials`) and one written
   out. 20 tags or more on a key (`MaxGroup`) = noise, kept without members, skipped until a rebuild. `BookCount` = the
   members' direct links summed over libraries when written (what the page ranks by; stale until written again).
+- **Order inside a group** (the list and a tag's look-alikes): most books first, then the **name** (ordinal, the same
+  on every system), then the id. Never by id alone: ids follow the order a scan met the files, which is the
+  directory's order on Linux and by name on Windows (found by CI on Linux, 2026-11-11; `TheFirstScanFindsLookAlikesRankedByBooks`
+  writes the files so the scan order and the name order disagree).
 - **Not the same:** `NotSameTags (TagId < OtherId)`; a group whose every pair is marked isn't stored.
 - **Build** (`BuildAsync`): per field (and plain tags) and per key kind, the tags walked in key order on their index,
   pages of 5,000; a page's last key is read again in the next page unless it fills the page. The first one runs at the

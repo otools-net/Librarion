@@ -4,6 +4,11 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ## Unreleased
 
+### Fixed
+
+- **Tags → Possible duplicates**: tags with as many books are listed by name; their order depended on the order the
+  files were found, which differs between Linux and Windows.
+
 ### Changed
 
 - **Covers are JPEG** everywhere (they were WebP), so every reader app can show them. Covers already made are made
