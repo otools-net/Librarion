@@ -32,7 +32,8 @@ and starting workers only slowed it down). A connection string with its own `Opt
 ## Address
 
 `Urls` sets where the server listens (default `http://localhost:5090`, this computer only). To reach it from other
-devices: `"Urls": "http://0.0.0.0:5090"`.
+devices: `"Urls": "http://0.0.0.0:5090"`, and the port let in by the firewall: step by step in
+[installation](installation.md#from-other-devices-on-your-home-network).
 
 ## Libraries
 
