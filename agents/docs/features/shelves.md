@@ -74,7 +74,11 @@ plan](../development/stage-7-opds-plan.md) (D-7.9, the user's Q1 and Q10). Right
 - **Gotcha:** the snapshot key of `BookList` (`books|library|shelf|tag|sort|q|folder`) gained the shelf: a test
   reading a kept list must use the new key.
 
-## Planned (stage 7)
+## Built (stage 7 chunk 11): the feeds
 
-- The feeds (chunk 11): the shelf list and each shelf's feed, in the shelf's order.
+- In each library's OPDS catalog: **My shelves** (when the account has one), each shelf's books of that library in
+  its own order: [opds](opds.md#built-stage-7-chunk-11-shelves).
+
+## Planned
+
 - Shared or public shelves: [next-version plan](../development/next-version-plan.md).

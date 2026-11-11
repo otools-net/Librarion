@@ -40,7 +40,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   (mouse or finger), by the **arrow keys, Home and End** on it, or with **Move** (a click on the grip: to the start,
   up, down, to the end); a selected book moves with its selection. **Remove from shelf**, **Rename** and **Delete**
   (asking first; the books stay). Through the API too (`api/shelves`; `POST …/books/move` moves a selection at
-  once).
+  once). In the **OPDS catalog**, each library lists **My shelves** once the account has one: each shelf's books of
+  that library, in the shelf's own order.
 - **API keys in the address:** a key made with **Can be used in the address** opens the catalog from
   `…/opds/k/<key>` alone, for reader apps that can't sign in; every link of the catalog keeps it. Under a new key,
   **How to use it** gives that address (with **Copy address**), or the user name and the key as the password, and

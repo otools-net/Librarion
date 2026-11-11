@@ -44,13 +44,14 @@ public static partial class OpdsEndpoints
             BookVisibilities visibilities, BookDownloads downloads) => DownloadAsync(library, id, fileId, zipped: true, context, current, visibilities, downloads));
         library.MapGet("/books/{id:int}/cover/{size}", CoverAsync);
         MapBrowse(library);
+        MapShelves(library);
 
         // Every other address, file-like ones too (opensearch.xml): not found, before the client's fallback takes it.
         opds.MapFallback("{**path}", () => TypedResults.NotFound()).AllowAnonymous();
     }
 
     /// <summary>The libraries the account may read by OPDS; with only one, its catalog itself (no extra step in the app).</summary>
-    private static async Task<IResult> Root(HttpContext context, CurrentAccess current, AccessService accounts, TagQueries tags)
+    private static async Task<IResult> Root(HttpContext context, CurrentAccess current, AccessService accounts, TagQueries tags, Shelves shelves)
     {
         var state = await current.GetAsync();
         var links = new OpdsLinks(context);
@@ -58,7 +59,8 @@ public static partial class OpdsEndpoints
             ? (await accounts.ListLibrariesAsync(tenantId, context.RequestAborted)).Where(l => Opens(state, l.Id)).ToList()
             : [];
         if (libraries.Count == 1)
-            return LibraryFeed(libraries[0].Id, libraries[0].Name, links, links.Root, await tags.FieldsWithValuesAsync(state.TenantId!.Value, context.RequestAborted));
+            return LibraryFeed(libraries[0].Id, libraries[0].Name, links, links.Root, await tags.FieldsWithValuesAsync(state.TenantId!.Value, context.RequestAborted),
+                await HasShelvesAsync(state, shelves, context.RequestAborted));
 
         // A list of catalogs: no search across them (Q11); each library's feeds carry its own.
 
@@ -68,7 +70,7 @@ public static partial class OpdsEndpoints
         return feed;
     }
 
-    private static async Task<IResult> LibraryRoot(int library, HttpContext context, CurrentAccess current, AccessService accounts, TagQueries tags)
+    private static async Task<IResult> LibraryRoot(int library, HttpContext context, CurrentAccess current, AccessService accounts, TagQueries tags, Shelves shelves)
     {
         var state = await current.GetAsync();
         if (!Opens(state, library))
@@ -77,20 +79,24 @@ public static partial class OpdsEndpoints
         if (name is null)
             return Results.NotFound();
         var links = new OpdsLinks(context);
-        return LibraryFeed(library, name, links, links.Library(library), await tags.FieldsWithValuesAsync(state.TenantId!.Value, context.RequestAborted));
+        return LibraryFeed(library, name, links, links.Library(library), await tags.FieldsWithValuesAsync(state.TenantId!.Value, context.RequestAborted),
+            await HasShelvesAsync(state, shelves, context.RequestAborted));
     }
 
     /// <summary>
-    /// A library's catalog: what it can be browsed by (recent, by title, each field with values, the plain tags; more
-    /// with later chunks: shelves, search).
+    /// A library's catalog: what it can be browsed by (recent, by title, the account's shelves when it has some, each
+    /// field with values, the plain tags; its search in the feed's links).
     /// </summary>
-    private static OpdsFeed LibraryFeed(int library, string name, OpdsLinks links, string self, IReadOnlyList<FieldInfo> fields)
+    private static OpdsFeed LibraryFeed(int library, string name, OpdsLinks links, string self, IReadOnlyList<FieldInfo> fields, bool shelves)
     {
         var feed = OpdsFeed.Start(OpdsFeed.NavigationType, $"urn:librarion:library:{library}", name, links, self, library: library)
             .Navigation($"urn:librarion:library:{library}:recent", "Recently added", links.Recent(library), OpdsFeed.AcquisitionType,
                 "The books added last, newest first.", OpdsFeed.NewRel)
             .Navigation($"urn:librarion:library:{library}:titles", "All books by title", links.Titles(library), OpdsFeed.AcquisitionType,
                 "Every book, A to Z.");
+        if (shelves)
+            feed.Navigation($"urn:librarion:library:{library}:shelves", "My shelves", links.Shelves(library), OpdsFeed.NavigationType,
+                "Your own lists of books, in your order.");
         foreach (var field in fields)
             feed.Navigation($"urn:librarion:library:{library}:field:{field.Key}", FieldName(field), links.Values(library, field.Key), OpdsFeed.NavigationType);
         return feed.Navigation($"urn:librarion:library:{library}:tags", "Tags", links.Values(library, null), OpdsFeed.NavigationType);

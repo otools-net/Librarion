@@ -27,6 +27,12 @@ public sealed class OpdsLinks(HttpContext context)
 
     public string TagBooks(int library, int tag, string? after = null) => $"{Library(library)}/tags/{tag}/books" + After(after);
 
+    /// <summary>The account's shelves, as a library's catalog lists them.</summary>
+    public string Shelves(int library) => Library(library) + "/shelves";
+
+    /// <summary>A shelf's books in the library, in the shelf's own order.</summary>
+    public string Shelf(int library, int shelf, string? after = null) => $"{Shelves(library)}/{shelf}" + After(after);
+
     /// <summary>The library's OpenSearch description (where reader apps learn the search address).</summary>
     public string OpenSearch(int library) => Library(library) + "/opensearch.xml";
 

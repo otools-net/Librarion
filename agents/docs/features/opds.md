@@ -1,6 +1,7 @@
 # OPDS feeds
 
-Code: `src/Librarion.Api/Opds/` (`OpdsEndpoints` routes, `OpdsEndpoints.Browse` fields and tags, `OpdsFeed` the Atom
+Code: `src/Librarion.Api/Opds/` (`OpdsEndpoints` routes, `OpdsEndpoints.Browse` fields and tags, `OpdsEndpoints.Shelves`
+shelves, `OpdsFeed` the Atom
 writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQueries.EntriesAsync`,
 `TagQueries.FieldsWithValuesAsync` / `InitialsAsync`. Tests: `OpdsTests`, `OpdsFeedTests`. Sign-in:
 [opds-auth](opds-auth.md). Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.5–D-7.8).
@@ -92,6 +93,18 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
   file id is the same); the merged book is no longer listed.
 - Tests: `OpdsFeedTests.AnFb2IsAlsoOfferedZipped`, `AMergedBooksOldAddressesStillAnswer`.
 
+## Built (stage 7 chunk 11): shelves
+
+- **Per library**, as everything in the catalog (Q11): shelves hold books of every library, so each library's
+  catalog shows its own books of them. A library's catalog lists **My shelves** (after All books by title) only
+  when the account holds `account.shelves` and has a shelf (one short query, `OpdsEndpoints.HasShelvesAsync`).
+- `/opds/l/<library>/shelves`: the account's shelves by name (never paged: at most `shelves.maxPerAccount`), no
+  counts (a shelf's count is of every library). `/opds/l/<library>/shelves/<id>`: its books of that library in the
+  shelf's own order, 50 a page by key (`Shelves.BooksAsync` with `library`), up = the list; another account's shelf
+  404. Both routes name `account.shelves` besides the group's `library.opds` (403 without it). The right is an
+  account one: an API key's library list doesn't narrow it.
+- Test: `OpdsFeedTests.ShelvesAreFeedsOfEachLibraryInTheirOwnOrder`.
+
 ## Planned (stage 7)
 
-- Shelves (11). Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).
+- Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).

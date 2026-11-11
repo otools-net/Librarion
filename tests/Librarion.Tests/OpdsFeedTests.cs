@@ -298,6 +298,76 @@ public sealed class OpdsFeedTests
         Assert.AreEqual(HttpStatusCode.NotFound, other.StatusCode);
     }
 
+    // ---- Shelves (chunk 11) ----
+
+    /// <summary>
+    /// A library's catalog lists My shelves once the account has one; each shelf's feed holds that library's books of
+    /// it in the shelf's own order, 50 a page by key; another library shows its own (none here); another account's
+    /// shelf is not found; without the right to shelves, neither the entry nor the feeds.
+    /// </summary>
+    [TestMethod]
+    public async Task ShelvesAreFeedsOfEachLibraryInTheirOwnOrder()
+    {
+        var (shelf, reader) = await StartAsync(Enumerable.Range(0, 51).Select(i => ($"Book {i:00}.fb2", Fb2($"Book {i:00}"))).ToArray());
+        await using var _s = shelf;
+        using var _r = reader;
+        var library = shelf.LibraryId;
+        LibraryInfo comics;
+        using (var made = await shelf.Admin.PostAsJsonAsync("/api/libraries", new LibraryInput("Comics"), ApiClients.Json, Cancel))
+            comics = (await made.Content.ReadFromJsonAsync<LibraryInfo>(ApiClients.Json, Cancel))!;
+        Dictionary<string, int> books;
+        await using (var db = await shelf.DbAsync(Cancel))
+            books = await db.Books.ToDictionaryAsync(b => b.Title!, b => b.Id, Cancel);
+
+        var catalog = $"/opds/l/{library}";
+        Assert.IsFalse(Entries(await FeedAsync(reader, catalog, "navigation")).Any(e => Title(e) == "My shelves"), "no shelf yet");
+
+        using var web = await ApiClients.SignInAsync(shelf.Factory, "reader", ApiClients.Password, Cancel);
+        async Task<int> MakeAsync(string name, IEnumerable<string> titles)
+        {
+            using var made = await web.PostAsJsonAsync("/api/shelves", new ShelfEndpoints.ShelfInput(name), ApiClients.Json, Cancel);
+            var id = (await made.Content.ReadFromJsonAsync<Librarion.Core.Catalog.ShelfInfo>(ApiClients.Json, Cancel))!.Id;
+            var ids = titles.Select(t => books[t]).ToList();
+            if (ids.Count > 0)
+                using (var added = await web.PostAsJsonAsync($"/api/shelves/{id}/books", new ShelfEndpoints.ShelfBooksInput(ids), ApiClients.Json, Cancel))
+                    Assert.AreEqual(HttpStatusCode.OK, added.StatusCode, await added.Content.ReadAsStringAsync(Cancel));
+            return id;
+        }
+        // Newest first: the shelf's own order, not the library's.
+        var order = Enumerable.Range(0, 51).Reverse().Select(i => $"Book {i:00}").ToList();
+        var mine = await MakeAsync("Mine", order);
+        await MakeAsync("Empty", []);
+
+        var entry = Entries(await FeedAsync(reader, catalog, "navigation")).Single(e => Title(e) == "My shelves");
+        Assert.AreEqual($"{catalog}/shelves", Href(entry, "subsection"));
+        var list = await FeedAsync(reader, $"{catalog}/shelves", "navigation");
+        CollectionAssert.AreEqual(new[] { "Empty", "Mine" }, Entries(list).Select(Title).ToArray(), "by name");
+        Assert.AreEqual($"{catalog}/shelves/{mine}", Href(Entries(list)[1], "subsection"));
+        Assert.AreEqual(catalog, Href(list.Root!, "up"));
+
+        var first = await FeedAsync(reader, $"{catalog}/shelves/{mine}", "acquisition");
+        Assert.AreEqual("Mine", first.Root!.Element(Atom + "title")!.Value);
+        Assert.AreEqual($"{catalog}/shelves", Href(first.Root!, "up"));
+        CollectionAssert.AreEqual(order.Take(50).ToArray(), Entries(first).Select(Title).ToArray());
+        Assert.IsTrue(Entries(first)[0].Elements(Atom + "link").Any(l => (string?)l.Attribute("rel") == OpdsFeed.AcquisitionRel));
+        var next = Href(first.Root!, "next")!;
+        StringAssert.StartsWith(next, $"{catalog}/shelves/{mine}?after=");
+        var second = await FeedAsync(reader, next, "acquisition");
+        CollectionAssert.AreEqual(new[] { "Book 00" }, Entries(second).Select(Title).ToArray());
+        Assert.IsNull(Href(second.Root!, "next"));
+
+        Assert.IsEmpty(Entries(await FeedAsync(reader, $"/opds/l/{comics.Id}/shelves/{mine}", "acquisition")), "the other library has none of them");
+        using var admin = OpdsTests.Reader(shelf.Factory, ApiClients.AdminName, ApiClients.Password);
+        using (var others = await admin.GetAsync($"{catalog}/shelves/{mine}", Cancel))
+            Assert.AreEqual(HttpStatusCode.NotFound, others.StatusCode, "another account's shelf");
+
+        await shelf.Factory.Services.GetRequiredService<AccessService>().UpdateTenantAsync(shelf.TenantId,
+            new TenantInput("Home", DisabledRights: [Rights.Shelves]), Cancel);
+        Assert.IsFalse(Entries(await FeedAsync(reader, catalog, "navigation")).Any(e => Title(e) == "My shelves"), "without the right");
+        using (var refused = await reader.GetAsync($"{catalog}/shelves/{mine}", Cancel))
+            Assert.AreEqual(HttpStatusCode.Forbidden, refused.StatusCode);
+    }
+
     // ---- Fields and tags (chunk 6) ----
 
     private static string Title(XElement entry) => entry.Element(Atom + "title")!.Value;

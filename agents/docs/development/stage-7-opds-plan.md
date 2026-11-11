@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 11.
+**Next:** chunk 12.
 
 ## The user's answers (2026-11-10)
 
@@ -164,7 +164,9 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     axe in both themes. **Built:** `ShelfStore`, `ShelfPicker`, `BookList` with `shelf`; reorder by drag (pointer
     events), keys and Move; `POST …/books/move` for a selection, the shelf order's cursor following its book;
     selection with `account.shelves` alone; user docs `user-guide/shelves.md`; [shelves](../features/shelves.md#built-stage-7-chunk-10-the-pages).
-11. [ ] Shelves in OPDS: the shelf list and each shelf's feed (in the shelf's order).
+11. [x] Shelves in OPDS: the shelf list and each shelf's feed (in the shelf's order). **Built:** per library (Q11:
+    each library's books of a shelf), My shelves only when the account has one, `account.shelves` on both routes;
+    [opds](../features/opds.md#built-stage-7-chunk-11-shelves).
 12. [ ] HTTP-level e2e as a reader app (Playwright request context): Basic, key, path key; root → a field → a value →
     books → download (also from inside a zip); search; a shelf; 401 without credentials, and with a cookie only.
 13. [ ] Validation: `agents/tools/opds-validate/` (offline RelaxNG check of OPDS 1.2 / Atom, with a README); every feed

@@ -36,6 +36,12 @@ whole selection.
   so you can move a book a few places, saying its place on the shelf.
 - With the keyboard, on the grip: the **arrow keys** move it one place, **Home** to the start, **End** to the end.
 
+## In reader apps
+
+A reader app connected to Librarion's catalog (OPDS) shows **My shelves** in each library's catalog once you have a
+shelf: each shelf with its books of that library, in your order. A shelf with books from several libraries appears
+in each of them with that library's books.
+
 ## Taking books off, renaming, deleting
 
 - Select books on the shelf's page, then **Remove from shelf**: they leave the shelf, not their libraries.
