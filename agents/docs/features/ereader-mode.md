@@ -13,8 +13,8 @@ here, the device's own reader opens the downloaded file.
 - The browsers of e-ink devices are old or limited WebKit/Chromium builds: slow JS, little memory, partial CSS; the
   Angular app is too heavy for them, and its scrolling, transitions and colours smear on e-ink.
 - So the mode is **server-rendered HTML that works with JS off**: links and plain forms only, one small stylesheet,
-  no client framework, no script at all (`script-src 'none'` in its CSP). Rendering (Razor components rendered
-  statically or plain templates) is chosen when the stage starts.
+  no client framework, no script at all (`default-src 'none'` in its CSP). Rendered by Razor components rendered
+  statically on the server (`RazorComponentResult`: HTML-encoded by default, no Blazor runtime sent).
 
 ## Design
 
@@ -22,8 +22,9 @@ here, the device's own reader opens the downloaded file.
   the stylesheet), no dark theme, no shadows, gradients, animations, transitions or hover effects.
 - **Big and plain:** system fonts, large text, tap targets ≥ 44 px (e-ink touch is imprecise), generous line height;
   fits 600 × 800 and up, portrait first; nothing needs a long press or a swipe.
-- **Pages, not scrolling:** lists of ~10–20 items with **Previous / Next** links (keyset cursors in the query string,
-  [scale](../development/scale.md)), so each screen is one full refresh; no infinite scroll, no virtual lists.
+- **Pages, not scrolling:** lists of 20 items with small covers, **Next** and **First** links (keyset cursors in the
+  query string, [scale](../development/scale.md); back is the browser's Back, no Previous: it would need every sort
+  walked backwards), so each screen is one full refresh; no infinite scroll, no virtual lists.
 - Covers as the small thumbnails (`s`) the app already serves ([book-display](book-display.md)); every image has
   its width and height so the page does not reflow while it loads.
 
@@ -51,11 +52,14 @@ here, the device's own reader opens the downloaded file.
 
 ## Access
 
-- Address `/e/` (short, to type on an e-ink keyboard), linked from the app's menu and sign-in page; the app may offer
-  it once when the User-Agent is an e-ink device.
-- Cookie session like the app, long-lived (typing a password on an e-ink keyboard is slow); forms carry the
-  antiforgery token. Devices whose browser loses cookies can use a path API key (`/e/k/<key>/…`, opt-in per key,
-  redacted from logs), as [opds-auth](opds-auth.md).
+- Address `/e/` (short, to type on an e-ink keyboard), linked from the app's sign-in page. E-ink browsers (by
+  User-Agent) asking for the app's HTML are **redirected to `/e/` by the server** (a book's address to its `/e`
+  page); a **Full site** link on `/e` sets a cookie that stops it, so a wrongly detected browser is never stuck. Never
+  `/api`, `/opds` or files; no redirect when the mode is off.
+- Cookie session like the app; **Stay signed in** ticked by default (typing a password on an e-ink keyboard is slow);
+  forms carry the antiforgery token. Devices whose browser loses cookies can use a path API key (`/e/k/<key>/…`, the
+  `opds` scope renamed "Reader apps and e-readers", opt-in per key with **Can be used in the address**, redacted from
+  logs), as [opds-auth](opds-auth.md).
 - Rights: the existing `library.browse` and `library.download`, content filters (`Visible()`) and tenants as everywhere
   ([rights](rights.md)); a tenant setting can turn the mode off.
 - Texts through the same translation keys (`en.json` read by the server), the UI language as the user's.
@@ -67,8 +71,9 @@ here, the device's own reader opens the downloaded file.
 
 ## Tests to have
 
-- Backend: every `/e/` route names a right; pages render without any `<script>`; Previous / Next follow the keyset
+- Backend: every `/e/` route names a right; pages render without any `<script>`; Next / First follow the keyset
   across pages; hidden books 404; download headers (ASCII + UTF-8 names, type, ranges); device format order per
-  User-Agent; path key works and is redacted; the stylesheet has no non-gray colour.
+  User-Agent; the redirect of e-ink browsers (and its Full site cookie); path key works and is redacted; the
+  stylesheet has no non-gray colour.
 - e2e (important flow): with JavaScript disabled on a 600 × 800 viewport: sign in, search, open a book, download a
   file (also from a container zip), next page of a list; no request leaves the origin.

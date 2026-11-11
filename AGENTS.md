@@ -98,7 +98,7 @@ note rather than inventing a new one.
 | Note | Covers | Code |
 |---|---|---|
 | [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (7 done; 8, e-reader mode, next), budgets, risks | |
-| [stage-8-ereader-plan](agents/docs/development/stage-8-ereader-plan.md) | **stage 8 checklist**: e-reader mode at `/e/`; proposed decisions, the user's questions, chunks, the **Next:** chunk to continue with | |
+| [stage-8-ereader-plan](agents/docs/development/stage-8-ereader-plan.md) | **stage 8 checklist**: e-reader mode at `/e/`; confirmed decisions, the user's answers, chunks, the **Next:** chunk to continue with | |
 | [next-version-plan](agents/docs/development/next-version-plan.md) | open topics for after 1.0: features discussed but not built before the MVP | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |

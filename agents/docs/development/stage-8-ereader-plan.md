@@ -4,8 +4,8 @@ Roadmap: [foundation-plan](foundation-plan.md) (D23; D7 for path keys). Goal: **
 e-ink device's browser** (Kindle, Kobo, PocketBook, Boox, Tolino): a second, plain face of the library at `/e/`,
 server-rendered, grayscale, no script. Version stays on `edge`; the merge into `main` makes it `0.9.0`.
 
-Written 2026-11-11, at the close of stage 7. Decisions D-8.1–D-8.10 below are **proposed**: chunk 0 asks the
-questions (Q1–Q7) and records the answers.
+Written 2026-11-11, at the close of stage 7. Decisions D-8.1–D-8.10 below are **confirmed** (chunk 0, 2026-11-11;
+the user's answers below).
 
 Feature notes this stage builds (their "planned" parts become built): [ereader-mode](../features/ereader-mode.md)
 (the design: screens, grayscale, pages, downloads, access), [opds-auth](../features/opds-auth.md) (path keys on `/e`
@@ -29,9 +29,21 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 0.
+**Next:** chunk 1.
 
-## Questions for the user (chunk 0)
+## The user's answers (2026-11-11)
+
+- **Q1:** Razor components rendered statically (recommended).
+- **Q2:** Next and First links plus the browser's Back; no Previous (recommended).
+- **Q3:** the `opds` scope, renamed "Reader apps and e-readers", with the key's **Can be used in the address**
+  (recommended).
+- **Q4 (changed):** a link on the app's sign-in page, and e-ink browsers **redirected to `/e/` automatically** where
+  possible (instead of the one-time note). How: D-8.11.
+- **Q5:** formats the device can't open listed after the others, dimmed, still downloadable (recommended).
+- **Q6:** **Stay signed in** ticked by default on `/e/` (recommended).
+- **Q7:** 20 books a page with small covers (recommended).
+
+## Questions for the user (chunk 0, answered)
 
 - **Q1 Rendering:** Razor components rendered statically on the server (`RazorComponentResult`: typed templates,
   HTML-encoded by default, layouts; part of ASP.NET Core, no Blazor runtime sent) **(recommended)**, or plain C#
@@ -50,7 +62,7 @@ is the note's; nothing to port.
 - **Q7 Page size:** 20 books a page with small covers **(recommended)**, or 10 (faster refresh on the slowest
   devices) — or the account's page size preference?
 
-## Decisions for this stage (proposed; chunk 0 confirms or changes them)
+## Decisions for this stage (confirmed 2026-11-11)
 
 - **D-8.1 Rendering (Q1):** Razor components rendered statically by minimal API endpoints
   (`RazorComponentResult`), one layout, no interactivity, no `blazor.web.js`; markup in
@@ -77,16 +89,26 @@ is the note's; nothing to port.
   ZIP entries), FB2 also as `fb2.zip` (`ZippedDownload`); `Content-Disposition` with an ASCII `filename` and a UTF-8
   `filename*` (old browsers mangle UTF-8 names; checked, fixed if the app's isn't). The device's formats first, guessed
   from the User-Agent (Kindle: AZW3, MOBI, PDF, TXT; Kobo: EPUB, KEPUB, PDF, CBZ; PocketBook and others: FB2, EPUB,
-  PDF, DJVU…), changeable on the page (a form, kept in a cookie); others per Q5.
+  PDF, DJVU…), changeable on the page (a form, kept in a cookie); the others after them, dimmed, still downloadable
+  (Q5).
 - **D-8.9 Look:** grayscale only (a test reads the stylesheet: no hue), system fonts, large text, targets ≥ 44 px,
   600 × 800 portrait first, every image with its width and height, covers as the `s` thumbnails; no dark theme,
   shadows, gradients, transitions or hover effects.
 - **D-8.10 Texts:** the same `en.json` keys read by the server (`ServerTexts`, the user's UI language, English
   shipped), `ClientI18nTests` extended to the server's keys; fields named as the app names them.
+- **D-8.11 Ways in (Q4):** a link to `/e/` on the app's sign-in page. E-ink browsers are redirected **on the server**
+  (their script can't be relied on): `ClientPage` answers a GET of the app's HTML with a `302` to `/e/` when the
+  User-Agent is an e-ink device (the same detection as D-8.8: Kindle, Kobo, PocketBook, Tolino, Boox; unknown → no
+  redirect), keeping where it can (a book's address → its `/e` book page; anything else → `/e/`). A **Full site**
+  link on every `/e` page sets a cookie (`librarion.fullsite`, a year) that stops the redirect, and `/e`'s own link
+  back clears it, so a wrongly detected browser or a user who wants the app is never stuck. Only HTML pages are
+  redirected: never `/api`, `/opds`, files, covers or downloads; the switch `ereader.enabled` off → no redirect.
+  Nothing is added to the app's menu.
 
 ## Todo (one chunk per session; commit it, then ask before the next)
 
-0. [ ] The user answers Q1–Q7; D-8.1–D-8.10 updated and marked confirmed.
+0. [x] The user answers Q1–Q7; D-8.1–D-8.10 updated and marked confirmed. **Built:** answers recorded above; Q4
+   changed to a server-side redirect of e-ink browsers (D-8.11); [ereader-mode](../features/ereader-mode.md) updated.
 1. [ ] The `/e` frame: route group and fallback, `ClientPage` exclusion, setup page (503 as HTML), the `/e` CSP
    (D-8.3), the rendering (D-8.1: layout, `ereader.css`), `ServerTexts` (D-8.10), the tenant setting
    `ereader.enabled` (D-8.5); a placeholder home behind `library.browse`. Tests: every route names a right, no
@@ -109,7 +131,9 @@ is the note's; nothing to port.
 8. [ ] Keys in the address (D-8.7, Q3): `/e/k/<key>/…`, the middleware shared with `/opds/k/`, links, covers and
    downloads keeping the prefix, redaction (a test reads the log), the tenant switch; the API key page's "How to use
    it" names the `/e` address. Tests.
-9. [ ] Ways in (Q4): links on the app's sign-in page and menu, the one-time note for e-ink browsers; client specs.
+9. [ ] Ways in (Q4, D-8.11): the link on the app's sign-in page; the server-side redirect of e-ink browsers from
+   `ClientPage` (a book's address to its `/e` page), the **Full site** cookie and the way back. Tests per User-Agent
+   (redirected, not redirected, with the cookie, switch off, `/api` / `/opds` / files never); client spec for the link.
 10. [ ] e2e: a project with JavaScript off at 600 × 800 (and a Kindle-like User-Agent): sign in, search, a book page,
     download loose and from a ZIP, the next page, a key in the address, sign out; no request leaves the origin; axe AA
     on each screen (run with script on: the pages have none of their own).
