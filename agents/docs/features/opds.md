@@ -105,6 +105,19 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
   account one: an API key's library list doesn't narrow it.
 - Test: `OpdsFeedTests.ShelvesAreFeedsOfEachLibraryInTheirOwnOrder`.
 
+## Built (stage 7 chunk 12): end to end as a reader app
+
+- `tests/e2e/specs/opds.spec.ts` (`@opds`, desktop project only: HTTP, no screen) with `fixtures/opds.ts`
+  (`ReaderApp`: Playwright's request context with Basic or nothing; `parseFeed` reads our own Atom with regular
+  expressions, not a schema check). One flow: no credentials 401 with the Basic challenge; the web cookie alone 401;
+  a wrong password 401; the password: root (a list: every test's libraries share the tenant) → the library →
+  Authors → the author → the books; downloads compared byte for byte, loose and from inside a ZIP; the `fb2.zip`
+  starts with `PK`; a thumbnail is JPEG; search through the feed's `{searchTerms}` template; a shelf made through the
+  API shows in its own order; a key as the password; a key in the address alone, every feed link keeping the
+  prefix, down to a download.
+- The libraries are made through the API as the administrator (no page needed); an account of the Users group
+  reads them at once (Users hold the library rights tenant-wide).
+
 ## Planned (stage 7)
 
 - Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).
