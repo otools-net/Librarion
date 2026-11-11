@@ -4,7 +4,23 @@ Code: `src/Librarion.Api/Opds/` (`OpdsEndpoints` routes, `OpdsEndpoints.Browse` 
 shelves, `OpdsFeed` the Atom
 writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQueries.EntriesAsync`,
 `TagQueries.FieldsWithValuesAsync` / `InitialsAsync`. Tests: `OpdsTests`, `OpdsFeedTests`. Sign-in:
-[opds-auth](opds-auth.md). Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.5–D-7.8).
+[opds-auth](opds-auth.md). Decisions: [below](#decisions-stage-7-confirmed-2026-11-10).
+
+## Decisions (stage 7, confirmed 2026-11-10)
+
+From the stage 7 plan (removed at the merge, 0.8.0; git history keeps it), the user's answers of 2026-11-10:
+
+- **Addresses (D-7.5, Q11):** `/opds` the root (one library: its catalog; several: the list, each its own catalog; no
+  catalog across libraries), `/opds/l/<library>/…` per library (the tenant follows the library), `/opds/k/<key>/…`.
+- **Feeds (D-7.6):** OPDS 1.2; next pages by key, never offsets or totals; 50 entries a page; a page's files and
+  extras in one batched query each.
+- **Entries (D-7.7):** id `urn:librarion:book:<id>`, the file-name title fallback (D15), an acquisition link per
+  file with its media type, FB2 also as `fb2.zip` zipped on the fly.
+- **Covers JPEG everywhere (D-7.8, Q5–Q6):** many reader apps don't decode WebP; the web app's covers too; uploads
+  made before (not in production) not converted.
+- **Validation (D-7.10):** against the OPDS 1.2 / Atom RELAX NG schemas, offline (chunk 13).
+- **OPDS 2.0 (Q3):** optional, skipped: [next-version plan](../development/next-version-plan.md#opds).
+- **Rights (D-7.1, Q4):** `library.opds`, `account.apiKeys`, `account.shelves`, all to Users ([rights](rights.md)).
 
 ## Built (stage 7 chunk 1)
 
@@ -142,7 +158,9 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
 
 ## Checked by hand (the stage's exit criterion: the user, before the merge)
 
-**Moon+ Reader: works** (the user, 2026-11-11, over the home WLAN). KOReader and Thorium: not yet. For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
+**Moon+ Reader: works** (the user, 2026-11-11, over the home WLAN; [docs/opds.md](../../../docs/opds.md) as
+written). **KOReader and Thorium** could not be reached for testing: moved to stage 8's by-hand checks (the user's
+decision, 2026-11-11; [stage 8 plan](../development/stage-8-ereader-plan.md)). For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
 [docs/opds.md](../../../docs/opds.md):
 
 1. Add the catalog with the user name and the **password**: the root opens (one library: its catalog; several: the list).

@@ -3,8 +3,26 @@
 Code: `src/Librarion.Api/Opds/OpdsAuthentication.cs` (the `Opds` scheme, Basic), `BasicVerificationCache.cs`;
 `Api/Security/ApiKeyAuthentication.cs` (`ApiKeySignIn`, the `ApiKey` scheme), `CurrentAccess.cs` (narrowing);
 `Core/Access/ApiKeys.cs`, `Core/Data/Entities/Access/ApiKey.cs`; `Api/Endpoints/ApiKeyEndpoints.cs`; client
-`account/api-keys.ts`. Tests: `OpdsTests`, `ApiKeyTests`, `api-keys.spec.ts` (client and e2e). Decisions: [stage 7 plan](../development/stage-7-opds-plan.md) (D-7.2–D-7.5). Feeds:
+`account/api-keys.ts`. Tests: `OpdsTests`, `ApiKeyTests`, `api-keys.spec.ts` (client and e2e). Decisions: [below](#decisions-stage-7-confirmed-2026-11-10). Feeds:
 [opds](opds.md).
+
+## Decisions (stage 7, confirmed 2026-11-10)
+
+From the stage 7 plan (removed at the merge, 0.8.0; git history keeps it), the user's answers of 2026-11-10:
+
+- **Ways in by path (D-7.2, Q7):** `/opds/**` takes Basic (password or key) and keys only, never the cookie, GET only.
+  `/api/**` keeps the cookie and adds `Bearer` / `X-Api-Key` (never Basic there: browsers replay Basic as they do
+  cookies); a key-signed request needs no `X-Librarion-Request`. Scopes narrow, never widen: `opds` = `/opds` only,
+  `api:read` = GET routes, `api:write` = all; optionally some libraries.
+- **Keys (D-7.3, Q8):** `lib_<id>_<secret>`, stored as the id and a SHA-256 of the secret, compared in fixed time,
+  shown once; name, scopes, libraries, path allowed, expiry (optional, none by default), last use (written at most
+  once a minute), revoked. A new security stamp or a disabled account ends them at once.
+- **Basic's cost (D-7.4):** a success cached 5 minutes (user, a keyed hash of the secret, the stamp), a failure
+  never; failures through `SignInThrottle` and the lockout; a rate limit per account; security events, never a secret.
+- **Keys in the address (D-7.5, Q9):** opt-in per key ("Can be used in the address"), a tenant setting switches them
+  off, the key redacted from logs. Basic needs the key's owner's name (an empty name is refused: a key without the
+  name goes in the address or the headers; the user's answer, 2026-11-10).
+- **Guests (Q2):** none before 1.0: [next-version plan](../development/next-version-plan.md).
 
 ## Built (stage 7 chunk 1)
 

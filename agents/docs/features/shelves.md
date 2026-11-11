@@ -3,8 +3,9 @@
 Code: `Core/Catalog/Shelves.cs` (the service), `Core/Data/Entities/Catalog/Shelf.cs` (`Shelf`, `ShelfBook`),
 `Api/Endpoints/ShelfEndpoints.cs`; the client: `core/shelf-store.ts`, `app/shelves/` (pages, `ShelfPicker`),
 `browse/book-list.ts` with `shelf`, `browse/shelf-order.ts`, `browse/shelf-move.ts`; shelf rows in merges: `Core/Merging/BookMerger.cs` / `BookMerger.Undo.cs`
-(`ShelfData`, `ShelvesBackAsync`). Tests: `ShelfTests` (both providers), `TenancyTests`, `shelves/shelves.spec.ts`, e2e `shelves.spec.ts`. Decisions: [stage 7
-plan](../development/stage-7-opds-plan.md) (D-7.9, the user's Q1 and Q10). Right: `account.shelves` ([rights](rights.md)).
+(`ShelfData`, `ShelvesBackAsync`). Tests: `ShelfTests` (both providers), `TenancyTests`, `shelves/shelves.spec.ts`, e2e `shelves.spec.ts`. Decisions (stage 7, the user's
+answers 2026-11-10): shelves built in stage 7 (Q1); personal, in their own order, the shelf's page also by title,
+author or date added (D-7.9, Q10); shared and public shelves after 1.0. Right: `account.shelves` ([rights](rights.md)).
 
 ## Built (stage 7 chunk 9): Core and routes
 

@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 0 (after stage 7 is merged).
+**Next:** chunk 0.
 
 ## Questions for the user (chunk 0)
 
@@ -118,12 +118,14 @@ is the note's; nothing to port.
     server).
 12. [ ] Docs and close: `docs/user-guide/ereader.md` (Kindle, Kobo, PocketBook), the API keys page, rights and
     settings references; notes (`ereader-mode`, `opds-auth`, `rights`, `settings`, `sessions-and-pipeline`),
-    CHANGELOG; the by-hand list for the user (Kindle, Kobo and PocketBook browsers); merge `0.9.0`, this plan
-    removed, the roadmap marks stage 8 done.
+    CHANGELOG; the by-hand list for the user (Kindle, Kobo and PocketBook browsers; and, moved from stage 7, the OPDS
+    catalog in **KOReader** and **Thorium**: [opds](../features/opds.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge));
+    merge `0.9.0`, this plan removed, the roadmap marks stage 8 done.
 
 ## Exit criteria
 
 From the roadmap: with JavaScript off on 600 × 800: sign in, search, book page, download (also from a ZIP); no
-`<script>` and no colour; Kindle, Kobo and PocketBook browsers checked by hand (by the user). Also: every `/e` route
+`<script>` and no colour; Kindle, Kobo and PocketBook browsers checked by hand (by the user); and stage 7's OPDS
+checks in KOReader and Thorium (moved here 2026-11-11: no access to them then; Moon+ passed). Also: every `/e` route
 names its right; form posts need the antiforgery token; keys never appear in logs; both providers green; the pages
 within the list budget at 2M.

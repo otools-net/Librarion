@@ -97,9 +97,8 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (6 done; 7, OPDS and API keys, built and waiting for the by-hand checks; 8 planned), budgets, risks | |
-| [stage-7-opds-plan](agents/docs/development/stage-7-opds-plan.md) | **stage 7 checklist**: OPDS 1.2, API keys, shelves; decisions, chunks, the **Next:** chunk to continue with | |
-| [stage-8-ereader-plan](agents/docs/development/stage-8-ereader-plan.md) | **stage 8 checklist** (after stage 7's merge): e-reader mode at `/e/`; proposed decisions, the user's questions, chunks | |
+| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (7 done; 8, e-reader mode, next), budgets, risks | |
+| [stage-8-ereader-plan](agents/docs/development/stage-8-ereader-plan.md) | **stage 8 checklist**: e-reader mode at `/e/`; proposed decisions, the user's questions, chunks, the **Next:** chunk to continue with | |
 | [next-version-plan](agents/docs/development/next-version-plan.md) | open topics for after 1.0: features discussed but not built before the MVP | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
