@@ -173,6 +173,13 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     [opds](../features/opds.md#built-stage-7-chunk-12-end-to-end-as-a-reader-app).
 13. [ ] Validation: `agents/tools/opds-validate/` (offline RelaxNG check of OPDS 1.2 / Atom, with a README); every feed
     kind validated (in tests, or the tool over a running server in CI).
+13a. [ ] CI failure (reported by the user, 2026-11-11, both providers on the Linux runner, commit `f2a5896`):
+    `TagDuplicateTests.TheFirstScanFindsLookAlikesRankedByBooks` expects `Sound: Stanislaw Lem, Станислав Лем` and
+    gets `Sound: Станислав Лем, Stanislaw Lem` (index 7: `S` / `С`); green on Windows. Both tags have one book, so
+    the order within a group falls to a tie-break; likely the tag id, which follows the order files are scanned in
+    (directory order on Linux, by name on Windows). Find the group's order (`TagDuplicates`), make the tie-break
+    stable and meaningful (name, then id) or the test's expectation order-free where the order doesn't matter;
+    check other tests that rely on scan order the same way; prove it with a scan in reverse file order.
 14. [ ] Benchmark at 2M on both providers: OPDS scenarios in `tests/Librarion.Benchmarks/Bench/RunCommand.cs` (root,
     Recent first and deep page, a field's first letters uncached (~90 seeks over 500k authors), a field letter, a big author's books, a series by number, search, a shelf, a page's
     entries with files) within the OPDS budget (150 ms p95), no full scan; Basic cold vs cached; idle memory.
