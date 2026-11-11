@@ -22,7 +22,7 @@ public sealed class OpdsFeedTests
 
     private CancellationToken Cancel => TestContext.CancellationToken;
 
-    private static string Fb2(string title, string? author = "Ann Writer", string? series = null, int number = 1, string? annotation = null, string lang = "en") => $"""
+    internal static string Fb2(string title, string? author = "Ann Writer", string? series = null, int number = 1, string? annotation = null, string lang = "en") => $"""
         <?xml version="1.0" encoding="utf-8"?>
         <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0"><description><title-info>
         <genre>sf_fantasy</genre>

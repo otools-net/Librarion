@@ -24,6 +24,8 @@ const pages = pageArgs.length ? pageArgs : [
     'login', 'login#recover', '', 'fields', 'fields/author', 'fields/author#first', 'account', 'admin/users', 'admin/users#new', 'admin/groups', 'admin/groups#new',
     'admin/libraries', 'admin/libraries#open', 'admin/tenants', 'admin/tenants#edit', 'admin/settings', 'admin/security', 'missing',
 ];
+// The e-reader pages (/e, an address starting with `e/` or `e`): one size, as an e-ink browser shows them.
+const ereader = { ereader: { viewport: { width: 600, height: 800 }, javaScriptEnabled: false } };
 const sizes = {
     phone: { ...devices['Pixel 7'], viewport: { width: 360, height: 740 }, screen: { width: 360, height: 800 } },
     desktop: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
@@ -61,7 +63,9 @@ try {
     // A folder of a few books, added to the library and scanned: the library panel has folders, runs and progress.
     const books = path.join(work, 'books');
     fs.mkdirSync(books, { recursive: true });
-    for (let i = 1; i <= 3; i++)
+    // LIBRARION_SCREENS_BOOKS: how many (default 3; more than 20 shows the e-reader's First / Next).
+    const count = Number(process.env.LIBRARION_SCREENS_BOOKS ?? 3);
+    for (let i = 1; i <= count; i++)
         fs.writeFileSync(path.join(books, `book-${i}.fb2`), `<?xml version="1.0"?><FictionBook><description><title-info><genre>sf_fantasy</genre>`
             + `<author><first-name>Ann</first-name><last-name>Writer</last-name></author><book-title>Book ${i}</book-title><annotation><p>The ${i}. part of the saga: a long road, an old map.</p><p>And a dragon.</p></annotation><lang>en</lang>`
             + `<sequence name="Writer Saga" number="${i}"/></title-info><publish-info><publisher>Quill Press</publisher><year>2001</year></publish-info></description><body/></FictionBook>`);
@@ -75,11 +79,16 @@ try {
 
     fs.mkdirSync(out, { recursive: true });
     const browser = await chromium.launch({ channel });
-    for (const [size, device] of Object.entries(sizes)) {
+    // A scan runs in the background: the books are in before the first shot.
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    for (const [size, device] of Object.entries({ ...sizes, ...ereader })) {
         for (const address of pages) {
             const [route, action] = address.split('#');
-            const signedOut = route === 'login';
-            const context = await browser.newContext({ ...device, baseURL, colorScheme: theme, storageState: signedOut ? undefined : signedIn });
+            const isEReader = route === 'e' || route.startsWith('e/');
+            if (isEReader !== (size === 'ereader'))
+                continue;
+            const signedOut = route === 'login' || route === 'e/signin';
+            const context = await browser.newContext({ ...device, baseURL, colorScheme: isEReader ? 'light' : theme, storageState: signedOut ? undefined : signedIn });
             const page = await context.newPage();
             await page.goto(`./${route}`);
             await page.getByRole('heading', { level: 1 }).waitFor();
@@ -125,11 +134,13 @@ try {
                 if (action.startsWith('found='))
                     await page.locator('.admin-search-results a').first().click();
             }
+            if (isEReader && action === 'next')
+                await page.locator('a[rel="next"]').click();
             await page.waitForLoadState('networkidle');
             // Dialogs and sheets rise in; the shot waits until they stand still.
             await page.waitForTimeout(400);
             const file = path.join(out, `${size}-${(address || 'home').replaceAll(/[/#?=:"*]/g, '-')}${theme === 'light' ? '-light' : ''}.png`);
-            await page.screenshot({ path: file, fullPage: !action || action === 'book' });
+            await page.screenshot({ path: file, fullPage: isEReader || !action || action === 'book' });
             console.log(file);
             await context.close();
         }

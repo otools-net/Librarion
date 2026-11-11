@@ -1,0 +1,50 @@
+@using Librarion.Core.Catalog
+@*
+    A library's page (the home page when it is the only one): its search box, the books added last, and what it can be
+    browsed by (all books A to Z, each field with values, the plain tags).
+*@
+<EPage Frame="Frame" Title="@Name">
+    <form class="panel search" method="get" action="@Frame.Links.Search(LibraryId)" role="search">
+        <label for="q">@Texts["ereader.library.searchLabel"]</label>
+        <span class="row">
+            <input id="q" name="q" type="search" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <button type="submit">@Texts["search.title"]</button>
+        </span>
+    </form>
+
+    <h2>@Texts["ereader.library.recent"]</h2>
+    <BookList Frame="Frame" Books="Recent" />
+    @if (MoreRecent)
+    {
+        <p class="more"><a href="@Frame.Links.Recent(LibraryId)">@Texts["ereader.library.moreRecent"]</a></p>
+    }
+
+    <h2>@Texts["ereader.library.browse"]</h2>
+    <ul class="plain">
+        <li><a href="@Frame.Links.Titles(LibraryId)">@Texts["ereader.library.titles"]</a></li>
+        @foreach (var field in Fields)
+        {
+            <li><a href="@Frame.Links.Field(LibraryId, field.Key)">@FieldName(field)</a></li>
+        }
+        <li><a href="@Frame.Links.Tags(LibraryId)">@Texts["shell.nav.tags"]</a></li>
+    </ul>
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired] public int LibraryId { get; set; }
+
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyList<BookListItem> Recent { get; set; } = [];
+
+    /// <summary>More books than <see cref="Recent"/> shows: a link to all of them.</summary>
+    [Parameter] public bool MoreRecent { get; set; }
+
+    /// <summary>The fields that hold values in the tenant (authors, series…), in the app's order.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<FieldInfo> Fields { get; set; } = [];
+
+    /// <summary>A built-in field by the app's name for it (<c>fields.name.&lt;key&gt;</c>), a custom one by its own.</summary>
+    private string FieldName(FieldInfo field) => field.BuiltIn && Texts.Has("fields.name." + field.Key) ? Texts["fields.name." + field.Key] : field.Name;
+}

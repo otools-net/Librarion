@@ -113,6 +113,28 @@ here, the device's own reader opens the downloaded file.
   `RequestDelegate` and its result is dropped (a 200 with no body): add a `CancellationToken` parameter (as
   `SessionEndpoints` does).
 
+## Built (stage 8 chunk 3): home, a library's page, lists of books
+
+- **Addresses:** `/e/` home; `/e/l/<library>/` a library's page; `/e/l/<library>/recent` and `/titles` its books
+  newest first and A to Z (`?after=<cursor>`); `/e/l/<library>/books/<id>/cover/<s|m|l>` covers (under `/e`, so the
+  keys in the address of chunk 8 cover them too). Book pages (`/books/<id>`), search (`/search?q=`), fields
+  (`/fields/<key>`) and tags (`/tags`) are linked already and built by chunks 4–6. All in `EReaderLinks`.
+- **Home:** with one library to browse, its page itself (one refresh less, as the OPDS root); with several, a list
+  of them. A library one can't browse (or of another tenant) is 404, never 403 (not told apart from none).
+- **A library's page:** the search box (a GET form, no token needed), the 5 books added last
+  (`RecentOnLibraryPage`) with "All recently added", then Browse: all books by title, every field with values
+  (`TagQueries.FieldsWithValuesAsync`, built-in ones by the app's names `fields.name.<key>`), Tags.
+- **Lists** (`BooksPage`, `BookList`, `Pager`): 20 a page (`PageSize`, Q7) by `BookQueries.ListAsync` under the
+  account's visibility (content filters); a row is one link: the `s` cover shown at 48 × 72 (`width`/`height` set,
+  `object-fit: contain`, a gray box behind), the title bold (else the file's name, else "Untitled"), authors, series
+  and number (`0.##`). First (from page 2) and Next (`rel="next"`, at the right). A cursor that doesn't read starts
+  at the beginning (`KeysetCursor.Decode`).
+- **Razor gotchas:** a component's `string` parameter given without `@` is the literal text (`First="First"` passed
+  "First"; write `First="@First"`; parameters of other types are C# expressions either way). An empty attribute
+  value renders bare (`alt=""` → `alt`), and void elements end in ` />`: tests match loosely.
+- Screenshots of these pages: [screenshots](../../tools/screenshots/README.md) takes `e/…` addresses at 600 × 800 with
+  JavaScript off (`LIBRARION_SCREENS_BOOKS=25` for a pager).
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing

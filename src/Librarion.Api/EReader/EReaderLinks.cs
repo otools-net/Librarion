@@ -14,6 +14,33 @@ public sealed class EReaderLinks(HttpContext context)
 
     public string Stylesheet => _root + EReaderEndpoints.StylesheetPath + "?v=" + EReaderStylesheet.Version;
 
+    /// <summary>A library's page.</summary>
+    public string Library(int library) => $"{_root}/l/{library}/";
+
+    /// <summary>A library's books, newest first; a page after <paramref name="after"/> (a cursor) when given.</summary>
+    public string Recent(int library, string? after = null) => $"{_root}/l/{library}/recent" + After(after);
+
+    /// <summary>A library's books A to Z.</summary>
+    public string Titles(int library, string? after = null) => $"{_root}/l/{library}/titles" + After(after);
+
+    /// <summary>Where a library's search box sends its words (<c>q</c>).</summary>
+    public string Search(int library) => $"{_root}/l/{library}/search";
+
+    /// <summary>A book's page.</summary>
+    public string Book(int library, int book) => $"{_root}/l/{library}/books/{book}";
+
+    /// <summary>A book's cover; <paramref name="version"/> changes with the book, so a cached picture isn't kept after an edit.</summary>
+    public string Cover(int library, int book, string size, string? version) =>
+        $"{_root}/l/{library}/books/{book}/cover/{size}" + (version is null ? "" : "?v=" + Uri.EscapeDataString(version));
+
+    /// <summary>A field's values (authors, series…), A to Z.</summary>
+    public string Field(int library, string key) => $"{_root}/l/{library}/fields/{Uri.EscapeDataString(key)}";
+
+    /// <summary>The plain tags of a library.</summary>
+    public string Tags(int library) => $"{_root}/l/{library}/tags";
+
+    private static string After(string? after) => after is null ? "" : "?after=" + Uri.EscapeDataString(after);
+
     /// <summary>Where the sign-out form posts.</summary>
     public string SignOut => _root + "/signout";
 

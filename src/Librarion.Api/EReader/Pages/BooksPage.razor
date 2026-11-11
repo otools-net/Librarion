@@ -1,0 +1,25 @@
+@using Librarion.Core.Catalog
+@*
+    A page of books (a library's recent or A to Z; search results and a value's books later): the list, then First and
+    Next. No Previous (Q2): back is the browser's Back.
+*@
+<EPage Frame="Frame" Title="@Title" Up="Up">
+    <BookList Frame="Frame" Books="Books" />
+    <Pager First="@First" Next="@Next" />
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public EPage.Crumb? Up { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<BookListItem> Books { get; set; } = [];
+
+    /// <summary>The next page's address; null on the last page.</summary>
+    [Parameter] public string? Next { get; set; }
+
+    /// <summary>The first page's address; null on the first page.</summary>
+    [Parameter] public string? First { get; set; }
+}

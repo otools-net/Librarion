@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 3.
+**Next:** chunk 4.
 
 ## The user's answers (2026-11-11)
 
@@ -123,9 +123,12 @@ is the note's; nothing to port.
    token refused when missing, a disabled account. **Built:**
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-2-sign-in-and-out),
    [accounts](../features/accounts.md); the app's sign-in moved into `SessionEndpoints.TrySignInAsync` for both.
-3. [ ] Home and the book list: search box, recently added, links to browse; one list component (small cover,
+3. [x] Home and the book list: search box, recently added, links to browse; one list component (small cover,
    title with the file-name fallback, authors, series and number), Next / First by key (D-8.6). Tests: the keys
-   walk without repeats, hidden books absent.
+   walk without repeats, hidden books absent. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-3-home-a-librarys-page-lists-of-books); the home is
+   the only library's page or a list of libraries; links to search, fields, tags and book pages wait for chunks 4–6;
+   the screenshots tool shoots `/e` pages.
 4. [ ] Search: the box and its results in the search language, paged by key; a blank search shows nothing; the
    language's errors shown plainly. Tests on both providers.
 5. [ ] Browse: the fields that hold values, a field's first letters (`InitialsAsync`) and values A–Z, a value's books

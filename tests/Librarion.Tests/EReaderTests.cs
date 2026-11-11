@@ -73,7 +73,7 @@ public sealed partial class EReaderTests
         Assert.AreEqual("/e/signin?return=%2Fe%2F", response.Headers.Location?.OriginalString);
     }
 
-    /// <summary>The app's cookie opens the mode (one sign-in for both): the home page with the libraries one may browse.</summary>
+    /// <summary>The app's cookie opens the mode (one sign-in for both): the home page, the only library's page.</summary>
     [TestMethod]
     public async Task TheAppsSessionOpensTheHome()
     {
@@ -89,8 +89,8 @@ public sealed partial class EReaderTests
 
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, address);
             var html = await PlainPageAsync(response, Cancel);
-            StringAssert.Contains(html, "<h1>Library</h1>", address);
-            StringAssert.Contains(html, $"<li>{WebUtility.HtmlEncode(library.Name)}</li>", address);
+            StringAssert.Contains(html, $"<h1>{WebUtility.HtmlEncode(library.Name)}</h1>", address);
+            StringAssert.Contains(html, $"action=\"/e/l/{library.Id}/search\"", address);
             StringAssert.Contains(html, $"href=\"/e/ereader.css?v={EReaderStylesheet.Version}\"", address);
         }
     }
@@ -226,7 +226,7 @@ public sealed partial class EReaderTests
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "black", "white", "gray", "grey", "transparent", "currentcolor", "inherit", "none", "solid", "dashed", "dotted", "double", "medium", "thin",
-            "thick", "initial", "linear-gradient", "repeating-linear-gradient", "radial-gradient", "to", "top", "bottom", "left", "right", "inset",
+            "thick", "initial", "underline", "overline", "line-through", "linear-gradient", "repeating-linear-gradient", "radial-gradient", "to", "top", "bottom", "left", "right", "inset",
         };
         foreach (Match declaration in ColourDeclaration().Matches(css))
             foreach (var word in Word().Matches(declaration.Groups[2].Value).Select(w => w.Value).Where(w => !allowed.Contains(w)))

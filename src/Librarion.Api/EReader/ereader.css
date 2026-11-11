@@ -113,6 +113,107 @@ ul.plain > li > a {
     box-sizing: border-box;
 }
 
+/* The page above this one (a library over its lists). */
+.crumb {
+    margin: 0 0 4px;
+}
+
+.crumb a {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+}
+
+/* The list of books: a small cover, then title (bold), authors, series. One link per row. */
+ul.books > li > a {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    text-decoration: none;
+}
+
+.cover {
+    flex: none;
+    width: 48px;
+    height: 72px;
+    object-fit: contain;
+    background-color: #e6e6e6;
+    border: 1px solid #999;
+}
+
+.about {
+    display: block;
+    min-width: 0;
+}
+
+.about > span {
+    display: block;
+}
+
+.title {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.authors,
+.series {
+    color: #444;
+    font-size: 0.9rem;
+}
+
+.more a {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+}
+
+/* First and Next: links that look like the buttons. */
+.pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.pager .next {
+    margin-left: auto;
+}
+
+a.button {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 40px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    font-weight: bold;
+    text-decoration: none;
+    color: #000;
+    border: 2px solid #000;
+    background-color: #e0e0e0;
+    background-image: linear-gradient(#f7f7f7, #d4d4d4);
+}
+
+a.button:active {
+    background-color: #bbbbbb;
+    background-image: none;
+}
+
+.search label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.search .row {
+    display: flex;
+    gap: 8px;
+}
+
+.search input {
+    flex: 1;
+    min-width: 0;
+}
+
 /* A gray area that groups things (a search box, a book's files). */
 .panel {
     margin: 0 0 16px;

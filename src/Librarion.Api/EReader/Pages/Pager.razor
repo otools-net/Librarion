@@ -1,0 +1,22 @@
+@*
+    First and Next under a list (D-8.6): links styled as buttons, Next last so it sits under the thumb.
+*@
+@if (First is not null || Next is not null)
+{
+    <nav class="pager" aria-label="@Texts["ereader.list.pages"]">
+        @if (First is not null)
+        {
+            <a class="button" href="@First">@Texts["ereader.list.first"]</a>
+        }
+        @if (Next is not null)
+        {
+            <a class="button next" href="@Next" rel="next">@Texts["ereader.list.next"]</a>
+        }
+    </nav>
+}
+
+@code {
+    [Parameter] public string? First { get; set; }
+
+    [Parameter] public string? Next { get; set; }
+}

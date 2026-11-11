@@ -23,6 +23,10 @@
     }
 </header>
 <main>
+    @if (Up is { } up)
+    {
+        <p class="crumb"><a href="@up.Href">@up.Text</a></p>
+    }
     <h1>@Title</h1>
     @ChildContent
 </main>
@@ -34,5 +38,10 @@
 
     [Parameter, EditorRequired] public string Title { get; set; } = "";
 
+    /// <summary>The page this one is under (a library for its lists), linked above the heading.</summary>
+    [Parameter] public Crumb? Up { get; set; }
+
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    public sealed record Crumb(string Text, string Href);
 }

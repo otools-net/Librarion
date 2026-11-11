@@ -12,6 +12,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   on by default) turns it off.
 - E-reader mode: **signing in and out** with a plain form, the same accounts, wrong-password limits and security log
   as the app; **Stay signed in** is ticked to begin with. Signing in on either opens both.
+- E-reader mode: a library's page (search box, the books added last, ways to browse) and its books **newest first**
+  or **A to Z**, 20 a page with small covers, **Next page** and **First page**; with one library it is the home page.
 
 ## 0.8.0
 

@@ -1,16 +1,14 @@
 @*
-    The home page. Stage 8 chunk 1: the frame only (the libraries one may browse); search, recently added and the
-    links to browse come with chunk 3.
+    The home page with several libraries to browse: the list of them (with one, EReaderEndpoints shows its page here
+    instead).
 *@
-<EPage Frame="Frame" Title="@(Texts["ereader.home.title"])">
-    <p>@Texts["ereader.home.intro"]</p>
+<EPage Frame="Frame" Title="@(Texts["ereader.home.libraries"])">
     @if (Libraries.Count > 0)
     {
-        <h2>@Texts["ereader.home.libraries"]</h2>
         <ul class="plain">
             @foreach (var library in Libraries)
             {
-                <li>@library</li>
+                <li><a href="@library.Href">@library.Name</a></li>
             }
         </ul>
     }
@@ -23,6 +21,8 @@
 @code {
     [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
 
-    /// <summary>The names of the libraries the account may browse, in the app's order.</summary>
-    [Parameter, EditorRequired] public IReadOnlyList<string> Libraries { get; set; } = [];
+    /// <summary>The libraries the account may browse, in the app's order.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<LibraryLink> Libraries { get; set; } = [];
+
+    public sealed record LibraryLink(string Name, string Href);
 }

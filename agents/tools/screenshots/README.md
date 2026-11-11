@@ -22,6 +22,10 @@ LIBRARION_SCREENS_THEME=light node agents/tools/screenshots/screenshots.mjs   # 
   address `""` is the library), `#first` opens the first value of a list (`fields/author#first`: an author's page), `#book` the library's first book (`""#book`, a full-page shot), `#refine` presses Refine (its sheet opens). `#suggest=<words>` types them in the top bar's search (its suggestions open); a page may carry a query (`search?q=book`). Shots with an action are the viewport, not the full page. The setup adds a second library, "Comics", so
   the switcher shows. Before
   the pages, a folder of three FB2s is added to the library and scanned. Files are named `<phone|desktop>-<page>.png`.
+- **E-reader pages** (`/e`): an address starting with `e/` (or `e`) is shot once, at 600 × 800 with JavaScript off and
+  light colors, full page, named `ereader-<page>.png`; `e/signin` signed out; `#next` follows the list's Next.
+  `LIBRARION_SCREENS_BOOKS=25` adds 25 books instead of 3 (more than 20 shows First / Next):
+  `LIBRARION_SCREENS_BOOKS=25 node agents/tools/screenshots/screenshots.mjs <out> e/signin e/ e/l/1/titles e/l/1/titles#next`.
 - It reuses the last e2e build by default (`LIBRARION_E2E_SKIP_BUILD=1`); without one it builds. The client is
   served from the source tree's `wwwroot` but the server from that build: after a server change, shoot with
   `LIBRARION_E2E_SKIP_BUILD=0` (a stale server once hid the book page's Download, `canDownload` missing).

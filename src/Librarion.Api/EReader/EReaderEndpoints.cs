@@ -12,7 +12,7 @@ namespace Librarion.Api.EReader;
 /// CSP, <see cref="SecurityHeaders.EReaderPolicy"/>). The app's cookie session; every route names its right; anything
 /// else under <c>/e</c> is a plain 404 page (<see cref="EReaderGuard"/>), never the client's.
 /// </summary>
-public static class EReaderEndpoints
+public static partial class EReaderEndpoints
 {
     public const string Prefix = "/e";
 
@@ -23,7 +23,7 @@ public static class EReaderEndpoints
     {
         var e = app.MapGroup(Prefix).ExcludeFromDescription();
 
-        e.MapGet("", HomeAsync).RequireRight(Rights.Browse);
+        MapLibrary(e);
         e.MapGet(StylesheetPath, EReaderStylesheet.Serve).AllowAnonymous();
         e.MapGet("/signin", SignInPageAsync).AllowAnonymous();
         e.MapPost("/signin", SignInAsync).AllowAnonymous().RequireRateLimiting(SecurityServiceCollectionExtensions.SignInRateLimit);
@@ -31,16 +31,6 @@ public static class EReaderEndpoints
 
         // Every other address, file-like ones too: not found (EReaderGuard renders the page), before the client's fallback takes it.
         e.MapFallback("{**path}", () => TypedResults.NotFound()).AllowAnonymous();
-    }
-
-    /// <summary>The home page: for now the libraries one may browse (search, recently added and browsing: chunk 3).</summary>
-    private static async Task<RazorComponentResult<HomePage>> HomeAsync(HttpContext context, CurrentAccess current, AccessService accounts)
-    {
-        var state = await current.GetAsync();
-        var libraries = state.TenantId is { } tenantId
-            ? (await accounts.ListLibrariesAsync(tenantId, context.RequestAborted)).Where(l => state.Access.HasIn(Rights.Browse, l.Id)).Select(l => l.Name).ToList()
-            : [];
-        return new RazorComponentResult<HomePage>(new { Frame = await EReaderFrame.ForAsync(context), Libraries = (IReadOnlyList<string>)libraries });
     }
 
     /// <summary>The sign-in page; someone already signed in goes on to where they were going.</summary>
