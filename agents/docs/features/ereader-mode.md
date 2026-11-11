@@ -19,8 +19,12 @@ here, the device's own reader opens the downloaded file.
 
 ## Design
 
-- **Grayscale only:** black text on white, grays for borders and secondary text; no colour anywhere (a test checks
-  the stylesheet), no dark theme, no shadows, gradients, animations, transitions or hover effects.
+- **Grayscale only:** black text, white and grays; no colour with a hue anywhere (a test checks the stylesheet).
+  Grays mark areas (the top bar, buttons, notices, headings, every other row of a list, `.panel` for a group) and
+  short gray gradients give them shape (the user's decision, 2026-11-11): two close grays per gradient (older panels
+  show about 16 levels: a long gradient bands), a plain `background-color` before each for browsers without
+  gradients; text black or `#444` on `#ccc` or lighter. No dark theme, custom properties (old e-ink WebKit), animations,
+  transitions or hover effects (they make the panel redraw); a pressed button darkens (`:active`).
 - **Big and plain:** system fonts, large text, tap targets ≥ 44 px (e-ink touch is imprecise), generous line height;
   fits 600 × 800 and up, portrait first; nothing needs a long press or a swipe.
 - **Pages, not scrolling:** lists of 20 items with small covers, **Next** and **First** links (keyset cursors in the
@@ -77,8 +81,9 @@ here, the device's own reader opens the downloaded file.
   read by `ServerTexts` (`Texts["key"]`, `Format` for `{name}`); `EveryTextKeyTheModeUsesExists` reads the keys used
   in `EReader/`. Keys of the mode: `ereader.*`; shared ones reused (`app.name`, `error.forbidden`).
 - **Stylesheet:** `ereader.css` embedded (`Librarion.EReader.ereader.css`), served at `/e/ereader.css?v=<hash>`,
-  immutable, ETag; `TheStylesheetHasNoColour` allows hex grays only and no shadow, gradient, transition, animation,
-  hover, filter, `url(`, `@import`, dark theme. Fonts: `serif` (the device's own).
+  immutable, ETag; `TheStylesheetHasNoColour` allows hex grays only (gradients and shadows included, each gradient
+  with a plain fill in its rule) and no custom property, transition, animation, hover, filter, `url(`, `@import`, dark
+  theme. Fonts: `serif` (the device's own).
 - **Errors as pages:** `EReaderGuard` (see [sessions-and-pipeline](../architecture/sessions-and-pipeline.md)): setup
   503, switch 404, and any bodiless 400/403/404/405 rendered as a plain page; a visitor without a session is sent to
   `/e/signin?return=…` by the cookie's `OnRedirectToLogin` (the sign-in page itself is chunk 2).

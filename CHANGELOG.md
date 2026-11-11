@@ -6,7 +6,7 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Added
 
-- **E-reader mode** (being built): a plain, gray version of the library at `/e/` for the browsers of e-ink readers,
+- **E-reader mode** (being built): a plain, grayscale version of the library at `/e/` for the browsers of e-ink readers,
   with no script. So far its frame: the home page (signed in with the app's session), plain pages for "not found",
   "not allowed" and a server not set up yet. A new setting **E-reader mode** (Settings → Reader apps and e-readers,
   on by default) turns it off.

@@ -195,8 +195,10 @@ public sealed partial class EReaderTests
     }
 
     /// <summary>
-    /// Grayscale only and nothing that smears on e-ink (D-8.9): every colour a hex gray, no colour functions or names
-    /// but black, white and gray, no shadows, gradients, transitions, animations, hover or dark theme.
+    /// Grayscale only and nothing that makes the panel redraw (D-8.9): every colour a hex gray (in fills, borders,
+    /// gradients and shadows alike), no colour functions or names but black, white and gray; every gradient with a plain
+    /// gray fill in the same rule for browsers without gradients; no custom properties (old e-ink WebKit), transitions,
+    /// animations, hover or dark theme.
     /// </summary>
     [TestMethod]
     public void TheStylesheetHasNoColour()
@@ -212,11 +214,20 @@ public sealed partial class EReaderTests
             Assert.IsTrue(full[0..2] == full[2..4] && full[2..4] == full[4..6], $"#{hex} is not a gray");
         }
 
-        foreach (var forbidden in new[] { "rgb(", "rgba(", "hsl(", "hsla(", "hwb(", "lab(", "lch(", "color(", "color-mix(", "gradient(", "shadow",
+        foreach (var forbidden in new[] { "rgb(", "rgba(", "hsl(", "hsla(", "hwb(", "lab(", "lch(", "color(", "color-mix(", "var(", "--",
                      "transition", "animation", ":hover", "prefers-color-scheme", "filter", "@import", "url(", "@font-face" })
             Assert.IsFalse(css.Contains(forbidden, StringComparison.OrdinalIgnoreCase), forbidden);
 
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "black", "white", "gray", "grey", "transparent", "currentcolor", "inherit", "none", "solid", "dashed", "dotted", "double", "medium", "thin", "thick", "initial" };
+        var gradients = css.Split('}').Where(rule => rule.Contains("gradient(", StringComparison.Ordinal)).ToList();
+        Assert.IsNotEmpty(gradients, "the check found the gradients");
+        foreach (var rule in gradients)
+            StringAssert.Contains(rule, "background-color:", $"a gradient without a plain fill before it:{Environment.NewLine}{rule.Trim()}");
+
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "black", "white", "gray", "grey", "transparent", "currentcolor", "inherit", "none", "solid", "dashed", "dotted", "double", "medium", "thin",
+            "thick", "initial", "linear-gradient", "repeating-linear-gradient", "radial-gradient", "to", "top", "bottom", "left", "right", "inset",
+        };
         foreach (Match declaration in ColourDeclaration().Matches(css))
             foreach (var word in Word().Matches(declaration.Groups[2].Value).Select(w => w.Value).Where(w => !allowed.Contains(w)))
                 Assert.Fail($"{declaration.Value.Trim()}: \"{word}\" may be a colour");
@@ -285,7 +296,7 @@ public sealed partial class EReaderTests
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         var html = await PlainPageAsync(response, Cancel);
-        StringAssert.Contains(html, "<form method=\"post\" action=\"/e/signin\">");
+        StringAssert.Contains(html, "method=\"post\" action=\"/e/signin\">");
         StringAssert.Contains(html, "name=\"userName\"");
         StringAssert.Contains(html, "type=\"password\"");
         StringAssert.Matches(html, new Regex("<input type=\"checkbox\" name=\"remember\" value=\"on\" checked"));

@@ -8,7 +8,7 @@
     {
         <p class="error" role="alert">@Error</p>
     }
-    <form method="post" action="@Frame.Links.SignIn()">
+    <form class="panel" method="post" action="@Frame.Links.SignIn()">
         <FormToken Token="Frame.Token!" />
         <input type="hidden" name="return" value="@ReturnTo">
         <p class="field">

@@ -92,8 +92,10 @@ is the note's; nothing to port.
   PDF, DJVU…), changeable on the page (a form, kept in a cookie); the others after them, dimmed, still downloadable
   (Q5).
 - **D-8.9 Look:** grayscale only (a test reads the stylesheet: no hue), system fonts, large text, targets ≥ 44 px,
-  600 × 800 portrait first, every image with its width and height, covers as the `s` thumbnails; no dark theme,
-  shadows, gradients, transitions or hover effects.
+  600 × 800 portrait first, every image with its width and height, covers as the `s` thumbnails. **Changed by the
+  user (2026-11-11):** not only black and white: grays mark areas (top bar, buttons, notices, headings, every other
+  row) and short gray gradients give them shape (two close grays each, a plain gray fill before every gradient);
+  still no hue, dark theme, custom properties, transitions, animations or hover effects.
 - **D-8.10 Texts:** the same `en.json` keys read by the server (`ServerTexts`, the user's UI language, English
   shipped), `ClientI18nTests` extended to the server's keys; fields named as the app names them.
 - **D-8.11 Ways in (Q4):** a link to `/e/` on the app's sign-in page. E-ink browsers are redirected **on the server**
