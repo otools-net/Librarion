@@ -4,6 +4,7 @@
 dotnet build ; dotnet test                                       # the Api build runs npm ci + ng build into wwwroot
 dotnet build -p:LibrarionSkipWebClient=true                      # without the client
 LIBRARION_TEST_POSTGRES="$(agents/tools/postgres-dev/start.sh)" dotnet test   # the backend tests on PostgreSQL
+LIBRARION_OPDS_SCHEMAS=D:/Temp/opds-validate/cache dotnet test   # also checks the OPDS feeds with jing (agents/tools/opds-validate: run its fetch once)
 cd src/Librarion.Web ; npm test ; npm run build ; npm start      # client: Vitest, build into wwwroot, ng serve :4200
 cd tests/e2e ; npm ci ; npm run browsers ; npm run e2e           # end-to-end (testing-e2e.md)
 dotnet run --project src/Librarion.Api                           # :5090, SQLite in src/Librarion.Api/data/

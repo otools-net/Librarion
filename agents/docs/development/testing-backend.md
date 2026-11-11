@@ -2,6 +2,9 @@
 
 Rules and infrastructure: [testing](testing.md). Code: `tests/Librarion.Tests/Infrastructure/`.
 
+- **OPDS schemas:** `OpdsFeedTests.EveryFeedKindMatchesTheOpdsSchemas` checks one feed of every kind with jing when
+  `LIBRARION_OPDS_SCHEMAS` names the cache of `agents/tools/opds-validate` (its `fetch`, once); without it the test
+  ends inconclusive (skipped), never passed. CI sets it on every backend job.
 - **Two runs, one per provider:** `dotnet test` uses SQLite; with `LIBRARION_TEST_POSTGRES` set to a server
   connection string (a user that may create databases) every `TestCatalog` makes its own database there and drops it
   (`WITH (FORCE)`) at the end. Local server: `agents/tools/postgres-dev/` (Docker). CI runs both.

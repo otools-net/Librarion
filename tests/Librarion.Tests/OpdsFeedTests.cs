@@ -298,6 +298,101 @@ public sealed class OpdsFeedTests
         Assert.AreEqual(HttpStatusCode.NotFound, other.StatusCode);
     }
 
+    // ---- Schemas (chunk 13) ----
+
+    /// <summary>
+    /// One feed of every kind (the root as a library and as a list, a library, recent and by title with a next page, a
+    /// field's letters and values, a value's books, a series, a tag tree and its books, the tags, search, shelves and a
+    /// shelf), each with full entries (authors, language, category, summary, covers, a file and its fb2.zip), checked
+    /// against the OPDS 1.2 and Atom RELAX NG schemas by jing (agents/tools/opds-validate) when
+    /// <c>LIBRARION_OPDS_SCHEMAS</c> names its cache; else only written and read (inconclusive).
+    /// </summary>
+    [TestMethod]
+    public async Task EveryFeedKindMatchesTheOpdsSchemas()
+    {
+        var books = Enumerable.Range(0, 51).Select(i => ($"Book {i:00}.fb2", Fb2($"Book {i:00}", $"A{i:00} Writer",
+            series: i < 3 ? "Saga" : null, number: 3 - i, annotation: i == 0 ? "<p>A <b>long</b> tale &amp; more.</p>" : null))).ToArray();
+        var (shelf, reader) = await StartAsync(books);
+        await using var _s = shelf;
+        using var _r = reader;
+        var library = $"/opds/l/{shelf.LibraryId}";
+        var feeds = new Dictionary<string, string>();
+        async Task<XDocument> KeepAsync(string name, string url, string kind)
+        {
+            var feed = await FeedAsync(reader, url, kind);
+            // The search template link (`{searchTerms}`, for reader apps that read only that form) is no IRI: OPDS 1.2
+            // wants rel="search" on the OpenSearch description, which every such feed links too. Checked without it.
+            var copy = new XDocument(feed);
+            var templates = copy.Root!.Elements(Atom + "link").Where(l => (string?)l.Attribute("rel") == "search" && l.Attribute("href")!.Value.Contains("{searchTerms}")).ToList();
+            if (templates.Count > 0)
+                Assert.IsTrue(copy.Root!.Elements(Atom + "link").Any(l => (string?)l.Attribute("type") == OpdsFeed.OpenSearchType), $"{name}: the description too");
+            templates.ForEach(l => l.Remove());
+            feeds[name] = copy.Declaration + Environment.NewLine + copy.ToString(SaveOptions.DisableFormatting);
+            return feed;
+        }
+
+        var parent = await CreateTagAsync(shelf, new Librarion.Core.Tagging.TagInput("Speculative"));
+        var child = await CreateTagAsync(shelf, new Librarion.Core.Tagging.TagInput("Fairy", ParentIds: [parent]));
+        Dictionary<string, int> ids;
+        await using (var db = await shelf.DbAsync(Cancel))
+            ids = await db.Books.ToDictionaryAsync(b => b.Title!, b => b.Id, Cancel);
+        using (var tagged = await shelf.Admin.PostAsJsonAsync("/api/books/tags",
+                   new BookEndpoints.SelectionInput([ids["Book 00"]], [new Librarion.Core.Catalog.BookTagEdit(child)]), ApiClients.Json, Cancel))
+            Assert.IsTrue(tagged.IsSuccessStatusCode, await tagged.Content.ReadAsStringAsync(Cancel));
+        using var web = await ApiClients.SignInAsync(shelf.Factory, "reader", ApiClients.Password, Cancel);
+        int mine;
+        using (var made = await web.PostAsJsonAsync("/api/shelves", new ShelfEndpoints.ShelfInput("Mine"), ApiClients.Json, Cancel))
+            mine = (await made.Content.ReadFromJsonAsync<Librarion.Core.Catalog.ShelfInfo>(ApiClients.Json, Cancel))!.Id;
+        using (var added = await web.PostAsJsonAsync($"/api/shelves/{mine}/books", new ShelfEndpoints.ShelfBooksInput([ids["Book 02"], ids["Book 00"]]), ApiClients.Json, Cancel))
+            Assert.IsTrue(added.IsSuccessStatusCode);
+
+        await KeepAsync("root-one-library", "/opds", "navigation");
+        await KeepAsync("library", library, "navigation");
+        var recent = await KeepAsync("recent", $"{library}/recent", "acquisition");
+        Assert.IsNotNull(Href(recent.Root!, "next"), "a next link checked too");
+        await KeepAsync("titles", $"{library}/titles", "acquisition");
+        var letters = await KeepAsync("field-letters", $"{library}/fields/author", "navigation");
+        Assert.IsTrue(Entries(letters).Any(e => Title(e) == "All"), "more than a page: letters");
+        var values = await KeepAsync("field-values", $"{library}/fields/author?from=A", "navigation");
+        await KeepAsync("field-all", $"{library}/fields/author?from=", "navigation");
+        await KeepAsync("value-books", Href(Entries(values)[0], "subsection")!, "acquisition");
+        var series = await KeepAsync("series", $"{library}/fields/series", "navigation");
+        var saga = await KeepAsync("series-books", Href(Entries(series).Single(), "subsection")!, "acquisition");
+        CollectionAssert.AreEqual(new[] { "Book 02", "Book 01", "Book 00" }, Entries(saga).Select(Title).ToArray());
+        await KeepAsync("tag-tree", $"{library}/tags/{parent}", "navigation");
+        await KeepAsync("tag-books", $"{library}/tags/{parent}/books", "acquisition");
+        await KeepAsync("tags", $"{library}/tags", "navigation");
+        await KeepAsync("search", $"{library}/search?q=book", "acquisition");
+        await KeepAsync("search-blank", $"{library}/search?q=", "acquisition");
+        await KeepAsync("shelves", $"{library}/shelves", "navigation");
+        var onShelf = await KeepAsync("shelf", $"{library}/shelves/{mine}", "acquisition");
+        var entry = Entries(onShelf).Single(e => Title(e) == "Book 00");
+        Assert.IsNotNull(entry.Element(Atom + "summary"), "an entry with a summary is checked");
+        Assert.IsTrue(entry.Elements(Atom + "link").Any(l => (string?)l.Attribute("type") == OpdsFeed.Fb2ZipType), "and with its fb2.zip");
+        using (var made = await shelf.Admin.PostAsJsonAsync("/api/libraries", new LibraryInput("Comics"), ApiClients.Json, Cancel))
+            Assert.IsTrue(made.IsSuccessStatusCode);
+        await KeepAsync("root-libraries", "/opds", "navigation");
+
+        var folder = Path.Combine(Path.GetTempPath(), "librarion-opds-feeds", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        foreach (var (name, xml) in feeds)
+            await File.WriteAllTextAsync(Path.Combine(folder, name + ".xml"), xml, Cancel);
+        TestContext.WriteLine($"{feeds.Count} feeds in {folder}");
+
+        var schemas = Environment.GetEnvironmentVariable("LIBRARION_OPDS_SCHEMAS");
+        if (string.IsNullOrEmpty(schemas) || !File.Exists(Path.Combine(schemas, "jing.jar")))
+            Assert.Inconclusive("Not checked against the schemas: run agents/tools/opds-validate/validate.mjs fetch and set LIBRARION_OPDS_SCHEMAS.");
+        var java = new System.Diagnostics.ProcessStartInfo("java") { RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[] { "-jar", Path.Combine(schemas, "jing.jar"), "-c", Path.Combine(schemas, "opds-fixed.rnc") }
+                     .Concat(feeds.Keys.Order().Select(name => Path.Combine(folder, name + ".xml"))))
+            java.ArgumentList.Add(argument);
+        using var run = System.Diagnostics.Process.Start(java)!;
+        var output = await run.StandardOutput.ReadToEndAsync(Cancel) + await run.StandardError.ReadToEndAsync(Cancel);
+        await run.WaitForExitAsync(Cancel);
+        Assert.AreEqual(0, run.ExitCode, output);
+        Directory.Delete(folder, recursive: true);
+    }
+
     // ---- Shelves (chunk 11) ----
 
     /// <summary>

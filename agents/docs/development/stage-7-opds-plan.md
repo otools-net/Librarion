@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 13.
+**Next:** chunk 13a.
 
 ## The user's answers (2026-11-10)
 
@@ -171,8 +171,12 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     books → download (also from inside a zip); search; a shelf; 401 without credentials, and with a cookie only.
     **Built:** `specs/opds.spec.ts` (`@opds`, desktop only), `fixtures/opds.ts` (`ReaderApp`, `parseFeed`);
     [opds](../features/opds.md#built-stage-7-chunk-12-end-to-end-as-a-reader-app).
-13. [ ] Validation: `agents/tools/opds-validate/` (offline RelaxNG check of OPDS 1.2 / Atom, with a README); every feed
-    kind validated (in tests, or the tool over a running server in CI).
+13. [x] Validation: `agents/tools/opds-validate/` (offline RelaxNG check of OPDS 1.2 / Atom, with a README); every feed
+    kind validated (in tests, or the tool over a running server in CI). **Built:** jing 20241231 + `opds.rnc` (pinned)
+    + `atom.rnc` cut from RFC 4287, fetched once by `validate.mjs fetch` (SHA-256 checked, curl when Node is blocked);
+    upstream schema bug mended (`opds-fixed.rnc`); the search template link left out of the check by choice;
+    `EveryFeedKindMatchesTheOpdsSchemas` (18 feed kinds), CI fetches and checks;
+    [opds](../features/opds.md#built-stage-7-chunk-13-validated-against-the-schemas).
 13a. [ ] CI failure (reported by the user, 2026-11-11, both providers on the Linux runner, commit `f2a5896`):
     `TagDuplicateTests.TheFirstScanFindsLookAlikesRankedByBooks` expects `Sound: Stanislaw Lem, Станислав Лем` and
     gets `Sound: Станислав Лем, Stanislaw Lem` (index 7: `S` / `С`); green on Windows. Both tags have one book, so

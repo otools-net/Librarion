@@ -118,6 +118,18 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
 - The libraries are made through the API as the administrator (no page needed); an account of the Users group
   reads them at once (Users hold the library rights tenant-wide).
 
+## Built (stage 7 chunk 13): validated against the schemas
+
+- `OpdsFeedTests.EveryFeedKindMatchesTheOpdsSchemas` writes one feed of every kind (root as a library and as a list,
+  library, recent and titles with a next link, a field's letters, values and All, a value's books, a series, a tag
+  tree and its books, tags, search and a blank search, shelves, a shelf; entries with summary, categories, covers,
+  files and fb2.zip) and runs jing with the OPDS 1.2 schema over them (`agents/tools/opds-validate`, its README).
+  All 18 match.
+- Found doing it: the upstream `opds.rnc` refuses any IRI holding r or t (a lost backslash); the tool mends that one
+  rule (`opds-fixed.rnc`). Our search **template** link (`{searchTerms}`) is no IRI, by design (chunk 7, for apps
+  reading only that form; calibre-web does the same): the test removes exactly that link before validating, after
+  checking the OpenSearch description link is there. Dropping the template would make the raw feeds valid as they are.
+
 ## Planned (stage 7)
 
 - Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).

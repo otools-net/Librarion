@@ -65,6 +65,18 @@ jobs:
         shell: bash
         run: echo "LIBRARION_TEST_POSTGRES=Host=localhost;Port=5432;Username=librarion;Password=librarion;Database=postgres" >> "$GITHUB_ENV"
 
+      # jing and the OPDS 1.2 / Atom schemas (agents/tools/opds-validate): OpdsFeedTests checks every feed kind with them.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: OPDS schemas
+        shell: bash
+        run: |
+          echo "LIBRARION_OPDS_SCHEMAS=$RUNNER_TEMP/opds-schemas" >> "$GITHUB_ENV"
+          LIBRARION_OPDS_SCHEMAS="$RUNNER_TEMP/opds-schemas" node agents/tools/opds-validate/validate.mjs fetch
+
       # The Api build installs and builds the client (npm ci + ng build) into wwwroot, which the privacy tests read.
       - name: dotnet test
         run: dotnet test --logger "console;verbosity=normal"
