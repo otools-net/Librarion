@@ -39,7 +39,26 @@ dotnet $bench generate --provider postgres --connection "$cs" --books 2000000
   importer keeps them, stage 6 4a), and `Libraries.BookCount`.
 - `ImportTagMappings`: one automatic FB2 mapping per plain tag, category, language, publisher and year, as an import
   would have recorded them (stage 6 chunk 9; none for people and series).
+- For OPDS (stage 7 chunk 14): a server administrator `admin` (the API is then set up), accounts `reader-0` …
+  `reader-20` in the built-in Users group (password `benchmark-password`), and `reader-0`'s shelf "Bench shelf" at
+  its cap of 10,000 random books in a random order. A catalog generated before stage 7 has none: generate it again.
 - Small-size tests: `CatalogGeneratorTests` (3,000 books, both providers).
+
+## What `opds` measures
+
+```sh
+dotnet build src/Librarion.Api -c Release -p:LibrarionSkipWebClient=true
+dotnet $bench opds --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/sqlite-2m.db" [--iterations 20] [--port 5300] [--api <Librarion.Api.dll>]
+```
+
+- Starts the real server (`src/Librarion.Api/bin/Release/net10.0/Librarion.Api.dll` by default) on the catalog,
+  its data and cache under `<work>/opds-server`, the OPDS rate limit lifted, and asks it over HTTP as a reader app
+  (Basic as `reader-0`): every feed kind's page end to end (query, entries, the Atom written), 3 warm-up and
+  `--iterations` timed, p50 / p95 / max against 150 ms, with the page's size.
+- **Basic:** the first request of `reader-1` … `reader-20` (each one's password hashed once) against the same page
+  from the verification cache.
+- **Memory:** the server's working set once started, and after the run and 30 s idle (budget 500 MB idle).
+- Report `opds-<provider>-<time>.json`; exit 1 on PostgreSQL past a budget. The queries' plans are `run`'s.
 
 ## What `run` measures
 
@@ -68,6 +87,11 @@ dotnet $bench run --provider sqlite --connection "Data Source=D:/Temp/librarion-
   caller who may merge (alone and with a common word; the groups of the `duplicates` command); then the few case:
   all but 0.1 % of the books unflagged for three scenarios (alone, newest, with a common word), the flags put back
   from the links afterwards (a minute or so at 2M).
+- OPDS (stage 7 chunk 14, `--only opds`, budget 150 ms): what each feed reads, its page of 50 and its entries'
+  extras (`BookQueries.EntriesAsync`): a library's catalog (fields with values, shelves), recent and by title (first
+  and deep page), the authors' and plain tags' first letters **uncached** (`InitialsAsync(fresh: true)`: one seek per
+  letter), authors from a letter, the most prolific author's books, the biggest series by number, a search, the
+  10,000-book shelf (first and middle page), a page's entries for 50 random books.
 - `--only <text>`: only the scenarios whose name contains it (a slow one measured with its plans, alone).
 - Each: 3 warm-up runs, then `--iterations` timed; p50, p95, max against the budget (list 100 ms, detail 50 ms, a
   figure asked once and kept 500 ms).

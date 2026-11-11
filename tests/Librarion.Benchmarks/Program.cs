@@ -6,6 +6,7 @@
 //   import --provider sqlite|postgres --connection <string> --source calibre|inpx [--records 2000000] [--work <folder>]
 //   duplicates --provider sqlite|postgres --connection <string> [--work <folder>]
 //   tag-duplicates --provider sqlite|postgres --connection <string> [--work <folder>]
+//   opds --provider sqlite|postgres --connection <string> [--api <Librarion.Api.dll>] [--port 5300] [--iterations 20] [--work <folder>]
 using System.Globalization;
 using Librarion.Benchmarks.Bench;
 using Librarion.Benchmarks.Data;
@@ -63,6 +64,14 @@ switch (command)
         var result = await TagDuplicatesCommand.RunAsync(target, work, Console.WriteLine, cancel.Token);
         return result.WithinBudget ? 0 : 1;
     }
+    case "opds":
+    {
+        var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
+        var api = Option("api", Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "Librarion.Api", "bin", "Release", "net10.0", "Librarion.Api.dll"));
+        var result = await OpdsCommand.RunAsync(target, work, api, int.Parse(Option("port", "5300"), CultureInfo.InvariantCulture),
+            int.Parse(Option("iterations", "20"), CultureInfo.InvariantCulture), Console.WriteLine, cancel.Token);
+        return result.WithinBudget || !target.IsPostgres ? 0 : 1;
+    }
     case "curation":
     {
         var target = new BenchTarget(Option("provider", "sqlite"), Option("connection"));
@@ -70,7 +79,7 @@ switch (command)
         return result.WithinBudget ? 0 : 1;
     }
     default:
-        Console.Error.WriteLine("Commands: generate, run, archive, import, duplicates, tag-duplicates, curation (see agents/tools/benchmark/README.md)");
+        Console.Error.WriteLine("Commands: generate, run, archive, import, duplicates, tag-duplicates, curation, opds (see agents/tools/benchmark/README.md)");
         return 2;
 }
 

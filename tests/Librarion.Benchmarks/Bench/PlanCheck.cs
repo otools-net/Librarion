@@ -40,6 +40,10 @@ public static partial class PlanCheck
         var text = plan.ToString();
         var aliases = Aliases(captured.Sql);
         var scans = new List<string>();
+        // EF answers an empty list (`ids.Contains(x)` with no ids) with `WHERE 0`: SQLite still prints `SCAN`, but reads no
+        // row (PostgreSQL shows a one-time false filter). Not a scan.
+        if (provider != "postgres" && ConstantFalse().IsMatch(captured.Sql))
+            return (text, scans);
         foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var table = provider == "postgres"
@@ -63,6 +67,9 @@ public static partial class PlanCheck
             result[match.Groups[2].Value] = match.Groups[1].Value;
         return result;
     }
+
+    [GeneratedRegex(@"\bWHERE 0\s*$", RegexOptions.Multiline)]
+    private static partial Regex ConstantFalse();
 
     [GeneratedRegex("""Seq Scan on "?(\w+)"?""")]
     private static partial Regex PostgresSeqScan();

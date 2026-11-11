@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Librarion.Benchmarks.Data;
 using Librarion.Core.Access;
+using Librarion.Core.Catalog;
 using Librarion.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,41 @@ namespace Librarion.Benchmarks.Generation;
 public static class GenerateCommand
 {
     public const string Password = "benchmark-password";
+
+    /// <summary>Accounts of the built-in Users group for the OPDS run (<c>reader-0</c>…): each one's first Basic sign-in is cold.</summary>
+    public const int Readers = 21;
+
+    public const string ShelfName = "Bench shelf";
+
+    /// <summary>
+    /// For the OPDS run (stage 7 chunk 14): a server administrator (the API is then set up), the reader accounts in Users,
+    /// and <c>reader-0</c>'s shelf at its cap (<see cref="Shelves.MaxBooks"/>) of random books in a random order.
+    /// </summary>
+    private static async Task ReadersAsync(IServiceProvider services, int tenantId, CatalogShape shape, Action<string> report, CancellationToken cancellationToken)
+    {
+        var watch = Stopwatch.StartNew();
+        var accounts = services.GetRequiredService<AccessService>();
+        await accounts.CreateUserAsync(new UserInput("admin", Password: Password, IsServerAdmin: true), null, cancellationToken);
+        var users = (await accounts.ListGroupsAsync(tenantId, cancellationToken)).Single(g => g.BuiltIn == BuiltInGroup.Users);
+        var owner = 0;
+        for (var i = 0; i < Readers; i++)
+        {
+            var user = (await accounts.CreateUserAsync(new UserInput($"reader-{i}", Password: Password, GroupIds: [users.Id]), tenantId, cancellationToken)).Value!;
+            if (i == 0)
+                owner = user.Id;
+        }
+
+        var shelves = services.GetRequiredService<Shelves>();
+        var shelf = (await shelves.CreateAsync(tenantId, owner, ShelfName, cancellationToken)).Value!;
+        var visibility = await services.GetRequiredService<BookVisibilities>().GetAsync(new AccessSubject(tenantId, owner), cancellationToken);
+        var random = new Random(shape.Seed);
+        var picked = new HashSet<int>();
+        while (picked.Count < Math.Min(Shelves.MaxBooks, shape.Books))
+            picked.Add(1 + random.Next(shape.Books));
+        foreach (var chunk in picked.Chunk(Librarion.Core.Tagging.BookTagger.MaxSelection))
+            await shelves.AddAsync(tenantId, owner, visibility, shelf.Id, chunk, cancellationToken);
+        report($"readers and a shelf of {picked.Count:N0} books in {watch.Elapsed.TotalSeconds:0.0} s");
+    }
 
     public static async Task<CatalogTarget> RunAsync(BenchTarget target, CatalogShape shape, string workFolder, Action<string> report, CancellationToken cancellationToken)
     {
@@ -79,6 +115,7 @@ public static class GenerateCommand
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        await ReadersAsync(host.Services, tenant.Id, shape, report, cancellationToken);
         report($"generated {shape.Books:N0} books in {total.Elapsed.TotalMinutes:0.0} min");
         return catalogTarget;
     }

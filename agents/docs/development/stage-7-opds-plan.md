@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 14.
+**Next:** chunk 15.
 
 ## The user's answers (2026-11-10)
 
@@ -188,9 +188,13 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     name (ordinal), then id, in the group list and in a tag's look-alikes (a second tie, "S. King" / "Стивен Кинг",
     now by name too); the whole suite run on Linux in a `dotnet/sdk:10.0` container: green;
     [merging](../features/merging.md#possible-duplicate-tags-built-stage-6-chunk-14).
-14. [ ] Benchmark at 2M on both providers: OPDS scenarios in `tests/Librarion.Benchmarks/Bench/RunCommand.cs` (root,
+14. [x] Benchmark at 2M on both providers: OPDS scenarios in `tests/Librarion.Benchmarks/Bench/RunCommand.cs` (root,
     Recent first and deep page, a field's first letters uncached (~90 seeks over 500k authors), a field letter, a big author's books, a series by number, search, a shelf, a page's
     entries with files) within the OPDS budget (150 ms p95), no full scan; Basic cold vs cached; idle memory.
+    **Built:** `run`'s `opds:` scenarios and an `opds` command (the real server over HTTP, Basic cold and cached,
+    memory); the generator makes an administrator, `reader-N` accounts and a 10,000-book shelf. Found and fixed:
+    fields with values scanned `Tags` on PostgreSQL, the letters ~90 queries (plain tags 1.7 s), plain-tag lists
+    sorted; all within budget, 162 / 214 MB idle; [scale](scale.md#measured), [opds](../features/opds.md#built-stage-7-chunk-14-measured-at-2m).
 15. [ ] Docs and close: user docs (`docs/user-guide/` OPDS with KOReader, Moon+ and Thorium set up, API keys,
     shelves; `docs/reference/rights.md`), feature notes (`opds-auth`, `opds`, `shelves`, `rights`, `accounts`,
     `merging`), CHANGELOG; the by-hand list for the user (KOReader, Moon+, Thorium); merge `0.8.0`, this plan removed

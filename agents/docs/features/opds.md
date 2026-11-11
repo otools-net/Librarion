@@ -130,6 +130,16 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
   reading only that form; calibre-web does the same): the test removes exactly that link before validating, after
   checking the OpenSearch description link is there. Dropping the template would make the raw feeds valid as they are.
 
+## Built (stage 7 chunk 14): measured at 2M
+
+- Every feed within 150 ms p95 over HTTP on both providers, the server 162 / 214 MB idle, a first Basic sign-in
+  about 200 ms then cached: [scale](../development/scale.md#measured) (the OPDS rows), `agents/tools/benchmark`
+  (`run --only opds`, the `opds` command).
+- Fixed on the way: `TagQueries.FieldsWithValuesAsync` seeks each field on its index (an `EXISTS` scanned on
+  PostgreSQL); `InitialsAsync` asks every letter in one query (`FirstAtOrAfterAsync`: raw SQL alike on both
+  providers, the tenant named in it), plain tags among every row without a field, the fields' own rows stepped over;
+  value pages ordered by `FieldId` first. `InitialsAsync(fresh: true)` skips the 10-minute cache (the benchmark).
+
 ## Planned (stage 7)
 
 - Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).

@@ -6,6 +6,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Fixed
 
+- **Plain tags A–Z** and other lists of values open faster on PostgreSQL with very many tags (70 ms → 11 ms at 2M
+  books); a reader app's first letters of authors and tags come in one query.
 - **Tags → Possible duplicates**: tags with as many books are listed by name; their order depended on the order the
   files were found, which differs between Linux and Windows.
 

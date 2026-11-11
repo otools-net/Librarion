@@ -63,7 +63,9 @@ public sealed class TagQueries(TenantDb tenantDb, TimeProvider time)
 
     /// <summary>
     /// The tenant's fields that hold at least one value (a reader app's catalog leaves out the empty ones): one seek per
-    /// field on the index (TenantId, FieldId, SortName), never a count.
+    /// field on the index (TenantId, FieldId, SortName), never a count. Ordered on purpose: a bare <c>EXISTS</c> was
+    /// answered on PostgreSQL by a scan of <c>Tags</c> from its start, past 500k authors before the first series (2M
+    /// benchmark, 2026-11-11).
     /// </summary>
     public async Task<IReadOnlyList<FieldInfo>> FieldsWithValuesAsync(int tenantId, CancellationToken cancellationToken = default)
     {
@@ -72,7 +74,7 @@ public sealed class TagQueries(TenantDb tenantDb, TimeProvider time)
         var kept = new List<FieldInfo>();
         foreach (var field in fields)
         {
-            if (await db.Tags.AnyAsync(t => t.FieldId == field.Id, cancellationToken))
+            if (await db.Tags.Where(t => t.FieldId == field.Id).OrderBy(t => t.SortName).Select(t => (int?)t.Id).FirstOrDefaultAsync(cancellationToken) is not null)
                 kept.Add(field);
         }
         return kept;
@@ -93,41 +95,77 @@ public sealed class TagQueries(TenantDb tenantDb, TimeProvider time)
     /// <summary>
     /// The letters of <see cref="Initials"/> some value of a field (or plain tag, <paramref name="fieldKey"/> null) starts
     /// with: for each, one seek on the index (TenantId, FieldId, SortName) for the first value at or after it, kept when
-    /// it starts with that letter. Right in any collation (PostgreSQL's libc one orders punctuation and U+FFFF unlike
+    /// it starts with that letter; every letter in one query (a <c>VALUES</c> list, a correlated <c>LIMIT 1</c> each:
+    /// ~90 round trips were 186 ms at 2M on PostgreSQL, one is under 1 ms). Plain tags are probed among all rows
+    /// without a field (<c>FieldKey IS NULL</c> turned PostgreSQL to another index and a sort of 50k rows per letter,
+    /// 1.7 s): a field's own row found first is stepped over. Right in any collation (PostgreSQL's libc one orders punctuation and U+FFFF unlike
     /// SQLite's code points: a skip scan by "the next code point" stopped after Z there). Values of the whole tenant, so
-    /// a letter may hold none of a library's books. Kept <see cref="InitialsLifetime"/> per tenant and field.
+    /// a letter may hold none of a library's books. Kept <see cref="InitialsLifetime"/> per tenant and field;
+    /// <paramref name="fresh"/> probes again (the benchmark's uncached case).
     /// </summary>
-    public async Task<IReadOnlyList<string>> InitialsAsync(int tenantId, string? fieldKey, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> InitialsAsync(int tenantId, string? fieldKey, CancellationToken cancellationToken = default, bool fresh = false)
     {
         var cacheKey = (tenantId, fieldKey ?? "");
-        if (_initials.TryGetValue(cacheKey, out var cached) && cached.Expires > time.GetUtcNow())
+        if (!fresh && _initials.TryGetValue(cacheKey, out var cached) && cached.Expires > time.GetUtcNow())
             return cached.Letters;
 
         await using var db = await tenantDb.ForTenantAsync(tenantId, cancellationToken);
-        IQueryable<Tag> tags;
-        if (fieldKey is null)
+        int? fieldId = null;
+        if (fieldKey is not null)
         {
-            tags = db.Tags.Where(t => t.FieldId == null && t.FieldKey == null);
-        }
-        else
-        {
-            var fieldId = await db.Tags.Where(t => t.FieldKey == fieldKey).Select(t => (int?)t.Id).FirstOrDefaultAsync(cancellationToken);
+            fieldId = await db.Tags.Where(t => t.FieldKey == fieldKey).Select(t => (int?)t.Id).FirstOrDefaultAsync(cancellationToken);
             if (fieldId is null)
                 return [];
-            tags = db.Tags.Where(t => t.FieldId == fieldId);
         }
 
+        // The fields' own rows have no field either: never a plain tag's letter.
+        // In key order, as FieldsAsync: with "IS NOT NULL" alone SQLite scans every tag.
+        var fieldRows = fieldId is null
+            ? (await db.Tags.Where(t => t.FieldKey != null).OrderBy(t => t.FieldKey).Select(t => t.SortName).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal)
+            : [];
+        var firsts = await FirstAtOrAfterAsync(db, tenantId, fieldId, Initials, cancellationToken);
         var letters = new List<string>();
-        foreach (var letter in Initials)
+        for (var i = 0; i < Initials.Count; i++)
         {
-            var first = await tags.Where(t => string.Compare(t.SortName, letter) >= 0).OrderBy(t => t.SortName)
-                .Select(t => t.SortName).FirstOrDefaultAsync(cancellationToken);
-            if (first is { Length: > 0 } && string.Equals(first[..1], letter, StringComparison.OrdinalIgnoreCase))
-                letters.Add(letter);
+            var first = firsts[i];
+            // A field's row in the way: the plain tags after it (the fields are a handful, so is this).
+            while (first is not null && fieldRows.Contains(first))
+                first = (await FirstAtOrAfterAsync(db, tenantId, null, [first], cancellationToken, after: true))[0];
+            if (first is { Length: > 0 } && string.Equals(first[..1], Initials[i], StringComparison.OrdinalIgnoreCase))
+                letters.Add(Initials[i]);
         }
 
         _initials[cacheKey] = (time.GetUtcNow() + InitialsLifetime, letters);
         return letters;
+    }
+
+    private sealed record FirstName(string Probe, string? First);
+
+    /// <summary>
+    /// For each of <paramref name="probes"/>, the first sort name at or after it (or after it, <paramref name="after"/>)
+    /// among the field's values (<paramref name="fieldId"/> null: every tag without a field), in one query. Raw SQL that
+    /// reads the same on both providers (a <c>VALUES</c> list's columns are <c>column1</c> on both); the tenant named
+    /// in it, since the query filter doesn't reach raw SQL. Ordered by <c>FieldId</c> first: PostgreSQL takes
+    /// <c>FieldId IS NULL</c> as no fixed value for the index's order and sorted otherwise.
+    /// </summary>
+    private static async Task<IReadOnlyList<string?>> FirstAtOrAfterAsync(LibrarionDbContext db, int tenantId, int? fieldId, IReadOnlyList<string> probes,
+        CancellationToken cancellationToken, bool after = false)
+    {
+        var arguments = new List<object> { tenantId };
+        if (fieldId is { } id)
+            arguments.Add(id);
+        var field = fieldId is null ? "t.\"FieldId\" IS NULL" : "t.\"FieldId\" = {1}";
+        var values = string.Join(", ", probes.Select((probe, i) => $"({{{arguments.Count + i}}})"));
+        arguments.AddRange(probes);
+        var sql = $$"""
+            SELECT l.column1 AS "Probe", (SELECT t."SortName" FROM "Tags" AS t
+                WHERE t."TenantId" = {0} AND {{field}} AND t."SortName" {{(after ? ">" : ">=")}} l.column1
+                ORDER BY t."FieldId", t."SortName" LIMIT 1) AS "First"
+            FROM (VALUES {{values}}) AS l
+            """;
+        var rows = await db.Database.SqlQueryRaw<FirstName>(sql, arguments.ToArray()).ToListAsync(cancellationToken);
+        var found = rows.ToDictionary(r => r.Probe, r => r.First, StringComparer.Ordinal);
+        return probes.Select(p => found.GetValueOrDefault(p)).ToList();
     }
 
     /// <summary>The values of the field <paramref name="fieldKey"/> by sort name.</summary>
@@ -228,7 +266,9 @@ public sealed class TagQueries(TenantDb tenantDb, TimeProvider time)
             if (cursor is { Text: { } name })
                 query = query.Where(t => string.Compare(t.SortName, name) >= 0 && (string.Compare(t.SortName, name) > 0 || t.Id > cursor.Id));
             var take = limit - items.Count + 1;
-            var rows = await query.OrderBy(t => t.SortName).ThenBy(t => t.Id).Take(take)
+            // FieldId first: the same order (every query here fixes it), and PostgreSQL walks the index for plain tags
+            // too (FieldId IS NULL, else it sorts them: 70 ms at 2M).
+            var rows = await query.OrderBy(t => t.FieldId).ThenBy(t => t.SortName).ThenBy(t => t.Id).Take(take)
                 .Select(t => new { t.Id, t.Name, t.SortName })
                 .ToListAsync(cancellationToken);
             var more = rows.Count == take;

@@ -29,6 +29,12 @@ public static class RunCommand
     private const double DetailBudget = 50;
     private const double SearchBudget = 300;
 
+    /// <summary>An OPDS feed page (the roadmap's budget): its query and its entries' extras.</summary>
+    private const double OpdsBudget = 150;
+
+    /// <summary>Entries in an OPDS page (<c>OpdsEndpoints.PageSize</c>).</summary>
+    private const int OpdsPage = 50;
+
     /// <summary>A figure asked once when a page or a choice opens and kept after (the Imported tags page's coverage line).</summary>
     private const double OnDemandBudget = 500;
 
@@ -49,6 +55,7 @@ public static class RunCommand
         var facets = services.GetRequiredService<Librarion.Core.Search.SearchFacets>();
         var visibilities = services.GetRequiredService<BookVisibilities>();
         var accounts = services.GetRequiredService<AccessService>();
+        var shelves = services.GetRequiredService<Shelves>();
 
         // What the scenarios need, found once (slow queries allowed here).
         var tenant = (await accounts.ListTenantsAsync(cancellationToken)).Single(t => t.Name == "Bench");
@@ -61,6 +68,8 @@ public static class RunCommand
         List<int> sampleIds;
         int zipFolder, looseParent, looseFolder, filterTag;
         string importedCursor;
+        int shelfId = 0, shelfOwner = 0;
+        string? shelfCursor = null;
         await using (var db = await tenantDb.ForTenantAsync(tenant.Id, cancellationToken))
         {
             // The folder view (stage 6 chunk 8b): a ZIP of 100k entries, the folder of the thousand folders of loose files, one of those.
@@ -95,6 +104,14 @@ public static class RunCommand
             var plainCount = await db.TagCounts.Where(c => c.LibraryId == libraryId && db.Tags.Any(t => t.Id == c.TagId && t.FieldId == null && t.FieldKey == null))
                 .OrderByDescending(c => c.BookCount).ThenByDescending(c => c.TagId).Skip(5000).Select(c => new { c.BookCount, c.TagId }).FirstAsync(cancellationToken);
             importedCursor = new KeysetCursor(null, plainCount.BookCount, plainCount.TagId).Encode();
+            // OPDS (stage 7 chunk 14): reader-0's shelf of 10,000 books, and its 5,000th place for a middle page.
+            if (await db.Shelves.Where(s => s.Name == Librarion.Benchmarks.Generation.GenerateCommand.ShelfName).Select(s => new { s.Id, s.UserId }).FirstOrDefaultAsync(cancellationToken) is { } shelf)
+            {
+                (shelfId, shelfOwner) = (shelf.Id, shelf.UserId);
+                var middle = await db.ShelfBooks.Where(s => s.ShelfId == shelf.Id).OrderBy(s => s.Position).ThenBy(s => s.BookId).Skip(5000)
+                    .Select(s => new { s.Position, s.BookId }).FirstAsync(cancellationToken);
+                shelfCursor = new KeysetCursor(null, middle.Position, middle.BookId).Encode();
+            }
             var random = new Random(42);
             sampleIds = Enumerable.Range(0, iterations + 3).Select(_ => 1 + random.Next(bookCount)).ToList();
         }
@@ -119,6 +136,15 @@ public static class RunCommand
         var addedCursor = new KeysetCursor(null, middleAdded.Ticks, middleAddedId).Encode();
         Task<int> List(BookVisibility visibility, BookPageRequest request) =>
             books.ListAsync(tenant.Id, visibility, request, cancellationToken).ContinueWith(t => t.Result.Items.Count, cancellationToken);
+        // An OPDS acquisition feed's data: the page, then its entries' files, languages and categories (one query each).
+        async Task<int> Feed(Task<Page<BookListItem>?> page)
+        {
+            var items = (await page)?.Items ?? [];
+            await books.EntriesAsync(tenant.Id, items.Select(b => b.Id).ToList(), cancellationToken);
+            return items.Count;
+        }
+        Task<int> OpdsBooks(BookPageRequest request) => Feed(books.ListAsync(tenant.Id, open, request with { Limit = OpdsPage }, cancellationToken)!);
+        var entryPages = Enumerable.Range(0, iterations + 3).Select(i => new Random(1000 + i)).Select(r => Enumerable.Range(0, OpdsPage).Select(_ => 1 + r.Next(bookCount)).ToList()).ToList();
 
         var scenarios = new List<(string Name, double Budget, Func<int, Task<int>> Run)>
         {
@@ -210,6 +236,31 @@ public static class RunCommand
             ("facets: category Fiction, no PDF", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, "category:Fiction -format:pdf", cancellationToken)).Counted),
             ("facets: books outside any series", SearchBudget, async _ => (await facets.ListAsync(tenant.Id, open, libraryId, "-series:", cancellationToken)).Counted),
         };
+        // OPDS (stage 7 chunk 14, budget 150 ms a feed page): what each feed reads; the whole feed over HTTP is the `opds` command.
+        scenarios.AddRange(new List<(string Name, double Budget, Func<int, Task<int>> Run)>
+        {
+            ("opds: a library's catalog (fields with values, shelves)", OpdsBudget,
+                async _ => (await tags.FieldsWithValuesAsync(tenant.Id, cancellationToken)).Count + (await shelves.ListAsync(tenant.Id, shelfOwner, cancellationToken)).Count),
+            ("opds: recent, first page", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId, BookSort.Added))),
+            ("opds: recent, deep page", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId, BookSort.Added, addedCursor))),
+            ("opds: by title, first page", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId))),
+            ("opds: by title, deep page", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId, After: titleCursor))),
+            ("opds: authors' first letters, uncached", OpdsBudget, async _ => (await tags.InitialsAsync(tenant.Id, "author", cancellationToken, fresh: true)).Count),
+            ("opds: plain tags' first letters, uncached", OpdsBudget, async _ => (await tags.InitialsAsync(tenant.Id, null, cancellationToken, fresh: true)).Count),
+            ("opds: authors from a letter", OpdsBudget, async _ => (await tags.ValuesAsync(tenant.Id, "author", libraryId, null, OpdsPage, cancellationToken, "M", open))!.Items.Count),
+            ("opds: the most prolific author's books", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId, TagId: prolificAuthor))),
+            ("opds: the biggest series, by number", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId, BookSort.Number, TagId: bigSeries))),
+            ("opds: search a word in many titles", OpdsBudget, _ => OpdsBooks(new BookPageRequest(libraryId, Query: "night"))),
+            ("opds: a shelf of 10,000 books, first page", OpdsBudget,
+                _ => Feed(shelves.BooksAsync(tenant.Id, shelfOwner, open, shelfId, ShelfSort.Shelf, null, OpdsPage, cancellationToken, libraryId))),
+            ("opds: a shelf of 10,000 books, middle page", OpdsBudget,
+                _ => Feed(shelves.BooksAsync(tenant.Id, shelfOwner, open, shelfId, ShelfSort.Shelf, shelfCursor, OpdsPage, cancellationToken, libraryId))),
+            ("opds: a page's entries (files, languages, categories)", OpdsBudget,
+                async i => (await books.EntriesAsync(tenant.Id, entryPages[i], cancellationToken)).Count),
+        });
+        if (shelfId == 0)
+            scenarios.RemoveAll(s => s.Name.Contains("shelf", StringComparison.Ordinal));
+
         foreach (var (name, visibility) in filtered)
         {
             scenarios.Add(($"{name} ({FilterShare(name)}), by title, first page", ListBudget, _ => List(visibility, new BookPageRequest())));
