@@ -41,7 +41,9 @@ Features discussed but **not built before the MVP (1.0.0)**, kept here so none i
 ## OPDS
 
 - OPDS-PSE (page streaming for comics; D6).
-- OPDS 2.0, if stage 7's optional chunk is skipped ([stage 7 plan](stage-7-opds-plan.md)).
+- **OPDS 2.0** (JSON feeds, `/opds/v2/…`): stage 7's optional chunk, skipped (the user's Q3, 2026-11-10: only if
+  time allowed). The feeds' data is ready for it (`BookQueries.EntriesAsync`, `OpdsLinks`); needs its own writer,
+  the authentication document, and a validator (the JSON schemas of opds-community/specs).
 
 ## Scale
 

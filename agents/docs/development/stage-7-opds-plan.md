@@ -26,7 +26,7 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 15.
+**Next:** the user's by-hand checks (chunk 15), then the merge.
 
 ## The user's answers (2026-11-10)
 
@@ -195,12 +195,17 @@ only, its GPL-3 code is never copied). SimpleFileExplorer has no API keys or Bas
     memory); the generator makes an administrator, `reader-N` accounts and a 10,000-book shelf. Found and fixed:
     fields with values scanned `Tags` on PostgreSQL, the letters ~90 queries (plain tags 1.7 s), plain-tag lists
     sorted; all within budget, 162 / 214 MB idle; [scale](scale.md#measured), [opds](../features/opds.md#built-stage-7-chunk-14-measured-at-2m).
-15. [ ] Docs and close: user docs (`docs/user-guide/` OPDS with KOReader, Moon+ and Thorium set up, API keys,
+15. [ ] Docs and close (all but the merge done 2026-11-11; the merge waits for the user's by-hand checks): user docs (`docs/user-guide/` OPDS with KOReader, Moon+ and Thorium set up, API keys,
     shelves; `docs/reference/rights.md`), feature notes (`opds-auth`, `opds`, `shelves`, `rights`, `accounts`,
     `merging`), CHANGELOG; the by-hand list for the user (KOReader, Moon+, Thorium); merge `0.8.0`, this plan removed
     (what stays true moved to the notes, open items to the next-version plan), the roadmap marks stage 7 done.
-16. [ ] (Optional, Q3) OPDS 2.0 JSON feeds on the same feed model (`/opds/v2/…`); if skipped, left as an open topic
-    in the [next-version plan](next-version-plan.md).
+    **Built:** `docs/opds.md` (signing in three ways, what the catalog shows, KOReader / Moon+ / Thorium), indexes;
+    notes (`opds`: the by-hand checklist; `rights`); OPDS 2.0 to the next-version plan; the stage 8 plan.
+    **Left:** the user's checks ([opds](../features/opds.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge)),
+    then the merge `0.8.0` and this plan removed.
+16. [x] (Optional, Q3) skipped: OPDS 2.0 JSON feeds on the same feed model (`/opds/v2/…`); if skipped, left as an open topic
+    in the [next-version plan](next-version-plan.md). **Skipped** (the user, 2026-11-11: finalize the stage): an
+    open topic in the [next-version plan](next-version-plan.md#opds).
 
 ## Exit criteria
 

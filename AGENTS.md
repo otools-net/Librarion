@@ -97,8 +97,9 @@ note rather than inventing a new one.
 
 | Note | Covers | Code |
 |---|---|---|
-| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (6 done; 7, OPDS and API keys, in progress), budgets, risks | |
+| [foundation-plan](agents/docs/development/foundation-plan.md) | **roadmap to the MVP (1.0.0)**: priorities, confirmed decisions, stages 0–11 (6 done; 7, OPDS and API keys, built and waiting for the by-hand checks; 8 planned), budgets, risks | |
 | [stage-7-opds-plan](agents/docs/development/stage-7-opds-plan.md) | **stage 7 checklist**: OPDS 1.2, API keys, shelves; decisions, chunks, the **Next:** chunk to continue with | |
+| [stage-8-ereader-plan](agents/docs/development/stage-8-ereader-plan.md) | **stage 8 checklist** (after stage 7's merge): e-reader mode at `/e/`; proposed decisions, the user's questions, chunks | |
 | [next-version-plan](agents/docs/development/next-version-plan.md) | open topics for after 1.0: features discussed but not built before the MVP | |
 | [privacy](agents/docs/development/privacy.md) | fully local: no CDN, no telemetry, opt-in outbound, the tests guarding it | |
 | [scale](agents/docs/development/scale.md) | keyset paging, counts, batches, the 2M / 10M benchmark and its measured numbers | |
@@ -157,6 +158,6 @@ note rather than inventing a new one.
 | [merging](agents/docs/features/merging.md) | duplicate books (copies, formats, same work) and tags: stored groups and their upkeep, the Duplicates page, compare and merge, redirects, Not a duplicate; undo and split (planned) | `Core/Merging/` |
 | [ereader-mode](agents/docs/features/ereader-mode.md) | e-reader mode: plain grayscale site for e-ink browsers (search, book info, download; no script) (planned) | `Api/EReader/` |
 | [conversion](agents/docs/features/conversion.md) | format conversion on demand: built-in FB2/EPUB → EPUB, KEPUB, AZW3; optional Calibre (MOBI, other inputs); queue, cache (planned) | `Core/Conversion/` |
-| [opds](agents/docs/features/opds.md) | the OPDS catalog for reader apps: the `/opds` group, its 404 and setup rules, the root and library feeds, Recent and by title by key, book entries, downloads and covers, fields A–Z by first letter, tags as trees, search (OpenSearch), FB2 zipped on the fly, shelves per library | `Api/Opds/`, `BookQueries.EntriesAsync` |
+| [opds](agents/docs/features/opds.md) | the OPDS catalog for reader apps (user guide `docs/opds.md`; the by-hand checklist): the `/opds` group, its 404 and setup rules, the root and library feeds, Recent and by title by key, book entries, downloads and covers, fields A–Z by first letter, tags as trees, search (OpenSearch), FB2 zipped on the fly, shelves per library | `Api/Opds/`, `BookQueries.EntriesAsync` |
 | [shelves](agents/docs/features/shelves.md) | personal shelves: an account's own lists of books in its own order (spaced positions, renumbered when needed), caps, counts, listing by key under visibility, merges / undo / split keep them; the pages (Add to shelf, the sidebar, a shelf's page, reorder by drag, keys or Move); their OPDS feeds | `Core/Catalog/Shelves.cs`, `Api/Endpoints/ShelfEndpoints.cs`, `app/shelves/`, `browse/shelf-order.ts` |
 | [opds-auth](agents/docs/features/opds-auth.md) | OPDS / API authentication: the `Opds` scheme (never the cookie), Basic with the verification cache, API keys (scopes, libraries, the policy scheme, narrowing in `CurrentAccess`), keys in the address (`/opds/k/`), never in logs, and their pages | `Api/Opds/`, `Api/Security/`, `Core/Access/ApiKeys.cs`, `app/account/api-keys.ts` |

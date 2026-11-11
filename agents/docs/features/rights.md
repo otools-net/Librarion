@@ -34,7 +34,9 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   2026-11-06), so it is for trusted groups; the books listed in a folder still are.
 - **Stage 7 rights** (chunk 1, the user's answers 2026-11-10): `library.opds` (Read, area `library`: the OPDS feeds
   of a library; downloads there also need `library.download`), `account.apiKeys` and `account.shelves` (Write, area
-  `account`: one's own keys and shelves); all to Administrators, Users and Curators.
+  `account`: one's own keys and shelves); all to Administrators, Users and Curators. An API key's scopes and
+  libraries only narrow its owner's rights, never widen them (`CurrentAccess`, [opds-auth](opds-auth.md)); account
+  rights such as `account.shelves` are not narrowed by its libraries.
 - **Evaluation** (`RightsEvaluator.GetAsync`): union of the account's groups' rights in its tenant; library rights only
   in the group's libraries (`AllLibraries`, or `GroupLibraries` rows); minus the tenant's `TenantDisabledRights`;
   minus the server's `Librarion:Rights:Disabled` (ids, `prefix*`, `kind:write`), applied at each read so a
@@ -60,7 +62,6 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
 - More library rights as features come: read, upload, delete; `library.convert` (needs `library.download`; keeping
   the copy as a book file also needs `library.edit`): [conversion](conversion.md).
 - Guests: none before 1.0 (the user's answer, 2026-11-10): [next-version plan](../development/next-version-plan.md).
-- API keys carry scopes that can only narrow the user's rights, never widen them ([opds-auth](opds-auth.md)).
 - **Content filters** (allowed/denied tags, languages, max rating) per group: narrow which books a right applies to,
   applied in every query (`Visible()`), 404 for a hidden book (never told apart from missing). **Joined at query time**
   through `TagClosure` (D22): always current, no precomputation. Known cost: a narrow allow-list (a group seeing

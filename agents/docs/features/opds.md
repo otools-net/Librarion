@@ -140,6 +140,23 @@ writer, `OpdsLinks` every address, `OpdsAuthentication`), `Core/Catalog/BookQuer
   providers, the tenant named in it), plain tags among every row without a field, the fields' own rows stepped over;
   value pages ordered by `FieldId` first. `InitialsAsync(fresh: true)` skips the 10-minute cache (the benchmark).
 
-## Planned (stage 7)
+## Checked by hand (the stage's exit criterion: the user, before the merge)
 
-- Keys in the address (`/opds/k/<key>/…`, every link keeping the prefix): [opds-auth](opds-auth.md#built-stage-7-chunk-8b-keys-in-the-address).
+Not yet done (2026-11-11). For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
+[docs/opds.md](../../../docs/opds.md):
+
+1. Add the catalog with the user name and the **password**: the root opens (one library: its catalog; several: the list).
+2. **Recently added**, then the next page (scroll or Next): no book twice, covers shown.
+3. **Authors** → a letter → an author → a book: title, authors, series, description, cover.
+4. **Download** an EPUB, then an FB2 and the same as **FB2.ZIP**: each opens in the app; a book inside a ZIP library too.
+5. **Search** a word, then `author:"…"`: results, and their next page.
+6. **My shelves** → a shelf: its books in the shelf's order.
+7. Change the catalog to the user name and an **API key** as the password: works; revoke the key: refused.
+8. A key **in the address** (no name, no password): works; links (next page, download) keep working.
+9. A **wrong password**: the app says so (and after five, the address waits 15 minutes).
+
+Note what each app names differently from [docs/opds.md](../../../docs/opds.md), and any feed it shows wrongly.
+
+## Not built
+
+- OPDS 2.0 (JSON) and OPDS-PSE (page streaming): [next-version plan](../development/next-version-plan.md).
