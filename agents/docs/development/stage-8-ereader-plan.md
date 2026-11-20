@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 10.
+**Next:** chunk 11.
 
 ## The user's answers (2026-11-11)
 
@@ -162,9 +162,12 @@ is the note's; nothing to port.
    **Built:** [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-9-ways-in); `EReaderRedirect`, `/e/books/<id>`
    finding the book's library, `/e/full-site` and `/e/start` (plain GETs: a browser preference only), no redirect
    before the setup; a short section in `docs/user-guide/finding-your-way.md` (chunk 12 writes the full guide).
-10. [ ] e2e: a project with JavaScript off at 600 × 800 (and a Kindle-like User-Agent): sign in, search, a book page,
+10. [x] e2e: a project with JavaScript off at 600 × 800 (and a Kindle-like User-Agent): sign in, search, a book page,
     download loose and from a ZIP, the next page, a key in the address, sign out; no request leaves the origin; axe AA
-    on each screen (run with script on: the pages have none of their own).
+    on each screen (run with script on: the pages have none of their own). **Built:**
+    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-10-end-to-end), [testing-e2e](testing-e2e.md); the
+    `ereader` project, every screen also checked for gray-only colours and 44 px targets; found: no icon declared, so
+    a `/favicon.ico` 404 (`EPage` links `favicon.svg`); `addedLibrary` shared with the OPDS spec.
 11. [ ] Benchmark at 2M on both providers: `/e` pages over HTTP (home, a list's deep page, search, a field's letters
     and values, a book page) within the list budget (100 ms p95), no full scan (the `opds` command's way: the real
     server).

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
+import { asAdmin } from './accounts';
 import { expect } from './test';
 import { work } from '../paths';
 
@@ -23,4 +24,17 @@ export async function scannedLibrary(page: Page, name: string, write: (folder: s
     await page.evaluate(id => localStorage.setItem('librarion.library', String(id)), library.id);
     await page.reload();
     return library.id;
+}
+
+/** A library of its own without a page (OPDS, e-reader mode): written, added and scanned as the administrator. */
+export async function addedLibrary(name: string, write: (folder: string) => void): Promise<number> {
+    const folder = path.join(work, 'books', name);
+    fs.rmSync(folder, { recursive: true, force: true });
+    fs.mkdirSync(folder, { recursive: true });
+    write(folder);
+    const { id } = await asAdmin<{ id: number }>('POST', 'api/libraries', { name });
+    await asAdmin('POST', `api/libraries/${id}/roots`, { path: folder });
+    const { runId } = await asAdmin<{ runId: number }>('POST', `api/libraries/${id}/scan`);
+    await expect.poll(async () => (await asAdmin<{ outcome: string | null }>('GET', `api/tasks/${runId}`)).outcome, { timeout: 30_000 }).toBe('succeeded');
+    return id;
 }

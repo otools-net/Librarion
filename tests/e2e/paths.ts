@@ -22,3 +22,6 @@ export const admin = { userName: 'admin', password: 'admin-password-1', tenant: 
 export const adminState = path.join(work, 'auth', 'admin.json');
 /** No cookies, nothing stored: `test.use({ storageState: signedOut })`. */
 export const signedOut = { cookies: [], origins: [] };
+
+/** A Kindle's browser (the `ereader` project; EReaderDevices knows it by `Kindle/` without `Silk`). */
+export const kindleUserAgent = 'Mozilla/5.0 (X11; U; Linux armv7l like Android; en-us) AppleWebKit/531.2+ (KHTML, like Gecko) Version/5.0 Safari/531.2+ Kindle/3.0+';

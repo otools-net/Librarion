@@ -7,27 +7,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { request } from '@playwright/test';
-import { asAdmin, makeAccount, uniqueName } from '../fixtures/accounts';
+import { makeAccount, uniqueName } from '../fixtures/accounts';
+import { addedLibrary } from '../fixtures/library';
 import { AcquisitionRel, ReaderApp, entryOf, linkOf, type Feed } from '../fixtures/opds';
 import { expect, test } from '../fixtures/test';
 import { fb2, writeZip } from '../fixtures/zip';
-import { baseURL, signedOut, work } from '../paths';
+import { baseURL, signedOut } from '../paths';
 
 const headers = { 'X-Librarion-Request': '1' };
 const Fb2ZipType = 'application/fb2+zip';
-
-/** A library of its own (as fixtures/library.ts, without a page): written, added and scanned as the administrator. */
-async function library(name: string, write: (folder: string) => void): Promise<number> {
-    const folder = path.join(work, 'books', name);
-    fs.rmSync(folder, { recursive: true, force: true });
-    fs.mkdirSync(folder, { recursive: true });
-    write(folder);
-    const { id } = await asAdmin<{ id: number }>('POST', 'api/libraries', { name });
-    await asAdmin('POST', `api/libraries/${id}/roots`, { path: folder });
-    const { runId } = await asAdmin<{ runId: number }>('POST', `api/libraries/${id}/scan`);
-    await expect.poll(async () => (await asAdmin<{ outcome: string | null }>('GET', `api/tasks/${runId}`)).outcome, { timeout: 30_000 }).toBe('succeeded');
-    return id;
-}
 
 /** The book's file link (not the zipped one) in an acquisition feed. */
 function fileLink(feed: Feed, title: string) {
@@ -42,7 +30,7 @@ test.describe('@opds', () => {
         const suffix = name.slice(name.lastIndexOf('-') + 1);
         const author = `Ann Reader${suffix}`;
         const books = { Alpha: fb2('Alpha', author), Beta: fb2('Beta', author), Gamma: fb2('Gamma', author) };
-        const libraryId = await library(name, folder => {
+        const libraryId = await addedLibrary(name, folder => {
             fs.writeFileSync(path.join(folder, 'Alpha.fb2'), books.Alpha);
             fs.writeFileSync(path.join(folder, 'Beta.fb2'), books.Beta);
             writeZip(path.join(folder, 'pack.zip'), [{ name: 'Gamma.fb2', data: books.Gamma }]);

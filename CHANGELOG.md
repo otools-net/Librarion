@@ -33,6 +33,7 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 
 ### Changed
 
+- E-reader pages name the app's icon, so browsers no longer ask for a missing `/favicon.ico`.
 - Downloads (app, reader apps, e-reader mode) give browsers that can't read UTF-8 file names a readable one:
   "Café Society.fb2" becomes "Cafe Society.fb2", a name in another alphabet "book-123.fb2" (was "_____ _ ___.fb2").
 

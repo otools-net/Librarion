@@ -13,7 +13,7 @@ npm ci                        # once, and after package.json changes
 npm run browsers              # once: WebKit (iPhone), Chromium, and the ffmpeg that records failure videos
 
 npm run e2e                                   # everything: builds the app, starts it, runs, stops it
-npm run e2e -- --project=android              # one device: android, android-small, iphone, landscape, desktop
+npm run e2e -- --project=android              # one device: android, android-small, iphone, landscape, desktop, ereader
 npm run e2e -- --grep "@smoke|@a11y|@accounts|@admin"   # the quick set (CI on edge: android, iphone, desktop)
 npm run e2e -- specs/smoke.spec.ts            # one file
 LIBRARION_E2E_SKIP_BUILD=1 npm run e2e        # reuse the last build
@@ -43,7 +43,7 @@ npx playwright show-report <tmp>/librarion-e2e/report   # the HTML report, trace
 | `fixtures/accounts.ts` | `makeAccount` (a new account per test, through the API as the administrator), `asAdmin`, `uniqueName`, `signIn` (through the page) |
 | `fixtures/axe.ts` | `audit(page, screen)`: axe WCAG 2.2 AA, serious and critical fail |
 | `fixtures/opds.ts` | `ReaderApp` (HTTP only: Basic, or nothing for a key in the address), `parseFeed` (titles and links of an Atom feed), `entryOf`, `linkOf` |
-| `specs/` | `smoke` (`@smoke`), `a11y` (`@a11y`), `accounts` (`@accounts`: sign-in, sign-out, recovery), `admin` (`@admin`: account, group, right used), `opds` (`@opds`: the catalog as a reader app, desktop project only), `harness` |
+| `specs/` | `smoke` (`@smoke`), `a11y` (`@a11y`), `accounts` (`@accounts`: sign-in, sign-out, recovery), `admin` (`@admin`: account, group, right used), `opds` (`@opds`: the catalog as a reader app, desktop project only), `ereader` (`@ereader`: e-reader mode with script off as a Kindle, `ereader` project only), `harness` |
 
 ## Writing a spec
 

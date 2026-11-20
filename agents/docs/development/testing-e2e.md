@@ -18,7 +18,11 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
 - The recovery spec reads the code from `<work>/data/recovery-code.txt`, as an administrator reads the console.
 - `webServer` waits on `api/setup` (anonymous; everything else answers 503 until the setup).
 - Devices: `android` (Pixel 7, Edge), `android-small` (360 px), `iphone` (WebKit), `landscape` (800 × 360: wider than
-  a phone, so the sidebar shows), `desktop` (only `@desktop` specs; `@desktop-only` never runs on phones).
+  a phone, so the sidebar shows), `desktop` (only `@desktop` specs; `@desktop-only` never runs on phones), `ereader`
+  (600 × 800, a Kindle's User-Agent, script off: only `@ereader` specs, which no other project runs; its layout checks
+  are called per screen in the spec, at 44 px, since it isn't `isMobile`).
+- Script off (`javaScriptEnabled: false`): locators and `page.evaluate` still work (Playwright's own world), the
+  guard's `securitypolicyviolation` listener doesn't (an init script); axe needs script, so its test turns it on.
 - The guard (`fixtures/test.ts`) fails a test on console errors, page errors, CSP violations, 5xx, and **any request
   to another origin** (privacy).
 - Every phone test that passes ends with the layout check (`expectFitsScreen`, `expectNothingCut`,
@@ -61,3 +65,8 @@ SFE's `testing-e2e.md`; its findings about touch, WebKit and timing apply here t
   an author suggestion without its `.suggestion-count` (the count is left out when the suggestion is asked before
   the library is known to the box); 46 of 46 green on `--repeat-each 3` alone. Look at the box's library first if it
   comes back.
+- Known flakes under the full run's load (stage 8 chunk 10, 2026-11-20, 11 min on this machine): `shelves.spec.ts` on
+  android and landscape (the order after Move still the old one after the reload), `folders.spec.ts` (the "default
+  tag now" status missed), `duplicates.spec.ts` on iphone (a tap waiting for a stable card). Each green alone
+  (`shelves` 3 of 3 with `--repeat-each 3`). The harness's mouse rule reads each line: the `// mouse:` comment goes
+  on the line of the call, not above it.

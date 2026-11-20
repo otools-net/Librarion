@@ -27,6 +27,12 @@ public sealed class EReaderLinks(HttpContext context, bool keepKey = true)
 
     public string Stylesheet => _root + EReaderEndpoints.StylesheetPath + "?v=" + EReaderStylesheet.Version;
 
+    /// <summary>
+    /// The app's own icon (a static file at the root, never under a key): declared, so browsers don't ask for a
+    /// <c>/favicon.ico</c> there is none of (a 404 on every first page, found by the e2e).
+    /// </summary>
+    public string Icon => context.Request.PathBase.Value?.TrimEnd('/') + "/favicon.svg";
+
     /// <summary>A library's page.</summary>
     public string Library(int library) => $"{_root}/l/{library}/";
 

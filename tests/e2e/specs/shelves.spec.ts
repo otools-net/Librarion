@@ -108,11 +108,11 @@ test.describe('@shelves', () => {
             // mouse: dragging is the desktop's way (the keys and Move are checked in the client's specs)
             const from = (await grip.boundingBox())!;
             const to = (await card('Alpha').boundingBox())!;
-            await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-            await page.mouse.down();
-            await page.mouse.move(to.x + 8, to.y + to.height / 2, { steps: 12 });
+            await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2); // mouse: the drag
+            await page.mouse.down(); // mouse: the drag
+            await page.mouse.move(to.x + 8, to.y + to.height / 2, { steps: 12 }); // mouse: the drag
             await expect(card('Alpha')).toHaveClass(/drop-before/);
-            await page.mouse.up();
+            await page.mouse.up(); // mouse: the drag
         }
         await expect.poll(() => titles(page)).toEqual(['Gamma', 'Alpha', 'Beta']);
         await page.reload();

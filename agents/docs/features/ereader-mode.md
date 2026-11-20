@@ -241,6 +241,21 @@ here, the device's own reader opens the downloaded file.
   OPDS, files, covers, `/e` itself and POSTs never; the cookie, its attributes and the way back; setup and both
   switches; `/e/books/<id>`), the client spec for the link.
 
+## Built (stage 8 chunk 10): end-to-end
+
+- `tests/e2e/specs/ereader.spec.ts` in the Playwright project **`ereader`** (600 × 800, a Kindle's User-Agent,
+  `javaScriptEnabled: false`, light, touch; only `@ereader` specs, which no other project runs). With script off: the
+  app's address sent to `/e/signin`, Stay signed in ticked, sign in, the libraries, a library, search, a book whose FB2
+  is inside a ZIP (ordered for Kindle, the FB2 under Other formats), Download (the same bytes) and Download zipped
+  (`PK`), All books by title 20 + 6 with Next and First, a loose download, Sign out (no session cookie left), then a
+  key in the address alone down to a download. On each screen: no `<script>`, every computed colour gray, fits,
+  nothing cut, targets ≥ 44 px. A second test runs axe AA on each screen with script on (axe needs it; the pages have
+  none). The guard fails on any request to another origin.
+- Found by it: the pages declared no icon, so browsers asked for `/favicon.ico` (404 on every first page): `EPage`
+  links the app's `favicon.svg` (`EReaderLinks.Icon`, the root's, never under a key).
+- Playwright's `evaluate` and locators work with `javaScriptEnabled: false` (its own world); a download is a link's
+  `tap()` with `waitForEvent('download')` before it.
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing
@@ -253,4 +268,4 @@ here, the device's own reader opens the downloaded file.
   User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie; built: `EReaderWaysInTests`); path key works and is redacted (built: `AddressKeyTests.EReader`); the
   stylesheet has no non-gray colour.
 - e2e (important flow): with JavaScript disabled on a 600 × 800 viewport: sign in, search, open a book, download a
-  file (also from a container zip), next page of a list; no request leaves the origin.
+  file (also from a container zip), next page of a list; no request leaves the origin (built: `ereader.spec.ts`).

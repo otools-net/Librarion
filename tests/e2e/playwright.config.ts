@@ -3,7 +3,7 @@
 // with touch, and on a desktop, signed in as that administrator. Reports and traces go to the work folder, not the repo.
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
-import { adminState, baseURL, here, signedOut, work } from './paths';
+import { adminState, baseURL, here, kindleUserAgent, signedOut, work } from './paths';
 
 // Chromium: the installed Edge on Windows (no download), Playwright's own elsewhere (CI). WebKit: `npm run browsers`.
 const channel = process.env.LIBRARION_E2E_CHANNEL ?? (process.platform === 'win32' ? 'msedge' : undefined);
@@ -39,18 +39,29 @@ export default defineConfig<Options>({
             testMatch: /.*\.setup\.ts/,
             use: { ...android, viewport: { width: 360, height: 740 }, screen: { width: 360, height: 800 }, deviceScaleFactor: 3, storageState: signedOut },
         },
-        { name: 'android', use: android, grepInvert: /@desktop-only/, dependencies: ['first-start'] },
+        { name: 'android', use: android, grepInvert: /@desktop-only|@ereader/, dependencies: ['first-start'] },
         {
             name: 'android-small',
             use: { ...android, viewport: { width: 360, height: 740 }, screen: { width: 360, height: 800 }, deviceScaleFactor: 3 },
-            grepInvert: /@desktop-only/,
+            grepInvert: /@desktop-only|@ereader/,
             dependencies: ['first-start'],
         },
-        { name: 'iphone', use: { ...devices['iPhone 13'] }, grepInvert: /@desktop-only/, dependencies: ['first-start'] },
+        { name: 'iphone', use: { ...devices['iPhone 13'] }, grepInvert: /@desktop-only|@ereader/, dependencies: ['first-start'] },
         {
             name: 'landscape',
             use: { ...android, viewport: { width: 800, height: 360 }, screen: { width: 800, height: 412 } },
-            grepInvert: /@desktop-only/,
+            grepInvert: /@desktop-only|@ereader/,
+            dependencies: ['first-start'],
+        },
+        // E-reader mode (agents/docs/features/ereader-mode.md): an e-ink screen, portrait, script off, a Kindle's
+        // User-Agent; only `@ereader` specs, which run nowhere else.
+        {
+            name: 'ereader',
+            use: {
+                ...devices['Desktop Chrome'], channel, viewport: { width: 600, height: 800 }, screen: { width: 600, height: 800 },
+                deviceScaleFactor: 1, hasTouch: true, userAgent: kindleUserAgent, javaScriptEnabled: false, colorScheme: 'light',
+            },
+            grep: /@ereader/,
             dependencies: ['first-start'],
         },
         { name: 'desktop', use: { ...devices['Desktop Chrome'], channel, viewport: { width: 1280, height: 800 } }, grep: /@desktop/, dependencies: ['first-start'] },

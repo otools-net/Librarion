@@ -92,6 +92,7 @@ public sealed partial class EReaderTests
             StringAssert.Contains(html, $"<h1>{WebUtility.HtmlEncode(library.Name)}</h1>", address);
             StringAssert.Contains(html, $"action=\"/e/l/{library.Id}/search\"", address);
             StringAssert.Contains(html, $"href=\"/e/ereader.css?v={EReaderStylesheet.Version}\"", address);
+            StringAssert.Contains(html, "<link rel=\"icon\" href=\"/favicon.svg\"", address + ": the app's icon, so no /favicon.ico is asked for");
         }
     }
 

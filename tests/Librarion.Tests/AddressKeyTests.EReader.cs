@@ -12,7 +12,10 @@ namespace Librarion.Tests;
 /// <summary>A key in the e-reader pages' address (<c>/e/k/&lt;key&gt;/…</c>, stage 8 chunk 8, D-8.7).</summary>
 public sealed partial class AddressKeyTests
 {
-    /// <summary>A page of the mode reached with the key alone (no cookie): plain, and every link, picture and form under the key's prefix.</summary>
+    /// <summary>
+    /// A page of the mode reached with the key alone (no cookie): plain, and every link, picture and form under the key's
+    /// prefix; only the app's icon (a static file, no key needed) at the root.
+    /// </summary>
     private async Task<string> KeyPageAsync(HttpClient app, string address, string prefix)
     {
         using var response = await app.GetAsync(address, Cancel);
@@ -20,7 +23,7 @@ public sealed partial class AddressKeyTests
         var html = await EReaderTests.PlainPageAsync(response, Cancel);
         var targets = Target().Matches(html).Select(m => WebUtility.HtmlDecode(m.Groups[1].Value)).ToList();
         Assert.IsNotEmpty(targets, address);
-        Assert.IsTrue(targets.All(t => t.StartsWith(prefix + "/", StringComparison.Ordinal)), address + "\n" + string.Join("\n", targets));
+        Assert.IsTrue(targets.All(t => t.StartsWith(prefix + "/", StringComparison.Ordinal) || t == "/favicon.svg"), address + "\n" + string.Join("\n", targets));
         return html;
     }
 
