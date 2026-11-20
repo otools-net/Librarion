@@ -21,6 +21,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   letters, each value shows its number of books, a series comes in its order, a tag with tags under it lists them.
 - E-reader mode: a **book's page** with its cover, authors, series and other fields as links, tags, description and
   files, each with **Download** (an FB2 also zipped).
+- E-reader mode: **the device's formats first**: a Kindle, Kobo, PocketBook, Tolino or Boox is recognised by its
+  browser, and the formats it opens come first on a book's page and in lists; the others follow, dimmed, and can
+  still be downloaded. **Change** on a book's page picks another device (or none) for this browser.
 
 ### Changed
 

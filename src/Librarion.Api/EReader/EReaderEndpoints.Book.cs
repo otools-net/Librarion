@@ -52,17 +52,22 @@ public static partial class EReaderEndpoints
 
         var fields = await tags.FieldsAsync(tenantId, context.RequestAborted);
         var canDownload = state.Access.HasIn(Rights.Download, library);
+        var frame = await EReaderFrame.ForAsync(context);
+        // The device's formats first, in its order; the others after them, dimmed, still downloadable (D-8.8, Q5).
+        var device = frame.Device;
         return new RazorComponentResult<BookPage>(new
         {
-            Frame = await EReaderFrame.ForAsync(context),
+            Frame = frame,
             Up = new EPage.Crumb(name, links.Library(library)),
             Book = book,
             Fields = (IReadOnlyList<BookPage.FieldValues>)FieldsOf(book, fields, library, links, texts),
             Description = (IReadOnlyList<string>)Paragraphs(book.Description),
-            Files = (IReadOnlyList<BookPage.FileRow>)book.Files.Select(f => new BookPage.FileRow(f,
+            Files = (IReadOnlyList<BookPage.FileRow>)EReaderDevices.Order(device, book.Files, f => f.Format).Select(f => new BookPage.FileRow(f,
                 canDownload && !f.Missing ? links.File(library, id, f.Id) : null,
-                canDownload && !f.Missing && OpdsFeed.Zipped(f.Format) ? links.ZippedFile(library, id, f.Id) : null)).ToList(),
+                canDownload && !f.Missing && OpdsFeed.Zipped(f.Format) ? links.ZippedFile(library, id, f.Id) : null,
+                device is null || device.Opens(f.Format))).ToList(),
             CanDownload = canDownload,
+            ChooseDevice = links.Device(context.Request.Path + context.Request.QueryString),
         });
     }
 

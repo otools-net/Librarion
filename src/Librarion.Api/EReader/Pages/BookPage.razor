@@ -3,7 +3,8 @@
 @*
     A book's page (stage 8 chunk 6): its cover (m, its box sized), title, fields as links to their values' books (the
     plain tags last), the description as plain text, then its files with Download (an FB2 also zipped). The files come
-    right under the title's block on a phone-sized screen too: downloading is what most come for.
+    right under the title's block on a phone-sized screen too: downloading is what most come for. The device's formats
+    first, the others after a note, dimmed and still downloadable (chunk 7, Q5), with a link to change the device.
 *@
 <EPage Frame="Frame" Title="@Texts.BookTitle(Book.Title, Book.FileName)" Up="Up">
     <div class="book-head">
@@ -34,36 +35,32 @@
     {
         <p class="notice">@Texts["book.noDownload"]</p>
     }
-    <ul class="plain files">
-        @foreach (var file in Files)
+    <p class="device">
+        @(Frame.Device is { } device ? Texts.Format("ereader.device.orderedFor", ("device", device.Name)) : Texts["ereader.device.noOrder"])
+        <a href="@ChooseDevice">@Texts["ereader.device.change"]</a>
+    </p>
+    @if (Opened.Count > 0)
+    {
+        <ul class="plain files">
+            @foreach (var file in Opened)
+            {
+                @FileItem(file)
+            }
+        </ul>
+    }
+    @if (Others.Count > 0)
+    {
+        @if (Frame.Device is { } named)
         {
-            <li>
-                <span class="file-about">
-                    <span class="format">@file.File.Format.ToUpperInvariant()</span>
-                    <span class="muted"> · @Size(file.File.Size)</span>
-                    <span class="line file-name">@file.File.Name</span>
-                    @if (file.File.Archive is { } archive)
-                    {
-                        <span class="line muted">@Texts.Format("ereader.book.inArchive", ("archive", archive))</span>
-                    }
-                    @if (file.File.Missing)
-                    {
-                        <span class="line muted">@Texts["ereader.book.fileMissing"]</span>
-                    }
-                </span>
-                @if (file.Download is { } download)
-                {
-                    <span class="file-actions">
-                        <a class="button" href="@download">@Texts.Format("book.download", ("format", file.File.Format.ToUpperInvariant()))</a>
-                        @if (file.Zipped is { } zipped)
-                        {
-                            <a class="button" href="@zipped">@Texts["ereader.book.downloadZipped"]</a>
-                        }
-                    </span>
-                }
-            </li>
+            <p class="others muted">@Texts.Format("ereader.device.others", ("device", named.Name))</p>
         }
-    </ul>
+        <ul class="plain files dim">
+            @foreach (var file in Others)
+            {
+                @FileItem(file)
+            }
+        </ul>
+    }
 
     @if (Description.Count > 0)
     {
@@ -95,13 +92,49 @@
     /// <summary>The account may download in this library (else a note, and no Download).</summary>
     [Parameter] public bool CanDownload { get; set; }
 
+    /// <summary>The device chooser, coming back to this page.</summary>
+    [Parameter, EditorRequired] public string ChooseDevice { get; set; } = "";
+
+    /// <summary>The files the device opens (all of them without a device), in its order.</summary>
+    private List<FileRow> Opened => Files.Where(f => f.Opens).ToList();
+
+    /// <summary>The files the device may not open: after the others, dimmed, still downloadable (Q5).</summary>
+    private List<FileRow> Others => Files.Where(f => !f.Opens).ToList();
+
+    private RenderFragment FileItem(FileRow file) => @<li>
+        <span class="file-about">
+            <span class="format">@file.File.Format.ToUpperInvariant()</span>
+            <span class="muted"> · @Size(file.File.Size)</span>
+            <span class="line file-name">@file.File.Name</span>
+            @if (file.File.Archive is { } archive)
+            {
+                <span class="line muted">@Texts.Format("ereader.book.inArchive", ("archive", archive))</span>
+            }
+            @if (file.File.Missing)
+            {
+                <span class="line muted">@Texts["ereader.book.fileMissing"]</span>
+            }
+        </span>
+        @if (file.Download is { } download)
+        {
+            <span class="file-actions">
+                <a class="button" href="@download">@Texts.Format("book.download", ("format", file.File.Format.ToUpperInvariant()))</a>
+                @if (file.Zipped is { } zipped)
+                {
+                    <a class="button" href="@zipped">@Texts["ereader.book.downloadZipped"]</a>
+                }
+            </span>
+        }
+    </li>;
+
     public sealed record Value(string Text, string Href);
 
     public sealed record FieldValues(string Title, IReadOnlyList<Value> Values);
 
     /// <param name="Download">Its address; null when it can't be downloaded (no right, missing).</param>
     /// <param name="Zipped">An FB2's zipped address; null otherwise.</param>
-    public sealed record FileRow(BookFileItem File, string? Download, string? Zipped);
+    /// <param name="Opens">The device opens its format (always, without a device); else listed after the others, dimmed.</param>
+    public sealed record FileRow(BookFileItem File, string? Download, string? Zipped, bool Opens = true);
 
     /// <summary>A file's size as the app shows it: bytes, kB, MB or GB (1,000 each), at most one decimal.</summary>
     internal static string Size(long bytes)

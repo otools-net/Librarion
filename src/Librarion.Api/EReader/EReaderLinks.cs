@@ -67,6 +67,10 @@ public sealed class EReaderLinks(HttpContext context)
         return given.Count == 0 ? "" : "?" + string.Join("&", given);
     }
 
+    /// <summary>The device chooser (whose formats come first), coming back to <paramref name="returnTo"/> (a path under <c>/e</c>); also where its form posts.</summary>
+    public string Device(string? returnTo = null) =>
+        _root + "/device" + (string.IsNullOrEmpty(returnTo) ? "" : "?return=" + Uri.EscapeDataString(returnTo));
+
     /// <summary>Where the sign-out form posts.</summary>
     public string SignOut => _root + "/signout";
 

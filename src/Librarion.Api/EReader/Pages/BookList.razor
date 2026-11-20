@@ -2,8 +2,8 @@
 @using Librarion.Core.Catalog
 @*
     The one list of books (D-8.6): a small cover (the s thumbnail at 48 x 72, its size set so the page doesn't move
-    while it loads), the title (the file's name for a book without one), authors, series and number. Each row is one
-    link to the book's page.
+    while it loads), the title (the file's name for a book without one), authors, series and number, its formats (the
+    device's first and bold, the others dimmed: chunk 7). Each row is one link to the book's page.
 *@
 @if (Books.Count == 0)
 {
@@ -26,6 +26,27 @@ else
                         @if (book.Series is { } series)
                         {
                             <span class="series">@SeriesOf(series, book.SeriesNumber)</span>
+                        }
+                        @if (book.Formats.Count > 0)
+                        {
+                            var formats = EReaderDevices.Order(Frame.Device, book.Formats.Distinct(StringComparer.OrdinalIgnoreCase), f => f);
+                            <span class="formats">
+                                @for (var i = 0; i < formats.Count; i++)
+                                {
+                                    @if (i > 0)
+                                    {
+                                        <span class="sep"> · </span>
+                                    }
+                                    @if (Frame.Device is { } device && !device.Opens(formats[i]))
+                                    {
+                                        <span class="dim">@formats[i].ToUpperInvariant()</span>
+                                    }
+                                    else
+                                    {
+                                        <b>@formats[i].ToUpperInvariant()</b>
+                                    }
+                                }
+                            </span>
                         }
                     </span>
                 </a>

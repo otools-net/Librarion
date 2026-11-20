@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 7.
+**Next:** chunk 8.
 
 ## The user's answers (2026-11-11)
 
@@ -144,8 +144,11 @@ is the note's; nothing to port.
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-6-the-book-page-and-downloads),
    [book-page](../features/book-page.md); the app's ASCII name was `_` per letter: `DownloadNames` folds accents and
    falls back to `book-<file id>`, for the app and OPDS too.
-7. [ ] Device formats (D-8.8, Q5): User-Agent guess (Kindle, Kobo, PocketBook, Tolino, Boox, else none), the order and
-   dimming on the book page and in lists, the chooser form and its cookie. Tests per User-Agent.
+7. [x] Device formats (D-8.8, Q5): User-Agent guess (Kindle, Kobo, PocketBook, Tolino, Boox, else none), the order and
+   dimming on the book page and in lists, the chooser form and its cookie. Tests per User-Agent. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-7-device-formats); `EReaderDevices` (the guess is
+   chunk 9's too: a Fire tablet's `Silk` is not a Kindle), the choice in `librarion.device` on `/e`, the chooser at
+   `/e/device` linked from the book page.
 8. [ ] Keys in the address (D-8.7, Q3): `/e/k/<key>/…`, the middleware shared with `/opds/k/`, links, covers and
    downloads keeping the prefix, redaction (a test reads the log), the tenant switch; the API key page's "How to use
    it" names the `/e` address. Tests.

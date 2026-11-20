@@ -1,0 +1,51 @@
+@*
+    The device chooser (stage 8 chunk 7, D-8.8): whose formats come first on book pages and in lists. Automatic (what
+    the User-Agent tells), each device with the formats it opens, or another device (no order, nothing dimmed). A plain
+    form with its token; the choice is kept in this browser.
+*@
+<EPage Frame="Frame" Title="@(Texts["ereader.device.title"])">
+    <p>@Texts["ereader.device.intro"]</p>
+    <form class="panel" method="post" action="@Frame.Links.Device()">
+        <FormToken Token="Frame.Token!" />
+        <input type="hidden" name="return" value="@ReturnTo">
+        <ul class="plain choices">
+            <li>
+                <label class="check">
+                    <input type="radio" name="device" value="@EReaderDevices.Automatic" checked="@(Chosen == EReaderDevices.Automatic)">
+                    @(Guessed is { } guessed ? Texts.Format("ereader.device.automatic", ("device", guessed.Name)) : Texts["ereader.device.automaticNone"])
+                </label>
+            </li>
+            @foreach (var device in EReaderDevices.All)
+            {
+                <li>
+                    <label class="check">
+                        <input type="radio" name="device" value="@device.Key" checked="@(Chosen == device.Key)">
+                        <span><span class="line">@device.Name</span><span class="line muted formats">@Formats(device)</span></span>
+                    </label>
+                </li>
+            }
+            <li>
+                <label class="check">
+                    <input type="radio" name="device" value="@EReaderDevices.NoDevice" checked="@(Chosen == EReaderDevices.NoDevice)">
+                    @Texts["ereader.device.other"]
+                </label>
+            </li>
+        </ul>
+        <p><button type="submit">@Texts["ereader.device.save"]</button></p>
+    </form>
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    /// <summary>Where to go back to once chosen: a path under /e (checked by the endpoint).</summary>
+    [Parameter] public string ReturnTo { get; set; } = "";
+
+    /// <summary>What the User-Agent tells; null when it names no device known.</summary>
+    [Parameter] public EReaderDevice? Guessed { get; set; }
+
+    /// <summary>The choice kept: a device's key, "none", or "auto".</summary>
+    [Parameter] public string Chosen { get; set; } = EReaderDevices.Automatic;
+
+    private static string Formats(EReaderDevice device) => string.Join(" · ", device.Formats.Select(f => f.ToUpperInvariant()));
+}

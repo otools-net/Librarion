@@ -24,6 +24,7 @@ public static partial class EReaderEndpoints
         var e = app.MapGroup(Prefix).ExcludeFromDescription();
 
         MapLibrary(e);
+        MapDevice(e);
         e.MapGet(StylesheetPath, EReaderStylesheet.Serve).AllowAnonymous();
         e.MapGet("/signin", SignInPageAsync).AllowAnonymous();
         e.MapPost("/signin", SignInAsync).AllowAnonymous().RequireRateLimiting(SecurityServiceCollectionExtensions.SignInRateLimit);

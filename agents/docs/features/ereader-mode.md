@@ -1,6 +1,6 @@
 # E-reader mode: a plain gray site for e-ink devices (planned)
 
-Code: `src/Librarion.Api/EReader/` (`EReaderEndpoints`, `EReaderGuard`, `EReaderSwitch`, `EReaderLinks`,
+Code: `src/Librarion.Api/EReader/` (`EReaderEndpoints`, `EReaderGuard`, `EReaderSwitch`, `EReaderLinks`, `EReaderDevices`,
 `EReaderFrame`, `ServerTexts`, `EReaderStylesheet` + `ereader.css`, `Pages/*.razor`), the same `Core/Catalog/` and `Core/Search/`
 services as the app; tests `EReaderTests`. Decision D23 in [foundation-plan](../development/foundation-plan.md); being
 built in stage 8 ([stage-8-ereader-plan](../development/stage-8-ereader-plan.md)).
@@ -48,10 +48,10 @@ here, the device's own reader opens the downloaded file.
 
 - The same download route and rights as the app (`library.download`), streamed from loose files or container zips
   ([archives](archives.md)); FB2 also offered as `fb2.zip`, as OPDS.
-- **Device formats:** the formats the device opens are listed first and the rest dimmed (Kindle: AZW3, MOBI, PDF,
-  TXT; Kobo: EPUB, KEPUB, PDF, CBZ; PocketBook: FB2, EPUB, PDF, DJVU…), guessed from the User-Agent, changeable on the
-  device (kept per browser). A book without a fitting format offers it converted (an FB2 as AZW3 for a Kindle,
-  [conversion](conversion.md)); a conversion still running answers with a "being prepared, try again" page.
+- **Device formats:** the formats the device opens are listed first and the rest dimmed, guessed from the
+  User-Agent, changeable on the device (kept per browser): built in chunk 7, below. A book without a fitting format
+  offers it converted (an FB2 as AZW3 for a Kindle, [conversion](conversion.md), stage 9); a conversion still running
+  answers with a "being prepared, try again" page.
 - File names in `Content-Disposition` as plain ASCII `filename` plus UTF-8 `filename*` (old browsers mangle UTF-8
   names), extension always matching the format.
 
@@ -194,6 +194,26 @@ here, the device's own reader opens the downloaded file.
   name with no Latin letter or digit left as `book-<file id>.fb2`. ASP.NET's own fallback was `_____ _ ___.fb2`.
 - Gotcha: the tool layer turns a typed backslash-u-00a0 into the character itself; write `\xA0` in C# sources.
 
+## Built (stage 8 chunk 7): device formats
+
+- **The device** (`EReaderDevices`, `EReaderDevice`): five families, each with the format keys its own reader opens,
+  best first: Kindle AZW3, AZW, MOBI, PDF, TXT; Kobo KEPUB, EPUB, PDF, CBZ, CBR, MOBI, TXT, RTF; PocketBook FB2,
+  EPUB, PDF, DJVU, MOBI, AZW3…; Tolino EPUB, PDF, TXT; Boox EPUB, FB2, PDF, DJVU… (a test checks every key is a
+  known format). Guessed from the User-Agent: `Kindle/` without `Silk` (a Fire tablet is no e-ink device), `Kobo`,
+  `PocketBook`, `tolino`, `BOOX` or `Onyx` (Boox models naming neither aren't recognised: no order, which is safe);
+  anything else none. Chunk 9's redirect uses the same guess.
+- **The choice** wins over the guess: cookie `librarion.device` (a family's key, or `none` for "another device: no
+  order"; absent = automatic), path `/e` (with `PathBase`), a year, HttpOnly, Lax. An unknown value in the cookie is
+  ignored (the guess again).
+- **Where it shows:** `EReaderFrame.Device` (every page has it). The book page lists the device's files first in its
+  order, then "Other formats: Kindle may not open them." and those in the book's own order in `ul.files.dim` (gray
+  text, a lighter button, still a Download); above the files "Formats ordered for Kindle." (or "not ordered") and
+  **Change**. A list's row shows the book's formats, the device's first and bold, the others `.dim`. No device: one
+  list, nothing dimmed.
+- **The chooser** `/e/device?return=<path>` (`library.browse`): radio buttons, Automatic naming the guess, each family
+  with its formats, Another device; posts with its form token to `/e/device`, keeps the choice (Automatic deletes the
+  cookie) and goes back (`SafeReturn`); a family not known is 400.
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing
@@ -203,7 +223,7 @@ here, the device's own reader opens the downloaded file.
 
 - Backend: every `/e/` route names a right; pages render without any `<script>`; Next / First follow the keyset
   across pages; hidden books 404; download headers (ASCII + UTF-8 names, type, ranges); device format order per
-  User-Agent; the redirect of e-ink browsers (and its Full site cookie); path key works and is redacted; the
+  User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie); path key works and is redacted; the
   stylesheet has no non-gray colour.
 - e2e (important flow): with JavaScript disabled on a 600 × 800 viewport: sign in, search, open a book, download a
   file (also from a container zip), next page of a list; no request leaves the origin.
