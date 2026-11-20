@@ -45,3 +45,5 @@ version** under the sign-in form, or at `/e/`.
 - The link under the sign-in form brings it back to the e-reader version.
 - An administrator may have switched the e-reader version off (the setting **E-reader mode**): then no browser is sent
   there.
+
+What it shows and how to use it on each device: [On an e-ink reader](ereader.md).

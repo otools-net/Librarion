@@ -5,8 +5,8 @@ libraries; the others tenant-wide (Manage tags too: a tenant's libraries share i
 
 | Right | Area | Changes | Built-in group | Lets its holder |
 |---|---|---|---|---|
-| Browse | Libraries | | Administrators, Users, Curators | see the library and its books |
-| Download | Libraries | | Administrators, Users, Curators | download the books' files |
+| Browse | Libraries | | Administrators, Users, Curators | see the library and its books, in the app and on the e-reader pages (`/e/`) |
+| Download | Libraries | | Administrators, Users, Curators | download the books' files, from the app and the e-reader pages |
 | Reader apps (OPDS) | Libraries | | Administrators, Users, Curators | browse, search and download the library's books from a reader app (OPDS), signing in with the password or an API key; downloads also need Download |
 | Browse by folder | Libraries | | Administrators, Curators | browse the library by its folders and ZIP files and see how many files each holds; folder names are shown even when content filters hide the books in them |
 | Scan | Libraries | yes | Administrators | scan the library's folders now, cancel a scan, schedule scans |

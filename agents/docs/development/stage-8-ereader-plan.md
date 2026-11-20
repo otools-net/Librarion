@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 12.
+**Next:** chunk 12b (waits for the user's checks by hand).
 
 ## The user's answers (2026-11-11)
 
@@ -173,11 +173,15 @@ is the note's; nothing to port.
     server). **Built:** [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-11-measured-at-2m),
     [scale](scale.md#measured); the `ereader` command (the server start shared with `opds`: `BenchServer`); all pages
     within 100 ms on both, a search 108 on PostgreSQL (within its 300); nothing changed.
-12. [ ] Docs and close: `docs/user-guide/ereader.md` (Kindle, Kobo, PocketBook), the API keys page, rights and
-    settings references; notes (`ereader-mode`, `opds-auth`, `rights`, `settings`, `sessions-and-pipeline`),
-    CHANGELOG; the by-hand list for the user (Kindle, Kobo and PocketBook browsers; and, moved from stage 7, the OPDS
-    catalog in **KOReader** and **Thorium**: [opds](../features/opds.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge));
-    merge `0.9.0`, this plan removed, the roadmap marks stage 8 done.
+12. Docs and close, split in two (2026-11-20: the merge needs the user's checks by hand, an exit criterion):
+    - [x] **12a** Docs and notes: `docs/user-guide/ereader.md` (Kindle, Kobo, PocketBook, Tolino, Boox), the API keys
+      page (already names `/e/k/`), rights and settings references; notes (`ereader-mode`: decisions Q1–Q7 moved in,
+      "planned" gone; `rights`; `opds`), CHANGELOG; the by-hand list for the user. **Built:**
+      [ereader-mode](../features/ereader-mode.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge)
+      (Kindle, Kobo, PocketBook) and [opds](../features/opds.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge)
+      (KOReader, Thorium); `opds-auth`, `settings`, `sessions-and-pipeline` were current already.
+    - [ ] **12b** The user's results recorded in the notes (fixes first if any fail); merge `0.9.0`, this plan removed
+      (its links: AGENTS index, roadmap), the roadmap marks stage 8 done.
 
 ## Exit criteria
 

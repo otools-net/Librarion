@@ -160,7 +160,7 @@ From the stage 7 plan (removed at the merge, 0.8.0; git history keeps it), the u
 
 **Moon+ Reader: works** (the user, 2026-11-11, over the home WLAN; [docs/opds.md](../../../docs/opds.md) as
 written). **KOReader and Thorium** could not be reached for testing: moved to stage 8's by-hand checks (the user's
-decision, 2026-11-11; [stage 8 plan](../development/stage-8-ereader-plan.md)). For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
+decision, 2026-11-11; checked with the e-reader browsers, [ereader-mode](ereader-mode.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge)). For each of **KOReader**, **Moon+ Reader** and **Thorium Reader**, following
 [docs/opds.md](../../../docs/opds.md):
 
 1. Add the catalog with the user name and the **password**: the root opens (one library: its catalog; several: the list).

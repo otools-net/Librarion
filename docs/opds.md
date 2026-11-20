@@ -75,3 +75,4 @@ the one from **My account → API keys**.
 - A reader app may ask for up to 600 pages a minute; a well-behaved app stays far below that.
 - Covers are JPEG, which every reader app shows.
 - Anonymous browsing (without signing in) is not available.
+- No reader app on the device? Its browser can use the [e-reader version](user-guide/ereader.md) at `/e/` instead.

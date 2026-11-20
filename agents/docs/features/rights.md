@@ -37,6 +37,10 @@ there), for tenants holding libraries. Who has them: [accounts](accounts.md); wh
   `account`: one's own keys and shelves); all to Administrators, Users and Curators. An API key's scopes and
   libraries only narrow its owner's rights, never widen them (`CurrentAccess`, [opds-auth](opds-auth.md)); account
   rights such as `account.shelves` are not narrowed by its libraries.
+- **Stage 8** (D-8.5): no new right. The e-reader pages (`/e`, [ereader-mode](ereader-mode.md)) need `library.browse`,
+  their downloads `library.download` too, as the app's; content filters and tenants as everywhere. A key in the
+  address there needs the `opds` scope ("Reader apps and e-readers"), not `library.opds`: `CurrentAccess` counts `/e`
+  as `/opds` only for a key's scope. The tenant setting `ereader.enabled` turns the pages off (404), not a right.
 - **Evaluation** (`RightsEvaluator.GetAsync`): union of the account's groups' rights in its tenant; library rights only
   in the group's libraries (`AllLibraries`, or `GroupLibraries` rows); minus the tenant's `TenantDisabledRights`;
   minus the server's `Librarion:Rights:Disabled` (ids, `prefix*`, `kind:write`), applied at each read so a

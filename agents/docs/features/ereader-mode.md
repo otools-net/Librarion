@@ -1,14 +1,31 @@
-# E-reader mode: a plain gray site for e-ink devices (planned)
+# E-reader mode: a plain gray site for e-ink devices
 
 Code: `src/Librarion.Api/EReader/` (`EReaderEndpoints`, `EReaderGuard`, `EReaderSwitch`, `EReaderLinks`, `EReaderDevices`,
 `EReaderFrame`, `ServerTexts`, `EReaderStylesheet` + `ereader.css`, `Pages/*.razor`), the same `Core/Catalog/` and `Core/Search/`
 services as the app, `ClientPage` for the redirect (`EReaderRedirect`); tests `EReaderTests`, `EReaderListTests`,
-`EReaderWaysInTests`, `AddressKeyTests.EReader`. Decision D23 in [foundation-plan](../development/foundation-plan.md); being
-built in stage 8 ([stage-8-ereader-plan](../development/stage-8-ereader-plan.md)).
+`EReaderWaysInTests`, `AddressKeyTests.EReader`; e2e `tests/e2e/specs/ereader.spec.ts`; benchmark `ereader`. Decision D23
+in [foundation-plan](../development/foundation-plan.md); built in stage 8 (0.9.0). User guide:
+`docs/user-guide/ereader.md`.
 
 A second, **basic face of the library for the browsers of e-ink readers** (Kindle, Kobo, PocketBook, Boox, Tolino):
 find a book, look at it, download it to the device. Not the in-app reader ([reader](reader.md)): nothing is read
 here, the device's own reader opens the downloaded file.
+
+## Decisions (stage 8, the user's answers 2026-11-11)
+
+- **Rendering (Q1):** Razor components rendered statically (`RazorComponentResult`), not hand-written templates
+  (every value encoded by hand is easy to get wrong).
+- **Paging (Q2):** Next and First plus the browser's Back; no Previous (every sort walked backwards: twice the list
+  queries).
+- **Keys in the address (Q3):** the `opds` scope, renamed "Reader apps and e-readers", with the key's **Can be used in
+  the address**; no scope of its own.
+- **Ways in (Q4, changed by the user):** the link on the app's sign-in page and a server-side redirect of e-ink
+  browsers (their script can't be relied on), with Full site to opt out; nothing in the app's menu.
+- **Formats a device can't open (Q5):** after the others, dimmed, still downloadable; never hidden.
+- **Stay signed in (Q6):** ticked by default (typing on an e-ink keyboard is slow).
+- **Page size (Q7):** 20 books with small covers, not the account's page size.
+- **Look (D-8.9, changed by the user):** grays and short gray gradients, not only black and white.
+- Later: "converted for this device" with stage 9 ([conversion](conversion.md)).
 
 ## Why a separate face
 
@@ -51,8 +68,8 @@ here, the device's own reader opens the downloaded file.
   ([archives](archives.md)); FB2 also offered as `fb2.zip`, as OPDS.
 - **Device formats:** the formats the device opens are listed first and the rest dimmed, guessed from the
   User-Agent, changeable on the device (kept per browser): built in chunk 7, below. A book without a fitting format
-  offers it converted (an FB2 as AZW3 for a Kindle, [conversion](conversion.md), stage 9); a conversion still running
-  answers with a "being prepared, try again" page.
+  will offer it converted (an FB2 as AZW3 for a Kindle, [conversion](conversion.md), stage 9; planned); a conversion
+  still running will answer with a "being prepared, try again" page.
 - File names in `Content-Disposition` as plain ASCII `filename` plus UTF-8 `filename*` (old browsers mangle UTF-8
   names), extension always matching the format.
 
@@ -269,11 +286,31 @@ here, the device's own reader opens the downloaded file.
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing
   external: no fonts, scripts or images from elsewhere ([privacy](../development/privacy.md)).
 
-## Tests to have
+## Tests
 
-- Backend: every `/e/` route names a right; pages render without any `<script>`; Next / First follow the keyset
-  across pages; hidden books 404; download headers (ASCII + UTF-8 names, type, ranges); device format order per
-  User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie; built: `EReaderWaysInTests`); path key works and is redacted (built: `AddressKeyTests.EReader`); the
-  stylesheet has no non-gray colour.
-- e2e (important flow): with JavaScript disabled on a 600 × 800 viewport: sign in, search, open a book, download a
-  file (also from a container zip), next page of a list; no request leaves the origin (built: `ereader.spec.ts`).
+- Backend: every `/e/` route names a right (`EveryRouteNamesARight`); no `<script>`, handler or `javascript:` in any
+  page (`EReaderTests.PlainPageAsync`); the stylesheet has no hue (`TheStylesheetHasNoColour`); Next / First by key
+  without repeats, hidden books absent or 404 (`EReaderListTests`); download headers (ASCII + UTF-8 names, ranges);
+  device order per User-Agent (`EReaderListTests.Devices`); the redirect and Full site (`EReaderWaysInTests`); keys in
+  the address and their redaction (`AddressKeyTests.EReader`); form posts without the token refused.
+- e2e: `ereader.spec.ts` (chunk 10, above). Benchmark: the `ereader` command (chunk 11).
+
+## Checked by hand (the stage's exit criterion: the user, before the merge)
+
+Following [docs/user-guide/ereader.md](../../../docs/user-guide/ereader.md), on each of a **Kindle**, a **Kobo** and a
+**PocketBook** (Tolino and Boox if at hand), over the home WLAN:
+
+1. The app's address in the device's browser: sent to `/e/` by itself (the sign-in page); **Keep me signed in** ticked.
+2. Sign in; the page is readable, buttons easy to hit, no colour smear; sleep the device and wake it: still signed in.
+3. A library's page → **All books by title** → **Next page** twice → **First page**: no book twice, covers shown.
+4. Search a word, then `author:"…"`; a blank search shows How to search.
+5. **Authors** → a letter → an author → a book: fields as links, files, description.
+6. "Formats ordered for <the device>" names it; its formats first; **Change** → another device → back to Automatic.
+7. **Download** a book in the device's format (Kindle AZW3 or MOBI, Kobo EPUB or KEPUB, PocketBook FB2 and **FB2,
+   zipped**), one from a ZIP library too: it opens in the device's library.
+8. A key in the address (API keys page, **Can be used in the address**): opens without signing in, a download works.
+9. **Full site** → the app (heavy, but no redirect back); the app's sign-in page's e-reader link → `/e/` again.
+10. **Sign out**.
+
+Also stage 7's OPDS checks in **KOReader** and **Thorium** ([opds](opds.md#checked-by-hand-the-stages-exit-criterion-the-user-before-the-merge)).
+Note what each device names differently from the guide, and anything shown wrongly.

@@ -20,5 +20,10 @@ server-only setting is never offered lower).
 | Density | compact, comfortable | compact | my preferences |
 | Language | like the browser, English | like the browser | my preferences |
 | Books per page | 20 to 200 | 50 | my preferences |
+| Days before missing books are offered for removal | 0 to 3650 | 30 | library |
+| Same file twice: one book | on, off | on | tenant |
+| API keys in the address (Reader apps and e-readers) | on, off | on | tenant |
+| E-reader mode (Reader apps and e-readers): the e-reader version at `/e/` ([On an e-ink reader](../user-guide/ereader.md)) | on, off | on | tenant |
+| Shelves per account | 1 to 1,000 | 100 | tenant |
 
 More settings come with the features that use them.

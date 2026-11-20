@@ -10,6 +10,9 @@ Too many wrong passwords from one place make that place wait 15 minutes before t
 still sign in from elsewhere). Many more lock the account itself until an administrator unlocks it. A server
 administrator can unlock their own account from the sign-in page: see [first start](../first-start.md#locked-out).
 
+On an e-ink reader, the e-reader version has its own plain sign-in form for the same account
+([On an e-ink reader](ereader.md#signing-in)).
+
 ## My account
 
 Your initial at the top right opens the account menu; **My account** there opens your section of the

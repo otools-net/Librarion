@@ -10,6 +10,8 @@
 - [Reader apps (OPDS)](opds.md): the catalog for KOReader, Moon+, Thorium and others; signing in with a password or
   an API key, what it shows, setting up each app.
 - [Searching](user-guide/searching.md): words, phrases, fields and tags, leaving out, suggestions.
+- [On an e-ink reader](user-guide/ereader.md): the plain e-reader version at `/e/` for Kindle, Kobo, PocketBook and
+  other e-ink browsers: signing in, search, browsing, downloads in the device's formats.
 - [Administration](administration/README.md): accounts, groups, libraries, tenants, settings, security log; the
   catalog: [tags](administration/tags.md), [imported tags](administration/imported-tags.md),
   [duplicates](administration/duplicates.md), [cover styles](administration/cover-styles.md).
