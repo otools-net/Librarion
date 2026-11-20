@@ -64,145 +64,95 @@ public static class OpdsCommand
             shelfCursor = new KeysetCursor(null, middle.Position, middle.BookId).Encode();
         }
 
-        var api = Path.GetFullPath(apiPath);
-        if (!File.Exists(api))
-            throw new FileNotFoundException($"{api}: build it first (dotnet build src/Librarion.Api -c Release)");
-        var data = Path.Combine(workFolder, "opds-server");
-        Directory.CreateDirectory(data);
-        var start = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(api)!, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var argument in new[]
-                 {
-                     api, "--urls", $"http://127.0.0.1:{port}", "--environment", "Production",
-                     $"--{DatabaseOptions.ProviderKey}={target.Provider}", $"--ConnectionStrings:{DatabaseOptions.ConnectionStringName}={target.ConnectionString}",
-                     $"--Librarion:Data:Directory={Path.Combine(data, "data")}", $"--Librarion:Cache:Directory={Path.Combine(data, "cache")}",
-                     // The benchmark asks far more than a reader app may (600 a minute).
-                     $"--{SecurityOptions.SectionName}:OpdsRequestsPerMinute=1000000", "--Logging:LogLevel:Default=Warning",
-                 })
-            start.ArgumentList.Add(argument);
-        using var server = Process.Start(start)!;
-        var log = new StringBuilder();
-        server.OutputDataReceived += (_, e) => { lock (log) log.AppendLine(e.Data); };
-        server.ErrorDataReceived += (_, e) => { lock (log) log.AppendLine(e.Data); };
-        server.BeginOutputReadLine();
-        server.BeginErrorReadLine();
-        try
+        await using var server = await BenchServer.StartAsync(target, workFolder, "opds-server", apiPath, port, cancellationToken);
+        var baseAddress = server.BaseAddress;
+        var memoryStarted = server.WorkingSetMb;
+        report($"server up, working set {memoryStarted:0} MB");
+
+        HttpClient Reader(string name)
         {
-            var baseAddress = new Uri($"http://127.0.0.1:{port}/");
-            using var anonymous = new HttpClient { BaseAddress = baseAddress };
-            var started = Stopwatch.StartNew();
-            while (true)
-            {
-                if (server.HasExited)
-                    throw new InvalidOperationException("The server stopped:\n" + log);
-                try
-                {
-                    using var probe = await anonymous.GetAsync("opds", cancellationToken);
-                    if (probe.StatusCode == HttpStatusCode.Unauthorized)
-                        break;
-                    if (probe.StatusCode == HttpStatusCode.ServiceUnavailable)
-                        throw new InvalidOperationException("The server wants setup: generate the catalog again (stage 7 adds its administrator).");
-                }
-                catch (HttpRequestException) when (started.Elapsed < TimeSpan.FromMinutes(3))
-                {
-                }
-                await Task.Delay(250, cancellationToken);
-            }
-            server.Refresh();
-            var memoryStarted = server.WorkingSet64 / 1048576.0;
-            report($"server up in {started.Elapsed.TotalSeconds:0.0} s, working set {memoryStarted:0} MB");
-
-            HttpClient Reader(string name)
-            {
-                var client = new HttpClient { BaseAddress = baseAddress };
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes($"{name}:{GenerateCommand.Password}")));
-                return client;
-            }
-
-            async Task<(double Ms, int Bytes)> GetAsync(HttpClient client, string url)
-            {
-                var watch = Stopwatch.StartNew();
-                using var response = await client.GetAsync(url, cancellationToken);
-                var body = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                var ms = watch.Elapsed.TotalMilliseconds;
-                if (response.StatusCode != HttpStatusCode.OK)
-                    throw new InvalidOperationException($"{url}: {(int)response.StatusCode} {Encoding.UTF8.GetString(body)}");
-                return (ms, body.Length);
-            }
-
-            // The first sign-in of each account hashes its password; each account once (reader-0 stays for the feeds).
-            var cold = new List<double>();
-            for (var i = 1; i < GenerateCommand.Readers; i++)
-            {
-                using var fresh = Reader($"reader-{i}");
-                cold.Add((await GetAsync(fresh, $"opds/l/{libraryId}")).Ms);
-            }
-
-            using var reader = Reader("reader-0");
-            var l = $"opds/l/{libraryId}";
-            string After(string cursor) => "?after=" + Uri.EscapeDataString(cursor);
-            var feeds = new (string Name, string Url)[]
-            {
-                ("root (the only library's catalog)", "opds"),
-                ("a library's catalog", l),
-                ("recent, first page", $"{l}/recent"),
-                ("recent, deep page", $"{l}/recent{After(addedCursor)}"),
-                ("by title, first page", $"{l}/titles"),
-                ("by title, deep page", $"{l}/titles{After(titleCursor)}"),
-                ("authors: first letters (kept)", $"{l}/fields/author"),
-                ("authors from a letter", $"{l}/fields/author?from=M"),
-                ("the most prolific author's books", $"{l}/tags/{prolificAuthor}"),
-                ("the biggest series, by number", $"{l}/tags/{bigSeries}/books"),
-                ("plain tags: first letters (kept)", $"{l}/tags"),
-                ("search a word in many titles", $"{l}/search?q=night"),
-                ("my shelves", $"{l}/shelves"),
-                ("a shelf of 10,000 books, first page", $"{l}/shelves/{shelfId}"),
-                ("a shelf of 10,000 books, middle page", $"{l}/shelves/{shelfId}{After(shelfCursor)}"),
-            };
-            var results = new List<ScenarioResult>();
-            foreach (var (name, url) in feeds)
-            {
-                for (var i = 0; i < 3; i++)
-                    await GetAsync(reader, url);
-                var times = new List<double>();
-                var bytes = 0;
-                for (var i = 0; i < iterations; i++)
-                {
-                    var (ms, size) = await GetAsync(reader, url);
-                    times.Add(ms);
-                    bytes = size;
-                }
-                times.Sort();
-                var result = new ScenarioResult("opds http: " + name, FeedBudget, times[times.Count / 2], times[(int)Math.Ceiling(times.Count * 0.95) - 1], times[^1],
-                    bytes, [], []);
-                results.Add(result);
-                report($"{(result.WithinBudget ? "ok  " : "SLOW")} p50 {result.P50Ms,7:0.0} ms  p95 {result.P95Ms,7:0.0} ms  (budget {FeedBudget:0}) {bytes / 1024.0,6:0.0} KB  {name}");
-            }
-
-            cold.Sort();
-            var coldP50 = cold[cold.Count / 2];
-            var coldP95 = cold[(int)Math.Ceiling(cold.Count * 0.95) - 1];
-            var warm = results[1].P50Ms;
-            report($"Basic: first sign-in p50 {coldP50:0.0} ms, p95 {coldP95:0.0} ms ({cold.Count} accounts); the same page signed in from the cache p50 {warm:0.0} ms");
-
-            // Idle: no requests for a while (the server's own timers and caches settle), then its working set.
-            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-            server.Refresh();
-            var memoryIdle = server.WorkingSet64 / 1048576.0;
-            report($"memory: {memoryStarted:0} MB once started, {memoryIdle:0} MB idle after the run (budget {MemoryBudget:0}), private {server.PrivateMemorySize64 / 1048576.0:0} MB");
-
-            var outcome = new OpdsResult(results, coldP50, coldP95, warm, memoryStarted, memoryIdle, MemoryBudget);
-            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-            var file = Path.Combine(workFolder, $"opds-{target.Provider}-{stamp}.json");
-            await File.WriteAllTextAsync(file, JsonSerializer.Serialize(outcome, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
-            report($"report: {file}");
-            return outcome;
+            var client = new HttpClient { BaseAddress = baseAddress };
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.UTF8.GetBytes($"{name}:{GenerateCommand.Password}")));
+            return client;
         }
-        finally
+
+        async Task<(double Ms, int Bytes)> GetAsync(HttpClient client, string url)
         {
-            if (!server.HasExited)
-                server.Kill(entireProcessTree: true);
-            await server.WaitForExitAsync(CancellationToken.None);
+            var watch = Stopwatch.StartNew();
+            using var response = await client.GetAsync(url, cancellationToken);
+            var body = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var ms = watch.Elapsed.TotalMilliseconds;
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new InvalidOperationException($"{url}: {(int)response.StatusCode} {Encoding.UTF8.GetString(body)}");
+            return (ms, body.Length);
         }
+
+        // The first sign-in of each account hashes its password; each account once (reader-0 stays for the feeds).
+        var cold = new List<double>();
+        for (var i = 1; i < GenerateCommand.Readers; i++)
+        {
+            using var fresh = Reader($"reader-{i}");
+            cold.Add((await GetAsync(fresh, $"opds/l/{libraryId}")).Ms);
+        }
+
+        using var reader = Reader("reader-0");
+        var l = $"opds/l/{libraryId}";
+        string After(string cursor) => "?after=" + Uri.EscapeDataString(cursor);
+        var feeds = new (string Name, string Url)[]
+        {
+            ("root (the only library's catalog)", "opds"),
+            ("a library's catalog", l),
+            ("recent, first page", $"{l}/recent"),
+            ("recent, deep page", $"{l}/recent{After(addedCursor)}"),
+            ("by title, first page", $"{l}/titles"),
+            ("by title, deep page", $"{l}/titles{After(titleCursor)}"),
+            ("authors: first letters (kept)", $"{l}/fields/author"),
+            ("authors from a letter", $"{l}/fields/author?from=M"),
+            ("the most prolific author's books", $"{l}/tags/{prolificAuthor}"),
+            ("the biggest series, by number", $"{l}/tags/{bigSeries}/books"),
+            ("plain tags: first letters (kept)", $"{l}/tags"),
+            ("search a word in many titles", $"{l}/search?q=night"),
+            ("my shelves", $"{l}/shelves"),
+            ("a shelf of 10,000 books, first page", $"{l}/shelves/{shelfId}"),
+            ("a shelf of 10,000 books, middle page", $"{l}/shelves/{shelfId}{After(shelfCursor)}"),
+        };
+        var results = new List<ScenarioResult>();
+        foreach (var (name, url) in feeds)
+        {
+            for (var i = 0; i < 3; i++)
+                await GetAsync(reader, url);
+            var times = new List<double>();
+            var bytes = 0;
+            for (var i = 0; i < iterations; i++)
+            {
+                var (ms, size) = await GetAsync(reader, url);
+                times.Add(ms);
+                bytes = size;
+            }
+            times.Sort();
+            var result = new ScenarioResult("opds http: " + name, FeedBudget, times[times.Count / 2], times[(int)Math.Ceiling(times.Count * 0.95) - 1], times[^1],
+                bytes, [], []);
+            results.Add(result);
+            report($"{(result.WithinBudget ? "ok  " : "SLOW")} p50 {result.P50Ms,7:0.0} ms  p95 {result.P95Ms,7:0.0} ms  (budget {FeedBudget:0}) {bytes / 1024.0,6:0.0} KB  {name}");
+        }
+
+        cold.Sort();
+        var coldP50 = cold[cold.Count / 2];
+        var coldP95 = cold[(int)Math.Ceiling(cold.Count * 0.95) - 1];
+        var warm = results[1].P50Ms;
+        report($"Basic: first sign-in p50 {coldP50:0.0} ms, p95 {coldP95:0.0} ms ({cold.Count} accounts); the same page signed in from the cache p50 {warm:0.0} ms");
+
+        // Idle: no requests for a while (the server's own timers and caches settle), then its working set.
+        await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+        var memoryIdle = server.WorkingSetMb;
+        report($"memory: {memoryStarted:0} MB once started, {memoryIdle:0} MB idle after the run (budget {MemoryBudget:0}), private {server.PrivateMb:0} MB");
+
+        var outcome = new OpdsResult(results, coldP50, coldP95, warm, memoryStarted, memoryIdle, MemoryBudget);
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        var file = Path.Combine(workFolder, $"opds-{target.Provider}-{stamp}.json");
+        await File.WriteAllTextAsync(file, JsonSerializer.Serialize(outcome, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        report($"report: {file}");
+        return outcome;
     }
 }

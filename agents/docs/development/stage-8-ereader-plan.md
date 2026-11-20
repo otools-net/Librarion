@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 11.
+**Next:** chunk 12.
 
 ## The user's answers (2026-11-11)
 
@@ -168,9 +168,11 @@ is the note's; nothing to port.
     [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-10-end-to-end), [testing-e2e](testing-e2e.md); the
     `ereader` project, every screen also checked for gray-only colours and 44 px targets; found: no icon declared, so
     a `/favicon.ico` 404 (`EPage` links `favicon.svg`); `addedLibrary` shared with the OPDS spec.
-11. [ ] Benchmark at 2M on both providers: `/e` pages over HTTP (home, a list's deep page, search, a field's letters
+11. [x] Benchmark at 2M on both providers: `/e` pages over HTTP (home, a list's deep page, search, a field's letters
     and values, a book page) within the list budget (100 ms p95), no full scan (the `opds` command's way: the real
-    server).
+    server). **Built:** [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-11-measured-at-2m),
+    [scale](scale.md#measured); the `ereader` command (the server start shared with `opds`: `BenchServer`); all pages
+    within 100 ms on both, a search 108 on PostgreSQL (within its 300); nothing changed.
 12. [ ] Docs and close: `docs/user-guide/ereader.md` (Kindle, Kobo, PocketBook), the API keys page, rights and
     settings references; notes (`ereader-mode`, `opds-auth`, `rights`, `settings`, `sessions-and-pipeline`),
     CHANGELOG; the by-hand list for the user (Kindle, Kobo and PocketBook browsers; and, moved from stage 7, the OPDS

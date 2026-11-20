@@ -222,6 +222,24 @@ Stage 2 benchmark (2026-11-01, this machine: 16 GB RAM, the PostgreSQL dev conta
   on PostgreSQL with no full scan. **Basic:** an account's first request (its password hashed) p50 188 / 236 ms, p95
   246 / 341 ms; then from the verification cache as any other request. **Memory:** the server 132 / 139 MB once
   started, **162 / 214 MB idle** after the run (budget 500).
+- **E-reader mode** (stage 8 chunk 11, 2026-11-20, 2M, warm, p95 in ms over HTTP, budget 100 a page, 300 a search;
+  `ereader` command: the real server asked as a Kindle's browser, signed in through the form; the plans by `run`,
+  101 queries, no full scan on either provider):
+
+  | Page (over HTTP, 20 books) | 2M SQLite | 2M PostgreSQL |
+  |---|---|---|
+  | home (the only library's page) | 13 | 36 |
+  | recent / by title, first and deep page | 8–10 | 18–21 |
+  | search a word in many titles / its next page | 80 / 64 | 108 / 106 |
+  | authors: first letters (kept) / from a letter / its next page | 6.5 / 8.8 / 7.0 | 20 / 23 / 25 |
+  | plain tags (first letters, kept) | 4.8 | 14 |
+  | the most prolific author's books / next page | 20 / 23 | 36 / 35 |
+  | the biggest series by number | 8.1 | 29 |
+  | a book's page (random books) | 13 | 24 |
+
+  Sign-in through the form (page, token, password hashed) 1.0 / 0.7 s once; memory 136 / 142 MB started, 222 / 232
+  MB idle after the run (budget 500). A search is past the list budget on PostgreSQL but within the search budget,
+  below the OPDS search's 126 (20 books a page, not 50). Nothing needed changing.
 - What the OPDS run found first (PostgreSQL): the fields with values as one `EXISTS` per field, answered by a scan of
   `Tags` from its start (95 ms; now ordered on the index); the first letters as ~90 queries (186 ms for authors) and,
   for plain tags, `FieldKey IS NULL` turning to another index and a sort of 50k rows per letter (**1.7 s**; now one

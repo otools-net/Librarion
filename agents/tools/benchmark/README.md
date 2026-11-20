@@ -60,6 +60,25 @@ dotnet $bench opds --provider sqlite --connection "Data Source=D:/Temp/librarion
 - **Memory:** the server's working set once started, and after the run and 30 s idle (budget 500 MB idle).
 - Report `opds-<provider>-<time>.json`; exit 1 on PostgreSQL past a budget. The queries' plans are `run`'s.
 
+## What `ereader` measures
+
+```sh
+dotnet build src/Librarion.Api -c Release -p:LibrarionSkipWebClient=true
+dotnet $bench ereader --provider sqlite --connection "Data Source=D:/Temp/librarion-bench/sqlite-2m.db" [--iterations 20] [--port 5300] [--api <Librarion.Api.dll>]
+```
+
+- The real server as for `opds` (shared: `Bench/BenchServer.cs`; data and cache under `<work>/ereader-server`), asked
+  as a Kindle's browser (its User-Agent: formats in its order): signed in once through `/e/signin` (the form's
+  antiforgery token, `reader-0`, Stay signed in; the session cookie kept), then each kind of `/e` page end to end
+  (queries and the Razor page written), 3 warm-up and `--iterations` timed, p95 against 100 ms (a search 300): the
+  home (the only library's page), recent and by title (first and deep page), a search and its next page, authors'
+  first letters, from a letter and its next page, plain tags' letters, the most prolific author's books and their
+  next page, the biggest series by number, a book's page (a different random book each time). Next pages follow the
+  page's own Next link.
+- Memory as `opds` (500 MB idle). Report `ereader-<provider>-<time>.json`; exit 1 on PostgreSQL past a budget.
+- The pages run Core's queries only (`BookQueries.ListAsync` / `GetAsync`, `TagQueries`), whose plans `run` checks:
+  run it too for "no full scan".
+
 ## What `run` measures
 
 ```sh

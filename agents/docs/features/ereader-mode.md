@@ -256,6 +256,14 @@ here, the device's own reader opens the downloaded file.
 - Playwright's `evaluate` and locators work with `javaScriptEnabled: false` (its own world); a download is a link's
   `tap()` with `waitForEvent('download')` before it.
 
+## Built (stage 8 chunk 11): measured at 2M
+
+- `ereader` benchmark command (`tests/Librarion.Benchmarks/Bench/EReaderCommand.cs`,
+  [benchmark README](../../tools/benchmark/README.md#what-ereader-measures)): the real server on the 2M catalog, asked
+  as a Kindle's browser signed in through the form; every page within 100 ms p95 on both providers (a search 108 on
+  PostgreSQL, within the search budget 300), no full scan (`run`); numbers in
+  [scale](../development/scale.md#measured). Nothing needed changing.
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing
