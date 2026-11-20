@@ -35,6 +35,7 @@ public sealed class ImportedTagTests
     {
         await using var shelf = await TestLibrary.CreateAsync(Cancel);
         shelf.Write("one.fb2", Fb2("One", "Space Opera, dragons"));
+        await shelf.ScanAsync(Cancel); // scanned alone first: folder order differs by OS, "first met" must not
         shelf.Write("two.fb2", Fb2("Two", "space  opera"));
         await shelf.ScanAsync(Cancel);
         shelf.Write("two.fb2", Fb2("Two", "space  opera", body: " read again"));
