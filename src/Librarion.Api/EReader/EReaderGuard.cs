@@ -11,9 +11,11 @@ namespace Librarion.Api.EReader;
 /// <list type="bullet">
 /// <item>until the server is set up, a plain page saying so (503), as the API's <see cref="RequestGuard"/>;</item>
 /// <item>with the mode switched off for the tenant (the server's value before anyone signs in), not found (404);</item>
+/// <item>with a key in the address (<c>/e/k/&lt;key&gt;</c>, D-8.7), the sign-in and sign-out addresses are not found:
+/// the key signs in alone, and a cookie set there would outlive the key;</item>
 /// <item>a request that may change something (anything but GET and HEAD) without a valid antiforgery token: refused
 /// with a plain page (400, D-8.4), before any route sees it;</item>
-/// <item>an answer that is an error without a body (a route's 404, the rights' 403, a 405, the rate limit's 429) becomes a plain page, never
+/// <item>an answer that is an error without a body (a key in the address refused: 401; a route's 404, the rights' 403, a 405, the rate limit's 429) becomes a plain page, never
 /// the API's problem JSON or the client's page.</item>
 /// </list>
 /// The stylesheet is let through always: the pages above link it.
@@ -43,6 +45,12 @@ public sealed class EReaderGuard(RequestDelegate next)
             return;
         }
 
+        if (AddressKey.Of(context) is not null && (rest.StartsWithSegments("/signin") || rest.StartsWithSegments("/signout")))
+        {
+            await NotFound(await EReaderFrame.ForAsync(context), texts).ExecuteAsync(context);
+            return;
+        }
+
         if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method) && !await antiforgery.IsRequestValidAsync(context))
         {
             await Page(await EReaderFrame.ForAsync(context), texts["ereader.formExpired.title"], texts["ereader.formExpired.text"], StatusCodes.Status400BadRequest)
@@ -55,7 +63,7 @@ public sealed class EReaderGuard(RequestDelegate next)
         if (context.Response.HasStarted || context.Response.ContentLength is > 0 || context.Response.ContentType is not null)
             return;
         var status = context.Response.StatusCode;
-        if (status is not (StatusCodes.Status400BadRequest or StatusCodes.Status403Forbidden or StatusCodes.Status404NotFound
+        if (status is not (StatusCodes.Status400BadRequest or StatusCodes.Status401Unauthorized or StatusCodes.Status403Forbidden or StatusCodes.Status404NotFound
             or StatusCodes.Status405MethodNotAllowed or StatusCodes.Status429TooManyRequests))
             return;
         var frame = await EReaderFrame.ForAsync(context);
@@ -63,6 +71,10 @@ public sealed class EReaderGuard(RequestDelegate next)
         {
             StatusCodes.Status403Forbidden => Page(frame, texts["ereader.forbidden.title"], texts["error.forbidden"], status),
             StatusCodes.Status400BadRequest => Page(frame, texts["ereader.badRequest.title"], texts["ereader.badRequest.text"], status),
+            // Only a key in the address is refused with a 401 here (a visitor without one goes to the sign-in page):
+            // its links lead to the mode without the key, where one can sign in.
+            StatusCodes.Status401Unauthorized => Page(new EReaderFrame(new EReaderLinks(context, keepKey: false), null, null),
+                texts["ereader.keyRefused.title"], texts["ereader.keyRefused.text"], status),
             StatusCodes.Status429TooManyRequests => Page(frame, texts["ereader.tooMany.title"], texts["ereader.tooMany.text"], status),
             _ => NotFound(frame, texts),
         };

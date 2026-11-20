@@ -1,13 +1,26 @@
+using Librarion.Api.Security;
+
 namespace Librarion.Api.EReader;
 
 /// <summary>
 /// The addresses the e-reader pages link to, from the app's root (the request's <c>PathBase</c>, a virtual directory
-/// behind a proxy). Absolute paths, so a page links the same from any depth; stage 8 chunk 8 adds the key prefix
-/// (<c>/e/k/&lt;key&gt;</c>) here, so every link keeps it.
+/// behind a proxy). Absolute paths, so a page links the same from any depth; with a key in the address
+/// (<c>/e/k/&lt;key&gt;</c>, D-8.7: <see cref="AddressKey"/>) every link keeps it, covers and downloads too.
 /// </summary>
-public sealed class EReaderLinks(HttpContext context)
+/// <param name="keepKey">False: the links of the mode without the address's key (where a refused key leads).</param>
+public sealed class EReaderLinks(HttpContext context, bool keepKey = true)
 {
-    private readonly string _root = context.Request.PathBase.Value?.TrimEnd('/') + EReaderEndpoints.Prefix;
+    private readonly string _root = context.Request.PathBase.Value?.TrimEnd('/')
+        + (keepKey ? AddressKey.Root(context, EReaderEndpoints.Prefix) : EReaderEndpoints.Prefix);
+
+    /// <summary>The request signed in with a key in its address (<c>/e/k/&lt;key&gt;</c>): no sign-in or sign-out there.</summary>
+    public bool ByKey { get; } = keepKey && AddressKey.Of(context) is not null;
+
+    /// <summary>
+    /// Where a return address (a path of the mode, <c>/e/…</c>, never with the key: <see cref="EReaderEndpoints.SafeReturn"/>)
+    /// leads from this request: under the key's prefix when the address had one.
+    /// </summary>
+    public string Back(string returnTo) => _root + returnTo[EReaderEndpoints.Prefix.Length..];
 
     /// <summary>The home page (<c>/e/</c>, with its slash: what people type).</summary>
     public string Home => _root + "/";

@@ -50,7 +50,8 @@ public sealed class CurrentAccess(IHttpContextAccessor accessor, AccessService a
         if (ApiKeySignIn.Grant(context) is not { } grant || grant.UserId != user.Id)
             return new AccessState(tenantId, user, EffectiveAccess.None);
         var method = context.Request.Method;
-        var allowed = grant.Allows(context.Request.Path.StartsWithSegments(Opds.OpdsEndpoints.Prefix),
+        // Reader apps and e-readers share the opds scope (D-8.7): /opds and /e.
+        var allowed = grant.Allows(context.Request.Path.StartsWithSegments(Opds.OpdsEndpoints.Prefix) || context.Request.Path.StartsWithSegments(EReader.EReaderEndpoints.Prefix),
             HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method));
         return new AccessState(tenantId, user, allowed ? grant.Narrow(access) : EffectiveAccess.None, grant.KeyId);
     }

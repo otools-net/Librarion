@@ -145,8 +145,8 @@ public sealed class ApiKeys(TenantDb tenantDb, AccessChanges changes, AccessServ
     /// The key a request names, when it is valid now: well formed, its secret right, not revoked or expired, its
     /// account enabled and with the stamp the key was made with. Null otherwise (the caller doesn't tell why).
     /// </summary>
-    /// <param name="inPath">The key came in the catalog's address (<c>/opds/k/&lt;key&gt;</c>): it must allow that, be for
-    /// reader apps, and its tenant (the server's settings for a key without one) must not have switched path keys off.</param>
+    /// <param name="inPath">The key came in the address (<c>/opds/k/&lt;key&gt;</c>, <c>/e/k/&lt;key&gt;</c>): it must allow
+    /// that, be for reader apps and e-readers (<see cref="ApiKeyScopes.Opds"/>), and its tenant (the server's settings for a key without one) must not have switched path keys off.</param>
     public async Task<ApiKeyGrant?> VerifyAsync(string? text, CancellationToken cancellationToken = default, bool inPath = false)
     {
         var grant = await GrantAsync(text, cancellationToken);

@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 8.
+**Next:** chunk 9.
 
 ## The user's answers (2026-11-11)
 
@@ -149,9 +149,13 @@ is the note's; nothing to port.
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-7-device-formats); `EReaderDevices` (the guess is
    chunk 9's too: a Fire tablet's `Silk` is not a Kindle), the choice in `librarion.device` on `/e`, the chooser at
    `/e/device` linked from the book page.
-8. [ ] Keys in the address (D-8.7, Q3): `/e/k/<key>/…`, the middleware shared with `/opds/k/`, links, covers and
+8. [x] Keys in the address (D-8.7, Q3): `/e/k/<key>/…`, the middleware shared with `/opds/k/`, links, covers and
    downloads keeping the prefix, redaction (a test reads the log), the tenant switch; the API key page's "How to use
-   it" names the `/e` address. Tests.
+   it" names the `/e` address. Tests. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-8-keys-in-the-address),
+   [opds-auth](../features/opds-auth.md#built-stage-8-chunk-8-keys-in-the-e-readers-address); `OpdsPathKey` became
+   `Security/AddressKey`, `/e/k/` signs in through the `ApiKey` scheme; no sign-in or sign-out under a key; a refused
+   key is a "Key not accepted" page; the scope renamed "Reader apps and e-readers".
 9. [ ] Ways in (Q4, D-8.11): the link on the app's sign-in page; the server-side redirect of e-ink browsers from
    `ClientPage` (a book's address to its `/e` page), the **Full site** cookie and the way back. Tests per User-Agent
    (redirected, not redirected, with the cookie, switch off, `/api` / `/opds` / files never); client spec for the link.

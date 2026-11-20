@@ -12,7 +12,7 @@ public static class SecurityServiceCollectionExtensions
 {
     public const string SignInRateLimit = "sign-in";
 
-    /// <summary>The default scheme: an API key when the request names one, else the session cookie.</summary>
+    /// <summary>The default scheme: an API key when the request names one (in a header, or in an <c>/e/k/</c> address), else the session cookie.</summary>
     public const string DefaultScheme = "Librarion";
 
     /// <summary>Reader apps' requests per minute, by the Basic name (else the address): <see cref="SecurityOptions.OpdsRequestsPerMinute"/>.</summary>
@@ -36,7 +36,7 @@ public static class SecurityServiceCollectionExtensions
         // A request naming an API key is the key's, whatever cookie it carries (no CSRF through a key); others the cookie's.
         services.AddAuthentication(DefaultScheme)
             .AddPolicyScheme(DefaultScheme, null, options => options.ForwardDefaultSelector = context =>
-                ApiKeySignIn.HasKeyHeader(context.Request) ? ApiKeyAuthenticationHandler.SchemeName : CookieAuthenticationDefaults.AuthenticationScheme)
+                AddressKey.Of(context) is not null || ApiKeySignIn.HasKeyHeader(context.Request) ? ApiKeyAuthenticationHandler.SchemeName : CookieAuthenticationDefaults.AuthenticationScheme)
             .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null)
             .AddCookie(options =>
             {
@@ -106,7 +106,7 @@ public static class SecurityServiceCollectionExtensions
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, security.SignInsPerMinute), Window = TimeSpan.FromMinutes(1) }));
             // Before authorization, so by what the request says it is: a feed page asks for its covers too (dozens a page).
             options.AddPolicy(OpdsRateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
-                Librarion.Api.Opds.OpdsPathKey.Of(context) is { } pathKey ? "key:" + (ApiKeys.Parse(pathKey)?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?")
+                AddressKey.Of(context) is { } pathKey ? "key:" + (ApiKeys.Parse(pathKey)?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?")
                 : Librarion.Api.Opds.OpdsAuthenticationHandler.ReadBasic(context.Request) is var (name, _) ? "user:" + name.Trim().ToUpperInvariant() : "address:" + context.Address(),
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, security.OpdsRequestsPerMinute), Window = TimeSpan.FromMinutes(1) }));
         });

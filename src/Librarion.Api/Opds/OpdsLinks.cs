@@ -9,8 +9,7 @@ namespace Librarion.Api.Opds;
 public sealed class OpdsLinks(HttpContext context)
 {
     /// <summary>The catalog's root as this request reached it: with the key when the address carried one (every link keeps it).</summary>
-    public string Root { get; } = context.Request.PathBase
-        + (OpdsPathKey.Of(context) is { } key ? OpdsPathKey.Prefix + "/" + Uri.EscapeDataString(key) : OpdsEndpoints.Prefix);
+    public string Root { get; } = context.Request.PathBase + Security.AddressKey.Root(context, OpdsEndpoints.Prefix);
 
     public string Library(int library) => $"{Root}/l/{library}";
 
@@ -62,7 +61,7 @@ public sealed class OpdsLinks(HttpContext context)
 
     /// <summary>The library a feed's address names (<c>/opds/l/&lt;id&gt;/…</c>), for the request's tenant; null for others.</summary>
     public static int? LibraryOf(HttpContext context) =>
-        context.Request.Path.StartsWithSegments(OpdsEndpoints.Prefix)
+        (context.Request.Path.StartsWithSegments(OpdsEndpoints.Prefix) || context.Request.Path.StartsWithSegments(EReader.EReaderEndpoints.Prefix))
         && context.GetRouteValue("library") is string text
         && int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
             ? id

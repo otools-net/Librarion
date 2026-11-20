@@ -94,7 +94,7 @@ From the stage 7 plan (removed at the merge, 0.8.0; git history keeps it), the u
 
 ## Built (stage 7 chunk 8b): keys in the address
 
-- **`OpdsPathKey`** (middleware before routing): `/opds/k/<key>/rest` goes on as `/opds/rest` (the raw target too), the
+- **`OpdsPathKey`** (middleware before routing; since stage 8 chunk 8 `Security/AddressKey.cs`, for `/e/k/` too: below): `/opds/k/<key>/rest` goes on as `/opds/rest` (the raw target too), the
   key in the request's items. `OpdsAuthenticationHandler` then signs in with that key alone (headers and Basic not
   looked at), through `ApiKeySignIn` with `inPath`: `ApiKeys.VerifyAsync(…, inPath: true)` also needs the key's
   `PathAllowed`, its `opds` scope, and its tenant's `opds.pathKeys` not off (`PathKeysAllowedAsync`, cached while
@@ -111,9 +111,33 @@ From the stage 7 plan (removed at the merge, 0.8.0; git history keeps it), the u
   address, the user name and the key as the password; with an API scope, the two headers. The checkbox "Can be used
   in the address" is hidden when the tenant has it off. Basic stays as built: a key as the password needs its owner's
   name (the user's answer, 2026-11-10).
-- Tests: `OpdsPathKeyTests` (links keep the prefix down to a download; refused keys, the tenant switch, revoked; the
+- Tests: `OpdsPathKeyTests`, now `AddressKeyTests` (links keep the prefix down to a download; refused keys, the tenant switch, revoked; the
   log read at Trace with scopes, nothing holds a secret; `Redact`), the client spec, e2e `api-keys.spec.ts` (the address
   alone opens the catalog, 401 once revoked).
+
+## Built (stage 8 chunk 8): keys in the e-reader's address
+
+- **`AddressKey`** (`Security/AddressKey.cs`, was `OpdsPathKey`): one middleware for both prefixes (`Prefixes`: `/opds`,
+  `/e`); `AddressKey.Of` the key, `AddressKey.Root(context, prefix)` the prefix as reached (`/e/k/<key>` or `/e`).
+- **Sign-in on `/e/k/`:** the default policy scheme sends a request with an address key to the `ApiKey` scheme (as a key
+  header), whose handler then verifies that key alone with `inPath: true`: the same rules as `/opds/k/` (`PathAllowed`,
+  the `opds` scope, the tenant's `opds.pathKeys`); the cookie is not looked at. Refused: 401 with `PathKeyChallenge`
+  (now `ApiKeySignIn.PathKeyChallenge`), rendered by `EReaderGuard` as "Key not accepted" whose links lead to `/e/`
+  without the key (`EReaderLinks(context, keepKey: false)`).
+- **Scope:** `CurrentAccess` treats `/e` as `/opds` for a key's scope (`ApiKeyGrant.Allows(opds: true…)`): the `opds`
+  scope is "Reader apps and e-readers" (Q3). `OpdsLinks.LibraryOf` reads `/e/l/<id>` too (a server administrator's key
+  works in the library's tenant).
+- **Links:** `EReaderLinks` roots every link at `AddressKey.Root` (covers, downloads, forms, the stylesheet); return
+  addresses stay `/e/…` without the key (`SafeReturn`) and are led back under the prefix by `EReaderLinks.Back`.
+- **No sign-in or sign-out under a key:** `/e/k/<key>/signin` and `/signout` are 404 (`EReaderGuard`; a cookie set there
+  would outlive the key), and the frame shows no Sign out (`EReaderLinks.ByKey`). Forms still carry the antiforgery
+  token: the device chooser works there while the browser keeps that cookie.
+- **Logs:** `LogRedaction` masks what follows `/opds/k/` and `/e/k/`.
+- **The page** (`api-keys.ts`): with the catalog's address, the **E-reader address with the key** (`<base>/e/k/<key>/`)
+  and **Copy e-reader address**.
+- Tests: `AddressKeyTests.EReader` (the pages, cover and both downloads by the key alone, every link under the prefix;
+  refused keys, the tenant's switches, revoked, the key deciding over a cookie; the device chooser coming back under the
+  key), the log test and `Redact` rows for `/e/k/`, the client spec.
 
 ## Ways in
 
@@ -145,4 +169,5 @@ From the stage 7 plan (removed at the merge, 0.8.0; git history keeps it), the u
 
 - Built: each way in, wrong password / revoked / expired / malformed key / disabled user → 401, scopes and libraries
   narrow rights, a key can't manage keys, no cookie on `/opds`, throttles, the cache dropped on a password change.
-- Built (chunk 8b): the key in the path never in logs (`OpdsPathKeyTests.TheKeyInTheAddressIsNeverInALog`).
+- Built (chunk 8b): the key in the path never in logs (`AddressKeyTests.TheKeyInTheAddressIsNeverInALog`, `/e/k/` too
+  since stage 8 chunk 8).

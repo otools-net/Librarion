@@ -24,6 +24,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - E-reader mode: **the device's formats first**: a Kindle, Kobo, PocketBook, Tolino or Boox is recognised by its
   browser, and the formats it opens come first on a book's page and in lists; the others follow, dimmed, and can
   still be downloaded. **Change** on a book's page picks another device (or none) for this browser.
+- E-reader mode: **a key in the address** for e-ink browsers that forget the sign-in: an API key made with **Can be used
+  in the address** opens `/e/k/<key>/` without signing in; **My account → API keys** shows that address under a new
+  key. The key's use **Reader apps (OPDS)** is now called **Reader apps and e-readers**.
 
 ### Changed
 

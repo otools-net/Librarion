@@ -16,11 +16,12 @@ using Microsoft.Extensions.Logging;
 namespace Librarion.Tests;
 
 /// <summary>
-/// A key in the catalog's address (<c>/opds/k/&lt;key&gt;/…</c>, agents/docs/features/opds-auth.md): only for keys that
-/// allow it, while the tenant allows it; every link keeps the prefix; the key is never in a log.
+/// A key in the address (agents/docs/features/opds-auth.md): the catalog's (<c>/opds/k/&lt;key&gt;/…</c>) and the
+/// e-reader pages' (<c>/e/k/&lt;key&gt;/…</c>, D-8.7); only for keys that allow it, while the tenant allows it; every
+/// link keeps the prefix; the key is never in a log.
 /// </summary>
 [TestClass]
-public sealed class OpdsPathKeyTests
+public sealed partial class AddressKeyTests
 {
     private static readonly XNamespace Atom = OpdsFeed.AtomNamespace;
 
@@ -145,11 +146,17 @@ public sealed class OpdsPathKeyTests
         var refused = (await KeyAsync(shelf, pathAllowed: false)).Key;
         using var app = Bare(shelf);
 
-        foreach (var address in new[] { $"/opds/k/{key}", $"/opds/k/{key}/l/{shelf.LibraryId}/titles?after=x", $"/opds/k/{refused}/l/{shelf.LibraryId}", $"/opds/k/{key}/nothing" })
+        var id = shelf.LibraryId;
+        foreach (var address in new[]
+                 {
+                     $"/opds/k/{key}", $"/opds/k/{key}/l/{id}/titles?after=x", $"/opds/k/{refused}/l/{id}", $"/opds/k/{key}/nothing",
+                     $"/e/k/{key}/", $"/e/k/{key}/l/{id}/titles?after=x", $"/e/k/{refused}/l/{id}/", $"/e/k/{key}/nothing", $"/e/k/{key}/signin",
+                 })
             using (await app.GetAsync(address, Cancel)) { }
 
         var lines = capture.Lines.ToList();
         Assert.IsTrue(lines.Any(l => l.Contains("/opds/k/" + LogRedaction.Mask, StringComparison.Ordinal)), "the hosting layer's request lines were captured:\n" + string.Join("\n", lines.Take(20)));
+        Assert.IsTrue(lines.Any(l => l.Contains("/e/k/" + LogRedaction.Mask, StringComparison.Ordinal)), "and the e-reader's");
         foreach (var secret in new[] { key, refused }.Select(k => k[(k.LastIndexOf('_') + 1)..]))
             Assert.IsFalse(lines.Any(l => l.Contains(secret, StringComparison.Ordinal)), string.Join("\n", lines.Where(l => l.Contains(secret, StringComparison.Ordinal))));
     }
@@ -157,6 +164,9 @@ public sealed class OpdsPathKeyTests
     [TestMethod]
     [DataRow("GET /opds/k/lib_12_abcDEF-_0123456789abcdefghij/l/3 x", "GET /opds/k/***/l/3 x")]
     [DataRow("/opds/k/not-a-key?x=1", "/opds/k/***?x=1")]
+    [DataRow("GET http://host/e/k/lib_3_abcDEF-_0123456789abcdefghij/l/1/books/2/files/3 x", "GET http://host/e/k/***/l/1/books/2/files/3 x")]
+    [DataRow("/e/k/not-a-key/", "/e/k/***/")]
+    [DataRow("/the/k/stays", "/the/k/stays")]
     [DataRow("Bearer lib_7_0123456789abcdefghijKLMN", "Bearer lib_7_***")]
     [DataRow("nothing here", "nothing here")]
     public void TextsAreRedacted(string text, string expected) => Assert.AreEqual(expected, LogRedaction.Redact(text));

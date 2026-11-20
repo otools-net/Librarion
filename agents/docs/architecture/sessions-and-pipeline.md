@@ -6,8 +6,8 @@ Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([
 [opds](../features/opds.md)). E-ink browsers on `/e`: `EReader/EReaderGuard.cs`, `EReader/EReaderEndpoints.cs`
 ([ereader-mode](../features/ereader-mode.md)).
 
-- **Order:** `UseForwardedHeaders` (loopback proxies) → `OpdsPathKey` (takes a key out of `/opds/k/<key>/…` before
-  routing sees it) → `UseRouting` (explicit since stage 7 chunk 8b; it was implicit at the very start) → `SecurityHeaders` (first, so errors carry them too) →
+- **Order:** `UseForwardedHeaders` (loopback proxies) → `AddressKey` (takes a key out of `/opds/k/<key>/…` or
+  `/e/k/<key>/…` before routing sees it) → `UseRouting` (explicit since stage 7 chunk 8b; it was implicit at the very start) → `SecurityHeaders` (first, so errors carry them too) →
   exception handler, status code pages → `RequestGuard` → authorization → `/openapi`, static files
   (`UseDefaultFiles` + `MapStaticAssets`), `/api` group (its own 404 fallback), then `ClientPage` for every other
   address.

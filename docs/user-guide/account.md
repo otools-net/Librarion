@@ -28,12 +28,12 @@ A key signs a reader app or a script in instead of your password. Give each devi
 revoke one without changing your password.
 
 1. **New key**, give it a name (the device or script it is for).
-2. **Used for:** **Reader apps (OPDS)**, **Reading through the API** (scripts that only look), **Changing through the
+2. **Used for:** **Reader apps and e-readers** (OPDS apps, and the e-reader pages of an e-ink device), **Reading through the API** (scripts that only look), **Changing through the
    API** (scripts that may change what your account may change). A key never does more than your account may.
 3. **Libraries:** when you may open several, tick some to limit the key to them; none ticked means all of them.
 4. **Ends on:** an optional last day; empty, the key works until you revoke it.
-5. **Can be used in the address** (reader apps only): for apps that can't sign in, the key becomes part of the
-   catalog's address. Anyone who sees that address can use the key, so tick it only when needed.
+5. **Can be used in the address** (reader apps and e-readers only): for apps that can't sign in and e-ink browsers
+   that forget the sign-in, the key becomes part of the address. Anyone who sees that address can use the key, so tick it only when needed.
 6. **Make the key**: the key is shown **this once**. **Copy** it and paste it where it goes; lost, revoke it and make
    another.
 
@@ -42,6 +42,10 @@ Under the key, **How to use it** says what to give the app or script:
 - **A reader app, with a key that can be used in the address:** the **catalog address with the key** (it ends in
   `/opds/k/` and the key). **Copy address** and add it as a catalog in the app: nothing else is asked, no user name, no
   password.
+- **An e-ink device whose browser forgets the sign-in, with a key that can be used in the address:** the **e-reader
+  address with the key** (it ends in `/e/k/`, the key and `/`). Open it in the device's browser and bookmark it: the
+  e-reader pages open without signing in, and every link keeps the key. There is no **Sign out** there; revoke the key
+  to end it.
 - **A reader app, otherwise:** add a catalog with the address shown on the page (it ends in `/opds`), your user name,
   and the key as the password.
 - **A script:** send the key in a header, `Authorization: Bearer <key>` or `X-Api-Key: <key>`.

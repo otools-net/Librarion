@@ -47,7 +47,7 @@ test.describe('@api-keys', () => {
         const key = await shown.inputValue();
         const address = page.getByLabel('Catalog address with the key');
         await expect(address).toHaveValue(new URL(`opds/k/${key}`, baseURL).href);
-        await expect(page.getByRole('list', { name: 'API keys' }).getByRole('listitem').filter({ hasText: 'Phone' })).toContainText('Reader apps (OPDS)');
+        await expect(page.getByRole('list', { name: 'API keys' }).getByRole('listitem').filter({ hasText: 'Phone' })).toContainText('Reader apps and e-readers');
         if (testInfo.project.name === 'android') {
             await audit(page, 'api keys (dark)');
             await page.emulateMedia({ colorScheme: 'light' });

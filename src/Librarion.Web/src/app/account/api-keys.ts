@@ -49,6 +49,15 @@ export const scopeKey = (scope: ApiKeyScope) => `apiKeys.scope.${scope.replace('
                                 <button type="button" class="button" [title]="'apiKeys.copyAddressHint' | t"
                                         (click)="copy(keyAddress(made.key), 'api-key-address', 'apiKeys.addressCopied')">{{ 'apiKeys.copyAddress' | t }}</button>
                             </div>
+                            <div class="field">
+                                <label class="field-label" for="api-key-ereader-address">{{ 'apiKeys.ereaderAddress' | t }}</label>
+                                <input id="api-key-ereader-address" type="text" class="api-key-text" readonly spellcheck="false" [value]="ereaderAddress(made.key)" (focus)="select($event)">
+                                <span class="field-hint">{{ 'apiKeys.useEreaderAddress' | t }}</span>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="button" [title]="'apiKeys.copyEreaderAddressHint' | t"
+                                        (click)="copy(ereaderAddress(made.key), 'api-key-ereader-address', 'apiKeys.addressCopied')">{{ 'apiKeys.copyEreaderAddress' | t }}</button>
+                            </div>
                         } @else {
                             <p class="field-hint api-key-use">{{ 'apiKeys.opdsAddress' | t: { address: opdsAddress, name: sessions.user()?.userName ?? '' } }}</p>
                         }
@@ -208,6 +217,11 @@ export class ApiKeys implements OnInit {
     /** The catalog's address holding the key: a reader app needs nothing else. */
     protected keyAddress(key: string): string {
         return `${this.opdsAddress}/k/${encodeURIComponent(key)}`;
+    }
+
+    /** The e-reader pages' address holding the key (`/e/k/<key>/`), for e-ink browsers that lose their cookies. */
+    protected ereaderAddress(key: string): string {
+        return new URL(`e/k/${encodeURIComponent(key)}/`, document.baseURI).href;
     }
     protected readonly tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 

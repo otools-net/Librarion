@@ -18,7 +18,7 @@ Reader apps don't use the web app's sign-in. Choose one of these:
 
 - **Your user name and password**, in the app's catalog settings. Simple, but the password is stored in the app.
 - **Your user name and an API key as the password** (recommended): make a key for the device in
-  **My account → API keys** with **Reader apps (OPDS)** ticked ([API keys](user-guide/account.md#api-keys)). If the
+  **My account → API keys** with **Reader apps and e-readers** ticked ([API keys](user-guide/account.md#api-keys)). If the
   device is lost, revoke its key; your password stays private.
 - **The key in the address**, for apps that can't sign in at all: tick **Can be used in the address** when making
   the key and use the address shown under it (it ends in `/opds/k/` and the key). Anyone who has that address can

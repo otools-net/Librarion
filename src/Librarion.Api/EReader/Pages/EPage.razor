@@ -1,6 +1,7 @@
 @*
     The frame of every e-reader page (D-8.1): plain HTML, one stylesheet, no script; the app's name as the way home,
-    and for a signed-in account its name and a Sign out button (a form: GET never changes anything, D-8.4).
+    and for a signed-in account its name and a Sign out button (a form: GET never changes anything, D-8.4); signed in
+    by a key in the address (D-8.7), nothing to sign out of.
 *@
 <!DOCTYPE html>
 <html lang="en">
@@ -13,7 +14,7 @@
 <body>
 <header class="top">
     <a class="brand" href="@Frame.Links.Home">@Texts["app.name"]</a>
-    @if (Frame is { UserName: { } name, Token: { } token })
+    @if (Frame is { UserName: { } name, Token: { } token, Links.ByKey: false })
     {
         <form class="account" method="post" action="@Frame.Links.SignOut">
             <FormToken Token="token" />

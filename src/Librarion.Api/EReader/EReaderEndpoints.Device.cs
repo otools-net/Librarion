@@ -35,6 +35,6 @@ public static partial class EReaderEndpoints
         if (choice != EReaderDevices.Automatic && choice != EReaderDevices.NoDevice && EReaderDevices.Find(choice) is null)
             return TypedResults.BadRequest();
         EReaderDevices.Keep(context, choice);
-        return TypedResults.Redirect(context.Request.PathBase + SafeReturn(form["return"]));
+        return TypedResults.Redirect(new EReaderLinks(context).Back(SafeReturn(form["return"])));
     }
 }

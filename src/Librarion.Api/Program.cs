@@ -55,8 +55,8 @@ app.Lifetime.ApplicationStopped.Register(() => (local.FileProvider as IDisposabl
 app.Logger.LogInformation("Librarion {Version} ({Commit})", AppVersion.Version, AppVersion.Commit ?? "unknown commit");
 
 app.UseForwardedHeaders();
-// A key in the catalog's address is taken out of the path before routing sees it (agents/docs/features/opds-auth.md).
-app.UseMiddleware<OpdsPathKey>();
+// A key in the address (/opds/k/, /e/k/) is taken out of the path before routing sees it (agents/docs/features/opds-auth.md).
+app.UseMiddleware<AddressKey>();
 app.UseRouting();
 // First, so that every answer (errors too) carries them.
 app.UseMiddleware<SecurityHeaders>();

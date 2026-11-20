@@ -59,7 +59,7 @@ describe('ApiKeys', () => {
 
         const rows = [...element.querySelectorAll('.api-key-row')];
         expect(rows).toHaveLength(3);
-        expect(rows[0].textContent).toContain('Reader apps (OPDS), Reading through the API');
+        expect(rows[0].textContent).toContain('Reader apps and e-readers, Reading through the API');
         expect(rows[0].textContent).toContain('Comics');
         expect(rows[0].textContent).toContain('in the address');
         expect(rows[0].textContent).toContain('10.0.0.5');
@@ -103,6 +103,12 @@ describe('ApiKeys', () => {
         button(element, 'Copy address').click();
         await stable();
         expect(writeText).toHaveBeenLastCalledWith(address);
+        // ...and the e-reader pages' address holding it (e-ink browsers that forget the sign-in).
+        const ereader = element.querySelector<HTMLInputElement>('#api-key-ereader-address')!.value;
+        expect(ereader).toBe(new URL(`e/k/${made.key}/`, document.baseURI).href);
+        button(element, 'Copy e-reader address').click();
+        await stable();
+        expect(writeText).toHaveBeenLastCalledWith(ereader);
         expect(element.querySelector('.api-key-headers')?.textContent).toContain(`Authorization: Bearer ${made.key}`);
         expect(element.querySelector('.api-key-headers')?.textContent).toContain(`X-Api-Key: ${made.key}`);
 
@@ -129,6 +135,7 @@ describe('ApiKeys', () => {
 
         expect(api.createApiKey).toHaveBeenCalledWith(expect.objectContaining({ pathAllowed: false }));
         expect(element.querySelector('#api-key-address')).toBeNull();
+        expect(element.querySelector('#api-key-ereader-address')).toBeNull();
         expect(element.querySelector('.api-key-use')?.textContent).toContain('the key as the password');
         expect(element.querySelector('.api-key-headers')).toBeNull();
     });

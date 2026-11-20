@@ -7,7 +7,7 @@ namespace Librarion.Api.Security;
 /// <summary>
 /// Keeps API keys out of every log (D-7.5, agents/docs/features/opds-auth.md): the hosting layer logs a request's
 /// address and puts it in each entry's scope before any middleware runs, so a key in the address
-/// (<c>/opds/k/&lt;key&gt;</c>) would be written as it is whenever those logs or scopes are on. The logger factory is
+/// (<c>/opds/k/&lt;key&gt;</c>, <c>/e/k/&lt;key&gt;</c>) would be written as it is whenever those logs or scopes are on. The logger factory is
 /// wrapped: messages, the values of structured entries and scopes pass through <see cref="Redact"/>, whatever the
 /// provider or level. Exceptions are passed on as they are (their messages never hold a request's address here).
 /// </summary>
@@ -15,12 +15,12 @@ public static partial class LogRedaction
 {
     public const string Mask = "***";
 
-    /// <summary>The key's text anywhere (its secret masked, its id kept), and whatever follows <c>/opds/k/</c>.</summary>
-    [GeneratedRegex(@"(?<keep>lib_\d+_)[A-Za-z0-9_-]+|(?<keep>/opds/k/)[^/?#\s""']+", RegexOptions.CultureInvariant)]
+    /// <summary>The key's text anywhere (its secret masked, its id kept), and whatever follows <c>/opds/k/</c> or <c>/e/k/</c>.</summary>
+    [GeneratedRegex(@"(?<keep>lib_\d+_)[A-Za-z0-9_-]+|(?<keep>/(?:opds|e)/k/)[^/?#\s""']+", RegexOptions.CultureInvariant)]
     private static partial Regex Secrets();
 
     public static string Redact(string text) =>
-        text.Contains("lib_", StringComparison.Ordinal) || text.Contains("/opds/k/", StringComparison.Ordinal)
+        text.Contains("lib_", StringComparison.Ordinal) || text.Contains("/k/", StringComparison.Ordinal)
             ? Secrets().Replace(text, match => match.Groups["keep"].Value + Mask)
             : text;
 

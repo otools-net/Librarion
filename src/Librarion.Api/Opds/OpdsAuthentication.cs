@@ -34,7 +34,7 @@ public sealed class OpdsAuthenticationHandler(
     public const string Challenge = "Basic realm=\"Librarion\", charset=\"UTF-8\"";
 
     /// <summary>The challenge of a 401 to a key in the address (not Basic: the app would ask for a password in vain).</summary>
-    public const string PathKeyChallenge = "Bearer realm=\"Librarion\", error=\"invalid_token\"";
+    public const string PathKeyChallenge = ApiKeySignIn.PathKeyChallenge;
 
     /// <summary>The security log's detail on a failed sign-in by a reader app.</summary>
     public const string LogDetail = "opds";
@@ -42,7 +42,7 @@ public sealed class OpdsAuthenticationHandler(
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // A key in the address decides alone (what else the app sends is not looked at): it must allow that use.
-        if (OpdsPathKey.Of(Context) is { } pathKey)
+        if (AddressKey.Of(Context) is { } pathKey)
             return await ApiKeySignIn.AuthenticateAsync(Context, SchemeName, pathKey, inPath: true);
         if (ApiKeySignIn.HasKeyHeader(Request))
             return await ApiKeySignIn.AuthenticateAsync(Context, SchemeName, ApiKeySignIn.ReadKeyHeader(Request));
@@ -82,7 +82,7 @@ public sealed class OpdsAuthenticationHandler(
     {
         Response.StatusCode = StatusCodes.Status401Unauthorized;
         // A refused key in the address: asking for a name and password would not help (the address's key still decides).
-        Response.Headers.WWWAuthenticate = OpdsPathKey.Of(Context) is null ? Challenge : PathKeyChallenge;
+        Response.Headers.WWWAuthenticate = AddressKey.Of(Context) is null ? Challenge : PathKeyChallenge;
         return Task.CompletedTask;
     }
 

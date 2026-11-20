@@ -214,6 +214,12 @@ here, the device's own reader opens the downloaded file.
   with its formats, Another device; posts with its form token to `/e/device`, keeps the choice (Automatic deletes the
   cookie) and goes back (`SafeReturn`); a family not known is 400.
 
+## Built (stage 8 chunk 8): keys in the address
+
+- `/e/k/<key>/…` opens the pages with a key allowed in the address, no cookie needed; every link, cover, download and
+  form keeps the prefix; no sign-in, sign-out or Sign out button there; a refused key is a plain "Key not accepted"
+  page (401) linking to `/e/`. How it works: [opds-auth](opds-auth.md#built-stage-8-chunk-8-keys-in-the-e-readers-address).
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing
@@ -223,7 +229,7 @@ here, the device's own reader opens the downloaded file.
 
 - Backend: every `/e/` route names a right; pages render without any `<script>`; Next / First follow the keyset
   across pages; hidden books 404; download headers (ASCII + UTF-8 names, type, ranges); device format order per
-  User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie); path key works and is redacted; the
+  User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie); path key works and is redacted (built: `AddressKeyTests.EReader`); the
   stylesheet has no non-gray colour.
 - e2e (important flow): with JavaScript disabled on a 600 × 800 viewport: sign in, search, open a book, download a
   file (also from a container zip), next page of a list; no request leaves the origin.

@@ -39,7 +39,7 @@ public static partial class EReaderEndpoints
     {
         var returnTo = SafeReturn(@return);
         if ((await current.GetAsync()).User is not null)
-            return TypedResults.Redirect(context.Request.PathBase + returnTo);
+            return TypedResults.Redirect(new EReaderLinks(context).Back(returnTo));
         return SignInPage(context, returnTo, null, remember: true, error: null);
     }
 
@@ -56,7 +56,7 @@ public static partial class EReaderEndpoints
         var returnTo = SafeReturn(form["return"]);
         var outcome = await SessionEndpoints.TrySignInAsync(context, userName, form["password"], remember);
         if (outcome.User is not null)
-            return TypedResults.Redirect(context.Request.PathBase + returnTo);
+            return TypedResults.Redirect(new EReaderLinks(context).Back(returnTo));
 
         var error = outcome.LockedUntil is { } until
             ? texts.Format("ereader.signIn.lockedOut", ("minutes", Math.Max(1, (int)Math.Ceiling((until - time.GetUtcNow()).TotalMinutes))))

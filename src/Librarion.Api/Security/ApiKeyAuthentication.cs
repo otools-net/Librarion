@@ -23,6 +23,9 @@ public static class ApiKeySignIn
     /// <summary>The security log's detail on a refused key.</summary>
     public const string LogDetail = "api key";
 
+    /// <summary>The challenge of a 401 to a key in the address (not Basic: a password would not help, the address's key decides).</summary>
+    public const string PathKeyChallenge = "Bearer realm=\"Librarion\", error=\"invalid_token\"";
+
     private const string GrantItem = "librarion.apiKeyGrant";
 
     /// <summary>The request names a key in a header (well formed or not): the key decides, never the cookie.</summary>
@@ -48,7 +51,7 @@ public static class ApiKeySignIn
     /// Checks <paramref name="key"/> (and, from Basic, that it is <paramref name="userName"/>'s); failures count in the
     /// sign-in throttle per address and go to the security log, never with the key.
     /// </summary>
-    /// <param name="inPath">The key came in the address (<c>/opds/k/…</c>): it must allow that (<see cref="ApiKeys.VerifyAsync"/>).</param>
+    /// <param name="inPath">The key came in the address (<c>/opds/k/…</c>, <c>/e/k/…</c>): it must allow that (<see cref="ApiKeys.VerifyAsync"/>).</param>
     public static async Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string scheme, string? key, string? userName = null, bool inPath = false)
     {
         var services = context.RequestServices;
@@ -83,21 +86,25 @@ public static class ApiKeySignIn
     }
 }
 
-/// <summary>Keys on <c>/api</c>: the default scheme sends requests with a key header here (<see cref="SecurityServiceCollectionExtensions"/>).</summary>
+/// <summary>
+/// Keys on <c>/api</c> and <c>/e</c>: the default scheme sends requests with a key header here, and those with a key in
+/// an <c>/e/k/</c> address (<see cref="AddressKey"/>: that key alone decides, as on <c>/opds/k/</c>; <see cref="SecurityServiceCollectionExtensions"/>).
+/// </summary>
 public sealed class ApiKeyAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string SchemeName = "ApiKey";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
-        ApiKeySignIn.ReadKeyHeader(Request) is { Length: > 0 } key
+        AddressKey.Of(Context) is { } pathKey ? ApiKeySignIn.AuthenticateAsync(Context, SchemeName, pathKey, inPath: true)
+        : ApiKeySignIn.ReadKeyHeader(Request) is { Length: > 0 } key
             ? ApiKeySignIn.AuthenticateAsync(Context, SchemeName, key)
             : Task.FromResult(AuthenticateResult.Fail("No key."));
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.StatusCode = StatusCodes.Status401Unauthorized;
-        Response.Headers.WWWAuthenticate = "Bearer realm=\"Librarion\"";
+        Response.Headers.WWWAuthenticate = AddressKey.Of(Context) is null ? "Bearer realm=\"Librarion\"" : ApiKeySignIn.PathKeyChallenge;
         return Task.CompletedTask;
     }
 }
