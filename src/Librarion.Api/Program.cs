@@ -30,6 +30,9 @@ builder.Services.AddLibrarionSecurity(builder.Configuration, builder.Environment
 builder.Services.AddSingleton<ClientPage>();
 // The e-reader pages (/e): Razor components rendered on the server, no Blazor runtime sent (D-8.1).
 builder.Services.AddRazorComponents();
+// Letters of every script written as they are (UTF-8), not as &#x411; (the default encoder's Latin only): a page of
+// Cyrillic titles is a third of the bytes on a slow e-ink browser. <, >, &, quotes are still escaped.
+builder.Services.AddWebEncoders(options => options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
 builder.Services.AddSingleton<ServerTexts>();
 builder.Services.AddSingleton<EReaderSwitch>();
 // API keys never in a log, whatever logs and scopes are on (the hosting layer logs a request's address).

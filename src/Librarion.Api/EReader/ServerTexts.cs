@@ -35,4 +35,10 @@ public sealed class ServerTexts
     }
 
     public bool Has(string key) => _english.ContainsKey(key);
+
+    /// <summary>
+    /// A field's name: a built-in one by the app's name for it (<c>fields.name.&lt;key&gt;</c>, as the client), a
+    /// custom one by its own.
+    /// </summary>
+    public string FieldName(string key, string name, bool builtIn) => builtIn && Has("fields.name." + key) ? this["fields.name." + key] : name;
 }

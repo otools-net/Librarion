@@ -1,0 +1,28 @@
+@*
+    A field's values (or the plain tags) by first letter, when they don't fit one page: a button per letter some value
+    starts with, then All (from the start: names in other scripts have no letter here).
+*@
+<EPage Frame="Frame" Title="@Title" Up="Up">
+    <nav class="letters" aria-label="@Texts["ereader.values.letters"]">
+        @foreach (var letter in Letters)
+        {
+            <a class="button" href="@letter.Href">@letter.Text</a>
+        }
+    </nav>
+    <p class="more"><a href="@All">@Texts["ereader.values.all"]</a></p>
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public EPage.Crumb? Up { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<Letter> Letters { get; set; } = [];
+
+    /// <summary>The whole list from its start.</summary>
+    [Parameter, EditorRequired] public string All { get; set; } = "";
+
+    public sealed record Letter(string Text, string Href);
+}

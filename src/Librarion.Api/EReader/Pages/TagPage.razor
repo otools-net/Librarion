@@ -1,0 +1,37 @@
+@using System.Globalization
+@*
+    A tag with tags under it ("Fiction" over "Horror"): all its books (with those under it) first, then each tag under
+    it by name.
+*@
+<EPage Frame="Frame" Title="@Title" Up="Up">
+    <p class="more">
+        <a href="@AllBooks">@Texts["ereader.tag.allBooks"]</a>
+        @if (BookCount is { } count)
+        {
+            <span class="muted"> · @Texts.Format("browse.count", ("count", count.ToString("N0", CultureInfo.InvariantCulture)))</span>
+        }
+    </p>
+    <h2>@Texts["ereader.tag.under"]</h2>
+    <ValueList Values="Children" />
+    @if (MoreChildren)
+    {
+        <p class="muted">@Texts["ereader.tag.moreUnder"]</p>
+    }
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public EPage.Crumb? Up { get; set; }
+
+    [Parameter, EditorRequired] public string AllBooks { get; set; } = "";
+
+    [Parameter] public int? BookCount { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<ValuesPage.Value> Children { get; set; } = [];
+
+    /// <summary>More tags are under it than are listed.</summary>
+    [Parameter] public bool MoreChildren { get; set; }
+}

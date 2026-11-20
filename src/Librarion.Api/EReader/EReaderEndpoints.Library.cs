@@ -33,6 +33,7 @@ public static partial class EReaderEndpoints
         library.MapGet("/titles", (int library, string? after, HttpContext context, CurrentAccess current, AccessService accounts, BookVisibilities visibilities,
             BookQueries books, ServerTexts texts) => BooksAsync(library, BookSort.Title, after, context, current, accounts, visibilities, books, texts));
         library.MapGet("/search", SearchAsync);
+        MapBrowse(library);
         library.MapGet("/books/{id:int}/cover/{size}", CoverAsync);
     }
 

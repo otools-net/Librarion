@@ -1,0 +1,29 @@
+@using System.Globalization
+@*
+    A list of values or tags: each row one link (its name, then its count of books when known).
+*@
+@if (Values.Count == 0)
+{
+    <p class="muted">@Texts["ereader.values.empty"]</p>
+}
+else
+{
+    <ul class="plain values">
+        @foreach (var value in Values)
+        {
+            <li>
+                <a href="@value.Href">
+                    <span class="name">@value.Name</span>
+                    @if (value.BookCount is { } count)
+                    {
+                        <span class="count">@Texts.Format("browse.count", ("count", count.ToString("N0", CultureInfo.InvariantCulture)))</span>
+                    }
+                </a>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ValuesPage.Value> Values { get; set; } = [];
+}

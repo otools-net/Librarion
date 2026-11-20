@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 5.
+**Next:** chunk 6.
 
 ## The user's answers (2026-11-11)
 
@@ -134,8 +134,10 @@ is the note's; nothing to port.
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-4-search), [search](../features/search.md); the
    language never refuses, so "plainly" is: nothing to search for and nothing found show How to search, a search cut
    at 500 characters or 20 terms says so (`SearchQuery.Cut`).
-5. [ ] Browse: the fields that hold values, a field's first letters (`InitialsAsync`) and values A–Z, a value's books
-   (a series by number), plain tags; content filters as on the app. Tests.
+5. [x] Browse: the fields that hold values, a field's first letters (`InitialsAsync`) and values A–Z, a value's books
+   (a series by number), plain tags; content filters as on the app. Tests. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-5-browse); found on the way: Razor wrote other
+   scripts as entities, fixed with `AddWebEncoders` (all Unicode ranges).
 6. [ ] The book page: cover, title, fields as links, plain tags, description as plain text (sanitized, cut), files with
    format, size and Download, FB2 also `fb2.zip`; a merged book's address goes to its book; hidden 404. Downloads:
    `Content-Disposition` ASCII + UTF-8 (D-8.8). Tests.

@@ -1,0 +1,25 @@
+@*
+    A page of a field's values (or plain tags) A to Z: each a link to its books, with how many there are in the
+    library; First and Next under them.
+*@
+<EPage Frame="Frame" Title="@Title" Up="Up">
+    <ValueList Values="Values" />
+    <Pager First="@First" Next="@Next" />
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public EPage.Crumb? Up { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<Value> Values { get; set; } = [];
+
+    [Parameter] public string? Next { get; set; }
+
+    [Parameter] public string? First { get; set; }
+
+    /// <param name="BookCount">Its books in the library; null when not known (the tags under a tag).</param>
+    public sealed record Value(string Name, string Href, int? BookCount);
+}

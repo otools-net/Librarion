@@ -40,7 +40,26 @@ public sealed class EReaderLinks(HttpContext context)
     /// <summary>The plain tags of a library.</summary>
     public string Tags(int library) => $"{_root}/l/{library}/tags";
 
+    /// <summary>
+    /// A field's values (<paramref name="key"/>), or the plain tags (null): their first letters, or a page of them from
+    /// a letter (<paramref name="from"/>; empty: from the start) or after a cursor.
+    /// </summary>
+    public string Values(int library, string? key, string? from = null, string? after = null) =>
+        (key is null ? Tags(library) : Field(library, key)) + Query(("from", from), ("after", after));
+
+    /// <summary>A tag's page (a field's value or a plain tag): its books, or the tags under it.</summary>
+    public string Tag(int library, int tag) => $"{_root}/l/{library}/tags/{tag}";
+
+    /// <summary>A tag's books (with those of the tags under it).</summary>
+    public string TagBooks(int library, int tag, string? after = null) => Tag(library, tag) + "/books" + After(after);
+
     private static string After(string? after) => after is null ? "" : "?after=" + Uri.EscapeDataString(after);
+
+    private static string Query(params (string Name, string? Value)[] parameters)
+    {
+        var given = parameters.Where(p => p.Value is not null).Select(p => p.Name + "=" + Uri.EscapeDataString(p.Value!)).ToList();
+        return given.Count == 0 ? "" : "?" + string.Join("&", given);
+    }
 
     /// <summary>Where the sign-out form posts.</summary>
     public string SignOut => _root + "/signout";

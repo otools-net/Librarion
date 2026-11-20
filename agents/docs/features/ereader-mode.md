@@ -151,6 +151,26 @@ here, the device's own reader opens the downloaded file.
 - `.notice` (light gray, a gray edge) for things to know; `.error` stays for refusals.
 - The mode's text-key test also reads `Texts.Format("…")` and whole keys written as strings in the pages.
 
+## Built (stage 8 chunk 5): browse
+
+- **Addresses** (`EReaderEndpoints.Browse.cs`, `library.browse`): `/e/l/<library>/fields/<key>` and `/tags` (plain
+  tags) with `?from=<letter>` (empty: from the start) and `&after=<cursor>`; `/tags/<id>` a tag's page;
+  `/tags/<id>/books?after=` its books. As the OPDS feeds ([opds](opds.md)), the same `TagQueries` calls.
+- **A field's page:** its values fit one page → the list itself (up to the library); more → **first letters**
+  (`TagQueries.InitialsAsync`, cached per tenant) as a grid of buttons (`LettersPage`, ≥ 52 × 44 px) and "All, from
+  the start" (other scripts' names without a letter are reached so). A letter's page ("Authors: Б") lists from there
+  by key (up to the letters); Next keeps `from`, so First goes back to the letter's start. Pages of a sparse library
+  can be short (`TagQueries.MaxScanned`).
+- **A value's row** (`ValueList`): its name and its books in the library ("2 books", `browse.count`), one link.
+- **A tag's page:** tags under it → "All its books" (with the count) and the tags under it (`TagPage`; "More tags
+  are under it" past `MaxChildren`); none → its books directly. Books by title; a **series by number** (the cursor
+  tells the order; a series without numbers by title), as OPDS. A merged tag's old address → 301 to the tag it
+  became; a tag the content filters deny, or with no book here, 404.
+- Field names in one place: `ServerTexts.FieldName(key, name, builtIn)` (`fields.name.<key>` for built-in ones).
+- **Encoding:** the Razor renderer took the default `HtmlEncoder` (Latin only): every Cyrillic letter came out as
+  `&#x411;` (8 bytes for 2). `AddWebEncoders` with `UnicodeRanges.All` in `Program.cs`: text as UTF-8, markup
+  characters still escaped (the search test checks `<b>` and quotes).
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing

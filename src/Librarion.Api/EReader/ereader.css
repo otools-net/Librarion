@@ -326,3 +326,30 @@ code {
     background-color: #ffffff;
     border: 1px solid #999;
 }
+
+/* A field's first letters: a grid of square buttons, big enough for a finger. */
+.letters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.letters a.button {
+    min-width: 52px;
+    padding: 0 8px;
+    text-align: center;
+}
+
+/* A value and its count of books on one line, the count at the right. */
+ul.values > li > a {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.values .count {
+    flex: none;
+    color: #444;
+    font-size: 0.9rem;
+}

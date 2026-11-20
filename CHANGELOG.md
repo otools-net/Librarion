@@ -17,6 +17,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - E-reader mode: **search** with the app's search language (`author:"…"`, `"phrases"`, `-` to leave out…), results
   A to Z, 20 a page; a blank search or one that finds nothing shows how to search, and one too long says only its
   start was searched.
+- E-reader mode: **browse** by author, series and every other field, and by tags: long lists open on their first
+  letters, each value shows its number of books, a series comes in its order, a tag with tags under it lists them.
 
 ## 0.8.0
 
