@@ -17,6 +17,8 @@ Code: `app/books/book-page.ts` (`BookPage`, route `books/:id`, loaded on first u
 - **Download:** a plain `<a href download>` (a GET needs no `X-Librarion-Request`): the head's button gives the first
   file not missing, each file row its own. Shown only with `canDownload` (`library.download` in the book's library);
   else a note says so. Missing files are listed, never offered.
+- The file's name: `Content-Disposition` with `filename*` (UTF-8) and an ASCII `filename` (accents folded, else
+  `book-<file id>.<ext>`: `DownloadNames`, shared with OPDS and the e-reader mode).
 - A merged book (`mergedIntoId`) goes to the kept one, replacing the address. 404 shows "Not found"; other errors
   Try again. The duplicates are asked after the book; their failure only leaves the panel out.
 - **Back:** browser back when the page was opened from the app (`Router.navigated` when constructed), else the

@@ -30,6 +30,12 @@ public sealed class EReaderLinks(HttpContext context)
     /// <summary>A book's page.</summary>
     public string Book(int library, int book) => $"{_root}/l/{library}/books/{book}";
 
+    /// <summary>A book's file to download, as it lies.</summary>
+    public string File(int library, int book, int file) => $"{Book(library, book)}/files/{file}";
+
+    /// <summary>An FB2 file zipped while it is sent (<c>.fb2.zip</c>).</summary>
+    public string ZippedFile(int library, int book, int file) => File(library, book, file) + "/zip";
+
     /// <summary>A book's cover; <paramref name="version"/> changes with the book, so a cached picture isn't kept after an edit.</summary>
     public string Cover(int library, int book, string size, string? version) =>
         $"{_root}/l/{library}/books/{book}/cover/{size}" + (version is null ? "" : "?v=" + Uri.EscapeDataString(version));

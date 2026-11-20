@@ -275,7 +275,9 @@ public static class BookEndpoints
         // A compressed entry is not seekable: its length is known all the same (the stream is held to it).
         if (!content.Seekable)
             context.Response.ContentLength = content.Length;
-        return Results.File(content.Stream, Librarion.Core.Formats.BookFormats.ContentType(target.Format), target.Name,
+        // The name set here (an ASCII one beside the UTF-8 one, DownloadNames), not by the result: it would replace it.
+        context.Response.Headers.ContentDisposition = DownloadNames.Disposition(target.Name, target.FileId);
+        return Results.File(content.Stream, Librarion.Core.Formats.BookFormats.ContentType(target.Format), fileDownloadName: null,
             target.Modified is { } modified ? new DateTimeOffset(modified, TimeSpan.Zero) : null, EntityTag(target), enableRangeProcessing: content.Seekable);
     }
 

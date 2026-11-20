@@ -41,4 +41,8 @@ public sealed class ServerTexts
     /// custom one by its own.
     /// </summary>
     public string FieldName(string key, string name, bool builtIn) => builtIn && Has("fields.name." + key) ? this["fields.name." + key] : name;
+
+    /// <summary>A book as shown: its title, else its first file's name (book-display.md), else "Untitled".</summary>
+    public string BookTitle(string? title, string? fileName) =>
+        !string.IsNullOrWhiteSpace(title) ? title : !string.IsNullOrWhiteSpace(fileName) ? fileName : this["ereader.book.untitled"];
 }

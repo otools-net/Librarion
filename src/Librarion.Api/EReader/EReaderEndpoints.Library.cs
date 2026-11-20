@@ -34,6 +34,7 @@ public static partial class EReaderEndpoints
             BookQueries books, ServerTexts texts) => BooksAsync(library, BookSort.Title, after, context, current, accounts, visibilities, books, texts));
         library.MapGet("/search", SearchAsync);
         MapBrowse(library);
+        MapBook(library);
         library.MapGet("/books/{id:int}/cover/{size}", CoverAsync);
     }
 

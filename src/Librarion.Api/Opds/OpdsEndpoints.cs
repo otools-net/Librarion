@@ -183,7 +183,7 @@ public static partial class OpdsEndpoints
         if (!zipped)
             return BookEndpoints.Download(context, target);
         var (content, problem) = BookDownloads.Open(target);
-        return content is null ? BookEndpoints.FileProblem(problem) : new ZippedDownload(content, target.Name, target.Modified);
+        return content is null ? BookEndpoints.FileProblem(problem) : new ZippedDownload(content, target.Name, target.Modified, target.FileId);
     }
 
     private static async Task<IResult> CoverAsync(int library, int id, string size, HttpContext context, CurrentAccess current, BookVisibilities visibilities,

@@ -18,7 +18,7 @@ else
                 <a href="@Frame.Links.Book(book.LibraryId, book.Id)">
                     <img class="cover" src="@Frame.Links.Cover(book.LibraryId, book.Id, "s", book.CoverVersion)" width="48" height="72" alt="">
                     <span class="about">
-                        <span class="title">@TitleOf(book)</span>
+                        <span class="title">@Texts.BookTitle(book.Title, book.FileName)</span>
                         @if (book.Authors.Count > 0)
                         {
                             <span class="authors">@string.Join(", ", book.Authors)</span>
@@ -38,10 +38,6 @@ else
     [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
 
     [Parameter, EditorRequired] public IReadOnlyList<BookListItem> Books { get; set; } = [];
-
-    /// <summary>The title, or the first file's name for a book without one (as the app, book-display.md).</summary>
-    private string TitleOf(BookListItem book) =>
-        !string.IsNullOrWhiteSpace(book.Title) ? book.Title : !string.IsNullOrWhiteSpace(book.FileName) ? book.FileName : Texts["ereader.book.untitled"];
 
     private string SeriesOf(string series, double? number) => number is { } n
         ? Texts.Format("ereader.book.seriesNumber", ("series", series), ("number", n.ToString("0.##", CultureInfo.InvariantCulture)))

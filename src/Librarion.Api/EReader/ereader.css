@@ -353,3 +353,73 @@ ul.values > li > a {
     color: #444;
     font-size: 0.9rem;
 }
+
+/* A book's page: the cover beside its fields, then the files, then the description. */
+.book-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin: 0 0 8px;
+}
+
+.cover-m {
+    flex: none;
+    width: 120px;
+    height: 180px;
+    object-fit: contain;
+    background-color: #e6e6e6;
+    border: 1px solid #999;
+}
+
+.fields {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+
+.fields dt {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.fields dt:first-child {
+    margin-top: 0;
+}
+
+.fields dd {
+    margin: 0;
+}
+
+/* Each value a target of its own: the line is tall enough for a finger. */
+.fields dd a {
+    display: inline-block;
+    min-height: 32px;
+    line-height: 32px;
+}
+
+ul.files > li {
+    padding: 10px 4px;
+}
+
+.format {
+    font-weight: bold;
+}
+
+/* The file's name, its archive, why it is missing: a line each. */
+.file-about > .line {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+}
+
+.file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.description p {
+    margin: 0 0 10px;
+}

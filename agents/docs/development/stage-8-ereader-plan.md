@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 6.
+**Next:** chunk 7.
 
 ## The user's answers (2026-11-11)
 
@@ -138,9 +138,12 @@ is the note's; nothing to port.
    (a series by number), plain tags; content filters as on the app. Tests. **Built:**
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-5-browse); found on the way: Razor wrote other
    scripts as entities, fixed with `AddWebEncoders` (all Unicode ranges).
-6. [ ] The book page: cover, title, fields as links, plain tags, description as plain text (sanitized, cut), files with
+6. [x] The book page: cover, title, fields as links, plain tags, description as plain text (sanitized, cut), files with
    format, size and Download, FB2 also `fb2.zip`; a merged book's address goes to its book; hidden 404. Downloads:
-   `Content-Disposition` ASCII + UTF-8 (D-8.8). Tests.
+   `Content-Disposition` ASCII + UTF-8 (D-8.8). Tests. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-6-the-book-page-and-downloads),
+   [book-page](../features/book-page.md); the app's ASCII name was `_` per letter: `DownloadNames` folds accents and
+   falls back to `book-<file id>`, for the app and OPDS too.
 7. [ ] Device formats (D-8.8, Q5): User-Agent guess (Kindle, Kobo, PocketBook, Tolino, Boox, else none), the order and
    dimming on the book page and in lists, the chooser form and its cookie. Tests per User-Agent.
 8. [ ] Keys in the address (D-8.7, Q3): `/e/k/<key>/…`, the middleware shared with `/opds/k/`, links, covers and

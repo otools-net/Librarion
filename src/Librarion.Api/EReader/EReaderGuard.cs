@@ -72,6 +72,6 @@ public sealed class EReaderGuard(RequestDelegate next)
     public static RazorComponentResult<MessagePage> NotFound(EReaderFrame frame, ServerTexts texts) =>
         Page(frame, texts["ereader.notFound.title"], texts["ereader.notFound.text"], StatusCodes.Status404NotFound);
 
-    private static RazorComponentResult<MessagePage> Page(EReaderFrame frame, string title, string text, int status, bool home = true) =>
+    internal static RazorComponentResult<MessagePage> Page(EReaderFrame frame, string title, string text, int status, bool home = true) =>
         new(new { Frame = frame, Title = title, Text = text, Home = home }) { StatusCode = status };
 }

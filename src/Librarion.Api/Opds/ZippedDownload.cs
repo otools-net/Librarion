@@ -9,7 +9,7 @@ namespace Librarion.Api.Opds;
 /// <c>fb2.zip</c>, what many reader apps ask for): never a temp file; no Range and no length, the size is known only
 /// at the end. The source is opened by the caller (its problems answered before), and disposed here.
 /// </summary>
-public sealed class ZippedDownload(BookFileContent content, string name, DateTime? modified) : IResult
+public sealed class ZippedDownload(BookFileContent content, string name, DateTime? modified, int fileId) : IResult
 {
     public const string ContentType = "application/zip";
 
@@ -19,10 +19,8 @@ public sealed class ZippedDownload(BookFileContent content, string name, DateTim
     {
         var cancellationToken = httpContext.RequestAborted;
         await using var source = content.Stream;
-        var disposition = new ContentDispositionHeaderValue("attachment");
-        disposition.SetHttpFileName(name + ".zip");
         httpContext.Response.ContentType = ContentType;
-        httpContext.Response.Headers.ContentDisposition = disposition.ToString();
+        httpContext.Response.Headers.ContentDisposition = Endpoints.DownloadNames.Disposition(name + ".zip", fileId);
         var body = httpContext.Response.Body;
 
         // The archive writes into a buffer (parts of it write synchronously, which the response refuses), sent after

@@ -171,6 +171,29 @@ here, the device's own reader opens the downloaded file.
   `&#x411;` (8 bytes for 2). `AddWebEncoders` with `UnicodeRanges.All` in `Program.cs`: text as UTF-8, markup
   characters still escaped (the search test checks `<b>` and quotes).
 
+## Built (stage 8 chunk 6): the book page and downloads
+
+- **`/e/l/<library>/books/<id>`** (`library.browse`, `EReaderEndpoints.Book.cs`, `BookPage`): `BookQueries.GetAsync`
+  under the account's visibility, as the app's page. The title (`ServerTexts.BookTitle`: else the file's name, else
+  "Untitled"), the `m` cover in a 120 × 180 box beside the fields; the fields in the tenant's order
+  (`TagQueries.FieldsAsync`), each value a link to its books (`/tags/<id>`), a series with the book's number, plain
+  tags last; then **Files** (format, size as the app's "1.2 MB", the name, "in Pack.zip" for an entry, a missing
+  file said and never offered) with **Download FB2** and, for FB2, **Download FB2, zipped**; the description last
+  (files first: downloading is what most come for).
+- **Description:** plain text already (the importers strip markup), so a line is a paragraph, spaces collapsed, cut
+  at `MaxDescription` (2000) at a word with "…"; nothing in it is read as markup (a text's `<desert>` stays).
+- A merged book's address → 302 to the kept book (a merge can be undone); a book of another library the account
+  browses → its own address; hidden or elsewhere → 404. Without `library.download` the page says so (`book.noDownload`)
+  and offers no link.
+- **Downloads:** `/books/<id>/files/<fileId>` and `…/zip` (`library.browse` and `library.download` on the route, the
+  library checked again inside), through the app's `BookEndpoints.Download` (Range, ETag, ZIP entries) and OPDS's
+  `ZippedDownload`. A file gone, changed or unreadable since the scan: a plain page with the app's `error.file.*`
+  text and its 410 / 409, never the problem JSON.
+- **File names (D-8.8):** `DownloadNames` (`Api/Endpoints/`), used by the app, OPDS and `/e`: `filename*` in UTF-8 and
+  an ASCII `filename` with accents folded ("Café" → "Cafe"), other letters as one `_` (trimmed at the ends), and a
+  name with no Latin letter or digit left as `book-<file id>.fb2`. ASP.NET's own fallback was `_____ _ ___.fb2`.
+- Gotcha: the tool layer turns a typed backslash-u-00a0 into the character itself; write `\xA0` in C# sources.
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing

@@ -19,6 +19,13 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   start was searched.
 - E-reader mode: **browse** by author, series and every other field, and by tags: long lists open on their first
   letters, each value shows its number of books, a series comes in its order, a tag with tags under it lists them.
+- E-reader mode: a **book's page** with its cover, authors, series and other fields as links, tags, description and
+  files, each with **Download** (an FB2 also zipped).
+
+### Changed
+
+- Downloads (app, reader apps, e-reader mode) give browsers that can't read UTF-8 file names a readable one:
+  "Café Society.fb2" becomes "Cafe Society.fb2", a name in another alphabet "book-123.fb2" (was "_____ _ ___.fb2").
 
 ## 0.8.0
 

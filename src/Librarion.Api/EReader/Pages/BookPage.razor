@@ -1,0 +1,119 @@
+@using System.Globalization
+@using Librarion.Core.Catalog
+@*
+    A book's page (stage 8 chunk 6): its cover (m, its box sized), title, fields as links to their values' books (the
+    plain tags last), the description as plain text, then its files with Download (an FB2 also zipped). The files come
+    right under the title's block on a phone-sized screen too: downloading is what most come for.
+*@
+<EPage Frame="Frame" Title="@Texts.BookTitle(Book.Title, Book.FileName)" Up="Up">
+    <div class="book-head">
+        <img class="cover-m" src="@Frame.Links.Cover(Book.LibraryId, Book.Id, "m", Book.CoverVersion)" width="120" height="180" alt="">
+        @if (Fields.Count > 0)
+        {
+            <dl class="fields">
+                @foreach (var field in Fields)
+                {
+                    <dt>@field.Title</dt>
+                    <dd>
+                        @for (var i = 0; i < field.Values.Count; i++)
+                        {
+                            @if (i > 0)
+                            {
+                                <span class="sep">, </span>
+                            }
+                            <a href="@field.Values[i].Href">@field.Values[i].Text</a>
+                        }
+                    </dd>
+                }
+            </dl>
+        }
+    </div>
+
+    <h2>@Texts["book.files"]</h2>
+    @if (!CanDownload)
+    {
+        <p class="notice">@Texts["book.noDownload"]</p>
+    }
+    <ul class="plain files">
+        @foreach (var file in Files)
+        {
+            <li>
+                <span class="file-about">
+                    <span class="format">@file.File.Format.ToUpperInvariant()</span>
+                    <span class="muted"> · @Size(file.File.Size)</span>
+                    <span class="line file-name">@file.File.Name</span>
+                    @if (file.File.Archive is { } archive)
+                    {
+                        <span class="line muted">@Texts.Format("ereader.book.inArchive", ("archive", archive))</span>
+                    }
+                    @if (file.File.Missing)
+                    {
+                        <span class="line muted">@Texts["ereader.book.fileMissing"]</span>
+                    }
+                </span>
+                @if (file.Download is { } download)
+                {
+                    <span class="file-actions">
+                        <a class="button" href="@download">@Texts.Format("book.download", ("format", file.File.Format.ToUpperInvariant()))</a>
+                        @if (file.Zipped is { } zipped)
+                        {
+                            <a class="button" href="@zipped">@Texts["ereader.book.downloadZipped"]</a>
+                        }
+                    </span>
+                }
+            </li>
+        }
+    </ul>
+
+    @if (Description.Count > 0)
+    {
+        <h2>@Texts["book.description"]</h2>
+        <div class="description">
+            @foreach (var paragraph in Description)
+            {
+                <p>@paragraph</p>
+            }
+        </div>
+    }
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter] public EPage.Crumb? Up { get; set; }
+
+    [Parameter, EditorRequired] public BookDetail Book { get; set; } = null!;
+
+    /// <summary>Its tags by field, in the tenant's order of fields; the plain tags last.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<FieldValues> Fields { get; set; } = [];
+
+    /// <summary>The description in plain paragraphs, cut.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Description { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<FileRow> Files { get; set; } = [];
+
+    /// <summary>The account may download in this library (else a note, and no Download).</summary>
+    [Parameter] public bool CanDownload { get; set; }
+
+    public sealed record Value(string Text, string Href);
+
+    public sealed record FieldValues(string Title, IReadOnlyList<Value> Values);
+
+    /// <param name="Download">Its address; null when it can't be downloaded (no right, missing).</param>
+    /// <param name="Zipped">An FB2's zipped address; null otherwise.</param>
+    public sealed record FileRow(BookFileItem File, string? Download, string? Zipped);
+
+    /// <summary>A file's size as the app shows it: bytes, kB, MB or GB (1,000 each), at most one decimal.</summary>
+    internal static string Size(long bytes)
+    {
+        string[] units = ["bytes", "kB", "MB", "GB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1000 && unit < units.Length - 1)
+        {
+            value /= 1000;
+            unit++;
+        }
+        return value.ToString(unit == 0 ? "0" : "0.#", CultureInfo.InvariantCulture) + " " + units[unit];
+    }
+}
