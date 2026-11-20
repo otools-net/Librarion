@@ -4,6 +4,7 @@ using Librarion.Api.Security;
 using Librarion.Core.Access;
 using Librarion.Core.Catalog;
 using Librarion.Core.Covers;
+using Librarion.Core.Search;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Librarion.Api.EReader;
@@ -31,6 +32,7 @@ public static partial class EReaderEndpoints
             BookQueries books, ServerTexts texts) => BooksAsync(library, BookSort.Added, after, context, current, accounts, visibilities, books, texts));
         library.MapGet("/titles", (int library, string? after, HttpContext context, CurrentAccess current, AccessService accounts, BookVisibilities visibilities,
             BookQueries books, ServerTexts texts) => BooksAsync(library, BookSort.Title, after, context, current, accounts, visibilities, books, texts));
+        library.MapGet("/search", SearchAsync);
         library.MapGet("/books/{id:int}/cover/{size}", CoverAsync);
     }
 
@@ -106,6 +108,44 @@ public static partial class EReaderEndpoints
             Books = page.Items,
             Next = next,
             First = after is null ? null : first,
+        });
+    }
+
+    /// <summary>
+    /// A search in the library in the search language (as the app's box and the OPDS search: words, "phrases",
+    /// <c>author:</c>, <c>-</c>…), by title, a page at a time by key (stage 8 chunk 4). Nothing to search for (blank, or
+    /// only signs) lists nothing and says how to search; a search cut short (too long, too many terms) says so.
+    /// </summary>
+    private static async Task<IResult> SearchAsync(int library, string? q, string? after, HttpContext context, CurrentAccess current, AccessService accounts,
+        BookVisibilities visibilities, BookQueries books)
+    {
+        var state = await current.GetAsync();
+        if (await LibraryNameAsync(state, library, accounts, context.RequestAborted) is not { } name)
+            return Results.NotFound();
+        var query = q?.Trim() ?? "";
+        // Read without the tenant's fields: whether there is anything to search for and whether it was cut doesn't
+        // depend on them (a key that is no field is still one term, of text).
+        var parsed = SearchQuery.Parse(query, _ => false);
+        var page = new Page<BookListItem>([], null);
+        if (!parsed.IsEmpty)
+        {
+            var visibility = await visibilities.GetAsync(new AccessSubject(state.TenantId, state.User!.Id), context.RequestAborted);
+            page = await books.ListAsync(state.TenantId!.Value, visibility, new BookPageRequest(library, BookSort.Title, after, PageSize, Query: query),
+                context.RequestAborted);
+        }
+
+        var links = new EReaderLinks(context);
+        return new RazorComponentResult<SearchPage>(new
+        {
+            Frame = await EReaderFrame.ForAsync(context),
+            Up = new EPage.Crumb(name, links.Library(library)),
+            LibraryId = library,
+            Query = query,
+            Searched = !parsed.IsEmpty,
+            Cut = parsed.Cut,
+            Books = page.Items,
+            Next = page.Next is { } next ? links.Search(library, query, next) : null,
+            First = after is null || parsed.IsEmpty ? null : links.Search(library, query),
         });
     }
 

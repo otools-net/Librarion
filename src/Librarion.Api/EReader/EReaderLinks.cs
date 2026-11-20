@@ -23,8 +23,9 @@ public sealed class EReaderLinks(HttpContext context)
     /// <summary>A library's books A to Z.</summary>
     public string Titles(int library, string? after = null) => $"{_root}/l/{library}/titles" + After(after);
 
-    /// <summary>Where a library's search box sends its words (<c>q</c>).</summary>
-    public string Search(int library) => $"{_root}/l/{library}/search";
+    /// <summary>Where a library's search box sends its words (<c>q</c>); with them, its results (a page after <paramref name="after"/>).</summary>
+    public string Search(int library, string? query = null, string? after = null) => $"{_root}/l/{library}/search"
+        + (query is null ? "" : "?q=" + Uri.EscapeDataString(query) + (after is null ? "" : "&after=" + Uri.EscapeDataString(after)));
 
     /// <summary>A book's page.</summary>
     public string Book(int library, int book) => $"{_root}/l/{library}/books/{book}";

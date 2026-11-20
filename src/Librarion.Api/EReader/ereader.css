@@ -293,3 +293,36 @@ button:active {
     border: 2px solid #000;
     border-left-width: 10px;
 }
+
+/* Something to know (nothing found, a search cut short): a light gray box with a gray edge. */
+.notice {
+    padding: 8px 12px;
+    background-color: #eeeeee;
+    border: 1px solid #666;
+    border-left-width: 6px;
+}
+
+/* How to search: each sign as typed above what it does. */
+.help h2 {
+    margin-top: 0;
+}
+
+.help dl {
+    margin: 0;
+}
+
+.help dt {
+    margin-top: 10px;
+}
+
+.help dd {
+    margin: 2px 0 0 16px;
+}
+
+code {
+    font-family: monospace;
+    font-size: 1rem;
+    padding: 0 4px;
+    background-color: #ffffff;
+    border: 1px solid #999;
+}

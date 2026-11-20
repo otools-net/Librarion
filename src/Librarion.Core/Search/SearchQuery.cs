@@ -47,6 +47,12 @@ public sealed record SearchQuery(IReadOnlyList<SearchTerm> Terms)
 
     public bool IsEmpty => Terms.Count == 0;
 
+    /// <summary>
+    /// Not all of the text was read: longer than <see cref="MaxLength"/>, or more than <see cref="MaxTerms"/> terms
+    /// (the rest is left out, not refused; the e-reader pages say so).
+    /// </summary>
+    public bool Cut { get; init; }
+
     /// <param name="isField">Whether a key (lower case) names one of the tenant's fields.</param>
     public static SearchQuery Parse(string? text, Func<string, bool> isField)
     {
@@ -90,7 +96,7 @@ public sealed record SearchQuery(IReadOnlyList<SearchTerm> Terms)
                 terms.Add(new SearchTerm(SearchTermKind.Text, negated, null, words, isQuoted, isPrefix));
         }
 
-        return new SearchQuery(terms);
+        return new SearchQuery(terms) { Cut = text.Length > MaxLength || !string.IsNullOrWhiteSpace(input[i..]) };
     }
 
     /// <summary>A quoted value (to its closing quote or the end) or a bare one (to the next space); a trailing <c>*</c> asks for a prefix.</summary>

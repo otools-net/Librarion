@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 4.
+**Next:** chunk 5.
 
 ## The user's answers (2026-11-11)
 
@@ -129,8 +129,11 @@ is the note's; nothing to port.
    [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-3-home-a-librarys-page-lists-of-books); the home is
    the only library's page or a list of libraries; links to search, fields, tags and book pages wait for chunks 4–6;
    the screenshots tool shoots `/e` pages.
-4. [ ] Search: the box and its results in the search language, paged by key; a blank search shows nothing; the
-   language's errors shown plainly. Tests on both providers.
+4. [x] Search: the box and its results in the search language, paged by key; a blank search shows nothing; the
+   language's errors shown plainly. Tests on both providers. **Built:**
+   [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-4-search), [search](../features/search.md); the
+   language never refuses, so "plainly" is: nothing to search for and nothing found show How to search, a search cut
+   at 500 characters or 20 terms says so (`SearchQuery.Cut`).
 5. [ ] Browse: the fields that hold values, a field's first letters (`InitialsAsync`) and values A–Z, a value's books
    (a series by number), plain tags; content filters as on the app. Tests.
 6. [ ] The book page: cover, title, fields as links, plain tags, description as plain text (sanitized, cut), files with

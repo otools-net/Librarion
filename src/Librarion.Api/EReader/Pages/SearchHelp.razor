@@ -1,0 +1,28 @@
+@*
+    How to search, short: the language's signs as typed (not translated: they are the language) and the app's help
+    texts for them (search.help.*). Shown when there was nothing to search for or nothing was found.
+*@
+<div class="panel help">
+    <h2>@Texts["search.help.title"]</h2>
+    <dl>
+        @foreach (var (example, key) in Examples)
+        {
+            <dt><code>@example</code></dt>
+            <dd>@Texts[key]</dd>
+        }
+    </dl>
+</div>
+
+@code {
+    private static readonly (string Example, string Key)[] Examples =
+    [
+        ("dune desert", "search.help.words"),
+        ("\"the long night\"", "search.help.phrase"),
+        ("drag*", "search.help.prefix"),
+        ("author:\"Frank Herbert\"", "search.help.field"),
+        ("series:", "search.help.anyValue"),
+        ("-format:pdf", "search.help.not"),
+        ("format:epub", "search.help.format"),
+        ("tag:Favourites", "search.help.tag"),
+    ];
+}

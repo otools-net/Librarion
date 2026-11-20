@@ -12,7 +12,8 @@ Decisions D3, D20, D22 in [foundation-plan](../development/foundation-plan.md), 
 
 ## The language (`SearchQuery.Parse`)
 
-- Terms split on spaces outside quotes, at most 20, 500 characters. `-` before a term negates it.
+- Terms split on spaces outside quotes, at most 20, 500 characters (the rest left out, never refused;
+  `SearchQuery.Cut` tells, the e-reader search says so). `-` before a term negates it.
 - `key:value` when `key` is `title`, `tag`, `format`, `special` or one of the tenant's fields (`FieldKey`); any other
   key is text ("Re:Zero" is a title). `field:` alone = any value of the field (`-series:` = none).
 - A bare word of free text is a prefix (it may be being typed); `"phrases"` are not unless followed by `*`; values

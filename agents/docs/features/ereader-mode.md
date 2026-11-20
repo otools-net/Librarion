@@ -135,6 +135,22 @@ here, the device's own reader opens the downloaded file.
 - Screenshots of these pages: [screenshots](../../tools/screenshots/README.md) takes `e/…` addresses at 600 × 800 with
   JavaScript off (`LIBRARION_SCREENS_BOOKS=25` for a pager).
 
+## Built (stage 8 chunk 4): search
+
+- **`/e/l/<library>/search?q=<words>&after=<cursor>`** (`library.browse`): the search language as the app's box and
+  the OPDS search ([search](search.md)), through `BookQueries.ListAsync(Query:)` by title, 20 a page by key; Next keeps
+  the words (`EReaderLinks.Search(library, q, after)`). Hidden books (content filters, hidden tags) as everywhere.
+- **The page** (`SearchPage`): the box again with the words kept (`SearchBox`, also on the library's page), "Books
+  matching …", the list and First / Next.
+- **Said plainly** (the language has no errors: it never refuses, it leaves out): nothing to search for (blank, only
+  signs such as `-`, `""`, `tag:` with no value) → no query run, "Type words…" and **How to search** (`SearchHelp`:
+  the language's signs as typed, `<code>`, over the app's `search.help.*` texts); nothing found → "No books match this
+  search." and the help; cut short (over 500 characters or 20 terms: `SearchQuery.Cut`) → a notice that only its
+  start was searched. Whether a search is empty or cut is read with `Parse(q, _ => false)`: a key that is no field is
+  still one text term, so neither depends on the tenant's fields.
+- `.notice` (light gray, a gray edge) for things to know; `.error` stays for refusals.
+- The mode's text-key test also reads `Texts.Format("…")` and whole keys written as strings in the pages.
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing

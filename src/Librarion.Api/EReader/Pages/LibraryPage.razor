@@ -4,13 +4,7 @@
     browsed by (all books A to Z, each field with values, the plain tags).
 *@
 <EPage Frame="Frame" Title="@Name">
-    <form class="panel search" method="get" action="@Frame.Links.Search(LibraryId)" role="search">
-        <label for="q">@Texts["ereader.library.searchLabel"]</label>
-        <span class="row">
-            <input id="q" name="q" type="search" autocomplete="off" autocapitalize="none" spellcheck="false">
-            <button type="submit">@Texts["search.title"]</button>
-        </span>
-    </form>
+    <SearchBox Frame="Frame" LibraryId="LibraryId" />
 
     <h2>@Texts["ereader.library.recent"]</h2>
     <BookList Frame="Frame" Books="Recent" />

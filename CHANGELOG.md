@@ -14,6 +14,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
   as the app; **Stay signed in** is ticked to begin with. Signing in on either opens both.
 - E-reader mode: a library's page (search box, the books added last, ways to browse) and its books **newest first**
   or **A to Z**, 20 a page with small covers, **Next page** and **First page**; with one library it is the home page.
+- E-reader mode: **search** with the app's search language (`author:"…"`, `"phrases"`, `-` to leave out…), results
+  A to Z, 20 a page; a blank search or one that finds nothing shows how to search, and one too long says only its
+  start was searched.
 
 ## 0.8.0
 

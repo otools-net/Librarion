@@ -41,7 +41,12 @@ public sealed class SearchTests
         Assert.AreEqual(new SearchTerm(SearchTermKind.Text, false, null, "Re:Zero", false, true), terms[6], "no field called re: a title");
         Assert.HasCount(7, terms, "a lone - is nothing");
         Assert.IsTrue(SearchQuery.Parse("author:\"Steph", IsField).Terms.Single().Prefix, "an open quote is still being typed");
-        Assert.HasCount(SearchQuery.MaxTerms, SearchQuery.Parse(string.Join(' ', Enumerable.Range(0, 50).Select(i => $"w{i}")), IsField).Terms);
+        var many = SearchQuery.Parse(string.Join(' ', Enumerable.Range(0, 50).Select(i => $"w{i}")), IsField);
+        Assert.HasCount(SearchQuery.MaxTerms, many.Terms);
+        Assert.IsTrue(many.Cut, "terms past the limit left out");
+        Assert.IsFalse(SearchQuery.Parse(string.Join(' ', Enumerable.Range(0, SearchQuery.MaxTerms).Select(i => $"w{i}")) + "  ", IsField).Cut, "exactly the limit");
+        Assert.IsTrue(SearchQuery.Parse(new string('a', SearchQuery.MaxLength + 1), IsField).Cut, "too long");
+        Assert.IsFalse(SearchQuery.Parse("hobb", IsField).Cut);
     }
 
     [TestMethod]

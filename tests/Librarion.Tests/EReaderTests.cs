@@ -241,7 +241,11 @@ public sealed partial class EReaderTests
         var folder = RepositoryFiles.PathOf("src/Librarion.Api/EReader");
         var used = Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories)
             .Where(p => p.EndsWith(".razor", StringComparison.Ordinal) || p.EndsWith(".cs", StringComparison.Ordinal))
-            .SelectMany(p => TextKey().Matches(File.ReadAllText(p)).Select(m => (File: Path.GetFileName(p), Key: m.Groups[1].Value)))
+            .SelectMany(p => TextKey().Matches(File.ReadAllText(p))
+                // In the pages also a key written whole as a string (a list of them, SearchHelp); the code has setting keys so.
+                .Concat(p.EndsWith(".razor", StringComparison.Ordinal) ? KeyLiteral().Matches(File.ReadAllText(p)) : [])
+                .Select(m => (File: Path.GetFileName(p), Key: m.Groups[1].Value)))
+            .Distinct()
             .ToList();
 
         Assert.IsGreaterThan(10, used.Count, "the check found the keys");
@@ -484,7 +488,11 @@ public sealed partial class EReaderTests
     [GeneratedRegex(@"(?<![#\w.-])[a-zA-Z][a-zA-Z-]*")]
     private static partial Regex Word();
 
-    /// <summary><c>Texts["key"]</c> in the pages, <c>texts["key"]</c> in the code.</summary>
-    [GeneratedRegex(@"[Tt]exts\[""([a-zA-Z][\w-]*(?:\.[\w-]+)+)""\]")]
+    /// <summary><c>Texts["key"]</c> or <c>Texts.Format("key", …)</c> in the pages, <c>texts[…]</c> in the code.</summary>
+    [GeneratedRegex(@"[Tt]exts(?:\[|\.Format\()""([a-zA-Z][\w-]*(?:\.[\w-]+)+)""")]
     private static partial Regex TextKey();
+
+    /// <summary>A whole key as a string in a page: <c>"search.help.words"</c> (lower case first, dots between words).</summary>
+    [GeneratedRegex(@"""([a-z][a-zA-Z]*(?:\.[a-zA-Z][\w-]*)+)""")]
+    private static partial Regex KeyLiteral();
 }

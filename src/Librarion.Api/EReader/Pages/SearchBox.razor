@@ -1,0 +1,19 @@
+@*
+    A library's search box (a library's page, the search page with its words kept): a plain GET form, the words in q.
+*@
+<form class="panel search" method="get" action="@Frame.Links.Search(LibraryId)" role="search">
+    <label for="q">@Texts["ereader.library.searchLabel"]</label>
+    <span class="row">
+        <input id="q" name="q" type="search" value="@Value" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="submit">@Texts["search.title"]</button>
+    </span>
+</form>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired] public int LibraryId { get; set; }
+
+    /// <summary>The words searched for; none on a library's page (no value attribute then).</summary>
+    [Parameter] public string? Value { get; set; }
+}

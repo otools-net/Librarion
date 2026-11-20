@@ -1,0 +1,52 @@
+@using Librarion.Core.Catalog
+@using Librarion.Core.Search
+@*
+    A search in a library (stage 8 chunk 4): the box with the words kept, then the books by title with First and Next;
+    nothing to search for, or nothing found: how to search instead (the app's help texts, the language's own signs).
+*@
+<EPage Frame="Frame" Title="@Texts["search.title"]" Up="Up">
+    <SearchBox Frame="Frame" LibraryId="LibraryId" Value="@Query" />
+    @if (Cut)
+    {
+        <p class="notice">@Texts.Format("ereader.search.cut", ("terms", SearchQuery.MaxTerms), ("length", SearchQuery.MaxLength))</p>
+    }
+    @if (!Searched)
+    {
+        <p>@Texts["ereader.search.start"]</p>
+        <SearchHelp />
+    }
+    else if (Books.Count == 0)
+    {
+        <p class="notice">@Texts["search.empty"]</p>
+        <SearchHelp />
+    }
+    else
+    {
+        <h2>@Texts.Format("search.books", ("query", Query))</h2>
+        <BookList Frame="Frame" Books="Books" />
+        <Pager First="@First" Next="@Next" />
+    }
+</EPage>
+
+@code {
+    [Parameter, EditorRequired] public EReaderFrame Frame { get; set; } = null!;
+
+    [Parameter] public EPage.Crumb? Up { get; set; }
+
+    [Parameter, EditorRequired] public int LibraryId { get; set; }
+
+    /// <summary>The words as typed (trimmed).</summary>
+    [Parameter] public string Query { get; set; } = "";
+
+    /// <summary>There was something to search for (not blank, not only signs).</summary>
+    [Parameter] public bool Searched { get; set; }
+
+    /// <summary>The search was too long or had too many terms: only its start was read.</summary>
+    [Parameter] public bool Cut { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<BookListItem> Books { get; set; } = [];
+
+    [Parameter] public string? Next { get; set; }
+
+    [Parameter] public string? First { get; set; }
+}
