@@ -29,6 +29,17 @@ public static partial class EReaderEndpoints
         e.MapGet("/signin", SignInPageAsync).AllowAnonymous();
         e.MapPost("/signin", SignInAsync).AllowAnonymous().RequireRateLimiting(SecurityServiceCollectionExtensions.SignInRateLimit);
         e.MapPost("/signout", SignOutAsync).AllowAnonymous();
+        // The ways in (D-8.11): a preference of this browser only (a cookie), nothing on the server, so a plain link.
+        e.MapGet("/full-site", (HttpContext context) =>
+        {
+            EReaderRedirect.ChooseFullSite(context);
+            return TypedResults.Redirect(context.Request.PathBase.Value?.TrimEnd('/') + "/");
+        }).AllowAnonymous();
+        e.MapGet("/start", (HttpContext context) =>
+        {
+            EReaderRedirect.ChooseEReader(context);
+            return TypedResults.Redirect(new EReaderLinks(context).Home);
+        }).AllowAnonymous();
 
         // Every other address, file-like ones too: not found (EReaderGuard renders the page), before the client's fallback takes it.
         e.MapFallback("{**path}", () => TypedResults.NotFound()).AllowAnonymous();

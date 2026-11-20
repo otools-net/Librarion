@@ -81,6 +81,17 @@ describe('SignInPage', () => {
         expect(element.querySelector<HTMLInputElement>('#login-password')!.value).toBe('');
     });
 
+    it('links the e-reader version out of the app, through the address that lets e-ink browsers be sent there again', async () => {
+        const api = mockApi();
+        api.session.mockResolvedValue(sessionInfo([], { user: null }));
+        const { element } = await render(SignInPage, api);
+
+        const link = element.querySelector<HTMLAnchorElement>('a.sign-in-ereader')!;
+        expect(link.textContent).toContain('Use the e-reader version');
+        expect(link.getAttribute('href')).toBe('e/start');
+        expect(link.getAttribute('routerLink')).toBeNull();
+    });
+
     it('opens the setup page on a new server', async () => {
         const api = mockApi();
         api.session.mockResolvedValue(sessionInfo([], { user: null, setupRequired: true }));

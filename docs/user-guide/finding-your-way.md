@@ -33,3 +33,15 @@ the arrow at the top left brings you back to where you were in the library.
   **Cancel** is chosen at first, so pressing Enter changes nothing. Deleting a tenant also asks you to type its name.
 - Short messages ("Saved.", "Scan started") appear in a corner and go away by themselves. Point at them to keep them,
   or close them with their × button.
+
+## On an e-ink reader
+
+The browsers of Kindle, Kobo, PocketBook, Tolino and Boox readers get **the e-reader version** instead: plain gray
+pages, without script, to find a book and download it to the device. They are sent there by themselves (a book's
+address opens the same book there); any other browser can open it with **On an e-ink reader? Use the e-reader
+version** under the sign-in form, or at `/e/`.
+
+- **Full site**, at the bottom of every e-reader page, keeps this browser on the app instead (for a year).
+- The link under the sign-in form brings it back to the e-reader version.
+- An administrator may have switched the e-reader version off (the setting **E-reader mode**): then no browser is sent
+  there.

@@ -29,7 +29,7 @@ is the note's; nothing to port.
   and the decisions are updated.
 - Anything decided to wait past 1.0 goes to [next-version-plan](next-version-plan.md), not a bullet left here.
 
-**Next:** chunk 9.
+**Next:** chunk 10.
 
 ## The user's answers (2026-11-11)
 
@@ -156,9 +156,12 @@ is the note's; nothing to port.
    [opds-auth](../features/opds-auth.md#built-stage-8-chunk-8-keys-in-the-e-readers-address); `OpdsPathKey` became
    `Security/AddressKey`, `/e/k/` signs in through the `ApiKey` scheme; no sign-in or sign-out under a key; a refused
    key is a "Key not accepted" page; the scope renamed "Reader apps and e-readers".
-9. [ ] Ways in (Q4, D-8.11): the link on the app's sign-in page; the server-side redirect of e-ink browsers from
+9. [x] Ways in (Q4, D-8.11): the link on the app's sign-in page; the server-side redirect of e-ink browsers from
    `ClientPage` (a book's address to its `/e` page), the **Full site** cookie and the way back. Tests per User-Agent
    (redirected, not redirected, with the cookie, switch off, `/api` / `/opds` / files never); client spec for the link.
+   **Built:** [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-9-ways-in); `EReaderRedirect`, `/e/books/<id>`
+   finding the book's library, `/e/full-site` and `/e/start` (plain GETs: a browser preference only), no redirect
+   before the setup; a short section in `docs/user-guide/finding-your-way.md` (chunk 12 writes the full guide).
 10. [ ] e2e: a project with JavaScript off at 600 × 800 (and a Kindle-like User-Agent): sign in, search, a book page,
     download loose and from a ZIP, the next page, a key in the address, sign out; no request leaves the origin; axe AA
     on each screen (run with script on: the pages have none of their own).

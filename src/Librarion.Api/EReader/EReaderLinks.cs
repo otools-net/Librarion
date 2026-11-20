@@ -40,6 +40,15 @@ public sealed class EReaderLinks(HttpContext context, bool keepKey = true)
     public string Search(int library, string? query = null, string? after = null) => $"{_root}/l/{library}/search"
         + (query is null ? "" : "?q=" + Uri.EscapeDataString(query) + (after is null ? "" : "&after=" + Uri.EscapeDataString(after)));
 
+    /// <summary>A book's page by its id alone (where the app's book address leads an e-ink browser): on to its library's.</summary>
+    public string AnyBook(int book) => $"{_root}/books/{book}";
+
+    /// <summary>The app instead of these pages, for this browser (<see cref="EReaderRedirect"/>): every page links it.</summary>
+    public string FullSite => _root + "/full-site";
+
+    /// <summary>These pages again after the full site was chosen: the app's link to them.</summary>
+    public string Start => _root + "/start";
+
     /// <summary>A book's page.</summary>
     public string Book(int library, int book) => $"{_root}/l/{library}/books/{book}";
 

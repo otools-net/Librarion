@@ -99,6 +99,10 @@ import { Skeleton } from '../shared/placeholders';
                     {{ 'signIn.lockedOut' | t }}
                     <a href="" [title]="'signIn.recoverLinkHint' | t" (click)="startRecovery($event)">{{ 'signIn.recoverLink' | t }}</a>
                 </p>
+                <!-- A plain link, out of the app (D-8.11): e/start lets e-ink browsers be sent to the e-reader pages again. -->
+                <p class="field-hint account-foot">
+                    <a class="sign-in-ereader" href="e/start" [title]="'signIn.ereaderHint' | t">{{ 'signIn.ereader' | t }}</a>
+                </p>
             }
         </main>
     `,

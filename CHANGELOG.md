@@ -27,6 +27,9 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - E-reader mode: **a key in the address** for e-ink browsers that forget the sign-in: an API key made with **Can be used
   in the address** opens `/e/k/<key>/` without signing in; **My account → API keys** shows that address under a new
   key. The key's use **Reader apps (OPDS)** is now called **Reader apps and e-readers**.
+- E-reader mode: **e-ink browsers are sent there by themselves** (Kindle, Kobo, PocketBook, Tolino, Boox), a book's
+  address to the same book; **Full site** at the bottom of every e-reader page keeps a browser on the app, and **On an
+  e-ink reader? Use the e-reader version** under the app's sign-in form leads back.
 
 ### Changed
 

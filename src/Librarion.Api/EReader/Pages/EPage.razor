@@ -1,7 +1,8 @@
 @*
     The frame of every e-reader page (D-8.1): plain HTML, one stylesheet, no script; the app's name as the way home,
     and for a signed-in account its name and a Sign out button (a form: GET never changes anything, D-8.4); signed in
-    by a key in the address (D-8.7), nothing to sign out of.
+    by a key in the address (D-8.7), nothing to sign out of. At the foot, Full site (D-8.11): the app instead, for this
+    browser.
 *@
 <!DOCTYPE html>
 <html lang="en">
@@ -31,6 +32,9 @@
     <h1>@Title</h1>
     @ChildContent
 </main>
+<footer class="foot">
+    <a class="muted" href="@Frame.Links.FullSite">@Texts["ereader.fullSite"]</a>
+</footer>
 </body>
 </html>
 

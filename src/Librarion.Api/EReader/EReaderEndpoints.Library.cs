@@ -25,6 +25,7 @@ public static partial class EReaderEndpoints
     private static void MapLibrary(RouteGroupBuilder e)
     {
         e.MapGet("", HomeAsync).RequireRight(Rights.Browse);
+        e.MapGet("/books/{id:int}", AnyBookAsync).RequireRight(Rights.Browse);
 
         var library = e.MapGroup("/l/{library:int}").RequireRight(Rights.Browse);
         library.MapGet("", LibraryAsync);

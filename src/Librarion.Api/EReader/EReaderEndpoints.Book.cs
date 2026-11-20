@@ -21,6 +21,18 @@ public static partial class EReaderEndpoints
     /// <summary>The description's length at most on a book page (cut at a word, "…"): one or two screens of e-ink.</summary>
     public const int MaxDescription = 2000;
 
+    /// <summary>A book by its id alone (the app's book address, redirected: <see cref="EReaderRedirect"/>): on to its library's page.</summary>
+    private static async Task<IResult> AnyBookAsync(int id, HttpContext context, CurrentAccess current, BookVisibilities visibilities, BookQueries books)
+    {
+        var state = await current.GetAsync();
+        if (state is not { TenantId: { } tenantId, User: { } user })
+            return Results.NotFound();
+        var visibility = await visibilities.GetAsync(new AccessSubject(tenantId, user.Id), context.RequestAborted);
+        return await books.GetAsync(tenantId, visibility, id, context.RequestAborted) is { } book && Opens(state, book.LibraryId)
+            ? Results.Redirect(new EReaderLinks(context).Book(book.LibraryId, id))
+            : Results.NotFound();
+    }
+
     private static void MapBook(RouteGroupBuilder library)
     {
         library.MapGet("/books/{id:int}", BookAsync);

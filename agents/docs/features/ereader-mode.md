@@ -2,7 +2,8 @@
 
 Code: `src/Librarion.Api/EReader/` (`EReaderEndpoints`, `EReaderGuard`, `EReaderSwitch`, `EReaderLinks`, `EReaderDevices`,
 `EReaderFrame`, `ServerTexts`, `EReaderStylesheet` + `ereader.css`, `Pages/*.razor`), the same `Core/Catalog/` and `Core/Search/`
-services as the app; tests `EReaderTests`. Decision D23 in [foundation-plan](../development/foundation-plan.md); being
+services as the app, `ClientPage` for the redirect (`EReaderRedirect`); tests `EReaderTests`, `EReaderListTests`,
+`EReaderWaysInTests`, `AddressKeyTests.EReader`. Decision D23 in [foundation-plan](../development/foundation-plan.md); being
 built in stage 8 ([stage-8-ereader-plan](../development/stage-8-ereader-plan.md)).
 
 A second, **basic face of the library for the browsers of e-ink readers** (Kindle, Kobo, PocketBook, Boox, Tolino):
@@ -220,6 +221,26 @@ here, the device's own reader opens the downloaded file.
   form keeps the prefix; no sign-in, sign-out or Sign out button there; a refused key is a plain "Key not accepted"
   page (401) linking to `/e/`. How it works: [opds-auth](opds-auth.md#built-stage-8-chunk-8-keys-in-the-e-readers-address).
 
+## Built (stage 8 chunk 9): ways in
+
+- **The redirect** (`EReaderRedirect.TargetAsync`, asked by `ClientPage.Serve` first): a GET or HEAD of the app's page
+  from a browser `EReaderDevices.Guess` names (Kindle without Silk, Kobo, PocketBook, Tolino, Boox) is a 302 to `/e/`;
+  the app's book address `/books/<id>` to `/e/books/<id>`, which finds the book's library under the account's
+  visibility and goes on to `/e/l/<library>/books/<id>` (unknown or hidden: 404; a visitor signs in first). Not
+  redirected: the `librarion.fullsite` cookie present, the server waiting for its setup (the app's setup page),
+  `ereader.enabled` off (`EReaderSwitch`, the tenant of the cookie session, else the server's value), anything but GET
+  / HEAD. The device chosen on `/e/device` doesn't count (its cookie is `/e`'s): only the User-Agent.
+- **Full site** (`/e/full-site`, a muted link in every page's `footer.foot`, under a key's prefix too): sets
+  `librarion.fullsite` (path the app's root, a year, HttpOnly, Lax), then 302 to the app's root. **The way back**
+  (`/e/start`, the app's sign-in page's "On an e-ink reader? Use the e-reader version", a plain `href`, not the router)
+  deletes it if present and goes to `/e/`. Both GET: they set only this browser's preference, nothing on the server.
+  Both `AllowAnonymous`; with the mode off they are 404 as every `/e` address.
+- Nothing in the app's menu (D-8.11). The sign-in page's link shows even when the mode is off (no setting is known
+  before signing in): it then leads to `/e`'s Not found.
+- Tests: `EReaderWaysInTests` (per User-Agent redirected or not, a tag's readable address, a book's address; the API,
+  OPDS, files, covers, `/e` itself and POSTs never; the cookie, its attributes and the way back; setup and both
+  switches; `/e/books/<id>`), the client spec for the link.
+
 ## Scale and privacy
 
 - Same keyset queries and page budgets as the app's lists, smaller pages; nothing new per request. Nothing
@@ -229,7 +250,7 @@ here, the device's own reader opens the downloaded file.
 
 - Backend: every `/e/` route names a right; pages render without any `<script>`; Next / First follow the keyset
   across pages; hidden books 404; download headers (ASCII + UTF-8 names, type, ranges); device format order per
-  User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie); path key works and is redacted (built: `AddressKeyTests.EReader`); the
+  User-Agent (built: `EReaderListTests.Devices`); the redirect of e-ink browsers (and its Full site cookie; built: `EReaderWaysInTests`); path key works and is redacted (built: `AddressKeyTests.EReader`); the
   stylesheet has no non-gray colour.
 - e2e (important flow): with JavaScript disabled on a 600 × 800 viewport: sign in, search, open a book, download a
   file (also from a container zip), next page of a list; no request leaves the origin.

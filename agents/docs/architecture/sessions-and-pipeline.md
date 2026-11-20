@@ -23,7 +23,10 @@ Reader apps on `/opds`: `Opds/OpdsAuthentication.cs`, `Opds/OpdsEndpoints.cs` ([
   without a CORS preflight, which never succeeds.
 - **Deep addresses:** `index.html` has `<base href="./">`, right at the root only; `ClientPage` serves the page for
   client routes with `<base href="{PathBase}/">`, so `/a/b/c` loads `/main-….js`, under a virtual directory too
-  (found by the e2e smoke set; `ADeepClientAddressGetsThePageWithTheAppsRootAsBase`).
+  (found by the e2e smoke set; `ADeepClientAddressGetsThePageWithTheAppsRootAsBase`). An e-ink browser gets a 302 to
+  `/e` instead (`EReaderRedirect`, [ereader-mode](../features/ereader-mode.md#built-stage-8-chunk-9-ways-in)): only
+  what `ClientPage` serves, so never `/api`, `/opds`, `/e` or files. `/` is `ClientPage`'s too (routing runs before
+  `UseDefaultFiles`); a literal `/index.html` is the static file, not redirected (checked on the real server).
 - Every `/api` and `/openapi` route names its right or `.AllowAnonymous()` (`EveryRouteNamesARight`); in stage 0
   all are anonymous (no accounts yet).
 - **Order (stage 1):** … → `UseAuthentication` → `RequestGuard` (header check, then 503 `setup-required` except
