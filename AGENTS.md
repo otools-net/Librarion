@@ -121,6 +121,7 @@ note rather than inventing a new one.
 | [build](agents/docs/environment/build.md) | client build inside MSBuild, theme-boot, the fixed static-assets error |
 | [dev-machine](agents/docs/environment/dev-machine.md) | this machine: SDK, Node, Edge, Docker without Hub access |
 | [line-endings](agents/docs/environment/line-endings.md) | LF everywhere, autocrlf warnings, ef output |
+| [docker](agents/docs/environment/docker.md) | the image (`Dockerfile`), compose with PostgreSQL behind Traefik, publishing to GHCR (`docker-image.yml`) |
 
 ### Features — `agents/docs/features/`
 

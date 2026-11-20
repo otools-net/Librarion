@@ -1,7 +1,8 @@
 # Installation
 
-Librarion is in early development: for now it runs from its source code. Packages (Docker image, portable download,
-Windows service, systemd) come before the first release.
+Librarion is in early development: it runs from its source code or as a [Docker image](docker.md) (with PostgreSQL
+behind Traefik, for an address of the internet). Other packages (portable download, Windows service, systemd) come
+before the first release.
 
 ## From source
 

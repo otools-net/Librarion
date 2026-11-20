@@ -298,7 +298,8 @@ here, the device's own reader opens the downloaded file.
 ## Checked by hand (the stage's exit criterion: the user, before the merge)
 
 Following [docs/user-guide/ereader.md](../../../docs/user-guide/ereader.md), on each of a **Kindle**, a **Kobo** and a
-**PocketBook** (Tolino and Boox if at hand), over the home WLAN:
+**PocketBook** (Tolino and Boox if at hand), over the home WLAN or, as the Kobo's browser wouldn't open a LAN IP
+address, on a test server with a domain (the `:edge` image behind Traefik, [docker](../environment/docker.md)):
 
 1. The app's address in the device's browser: sent to `/e/` by itself (the sign-in page); **Keep me signed in** ticked.
 2. Sign in; the page is readable, buttons easy to hit, no colour smear; sleep the device and wake it: still signed in.

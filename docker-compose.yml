@@ -1,0 +1,71 @@
+# Librarion with PostgreSQL, behind an existing Traefik that serves HTTPS for it (docs/docker.md).
+# Needs: Traefik running with its own Docker network, an entry point for https and a certificate resolver; a domain
+# whose DNS points at Traefik.
+#
+#   cp docker-compose.env.example .env      # then fill it in
+#   docker compose up -d
+#   docker compose logs librarion           # the setup code, if you didn't set one
+#   docker compose pull && docker compose up -d      # an update
+services:
+  librarion:
+    image: ghcr.io/otools-net/librarion:${LIBRARION_TAG:-edge}
+    # Or built from this checkout: drop the image line above, and `docker compose up -d --build`.
+    # build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Sign-in keys, setup code, uploaded covers and caches (the books' data is in PostgreSQL): back this one up.
+      - librarion-data:/app/data
+      # The books, read-only: add the folder /books to a library (Administration › Libraries).
+      - ${LIBRARION_BOOKS:?set LIBRARION_BOOKS to the folder of your books}:/books:ro
+    environment:
+      Librarion__Database__Provider: postgres
+      ConnectionStrings__Librarion: Host=postgres;Database=librarion;Username=librarion;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      # Your own setup code (at least 12 characters): on the internet, don't leave the first start to a printed one.
+      Librarion__Setup__Code: ${LIBRARION_SETUP_CODE:-}
+      # Reached only through Traefik over https: the session cookie is marked secure, and Traefik's forwarded visitor
+      # addresses are believed (the sign-in throttle and the security log see the visitors, not Traefik). The range
+      # holds Traefik's address on its network (`docker network inspect <network>`); Docker's default ranges otherwise.
+      Librarion__Security__RequireHttps: "true"
+      Librarion__Security__TrustedProxies__0: ${LIBRARION_TRUSTED_PROXIES:-172.16.0.0/12}
+      AllowedHosts: ${LIBRARION_DOMAIN:?set LIBRARION_DOMAIN}
+      # The time zone of the logs (default UTC).
+      # TZ: Europe/Madrid
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-traefik}
+      traefik.http.routers.librarion.rule: Host(`${LIBRARION_DOMAIN}`)
+      traefik.http.routers.librarion.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.librarion.tls: "true"
+      traefik.http.routers.librarion.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      traefik.http.services.librarion.loadbalancer.server.port: "8080"
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: librarion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: librarion
+    volumes:
+      - librarion-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U librarion -d librarion"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Only on this project's own network: never reachable from Traefik's or from outside.
+    networks: [default]
+
+networks:
+  # Traefik's network, made with Traefik (its name in TRAEFIK_NETWORK).
+  traefik:
+    name: ${TRAEFIK_NETWORK:-traefik}
+    external: true
+
+volumes:
+  librarion-data:
+  librarion-postgres:

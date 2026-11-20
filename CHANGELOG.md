@@ -30,6 +30,8 @@ User-visible changes per version (agents/docs/development/versioning-and-changel
 - E-reader mode: **e-ink browsers are sent there by themselves** (Kindle, Kobo, PocketBook, Tolino, Boox), a book's
   address to the same book; **Full site** at the bottom of every e-reader page keeps a browser on the app, and **On an
   e-ink reader? Use the e-reader version** under the app's sign-in form leads back.
+- **Docker image** `ghcr.io/otools-net/librarion` (amd64 and arm64), and a `docker-compose.yml` running it with
+  PostgreSQL behind Traefik, for an address of the internet over HTTPS (docs/docker.md).
 
 ### Changed
 

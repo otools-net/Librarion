@@ -1,0 +1,21 @@
+# What the image build doesn't need: builds, packages, local data and the repository's history.
+**/bin/
+**/obj/
+**/node_modules/
+**/.angular/
+**/out-tsc/
+src/Librarion.Api/wwwroot/
+src/Librarion.Api/data/
+src/Librarion.Api/appsettings.Local.json
+src/Librarion.Api/appsettings.Development.json
+tests/
+docs/
+agents/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.claude/
+*.user
+.env

@@ -1,6 +1,7 @@
 # Librarion documentation
 
 - [Installation](installation.md): running Librarion.
+- [Docker](docker.md): the image, and Librarion with PostgreSQL behind Traefik on an address of the internet.
 - [First start](first-start.md): the setup code, the first administrator, getting back in.
 - [Configuration](configuration.md): the database, the address, setup, security, rights.
 - [Signing in and your account](user-guide/account.md): password, preferences, API keys for reader apps and scripts.
